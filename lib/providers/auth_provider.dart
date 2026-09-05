@@ -42,7 +42,7 @@ class AuthNotifier extends StateNotifier<LoginScreenModel> {
 
   Future<void> initModel() async {
     ref.read(userProvider.notifier).clear();
-    final currentAccounts = ref.read(authProvider.notifier).getSavedAccounts();
+    final currentAccounts = await ref.read(authProvider.notifier).getSavedAccounts();
     ref.read(lockScreenActiveProvider.notifier).update((state) => true);
     if (FladderConfig.baseUrl != null) {
       final url = FladderConfig.baseUrl;
@@ -151,9 +151,9 @@ class AuthNotifier extends StateNotifier<LoginScreenModel> {
         credentials: credentials,
         lastUsed: DateTime.now(),
       );
-      ref.read(sharedUtilityProvider).addAccount(newUser);
+      await ref.read(sharedUtilityProvider).addAccount(newUser);
       ref.read(userProvider.notifier).userState = newUser;
-      final currentAccounts = ref.read(authProvider.notifier).getSavedAccounts();
+      final currentAccounts = await ref.read(authProvider.notifier).getSavedAccounts();
 
       state = state.copyWith(
         accounts: currentAccounts,
@@ -207,8 +207,8 @@ class AuthNotifier extends StateNotifier<LoginScreenModel> {
     return ensureLocalNetworkPermission(url, localContext);
   }
 
-  List<AccountModel> getSavedAccounts() {
-    state = state.copyWith(accounts: ref.read(sharedUtilityProvider).getAccounts());
+  Future<List<AccountModel>> getSavedAccounts() async {
+    state = state.copyWith(accounts: await ref.read(sharedUtilityProvider).getAccounts());
     return state.accounts;
   }
 

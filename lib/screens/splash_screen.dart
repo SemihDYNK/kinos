@@ -27,7 +27,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((value) async {
       await Future.delayed(const Duration(milliseconds: 500));
-      final AccountModel? lastUsedAccount = ref.read(sharedUtilityProvider).getActiveAccount();
+      final AccountModel? lastUsedAccount = await ref.read(sharedUtilityProvider).getActiveAccount();
       ref.read(userProvider.notifier).updateUser(lastUsedAccount);
 
       if (context.mounted) {

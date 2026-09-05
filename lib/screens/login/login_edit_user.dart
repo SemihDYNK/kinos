@@ -86,7 +86,7 @@ class LoginEditUser extends ConsumerWidget {
                 ),
                 onPressed: () async {
                   await ref.read(sharedUtilityProvider).removeAccount(user);
-                  ref.read(authProvider.notifier).getSavedAccounts();
+                  await ref.read(authProvider.notifier).getSavedAccounts();
                   if (context.mounted) {
                     Navigator.of(context).pop();
                   }

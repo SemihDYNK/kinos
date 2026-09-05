@@ -43,9 +43,7 @@ class UpdateNotifications {
 
   Future<void> registerBackgroundTask() async {
     await Future.delayed(const Duration(milliseconds: 500));
-    final accounts = ref
-        .read(sharedUtilityProvider)
-        .getAccounts()
+    final accounts = (await ref.read(sharedUtilityProvider).getAccounts())
         .where((a) => a.updateNotificationsEnabled || a.seerrRequestsEnabled)
         .toList();
     if (accounts.isEmpty) {
@@ -102,9 +100,7 @@ class UpdateNotifications {
   Future<void> conditionallyUnregisterBackgroundTask() async {
     try {
       await Future.delayed(const Duration(milliseconds: 500));
-      final accounts = ref
-          .read(sharedUtilityProvider)
-          .getAccounts()
+      final accounts = (await ref.read(sharedUtilityProvider).getAccounts())
           .where((a) => a.updateNotificationsEnabled || a.seerrRequestsEnabled)
           .toList();
       if (accounts.isEmpty) {

@@ -53,8 +53,7 @@ Future<LastSeenNotificationsModel?> performHeadlessUpdateCheck(
     final prefs = await SharedPreferences.getInstance();
     final sharedHelper = SharedHelper(sharedPreferences: prefs);
 
-    final accounts = sharedHelper
-        .getAccounts()
+    final accounts = (await sharedHelper.getAccounts())
         .where((element) => element.updateNotificationsEnabled || element.seerrRequestsEnabled)
         .toList();
     if (accounts.isEmpty) return null;
