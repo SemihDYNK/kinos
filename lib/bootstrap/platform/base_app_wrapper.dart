@@ -12,6 +12,7 @@ import 'package:fladder/background/update_notifications_worker.dart' as update_w
 import 'package:fladder/models/account_model.dart';
 import 'package:fladder/providers/arguments_provider.dart';
 import 'package:fladder/providers/connectivity_provider.dart';
+import 'package:fladder/providers/playback_report_queue_provider.dart';
 import 'package:fladder/providers/settings/client_settings_provider.dart';
 import 'package:fladder/providers/shared_provider.dart';
 import 'package:fladder/providers/update_notifications_provider.dart';
@@ -50,6 +51,9 @@ abstract class BaseAppWrapperState<T extends BaseAppWrapper> extends ConsumerSta
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       ref.read(sharedUtilityProvider).loadSettings();
+      // Starts draining any playback reports left in the offline outbox
+      // from a previous session, and keeps doing so for the app's lifetime.
+      ref.read(playbackReportQueueWorkerProvider);
       await platformInit();
       await _initializeNotifications();
     });
