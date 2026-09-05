@@ -20,10 +20,13 @@ import 'package:fladder/models/items/item_shared_models.dart';
 import 'package:fladder/models/items/media_segments_model.dart';
 import 'package:fladder/models/items/photos_model.dart';
 import 'package:fladder/models/items/trick_play_model.dart';
+import 'package:fladder/models/playback/playback_report_conflict.dart';
+import 'package:fladder/models/syncing/playback_queue_table.dart';
 import 'package:fladder/models/syncing/sync_item.dart';
 import 'package:fladder/providers/api_provider.dart';
 import 'package:fladder/providers/auth_provider.dart';
 import 'package:fladder/providers/connectivity_provider.dart';
+import 'package:fladder/providers/database_provider.dart';
 import 'package:fladder/providers/image_provider.dart';
 import 'package:fladder/providers/incognito_mode_provider.dart';
 import 'package:fladder/providers/sync_provider.dart';
@@ -714,7 +717,12 @@ class JellyService {
 
   Future<Response> sessionsPlayingPost({required PlaybackStartInfo? body}) async {
     if (ref.read(incognitoProvider)) return Response(http.Response("", 200), null);
-    return api.sessionsPlayingPost(body: body);
+    return _reportPlayback(
+      eventType: PlaybackQueueEventType.start,
+      itemId: body?.itemId,
+      positionTicks: body?.playbackStartTimeTicks ?? 0,
+      send: () => api.sessionsPlayingPost(body: body),
+    );
   }
 
   Future<Response> sessionsPlayingStoppedPost({
@@ -727,12 +735,64 @@ class JellyService {
           .read(syncProvider.notifier)
           .updatePlaybackPosition(itemId: body?.itemId, position: Duration(milliseconds: positionTicks ~/ 10000));
     }
-    return api.sessionsPlayingStoppedPost(body: body);
+    return _reportPlayback(
+      eventType: PlaybackQueueEventType.stop,
+      itemId: body?.itemId,
+      positionTicks: positionTicks ?? 0,
+      send: () => api.sessionsPlayingStoppedPost(body: body),
+    );
   }
 
   Future<Response> sessionsPlayingProgressPost({required PlaybackProgressInfo? body}) async {
     if (ref.read(incognitoProvider)) return Response(http.Response("", 200), null);
-    return api.sessionsPlayingProgressPost(body: body);
+    return _reportPlayback(
+      eventType: PlaybackQueueEventType.progress,
+      itemId: body?.itemId,
+      positionTicks: body?.positionTicks ?? 0,
+      send: () => api.sessionsPlayingProgressPost(body: body),
+    );
+  }
+
+  /// Writes [eventType] to the `playback_queue` offline outbox *before*
+  /// attempting [send], so a network failure here doesn't lose the report -
+  /// `playbackReportQueueWorkerProvider` drains anything left behind once
+  /// connectivity returns (with conflict resolution against the server's
+  /// current state - see [PlaybackConflictResolver]).
+  ///
+  /// On success the queued entry is deleted immediately. On failure -
+  /// either [send] throwing, or completing with a non-successful HTTP
+  /// response - the entry stays queued and this returns a synthetic
+  /// "accepted" response instead of throwing, matching the pre-existing
+  /// contract of these methods (callers await them without a try/catch).
+  Future<Response> _reportPlayback({
+    required PlaybackQueueEventType eventType,
+    required String? itemId,
+    required int positionTicks,
+    required Future<Response> Function() send,
+  }) async {
+    if (itemId == null || itemId.isEmpty) return send();
+
+    final db = ref.read(appDatabaseProvider);
+    final queueId = await db.enqueuePlaybackEvent(
+      itemId: itemId,
+      eventType: eventType,
+      positionTicks: positionTicks,
+    );
+
+    try {
+      final response = await send();
+      if (response.isSuccessful) {
+        await db.deletePlaybackEvent(queueId);
+      } else {
+        await db.incrementPlaybackEventAttempts(queueId);
+        await db.recordPlaybackEventFailure(queueId, 'HTTP ${response.statusCode}');
+      }
+      return response;
+    } catch (error) {
+      await db.incrementPlaybackEventAttempts(queueId);
+      await db.recordPlaybackEventFailure(queueId, error.toString());
+      return Response(http.Response("", 202), null);
+    }
   }
 
   Future<Response<PlaybackInfoResponse>> itemsItemIdPlaybackInfoPost({
