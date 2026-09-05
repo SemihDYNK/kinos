@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fladder/models/account_model.dart';
+import 'package:fladder/models/credentials_model.dart';
 import 'package:fladder/models/last_seen_notifications_model.dart';
 import 'package:fladder/models/settings/client_settings_model.dart';
 import 'package:fladder/models/settings/home_settings_model.dart';
@@ -22,6 +23,7 @@ import 'package:fladder/providers/settings/subtitle_settings_provider.dart';
 import 'package:fladder/providers/settings/video_player_settings_provider.dart';
 import 'package:fladder/providers/update_notifications_provider.dart';
 import 'package:fladder/providers/user_provider.dart';
+import 'package:fladder/services/secure_credentials_store.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError();
@@ -81,6 +83,7 @@ class SharedKeys {
   static final SharedKeys instance = SharedKeys._();
 
   static const String _loginCredentialsKey = 'loginCredentialsKey';
+  static const String _credentialsMigratedToSecureStorageKey = 'credentialsMigratedToSecureStorageKey';
   static const String _clientSettingsKey = 'clientSettings';
   static const String _homeSettingsKey = 'homeSettings';
   static const String _videoPlayerSettingsKey = 'videoPlayerSettings';
@@ -97,15 +100,26 @@ class SharedKeys {
 class SharedHelper {
   final Ref? ref;
   final SharedPreferences sharedPreferences;
+  final SecureCredentialsStore secureCredentials;
 
-  const SharedHelper({this.ref, required this.sharedPreferences});
+  /// Guards [_migrateCredentialsIfNeeded] within this instance's lifetime.
+  /// The real, cross-launch guard is the persisted
+  /// [SharedKeys._credentialsMigratedToSecureStorageKey] flag - this just
+  /// avoids re-checking that flag on every single call once we know it's set.
+  bool _migrationChecked = false;
+
+  SharedHelper({
+    this.ref,
+    required this.sharedPreferences,
+    this.secureCredentials = const SecureCredentialsStore(),
+  });
 
   Future<bool?> addAccount(AccountModel account) async {
     final newAccount = account.copyWith(
       lastUsed: DateTime.now(),
     );
 
-    List<AccountModel> accounts = getAccounts().toList();
+    List<AccountModel> accounts = await getAccounts();
     if (accounts.any((element) => element.sameIdentity(newAccount))) {
       accounts = accounts
           .map(
@@ -138,26 +152,88 @@ class SharedHelper {
     }
 
     //Remove from local database
-    final savedAccounts = getAccounts();
+    final savedAccounts = await getAccounts();
     savedAccounts.removeWhere((element) {
       return element.sameIdentity(account);
     });
+    await secureCredentials.delete(account.credentials.serverId, account.id);
     return (await saveAccounts(savedAccounts));
   }
 
-  List<AccountModel> getAccounts() {
+  /// Reads the saved account list, with each account's real [CredentialsModel]
+  /// (server URL, token, deviceId, ...) rehydrated from secure storage.
+  ///
+  /// SharedPreferences only ever holds the non-sensitive rest of the account
+  /// (name, avatar, filters, ...) plus the `serverId` needed to look the
+  /// credentials up - see [saveAccounts].
+  Future<List<AccountModel>> getAccounts() async {
+    await _migrateCredentialsIfNeeded();
+
     final savedAccounts = sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
+    if (savedAccounts == null) return [];
+
     try {
-      return savedAccounts != null ? savedAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList() : [];
+      final accounts = savedAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
+      return Future.wait(accounts.map(_hydrateCredentials));
     } catch (_, stacktrace) {
       log(stacktrace.toString());
       return [];
     }
   }
 
-  AccountModel? getActiveAccount() {
+  Future<AccountModel> _hydrateCredentials(AccountModel account) async {
+    final storedCredentials = await secureCredentials.read(account.credentials.serverId, account.id);
+    // No vault entry (e.g. it was cleared outside the app) leaves the
+    // account's placeholder credentials as-is rather than dropping it -
+    // failing to log in with an empty token is easier to recover from than
+    // an account silently disappearing from the list.
+    return storedCredentials == null ? account : account.copyWith(credentials: storedCredentials);
+  }
+
+  /// One-time, idempotent move of every account's [CredentialsModel] out of
+  /// the plaintext SharedPreferences blob and into [secureCredentials].
+  ///
+  /// Runs at most once per install (guarded by a persisted flag, checked
+  /// once per process by [_migrationChecked]); a failure isn't recorded as
+  /// done, so it's retried on the next call instead of stranding plaintext
+  /// credentials permanently.
+  Future<void> _migrateCredentialsIfNeeded() async {
+    if (_migrationChecked) return;
+    if (sharedPreferences.getBool(SharedKeys._credentialsMigratedToSecureStorageKey) ?? false) {
+      _migrationChecked = true;
+      return;
+    }
+
+    final rawAccounts = sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
+    if (rawAccounts == null || rawAccounts.isEmpty) {
+      await sharedPreferences.setBool(SharedKeys._credentialsMigratedToSecureStorageKey, true);
+      _migrationChecked = true;
+      return;
+    }
+
     try {
-      final accounts = getAccounts();
+      // At this point credentials are still the old plaintext payload, as
+      // written by every version of the app before this migration existed.
+      final accounts = rawAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
+
+      for (final account in accounts) {
+        await secureCredentials.save(account.credentials.serverId, account.id, account.credentials);
+      }
+
+      await sharedPreferences.setStringList(
+        SharedKeys._loginCredentialsKey,
+        accounts.map((e) => jsonEncode(_stripCredentials(e))).toList(),
+      );
+      await sharedPreferences.setBool(SharedKeys._credentialsMigratedToSecureStorageKey, true);
+      _migrationChecked = true;
+    } catch (e, stacktrace) {
+      log('Failed to migrate stored credentials to secure storage, will retry: $e\n$stacktrace');
+    }
+  }
+
+  Future<AccountModel?> getActiveAccount() async {
+    try {
+      final accounts = await getAccounts();
       AccountModel recentUsedAccount = accounts.reduce((lastLoggedIn, element) {
         return (element.lastUsed.compareTo(lastLoggedIn.lastUsed)) > 0 ? element : lastLoggedIn;
       });
@@ -170,8 +246,25 @@ class SharedHelper {
     }
   }
 
-  Future<bool?> saveAccounts(List<AccountModel> accounts) async =>
-      sharedPreferences.setStringList(SharedKeys._loginCredentialsKey, accounts.map((e) => jsonEncode(e)).toList());
+  /// Persists [accounts]: each one's real credentials go to
+  /// [secureCredentials] (keyed by `serverId:userId`), while SharedPreferences
+  /// only ever gets [_stripCredentials]'s placeholder in their place.
+  Future<bool?> saveAccounts(List<AccountModel> accounts) async {
+    for (final account in accounts) {
+      await secureCredentials.save(account.credentials.serverId, account.id, account.credentials);
+    }
+    return sharedPreferences.setStringList(
+      SharedKeys._loginCredentialsKey,
+      accounts.map((e) => jsonEncode(_stripCredentials(e))).toList(),
+    );
+  }
+
+  /// Keeps only `serverId` (needed to look credentials back up in
+  /// [secureCredentials]) and blanks out everything else - token, both URLs,
+  /// serverName, deviceId - before an account is written to SharedPreferences.
+  AccountModel _stripCredentials(AccountModel account) => account.copyWith(
+        credentials: CredentialsModel.internal(serverId: account.credentials.serverId),
+      );
 
   ClientSettingsModel get clientSettings {
     try {
@@ -211,7 +304,7 @@ class SharedHelper {
   }
 
   Future<void> updateAccountInfo(AccountModel account) async {
-    final accounts = getAccounts();
+    final accounts = await getAccounts();
     await Future.microtask(() async {
       await saveAccounts(accounts.map((e) {
         if (e.sameIdentity(account)) {
