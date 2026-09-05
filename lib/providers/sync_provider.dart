@@ -38,6 +38,7 @@ import 'package:fladder/models/video_stream_model.dart';
 import 'package:fladder/profiles/default_profile.dart';
 import 'package:fladder/providers/api_provider.dart';
 import 'package:fladder/providers/connectivity_provider.dart';
+import 'package:fladder/providers/database_provider.dart';
 import 'package:fladder/providers/service_provider.dart';
 import 'package:fladder/providers/settings/client_settings_provider.dart';
 import 'package:fladder/providers/sync/background_download_provider.dart';
@@ -61,7 +62,7 @@ const syncPathKey = "syncPathKey";
 
 class SyncNotifier extends StateNotifier<SyncSettingsModel> {
   SyncNotifier(this.ref, this.mobileDirectory)
-      : _db = AppDatabase(ref),
+      : _db = ref.read(appDatabaseProvider),
         super(SyncSettingsModel()) {
     _init();
   }
