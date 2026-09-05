@@ -14,8 +14,15 @@ import 'package:fladder/models/items/item_shared_models.dart';
 import 'package:fladder/models/items/media_segments_model.dart';
 import 'package:fladder/models/items/media_streams_model.dart';
 import 'package:fladder/models/items/trick_play_model.dart';
+import 'package:fladder/models/syncing/local_settings_table.dart';
+import 'package:fladder/models/syncing/palette_cache_table.dart';
+import 'package:fladder/models/syncing/playback_queue_table.dart';
 import 'package:fladder/models/syncing/sync_item.dart';
 import 'package:fladder/providers/user_provider.dart';
+
+export 'package:fladder/models/syncing/local_settings_table.dart';
+export 'package:fladder/models/syncing/palette_cache_table.dart';
+export 'package:fladder/models/syncing/playback_queue_table.dart';
 
 part 'database_item.g.dart';
 
@@ -43,7 +50,7 @@ class DatabaseItems extends Table {
   Set<Column<Object>> get primaryKey => {userId, id};
 }
 
-@DriftDatabase(tables: [DatabaseItems])
+@DriftDatabase(tables: [DatabaseItems, PlaybackQueue, PaletteCache, Settings])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(this.ref, [QueryExecutor? executor]) : super(executor ?? _openConnection());
 
@@ -52,7 +59,24 @@ class AppDatabase extends _$AppDatabase {
   String get userId => ref.read(userProvider.select((value) => value?.id ?? ""));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (Migrator m) async {
+          await m.createAll();
+        },
+        onUpgrade: (Migrator m, int from, int to) async {
+          if (from < 2) {
+            await m.createTable(playbackQueue);
+            await m.createIndex(playbackQueueUserItem);
+            await m.createIndex(playbackQueuePending);
+            await m.createTable(paletteCache);
+            await m.createTable(settings);
+            await m.createIndex(settingsScope);
+          }
+        },
+      );
 
   Future<void> clearDatabase() async {
     final dbPath = await getApplicationSupportDirectory();
@@ -194,6 +218,63 @@ class AppDatabase extends _$AppDatabase {
       itemModel: syncedItem.createItemModel(ref),
     );
   }
+
+  // --- playback_queue: offline outbox for start/progress/stop reports ---
+
+  Future<int> enqueuePlaybackEvent({
+    required String itemId,
+    required PlaybackQueueEventType eventType,
+    required int positionTicks,
+  }) =>
+      into(playbackQueue).insert(PlaybackQueueCompanion.insert(
+        userId: userId,
+        itemId: itemId,
+        eventType: eventType,
+        positionTicks: Value(positionTicks),
+      ));
+
+  Selectable<PlaybackQueueEntry> get getPendingPlaybackEvents =>
+      ((select(playbackQueue)..where((tbl) => tbl.userId.equals(userId)))
+        ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]));
+
+  Future<void> recordPlaybackEventFailure(int id, String error) =>
+      (update(playbackQueue)..where((tbl) => tbl.id.equals(id))).write(
+        PlaybackQueueCompanion(lastError: Value(error)),
+      );
+
+  Future<void> incrementPlaybackEventAttempts(int id) async {
+    final entry = await (select(playbackQueue)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+    if (entry == null) return;
+    await (update(playbackQueue)..where((tbl) => tbl.id.equals(id)))
+        .write(PlaybackQueueCompanion(attempts: Value(entry.attempts + 1)));
+  }
+
+  Future<void> deletePlaybackEvent(int id) => (delete(playbackQueue)..where((tbl) => tbl.id.equals(id))).go();
+
+  // --- palette_cache: cached dominant color per item ---
+
+  Future<PaletteCacheEntry?> getPalette(String itemId) =>
+      (select(paletteCache)..where((tbl) => tbl.itemId.equals(itemId))).getSingleOrNull();
+
+  Future<void> savePalette(String itemId, int argb) => into(paletteCache).insertOnConflictUpdate(
+        PaletteCacheCompanion.insert(itemId: itemId, argb: argb),
+      );
+
+  Future<void> deletePalette(String itemId) => (delete(paletteCache)..where((tbl) => tbl.itemId.equals(itemId))).go();
+
+  // --- settings: key/value preferences scoped per screen output ---
+
+  Future<Setting?> getSetting(String key, {String scope = 'global'}) =>
+      (select(settings)..where((tbl) => tbl.key.equals(key) & tbl.scope.equals(scope))).getSingleOrNull();
+
+  Selectable<Setting> getSettingsForScope(String scope) => select(settings)..where((tbl) => tbl.scope.equals(scope));
+
+  Future<void> setSetting(String key, String value, {String scope = 'global'}) => into(settings).insertOnConflictUpdate(
+        SettingsCompanion.insert(key: key, value: value, scope: scope),
+      );
+
+  Future<void> deleteSetting(String key, {String scope = 'global'}) =>
+      (delete(settings)..where((tbl) => tbl.key.equals(key) & tbl.scope.equals(scope))).go();
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
