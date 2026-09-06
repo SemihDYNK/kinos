@@ -40,155 +40,182 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final details = ref.watch(providerInstance);
-
-    if (details == null) {
-      return const SizedBox.shrink();
-    }
+    // `details` est null tant que le premier fetchDetails n'a pas abouti —
+    // et c'est justement PullToRefresh (refreshOnStart: true), à l'intérieur
+    // de MediaDetailScaffold, qui le déclenche. Un retour anticipé ici,
+    // avant de construire MediaDetailScaffold, empêchait ce déclenchement :
+    // l'écran restait bloqué sur le fond du Hero de DetailsScreen, sans
+    // jamais charger quoi que ce soit. MediaDetailScaffold doit donc
+    // toujours être construit ; seul son contenu dérivé de `details` est
+    // conditionnel, avec repli sur `widget.item` (déjà disponible) tant que
+    // le chargement n'est pas terminé.
+    final item = details ?? widget.item;
 
     final resolution =
-        details.mediaStreams.currentVersionStream?.detailedResolutionLabel;
-    final metaLine = buildMediaMetaLine(
-      year: details.premiereDate.year,
-      runTime: details.overview.runTime,
-      resolution: resolution,
-      communityRating: details.overview.communityRating,
-      genres: details.overview.genreItems.map((genre) => genre.name).toList(),
-    );
+        details?.mediaStreams.currentVersionStream?.detailedResolutionLabel;
+    final metaLine = details == null
+        ? ''
+        : buildMediaMetaLine(
+            year: details.premiereDate.year,
+            runTime: details.overview.runTime,
+            resolution: resolution,
+            communityRating: details.overview.communityRating,
+            genres:
+                details.overview.genreItems.map((genre) => genre.name).toList(),
+          );
 
-    final version = details.mediaStreams.currentVersionStream;
-    final info = <({String label, String value})>[
-      if (details.overview.directors.isNotEmpty)
-        (
-          label: context.localized.director(details.overview.directors.length),
-          value: details.overview.directors.map((p) => p.name).join(', ')
-        ),
-      if (details.overview.writers.isNotEmpty)
-        (
-          label: context.localized.writer(details.overview.writers.length),
-          value: details.overview.writers.map((p) => p.name).join(', ')
-        ),
-      if (details.overview.studios.isNotEmpty)
-        (
-          label: context.localized.studio(details.overview.studios.length),
-          value: details.overview.studios.map((s) => s.name).join(', ')
-        ),
-      (
-        label: context.localized.releaseDate,
-        value: DateFormat.yMMMd(Localizations.localeOf(context).toString())
-            .format(details.premiereDate)
-      ),
-      if (details.overview.productionLocations.isNotEmpty)
-        (label: 'Pays', value: details.overview.productionLocations.join(', ')),
-      if (details.overview.communityRating != null &&
-          details.overview.communityRating != 0)
-        (
-          label: context.localized.communityRating,
-          value: details.overview.communityRating!.toStringAsFixed(1)
-        ),
-      if (version?.container != null)
-        (label: 'Conteneur', value: version!.container!.toUpperCase()),
-      if (version?.videoStreams.firstOrNull?.codec.isNotEmpty ?? false)
-        (
-          label: 'Codec vidéo',
-          value: version!.videoStreams.first.codec.toUpperCase()
-        ),
-      if (details.mediaStreams.currentAudioStream?.codec.isNotEmpty ?? false)
-        (
-          label: 'Codec audio',
-          value: details.mediaStreams.currentAudioStream!.codec.toUpperCase()
-        ),
-      if (formatFileSize(version?.size) != null)
-        (label: 'Taille', value: formatFileSize(version?.size)!),
-      if (formatBitrate(version?.bitrate) != null)
-        (label: 'Débit', value: formatBitrate(version?.bitrate)!),
-    ];
+    final version = details?.mediaStreams.currentVersionStream;
+    final info = details == null
+        ? const <({String label, String value})>[]
+        : <({String label, String value})>[
+            if (details.overview.directors.isNotEmpty)
+              (
+                label: context.localized
+                    .director(details.overview.directors.length),
+                value: details.overview.directors.map((p) => p.name).join(', ')
+              ),
+            if (details.overview.writers.isNotEmpty)
+              (
+                label:
+                    context.localized.writer(details.overview.writers.length),
+                value: details.overview.writers.map((p) => p.name).join(', ')
+              ),
+            if (details.overview.studios.isNotEmpty)
+              (
+                label:
+                    context.localized.studio(details.overview.studios.length),
+                value: details.overview.studios.map((s) => s.name).join(', ')
+              ),
+            (
+              label: context.localized.releaseDate,
+              value:
+                  DateFormat.yMMMd(Localizations.localeOf(context).toString())
+                      .format(details.premiereDate)
+            ),
+            if (details.overview.productionLocations.isNotEmpty)
+              (
+                label: 'Pays',
+                value: details.overview.productionLocations.join(', ')
+              ),
+            if (details.overview.communityRating != null &&
+                details.overview.communityRating != 0)
+              (
+                label: context.localized.communityRating,
+                value: details.overview.communityRating!.toStringAsFixed(1)
+              ),
+            if (version?.container != null)
+              (label: 'Conteneur', value: version!.container!.toUpperCase()),
+            if (version?.videoStreams.firstOrNull?.codec.isNotEmpty ?? false)
+              (
+                label: 'Codec vidéo',
+                value: version!.videoStreams.first.codec.toUpperCase()
+              ),
+            if (details.mediaStreams.currentAudioStream?.codec.isNotEmpty ??
+                false)
+              (
+                label: 'Codec audio',
+                value:
+                    details.mediaStreams.currentAudioStream!.codec.toUpperCase()
+              ),
+            if (formatFileSize(version?.size) != null)
+              (label: 'Taille', value: formatFileSize(version?.size)!),
+            if (formatBitrate(version?.bitrate) != null)
+              (label: 'Débit', value: formatBitrate(version?.bitrate)!),
+          ];
 
     return MediaDetailScaffold(
-      label: details.name,
-      item: details,
-      backDrops: details.images,
-      poster: details.getPosters?.primary,
+      label: item.name,
+      item: item,
+      backDrops: item.images,
+      poster: item.getPosters?.primary,
       onRefresh: () async =>
           await ref.read(providerInstance.notifier).fetchDetails(widget.item),
-      title: details.name,
-      originalTitle: details.originalTitle,
+      title: item.name,
+      originalTitle: details?.originalTitle,
       metaLine: metaLine,
-      onPlay: () async {
-        await details.play(context, ref);
-        ref.read(providerInstance.notifier).fetchDetails(widget.item);
-      },
-      isFavourite: details.userData.isFavourite,
+      onPlay: details == null
+          ? null
+          : () async {
+              await details.play(context, ref);
+              ref.read(providerInstance.notifier).fetchDetails(widget.item);
+            },
+      isFavourite: item.userData.isFavourite,
       onToggleFavourite: () => ref.read(userProvider.notifier).setAsFavorite(
-            !details.userData.isFavourite,
-            details.id,
+            !item.userData.isFavourite,
+            item.id,
           ),
-      isPlayed: details.userData.played,
+      isPlayed: item.userData.played,
       onTogglePlayed: () => ref.read(userProvider.notifier).markAsPlayed(
-            !details.userData.played,
-            details.id,
+            !item.userData.played,
+            item.id,
           ),
-      actions: (context) => details.generateActions(
-        context,
-        ref,
-        exclude: {
-          ItemActions.play,
-          ItemActions.playFromStart,
-          ItemActions.details,
-          ItemActions.markPlayed,
-          ItemActions.markUnplayed,
-          ItemActions.setFavorite,
-        },
-        onDeleteSuccesFully: (item) {
-          if (context.mounted) context.router.popBack();
-        },
-      ),
-      content: (context, padding) => [
-        if (details.overview.summary.isNotEmpty)
-          SliverPadding(
-            padding: padding,
-            sliver: SliverToBoxAdapter(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _readingWidth),
-                child: Text(
-                  details.overview.summary,
-                  style: Theme.of(context).textTheme.bodyMedium,
+      actions: details == null
+          ? null
+          : (context) => details.generateActions(
+                context,
+                ref,
+                exclude: {
+                  ItemActions.play,
+                  ItemActions.playFromStart,
+                  ItemActions.details,
+                  ItemActions.markPlayed,
+                  ItemActions.markUnplayed,
+                  ItemActions.setFavorite,
+                },
+                onDeleteSuccesFully: (item) {
+                  if (context.mounted) context.router.popBack();
+                },
+              ),
+      content: (context, padding) => details == null
+          ? []
+          : [
+              if (details.overview.summary.isNotEmpty)
+                SliverPadding(
+                  padding: padding,
+                  sliver: SliverToBoxAdapter(
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxWidth: _readingWidth),
+                      child: Text(
+                        details.overview.summary,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
-        if (details.mediaStreams.audioStreams.isNotEmpty ||
-            details.mediaStreams.subStreams.isNotEmpty)
-          SliverPadding(
-            padding: padding.copyWith(top: AppSpacing.lg),
-            sliver: SliverToBoxAdapter(
-              child: MediaStreamSelectors(
-                mediaStream: details.mediaStreams,
-                onChanged: (changed) => ref
-                    .read(providerInstance.notifier)
-                    .setMediaStreamHelper(changed),
-              ),
-            ),
-          ),
-        if (details.overview.people.isNotEmpty || info.isNotEmpty)
-          SliverPadding(
-            padding: const EdgeInsets.only(top: AppSpacing.xl),
-            sliver: SliverToBoxAdapter(
-              child: MediaInfoSection(
-                  people: details.overview.people,
-                  info: info,
-                  contentPadding: padding),
-            ),
-          ),
-        if (details.related.isNotEmpty)
-          SliverPadding(
-            padding: const EdgeInsets.only(top: AppSpacing.xl),
-            sliver: SingleRowSection(
-              title: context.localized.related,
-              items: details.related,
-              contentPadding: padding,
-            ),
-          ),
-      ],
+              if (details.mediaStreams.audioStreams.isNotEmpty ||
+                  details.mediaStreams.subStreams.isNotEmpty)
+                SliverPadding(
+                  padding: padding.copyWith(top: AppSpacing.lg),
+                  sliver: SliverToBoxAdapter(
+                    child: MediaStreamSelectors(
+                      mediaStream: details.mediaStreams,
+                      onChanged: (changed) => ref
+                          .read(providerInstance.notifier)
+                          .setMediaStreamHelper(changed),
+                    ),
+                  ),
+                ),
+              if (details.overview.people.isNotEmpty || info.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: MediaInfoSection(
+                        people: details.overview.people,
+                        info: info,
+                        contentPadding: padding),
+                  ),
+                ),
+              if (details.related.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: SingleRowSection(
+                    title: context.localized.related,
+                    items: details.related,
+                    contentPadding: padding,
+                  ),
+                ),
+            ],
     );
   }
 }

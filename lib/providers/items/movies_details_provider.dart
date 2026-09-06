@@ -45,16 +45,20 @@ class MovieDetails extends _$MovieDetails {
 
       List<BaseItemDto> specialFeatures;
       try {
-        specialFeatures = (await api.itemsItemIdSpecialFeaturesGet(itemId: item.id)).body ?? [];
+        specialFeatures =
+            (await api.itemsItemIdSpecialFeaturesGet(itemId: item.id)).body ??
+                [];
       } on Exception catch (e, s) {
         specialFeatures = [];
         log("Failed to get special features for movie id ${item.id} due to $e",
             level: logging.Level.WARNING.value, error: e, stackTrace: s);
       }
 
-      final related = await ref.read(relatedUtilityProvider).relatedContent(item.id);
+      final related =
+          await ref.read(relatedUtilityProvider).relatedContent(item.id);
       final List<SpecialFeatureModel> specialFeatureModel =
-          SpecialFeatureModel.specialFeaturesFromDto(specialFeatures, ref).toList();
+          SpecialFeatureModel.specialFeaturesFromDto(specialFeatures, ref)
+              .toList();
 
       List<SeerrDashboardPosterModel> seerrRelated = const [];
       List<SeerrDashboardPosterModel> seerrRecommended = const [];
@@ -67,14 +71,16 @@ class MovieDetails extends _$MovieDetails {
         if (tmdbId != null) {
           final seerr = ref.read(seerrApiProvider);
           seerrRelated = await seerr.discoverRelatedMovies(tmdbId: tmdbId);
-          seerrRecommended = await seerr.discoverRecommendedMovies(tmdbId: tmdbId);
+          seerrRecommended =
+              await seerr.discoverRecommendedMovies(tmdbId: tmdbId);
           final seerrPoster = await seerr.fetchDashboardPosterFromIds(
             tmdbId: tmdbId,
             mediaType: SeerrMediaType.movie,
           );
           final status = seerrPoster?.mediaInfo?.mediaStatus;
           if (status != SeerrMediaStatus.unknown) {
-            final seerrServerUrl = ref.read(userProvider.select((value) => value?.seerrCredentials?.serverUrl));
+            final seerrServerUrl = ref.read(userProvider
+                .select((value) => value?.seerrCredentials?.serverUrl));
             seerrUrl = '${seerrServerUrl}movie/$tmdbId';
           }
         }
@@ -89,7 +95,12 @@ class MovieDetails extends _$MovieDetails {
           ),
           specialFeatures: specialFeatureModel);
       return null;
-    } catch (e) {
+    } catch (e, s) {
+      // Repli silencieux avant, sans trace — un échec ici (réseau,
+      // décodage...) laissait `state` à null indéfiniment, sans le moindre
+      // indice en console. Même traitement que series_details_provider.dart.
+      log("Error fetching movie details: $e",
+          level: logging.Level.WARNING.value, error: e, stackTrace: s);
       return null;
     }
   }

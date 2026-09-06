@@ -39,80 +39,98 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final details = ref.watch(providerId);
+    // `details` est null tant que le premier fetchDetails n'a pas abouti —
+    // et c'est justement PullToRefresh (refreshOnStart: true), à l'intérieur
+    // de MediaDetailScaffold, qui le déclenche. Un retour anticipé ici,
+    // avant de construire MediaDetailScaffold, empêchait ce déclenchement :
+    // l'écran restait bloqué sur le fond du Hero de DetailsScreen, sans
+    // jamais charger quoi que ce soit. MediaDetailScaffold doit donc
+    // toujours être construit ; seul son contenu dérivé de `details` est
+    // conditionnel, avec repli sur `widget.item` (déjà disponible) tant que
+    // le chargement n'est pas terminé.
+    final item = details ?? widget.item;
 
-    if (details == null) {
-      return const SizedBox.shrink();
-    }
-
-    final currentEpisode = details.nextUp;
+    final currentEpisode = details?.nextUp;
     final resolution = currentEpisode
         ?.mediaStreams.currentVersionStream?.detailedResolutionLabel;
-    final metaLine = buildMediaMetaLine(
-      year: details.overview.yearAired,
-      runTime: details.overview.runTime,
-      resolution: resolution,
-      communityRating: details.overview.communityRating,
-      genres: details.overview.genreItems.map((genre) => genre.name).toList(),
-    );
+    final metaLine = details == null
+        ? ''
+        : buildMediaMetaLine(
+            year: details.overview.yearAired,
+            runTime: details.overview.runTime,
+            resolution: resolution,
+            communityRating: details.overview.communityRating,
+            genres:
+                details.overview.genreItems.map((genre) => genre.name).toList(),
+          );
 
     final version = currentEpisode?.mediaStreams.currentVersionStream;
-    final info = <({String label, String value})>[
-      if (details.overview.directors.isNotEmpty)
-        (
-          label: context.localized.director(details.overview.directors.length),
-          value: details.overview.directors.map((p) => p.name).join(', '),
-        ),
-      if (details.overview.writers.isNotEmpty)
-        (
-          label: context.localized.writer(details.overview.writers.length),
-          value: details.overview.writers.map((p) => p.name).join(', '),
-        ),
-      if (details.overview.studios.isNotEmpty)
-        (
-          label: context.localized.studio(details.overview.studios.length),
-          value: details.overview.studios.map((s) => s.name).join(', '),
-        ),
-      if (details.overview.yearAired != null)
-        (
-          label: context.localized.releaseDate,
-          value: details.overview.yearAired.toString()
-        ),
-      if (details.overview.productionLocations.isNotEmpty)
-        (label: 'Pays', value: details.overview.productionLocations.join(', ')),
-      if (details.overview.communityRating != null &&
-          details.overview.communityRating != 0)
-        (
-          label: context.localized.communityRating,
-          value: details.overview.communityRating!.toStringAsFixed(1)
-        ),
-      if (version?.container != null)
-        (label: 'Conteneur', value: version!.container!.toUpperCase()),
-      if (version?.videoStreams.firstOrNull?.codec.isNotEmpty ?? false)
-        (
-          label: 'Codec vidéo',
-          value: version!.videoStreams.first.codec.toUpperCase()
-        ),
-      if (currentEpisode?.mediaStreams.currentAudioStream?.codec.isNotEmpty ??
-          false)
-        (
-          label: 'Codec audio',
-          value: currentEpisode!.mediaStreams.currentAudioStream!.codec
-              .toUpperCase()
-        ),
-      if (formatFileSize(version?.size) != null)
-        (label: 'Taille', value: formatFileSize(version?.size)!),
-      if (formatBitrate(version?.bitrate) != null)
-        (label: 'Débit', value: formatBitrate(version?.bitrate)!),
-    ];
+    final info = details == null
+        ? const <({String label, String value})>[]
+        : <({String label, String value})>[
+            if (details.overview.directors.isNotEmpty)
+              (
+                label: context.localized
+                    .director(details.overview.directors.length),
+                value: details.overview.directors.map((p) => p.name).join(', '),
+              ),
+            if (details.overview.writers.isNotEmpty)
+              (
+                label:
+                    context.localized.writer(details.overview.writers.length),
+                value: details.overview.writers.map((p) => p.name).join(', '),
+              ),
+            if (details.overview.studios.isNotEmpty)
+              (
+                label:
+                    context.localized.studio(details.overview.studios.length),
+                value: details.overview.studios.map((s) => s.name).join(', '),
+              ),
+            if (details.overview.yearAired != null)
+              (
+                label: context.localized.releaseDate,
+                value: details.overview.yearAired.toString()
+              ),
+            if (details.overview.productionLocations.isNotEmpty)
+              (
+                label: 'Pays',
+                value: details.overview.productionLocations.join(', ')
+              ),
+            if (details.overview.communityRating != null &&
+                details.overview.communityRating != 0)
+              (
+                label: context.localized.communityRating,
+                value: details.overview.communityRating!.toStringAsFixed(1)
+              ),
+            if (version?.container != null)
+              (label: 'Conteneur', value: version!.container!.toUpperCase()),
+            if (version?.videoStreams.firstOrNull?.codec.isNotEmpty ?? false)
+              (
+                label: 'Codec vidéo',
+                value: version!.videoStreams.first.codec.toUpperCase()
+              ),
+            if (currentEpisode
+                    ?.mediaStreams.currentAudioStream?.codec.isNotEmpty ??
+                false)
+              (
+                label: 'Codec audio',
+                value: currentEpisode!.mediaStreams.currentAudioStream!.codec
+                    .toUpperCase()
+              ),
+            if (formatFileSize(version?.size) != null)
+              (label: 'Taille', value: formatFileSize(version?.size)!),
+            if (formatBitrate(version?.bitrate) != null)
+              (label: 'Débit', value: formatBitrate(version?.bitrate)!),
+          ];
 
     return MediaDetailScaffold(
-      label: details.name,
-      item: details,
-      backDrops: details.images,
-      poster: details.getPosters?.primary,
+      label: item.name,
+      item: item,
+      backDrops: item.images,
+      poster: item.getPosters?.primary,
       onRefresh: () => ref.read(providerId.notifier).fetchDetails(widget.item),
-      title: details.name,
-      originalTitle: details.originalTitle,
+      title: item.name,
+      originalTitle: details?.originalTitle,
       metaLine: metaLine,
       onPlay: currentEpisode != null
           ? () async {
@@ -120,90 +138,95 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
               ref.read(providerId.notifier).fetchDetails(widget.item);
             }
           : null,
-      isFavourite: details.userData.isFavourite,
+      isFavourite: item.userData.isFavourite,
       onToggleFavourite: () => ref.read(userProvider.notifier).setAsFavorite(
-            !details.userData.isFavourite,
-            details.id,
+            !item.userData.isFavourite,
+            item.id,
           ),
-      isPlayed: details.userData.played,
+      isPlayed: item.userData.played,
       onTogglePlayed: () => ref.read(userProvider.notifier).markAsPlayed(
-            !details.userData.played,
-            details.id,
+            !item.userData.played,
+            item.id,
           ),
-      actions: (context) => details.generateActions(
-        context,
-        ref,
-        exclude: {
-          ItemActions.play,
-          ItemActions.playFromStart,
-          ItemActions.details,
-          ItemActions.markPlayed,
-          ItemActions.markUnplayed,
-          ItemActions.setFavorite,
-        },
-        onDeleteSuccesFully: (item) {
-          if (context.mounted) context.router.popBack();
-        },
-      ),
-      content: (context, padding) => [
-        if (details.overview.summary.isNotEmpty)
-          SliverPadding(
-            padding: padding,
-            sliver: SliverToBoxAdapter(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _readingWidth),
-                child: Text(
-                  details.overview.summary,
-                  style: Theme.of(context).textTheme.bodyMedium,
+      actions: details == null
+          ? null
+          : (context) => details.generateActions(
+                context,
+                ref,
+                exclude: {
+                  ItemActions.play,
+                  ItemActions.playFromStart,
+                  ItemActions.details,
+                  ItemActions.markPlayed,
+                  ItemActions.markUnplayed,
+                  ItemActions.setFavorite,
+                },
+                onDeleteSuccesFully: (item) {
+                  if (context.mounted) context.router.popBack();
+                },
+              ),
+      content: (context, padding) => details == null
+          ? []
+          : [
+              if (details.overview.summary.isNotEmpty)
+                SliverPadding(
+                  padding: padding,
+                  sliver: SliverToBoxAdapter(
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxWidth: _readingWidth),
+                      child: Text(
+                        details.overview.summary,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
-        // Saisons et épisodes juste sous le résumé, avant les sélecteurs de
-        // flux (qui concernent l'épisode "à suivre", pas la série entière).
-        if (details.seasons?.isNotEmpty ?? false)
-          SliverPadding(
-            padding: const EdgeInsets.only(top: AppSpacing.xl),
-            sliver: SliverToBoxAdapter(
-              child: SeasonEpisodeSection(
-                  seasons: details.seasons!, contentPadding: padding),
-            ),
-          ),
-        if (currentEpisode != null &&
-            (currentEpisode.mediaStreams.audioStreams.isNotEmpty ||
-                currentEpisode.mediaStreams.subStreams.isNotEmpty))
-          SliverPadding(
-            padding: padding.copyWith(top: AppSpacing.xl),
-            sliver: SliverToBoxAdapter(
-              child: MediaStreamSelectors(
-                mediaStream: currentEpisode.mediaStreams,
-                onChanged: (changed) =>
-                    ref.read(providerId.notifier).updateEpisodeInfo(
-                          currentEpisode.copyWith(mediaStreams: changed),
-                        ),
-              ),
-            ),
-          ),
-        if (details.overview.people.isNotEmpty || info.isNotEmpty)
-          SliverPadding(
-            padding: const EdgeInsets.only(top: AppSpacing.xl),
-            sliver: SliverToBoxAdapter(
-              child: MediaInfoSection(
-                  people: details.overview.people,
-                  info: info,
-                  contentPadding: padding),
-            ),
-          ),
-        if (details.related.isNotEmpty)
-          SliverPadding(
-            padding: const EdgeInsets.only(top: AppSpacing.xl),
-            sliver: SingleRowSection(
-              title: context.localized.related,
-              items: details.related,
-              contentPadding: padding,
-            ),
-          ),
-      ],
+              // Saisons et épisodes juste sous le résumé, avant les sélecteurs de
+              // flux (qui concernent l'épisode "à suivre", pas la série entière).
+              if (details.seasons?.isNotEmpty ?? false)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: SeasonEpisodeSection(
+                        seasons: details.seasons!, contentPadding: padding),
+                  ),
+                ),
+              if (currentEpisode != null &&
+                  (currentEpisode.mediaStreams.audioStreams.isNotEmpty ||
+                      currentEpisode.mediaStreams.subStreams.isNotEmpty))
+                SliverPadding(
+                  padding: padding.copyWith(top: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: MediaStreamSelectors(
+                      mediaStream: currentEpisode.mediaStreams,
+                      onChanged: (changed) =>
+                          ref.read(providerId.notifier).updateEpisodeInfo(
+                                currentEpisode.copyWith(mediaStreams: changed),
+                              ),
+                    ),
+                  ),
+                ),
+              if (details.overview.people.isNotEmpty || info.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: MediaInfoSection(
+                        people: details.overview.people,
+                        info: info,
+                        contentPadding: padding),
+                  ),
+                ),
+              if (details.related.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: SingleRowSection(
+                    title: context.localized.related,
+                    items: details.related,
+                    contentPadding: padding,
+                  ),
+                ),
+            ],
     );
   }
 }
