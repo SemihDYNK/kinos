@@ -8,9 +8,10 @@ import 'package:fladder/models/items/series_model.dart';
 import 'package:fladder/providers/items/series_details_provider.dart';
 import 'package:fladder/providers/user_provider.dart';
 import 'package:fladder/screens/dashboard/single_row_section.dart';
+import 'package:fladder/screens/details_screens/components/media_info_formatters.dart';
+import 'package:fladder/screens/details_screens/components/media_info_section.dart';
 import 'package:fladder/screens/details_screens/components/media_meta_line.dart';
 import 'package:fladder/screens/details_screens/components/media_stream_selectors.dart';
-import 'package:fladder/screens/shared/media/media_cast_row.dart';
 import 'package:fladder/screens/shared/media/season_episode_section.dart';
 import 'package:fladder/screens/shared/media_detail_scaffold.dart';
 import 'package:fladder/theme/app_theme.dart';
@@ -24,12 +25,13 @@ class SeriesDetailScreen extends ConsumerStatefulWidget {
   const SeriesDetailScreen({required this.item, super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _SeriesDetailScreenState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _SeriesDetailScreenState();
 }
 
 class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
-  AutoDisposeStateNotifierProvider<SeriesDetailViewNotifier, SeriesModel?> get providerId =>
-      seriesDetailsProvider(widget.item.id);
+  AutoDisposeStateNotifierProvider<SeriesDetailViewNotifier, SeriesModel?>
+      get providerId => seriesDetailsProvider(widget.item.id);
 
   /// Largeur de lecture confortable pour le résumé — ~80 caractères.
   static const _readingWidth = 640.0;
@@ -43,7 +45,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
     }
 
     final currentEpisode = details.nextUp;
-    final resolution = currentEpisode?.mediaStreams.currentVersionStream?.detailedResolutionLabel;
+    final resolution = currentEpisode
+        ?.mediaStreams.currentVersionStream?.detailedResolutionLabel;
     final metaLine = buildMediaMetaLine(
       year: details.overview.yearAired,
       runTime: details.overview.runTime,
@@ -52,10 +55,61 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
       genres: details.overview.genreItems.map((genre) => genre.name).toList(),
     );
 
+    final version = currentEpisode?.mediaStreams.currentVersionStream;
+    final info = <({String label, String value})>[
+      if (details.overview.directors.isNotEmpty)
+        (
+          label: context.localized.director(details.overview.directors.length),
+          value: details.overview.directors.map((p) => p.name).join(', '),
+        ),
+      if (details.overview.writers.isNotEmpty)
+        (
+          label: context.localized.writer(details.overview.writers.length),
+          value: details.overview.writers.map((p) => p.name).join(', '),
+        ),
+      if (details.overview.studios.isNotEmpty)
+        (
+          label: context.localized.studio(details.overview.studios.length),
+          value: details.overview.studios.map((s) => s.name).join(', '),
+        ),
+      if (details.overview.yearAired != null)
+        (
+          label: context.localized.releaseDate,
+          value: details.overview.yearAired.toString()
+        ),
+      if (details.overview.productionLocations.isNotEmpty)
+        (label: 'Pays', value: details.overview.productionLocations.join(', ')),
+      if (details.overview.communityRating != null &&
+          details.overview.communityRating != 0)
+        (
+          label: context.localized.communityRating,
+          value: details.overview.communityRating!.toStringAsFixed(1)
+        ),
+      if (version?.container != null)
+        (label: 'Conteneur', value: version!.container!.toUpperCase()),
+      if (version?.videoStreams.firstOrNull?.codec.isNotEmpty ?? false)
+        (
+          label: 'Codec vidéo',
+          value: version!.videoStreams.first.codec.toUpperCase()
+        ),
+      if (currentEpisode?.mediaStreams.currentAudioStream?.codec.isNotEmpty ??
+          false)
+        (
+          label: 'Codec audio',
+          value: currentEpisode!.mediaStreams.currentAudioStream!.codec
+              .toUpperCase()
+        ),
+      if (formatFileSize(version?.size) != null)
+        (label: 'Taille', value: formatFileSize(version?.size)!),
+      if (formatBitrate(version?.bitrate) != null)
+        (label: 'Débit', value: formatBitrate(version?.bitrate)!),
+    ];
+
     return MediaDetailScaffold(
       label: details.name,
       item: details,
       backDrops: details.images,
+      poster: details.getPosters?.primary,
       onRefresh: () => ref.read(providerId.notifier).fetchDetails(widget.item),
       title: details.name,
       originalTitle: details.originalTitle,
@@ -111,7 +165,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
           SliverPadding(
             padding: const EdgeInsets.only(top: AppSpacing.xl),
             sliver: SliverToBoxAdapter(
-              child: SeasonEpisodeSection(seasons: details.seasons!, contentPadding: padding),
+              child: SeasonEpisodeSection(
+                  seasons: details.seasons!, contentPadding: padding),
             ),
           ),
         if (currentEpisode != null &&
@@ -122,17 +177,21 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
             sliver: SliverToBoxAdapter(
               child: MediaStreamSelectors(
                 mediaStream: currentEpisode.mediaStreams,
-                onChanged: (changed) => ref.read(providerId.notifier).updateEpisodeInfo(
-                      currentEpisode.copyWith(mediaStreams: changed),
-                    ),
+                onChanged: (changed) =>
+                    ref.read(providerId.notifier).updateEpisodeInfo(
+                          currentEpisode.copyWith(mediaStreams: changed),
+                        ),
               ),
             ),
           ),
-        if (details.overview.people.isNotEmpty)
+        if (details.overview.people.isNotEmpty || info.isNotEmpty)
           SliverPadding(
             padding: const EdgeInsets.only(top: AppSpacing.xl),
             sliver: SliverToBoxAdapter(
-              child: MediaCastRow(people: details.overview.people, contentPadding: padding),
+              child: MediaInfoSection(
+                  people: details.overview.people,
+                  info: info,
+                  contentPadding: padding),
             ),
           ),
         if (details.related.isNotEmpty)

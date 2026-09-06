@@ -28,6 +28,10 @@ class OverviewModel with OverviewModelMappable {
   final List<String> tags;
   final List<Person> people;
   final String? seerrUrl;
+
+  /// Pays de production — affiché dans le panneau "Informations" de
+  /// l'écran de détail.
+  final List<String> productionLocations;
   const OverviewModel({
     this.runTime,
     this.summary = "",
@@ -46,14 +50,19 @@ class OverviewModel with OverviewModelMappable {
     this.tags = const [],
     this.people = const [],
     this.seerrUrl,
+    this.productionLocations = const [],
   });
 
   List<Person> get directors {
-    return people.where((element) => element.type == PersonKind.director).toList();
+    return people
+        .where((element) => element.type == PersonKind.director)
+        .toList();
   }
 
   List<Person> get writers {
-    return people.where((element) => element.type == PersonKind.writer).toList();
+    return people
+        .where((element) => element.type == PersonKind.writer)
+        .toList();
   }
 
   factory OverviewModel.fromBaseItemDto(BaseItemDto item, Ref? ref) {
@@ -68,14 +77,25 @@ class OverviewModel with OverviewModelMappable {
       communityRating: item.communityRating,
       tags: item.tags ?? [],
       dateAdded: item.dateCreated,
-      trickPlayInfo:
-          trickPlayItem != null && trickPlayItem.isNotEmpty ? TrickPlayModel.toTrickPlayMap(trickPlayItem) : null,
-      chapters:
-          (ref != null && item.id != null) ? Chapter.chaptersFromInfo(item.id ?? "", item.chapters ?? [], ref) : null,
-      studios: item.studios?.map((e) => Studio(id: e.id ?? "", name: e.name ?? "")).toList() ?? [],
-      genreItems: item.genreItems?.map((e) => GenreItems(id: e.id ?? "", name: e.name ?? "")).toList() ?? [],
+      trickPlayInfo: trickPlayItem != null && trickPlayItem.isNotEmpty
+          ? TrickPlayModel.toTrickPlayMap(trickPlayItem)
+          : null,
+      chapters: (ref != null && item.id != null)
+          ? Chapter.chaptersFromInfo(item.id ?? "", item.chapters ?? [], ref)
+          : null,
+      studios: item.studios
+              ?.map((e) => Studio(id: e.id ?? "", name: e.name ?? ""))
+              .toList() ??
+          [],
+      genreItems: item.genreItems
+              ?.map((e) => GenreItems(id: e.id ?? "", name: e.name ?? ""))
+              .toList() ??
+          [],
       externalUrls: ExternalUrls.fromDto(item.externalUrls ?? []),
-      people: ref != null ? Person.peopleFromDto(item.people ?? [], ref) : <Person>[],
+      people: ref != null
+          ? Person.peopleFromDto(item.people ?? [], ref)
+          : <Person>[],
+      productionLocations: item.productionLocations ?? [],
     );
   }
 }

@@ -37,6 +37,11 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
   final ImagesData? backDrops;
   final Future<void> Function()? onRefresh;
 
+  /// Affiche (jaquette Primary) posée à cheval sur le bandeau et le corps
+  /// — null si aucune n'est disponible (le titre reprend alors toute la
+  /// largeur du bandeau, sans décalage).
+  final ImageData? poster;
+
   final String title;
   final String? originalTitle;
   final String metaLine;
@@ -60,6 +65,7 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
     this.item,
     this.backDrops,
     this.onRefresh,
+    this.poster,
     required this.title,
     this.originalTitle,
     required this.metaLine,
@@ -74,7 +80,8 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MediaDetailScaffold> createState() => _MediaDetailScaffoldState();
+  ConsumerState<MediaDetailScaffold> createState() =>
+      _MediaDetailScaffoldState();
 }
 
 class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
@@ -124,7 +131,9 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   Future<void> _updateHeroPalette() async {
     final image = widget.backDrops?.randomBackDrop ?? widget.backDrops?.primary;
     final itemId = widget.item?.id;
-    if (image == null || itemId == null || identical(image, _lastPaletteImage)) {
+    if (image == null ||
+        itemId == null ||
+        identical(image, _lastPaletteImage)) {
       return;
     }
     _lastPaletteImage = image;
@@ -164,11 +173,30 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
     // décalé de sideBarInset — il lui faut donc le padding complet, pas
     // `innerPadding` (qui le retranche). L'oubli de cette distinction est
     // ce qui faisait passer tout le contenu sous la barre latérale.
-    final padding = AdaptiveLayout.adaptivePadding(context, horizontalPadding: AppSpacing.screenPadding);
+    final padding = AdaptiveLayout.adaptivePadding(context,
+        horizontalPadding: AppSpacing.screenPadding);
     final heroTint = context.tokens.heroTint;
     final heroTextSecondary = context.tokens.heroTextSecondary;
     final image = widget.backDrops?.randomBackDrop ?? widget.backDrops?.primary;
     final hasActions = widget.actions != null;
+
+    // Affiche à cheval sur le bandeau et le corps : 40% de sa hauteur dans
+    // le bandeau, 60% dessous. Le bloc titre se décale d'autant à droite
+    // (cf. _Banner.posterInset) ; le contenu (résumé, etc.) s'aligne déjà
+    // sur ce même bord gauche via `padding`, sans changement nécessaire.
+    final hasPoster = widget.poster != null;
+    final posterWidth = density == AppDensity.couch ? 260.0 : 200.0;
+    final posterHeight = posterWidth * 3 / 2;
+    // bottom: -posterBelowBanner avec une hauteur de posterHeight place le
+    // haut de l'affiche à (posterHeight - posterBelowBanner) = 40% de sa
+    // hauteur au-dessus du bord bas du bandeau — le reste (60%) déborde.
+    final posterBelowBanner = posterHeight * 0.6;
+    // Occupe l'espace du fondu au lieu d'une marge vide séparée : juste ce
+    // qu'il faut pour que l'affiche ait la place de déborder, plus un peu
+    // d'air avant le résumé.
+    final bleedHeight = hasPoster ? posterBelowBanner + AppSpacing.lg : 120.0;
+    final tintHoldFraction =
+        (minBannerHeight / (minBannerHeight + bleedHeight)).clamp(0.0, 1.0);
 
     return PullToRefresh(
       onRefresh: () async => await widget.onRefresh?.call(),
@@ -187,12 +215,13 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                 // fond lui-même dans la teinte à son propre bord bas (cf.
                 // _Banner, calque c bis) ; le dégradé ci-dessous prend le
                 // relais en pleine teinte à ce même point, puis s'étire sur
-                // une longue marge (280) avant de s'éteindre — fondu long,
-                // sans ligne de coupure. La fraction de palier (~0.65) est
-                // une approximation : le bandeau est à hauteur minimale
-                // extensible, sa hauteur réelle n'est pas connue ici : viser
-                // un peu court plutôt qu'un peu long n'a pas d'incidence
-                // visible, les deux calques sont alors déjà la même teinte.
+                // la marge de sortie (juste assez pour l'affiche, cf.
+                // bleedHeight) avant de s'éteindre — fondu long, sans ligne
+                // de coupure. tintHoldFraction est une approximation : le
+                // bandeau est à hauteur minimale extensible, sa hauteur
+                // réelle n'est pas connue ici : viser un peu court plutôt
+                // qu'un peu long n'a pas d'incidence visible, les deux
+                // calques sont alors déjà la même teinte.
                 SliverPadding(
                   padding: EdgeInsetsDirectional.only(start: sideBarInset),
                   sliver: DecoratedSliver(
@@ -200,31 +229,53 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        stops: const [0, 0.65, 1],
+                        stops: [0, tintHoldFraction, 1],
                         colors: [heroTint, heroTint, AppColors.background],
                       ),
                     ),
                     sliver: SliverMainAxisGroup(
                       slivers: [
                         SliverToBoxAdapter(
-                          child: _Banner(
-                            minHeight: minBannerHeight,
-                            maxHeight: maxBannerHeight,
-                            image: image,
-                            heroTint: heroTint,
-                            heroTextSecondary: heroTextSecondary,
-                            title: widget.title,
-                            originalTitle: widget.originalTitle,
-                            metaLine: widget.metaLine,
-                            onPlay: widget.onPlay,
-                            isFavourite: widget.isFavourite,
-                            onToggleFavourite: widget.onToggleFavourite,
-                            isPlayed: widget.isPlayed,
-                            onTogglePlayed: widget.onTogglePlayed,
-                            onMore: hasActions ? () => _showActions(context) : null,
+                          // clipBehavior.none : l'affiche déborde
+                          // volontairement sous le bandeau (point 2) — rien
+                          // d'opaque ne la recouvre dans la marge de sortie
+                          // ci-dessous, elle reste visible par-dessus.
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              _Banner(
+                                minHeight: minBannerHeight,
+                                maxHeight: maxBannerHeight,
+                                image: image,
+                                heroTint: heroTint,
+                                heroTextSecondary: heroTextSecondary,
+                                posterInset:
+                                    hasPoster ? posterWidth + AppSpacing.lg : 0,
+                                title: widget.title,
+                                originalTitle: widget.originalTitle,
+                                metaLine: widget.metaLine,
+                                onPlay: widget.onPlay,
+                                isFavourite: widget.isFavourite,
+                                onToggleFavourite: widget.onToggleFavourite,
+                                isPlayed: widget.isPlayed,
+                                onTogglePlayed: widget.onTogglePlayed,
+                                onMore: hasActions
+                                    ? () => _showActions(context)
+                                    : null,
+                              ),
+                              if (hasPoster)
+                                Positioned(
+                                  left: AppSpacing.screenPadding,
+                                  bottom: -posterBelowBanner,
+                                  width: posterWidth,
+                                  height: posterHeight,
+                                  child: _PosterCard(image: widget.poster),
+                                ),
+                            ],
                           ),
                         ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 280)),
+                        SliverToBoxAdapter(
+                            child: SizedBox(height: bleedHeight)),
                       ],
                     ),
                   ),
@@ -264,6 +315,10 @@ class _Banner extends StatelessWidget {
   final ImageData? image;
   final Color heroTint;
   final Color heroTextSecondary;
+
+  /// Espace réservé à gauche pour l'affiche qui déborde par-dessus (0 si
+  /// aucune) — le bloc de texte s'en décale d'autant.
+  final double posterInset;
   final String title;
   final String? originalTitle;
   final String metaLine;
@@ -280,6 +335,7 @@ class _Banner extends StatelessWidget {
     required this.image,
     required this.heroTint,
     required this.heroTextSecondary,
+    required this.posterInset,
     required this.title,
     required this.originalTitle,
     required this.metaLine,
@@ -293,7 +349,8 @@ class _Banner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showOriginalTitle = originalTitle != null && originalTitle!.toLowerCase() != title.toLowerCase();
+    final showOriginalTitle = originalTitle != null &&
+        originalTitle!.toLowerCase() != title.toLowerCase();
     final secondaryButtonStyle = IconButton.styleFrom(
       side: BorderSide(color: heroTextSecondary),
       foregroundColor: heroTextSecondary,
@@ -313,7 +370,8 @@ class _Banner extends StatelessWidget {
             // a. Fond teinté — visible au chargement et sur les bords.
             Positioned.fill(child: ColoredBox(color: heroTint)),
             // b. Backdrop plein cadre, cover.
-            Positioned.fill(child: FladderImage(image: image, fit: BoxFit.cover)),
+            Positioned.fill(
+                child: FladderImage(image: image, fit: BoxFit.cover)),
             // c. Fondu vers la teinte en bas de l'image : elle se fond
             // directement dans le fond teinté, pas de bord net entre
             // l'image et la teinte qui déborde ensuite sous le bandeau.
@@ -361,11 +419,17 @@ class _Banner extends StatelessWidget {
                 ),
               ),
             ),
-            // f. Bloc de texte, aligné en bas à gauche sur screenPadding —
-            // seul enfant non positionné : c'est lui qui pilote la hauteur
-            // du Stack entre minHeight et maxHeight.
+            // f. Bloc de texte, aligné en bas à gauche sur screenPadding
+            // (+ posterInset s'il y a une affiche à côté) — seul enfant non
+            // positionné : c'est lui qui pilote la hauteur du Stack entre
+            // minHeight et maxHeight.
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.screenPadding),
+              padding: EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.screenPadding + posterInset,
+                AppSpacing.screenPadding,
+                AppSpacing.screenPadding,
+                AppSpacing.screenPadding,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,7 +438,10 @@ class _Banner extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(color: AppColors.textPrimary),
+                    style: Theme.of(context)
+                        .textTheme
+                        .displayLarge
+                        ?.copyWith(color: AppColors.textPrimary),
                   ),
                   if (showOriginalTitle)
                     Padding(
@@ -383,10 +450,9 @@ class _Banner extends StatelessWidget {
                         originalTitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.55)),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color:
+                                AppColors.textPrimary.withValues(alpha: 0.55)),
                       ),
                     ),
                   if (metaLine.isNotEmpty) ...[
@@ -395,10 +461,8 @@ class _Banner extends StatelessWidget {
                       metaLine,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.75)),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textPrimary.withValues(alpha: 0.75)),
                     ),
                   ],
                   const SizedBox(height: AppSpacing.md),
@@ -407,7 +471,8 @@ class _Banner extends StatelessWidget {
                     children: [
                       if (onPlay != null)
                         FocusRing(
-                          autofocus: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad,
+                          autofocus: AdaptiveLayout.inputDeviceOf(context) ==
+                              InputDevice.dPad,
                           onActivate: onPlay,
                           child: ExcludeFocus(
                             child: FilledButton.icon(
@@ -427,7 +492,9 @@ class _Banner extends StatelessWidget {
                               style: secondaryButtonStyle,
                               onPressed: onToggleFavourite,
                               icon: Icon(
-                                isFavourite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                isFavourite
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
                               ),
                             ),
                           ),
@@ -442,7 +509,9 @@ class _Banner extends StatelessWidget {
                               style: secondaryButtonStyle,
                               onPressed: onTogglePlayed,
                               icon: Icon(
-                                isPlayed ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
+                                isPlayed
+                                    ? Icons.check_circle_rounded
+                                    : Icons.check_circle_outline_rounded,
                               ),
                             ),
                           ),
@@ -467,6 +536,30 @@ class _Banner extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Affiche à cheval sur le bandeau et le corps. "Élévation par la valeur,
+/// jamais par l'ombre" (cf. CLAUDE.md) : pas de BoxShadow, juste un liseré
+/// pour la détacher des deux fonds très proches (teinte, puis background)
+/// sur lesquels elle se pose.
+class _PosterCard extends StatelessWidget {
+  final ImageData? image;
+
+  const _PosterCard({required this.image});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: AppRadii.cardBorder,
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: ClipRRect(
+        borderRadius: AppRadii.cardBorder,
+        child: FladderImage(image: image, fit: BoxFit.cover),
       ),
     );
   }

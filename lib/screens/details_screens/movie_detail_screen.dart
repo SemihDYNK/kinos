@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:intl/intl.dart';
+
 import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/providers/items/movies_details_provider.dart';
 import 'package:fladder/providers/user_provider.dart';
 import 'package:fladder/screens/dashboard/single_row_section.dart';
+import 'package:fladder/screens/details_screens/components/media_info_formatters.dart';
+import 'package:fladder/screens/details_screens/components/media_info_section.dart';
 import 'package:fladder/screens/details_screens/components/media_meta_line.dart';
 import 'package:fladder/screens/details_screens/components/media_stream_selectors.dart';
-import 'package:fladder/screens/shared/media/media_cast_row.dart';
 import 'package:fladder/screens/shared/media_detail_scaffold.dart';
 import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
@@ -22,11 +25,13 @@ class MovieDetailScreen extends ConsumerStatefulWidget {
   const MovieDetailScreen({required this.item, super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ItemDetailScreenState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _ItemDetailScreenState();
 }
 
 class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
-  MovieDetailsProvider get providerInstance => movieDetailsProvider(widget.item.id);
+  MovieDetailsProvider get providerInstance =>
+      movieDetailsProvider(widget.item.id);
 
   /// Largeur de lecture confortable pour le résumé — ~80 caractères, ni un
   /// bloc étalé sur toute la largeur de l'écran, ni tronqué.
@@ -40,7 +45,8 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
       return const SizedBox.shrink();
     }
 
-    final resolution = details.mediaStreams.currentVersionStream?.detailedResolutionLabel;
+    final resolution =
+        details.mediaStreams.currentVersionStream?.detailedResolutionLabel;
     final metaLine = buildMediaMetaLine(
       year: details.premiereDate.year,
       runTime: details.overview.runTime,
@@ -49,11 +55,61 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
       genres: details.overview.genreItems.map((genre) => genre.name).toList(),
     );
 
+    final version = details.mediaStreams.currentVersionStream;
+    final info = <({String label, String value})>[
+      if (details.overview.directors.isNotEmpty)
+        (
+          label: context.localized.director(details.overview.directors.length),
+          value: details.overview.directors.map((p) => p.name).join(', ')
+        ),
+      if (details.overview.writers.isNotEmpty)
+        (
+          label: context.localized.writer(details.overview.writers.length),
+          value: details.overview.writers.map((p) => p.name).join(', ')
+        ),
+      if (details.overview.studios.isNotEmpty)
+        (
+          label: context.localized.studio(details.overview.studios.length),
+          value: details.overview.studios.map((s) => s.name).join(', ')
+        ),
+      (
+        label: context.localized.releaseDate,
+        value: DateFormat.yMMMd(Localizations.localeOf(context).toString())
+            .format(details.premiereDate)
+      ),
+      if (details.overview.productionLocations.isNotEmpty)
+        (label: 'Pays', value: details.overview.productionLocations.join(', ')),
+      if (details.overview.communityRating != null &&
+          details.overview.communityRating != 0)
+        (
+          label: context.localized.communityRating,
+          value: details.overview.communityRating!.toStringAsFixed(1)
+        ),
+      if (version?.container != null)
+        (label: 'Conteneur', value: version!.container!.toUpperCase()),
+      if (version?.videoStreams.firstOrNull?.codec.isNotEmpty ?? false)
+        (
+          label: 'Codec vidéo',
+          value: version!.videoStreams.first.codec.toUpperCase()
+        ),
+      if (details.mediaStreams.currentAudioStream?.codec.isNotEmpty ?? false)
+        (
+          label: 'Codec audio',
+          value: details.mediaStreams.currentAudioStream!.codec.toUpperCase()
+        ),
+      if (formatFileSize(version?.size) != null)
+        (label: 'Taille', value: formatFileSize(version?.size)!),
+      if (formatBitrate(version?.bitrate) != null)
+        (label: 'Débit', value: formatBitrate(version?.bitrate)!),
+    ];
+
     return MediaDetailScaffold(
       label: details.name,
       item: details,
       backDrops: details.images,
-      onRefresh: () async => await ref.read(providerInstance.notifier).fetchDetails(widget.item),
+      poster: details.getPosters?.primary,
+      onRefresh: () async =>
+          await ref.read(providerInstance.notifier).fetchDetails(widget.item),
       title: details.name,
       originalTitle: details.originalTitle,
       metaLine: metaLine,
@@ -100,21 +156,27 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
               ),
             ),
           ),
-        if (details.mediaStreams.audioStreams.isNotEmpty || details.mediaStreams.subStreams.isNotEmpty)
+        if (details.mediaStreams.audioStreams.isNotEmpty ||
+            details.mediaStreams.subStreams.isNotEmpty)
           SliverPadding(
             padding: padding.copyWith(top: AppSpacing.lg),
             sliver: SliverToBoxAdapter(
               child: MediaStreamSelectors(
                 mediaStream: details.mediaStreams,
-                onChanged: (changed) => ref.read(providerInstance.notifier).setMediaStreamHelper(changed),
+                onChanged: (changed) => ref
+                    .read(providerInstance.notifier)
+                    .setMediaStreamHelper(changed),
               ),
             ),
           ),
-        if (details.overview.people.isNotEmpty)
+        if (details.overview.people.isNotEmpty || info.isNotEmpty)
           SliverPadding(
             padding: const EdgeInsets.only(top: AppSpacing.xl),
             sliver: SliverToBoxAdapter(
-              child: MediaCastRow(people: details.overview.people, contentPadding: padding),
+              child: MediaInfoSection(
+                  people: details.overview.people,
+                  info: info,
+                  contentPadding: padding),
             ),
           ),
         if (details.related.isNotEmpty)

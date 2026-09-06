@@ -23,10 +23,13 @@ class MediaStreamsModel {
     required this.versionStreams,
   });
 
-  VersionStreamModel? get currentVersionStream => versionStreams.elementAtOrNull(versionStreamIndex ?? 0);
+  VersionStreamModel? get currentVersionStream =>
+      versionStreams.elementAtOrNull(versionStreamIndex ?? 0);
 
-  List<VideoStreamModel> get videoStreams => currentVersionStream?.videoStreams ?? [];
-  List<AudioStreamModel> get audioStreams => currentVersionStream?.audioStreams ?? [];
+  List<VideoStreamModel> get videoStreams =>
+      currentVersionStream?.videoStreams ?? [];
+  List<AudioStreamModel> get audioStreams =>
+      currentVersionStream?.audioStreams ?? [];
   List<SubStreamModel> get subStreams => currentVersionStream?.subStreams ?? [];
 
   bool get isNull {
@@ -44,7 +47,8 @@ class MediaStreamsModel {
     if (defaultAudioStreamIndex == -1 || defaultAudioStreamIndex == null) {
       return AudioStreamModel.no();
     }
-    return audioStreams.firstWhereOrNull((element) => element.index == defaultAudioStreamIndex) ??
+    return audioStreams.firstWhereOrNull(
+            (element) => element.index == defaultAudioStreamIndex) ??
         audioStreams.firstOrNull;
   }
 
@@ -52,7 +56,9 @@ class MediaStreamsModel {
     if (defaultSubStreamIndex == -1 || defaultSubStreamIndex == null) {
       return SubStreamModel.no();
     }
-    return subStreams.firstWhereOrNull((element) => element.index == defaultSubStreamIndex) ?? subStreams.firstOrNull;
+    return subStreams.firstWhereOrNull(
+            (element) => element.index == defaultSubStreamIndex) ??
+        subStreams.firstOrNull;
   }
 
   DisplayProfile? get displayProfile {
@@ -75,7 +81,9 @@ class MediaStreamsModel {
     BuildContext context,
     Function()? onTap,
   ) {
-    final audioStream = audioStreams.firstWhereOrNull((element) => element.isDefault) ?? audioStreams.firstOrNull;
+    final audioStream =
+        audioStreams.firstWhereOrNull((element) => element.isDefault) ??
+            audioStreams.firstOrNull;
     if (audioStream == null) return null;
     return DefaultVideoInformationBox(
       onTap: onTap,
@@ -92,7 +100,9 @@ class MediaStreamsModel {
     return DefaultVideoInformationBox(
       onTap: onTap,
       child: Icon(
-        subStreams.isNotEmpty ? Icons.subtitles_rounded : Icons.subtitles_off_outlined,
+        subStreams.isNotEmpty
+            ? Icons.subtitles_rounded
+            : Icons.subtitles_off_outlined,
       ),
     );
   }
@@ -102,8 +112,10 @@ class MediaStreamsModel {
     Ref ref,
   ) {
     return MediaStreamsModel(
-        defaultAudioStreamIndex: mediaSource?.firstOrNull?.defaultAudioStreamIndex,
-        defaultSubStreamIndex: mediaSource?.firstOrNull?.defaultSubtitleStreamIndex,
+        defaultAudioStreamIndex:
+            mediaSource?.firstOrNull?.defaultAudioStreamIndex,
+        defaultSubStreamIndex:
+            mediaSource?.firstOrNull?.defaultSubtitleStreamIndex,
         versionStreams: mediaSource?.mapIndexed(
               (index, element) {
                 final streams = element.mediaStreams ?? [];
@@ -113,20 +125,26 @@ class MediaStreamsModel {
                     id: element.id,
                     defaultAudioStreamIndex: element.defaultAudioStreamIndex,
                     defaultSubStreamIndex: element.defaultSubtitleStreamIndex,
+                    container: element.container,
+                    size: element.size,
+                    bitrate: element.bitrate,
                     videoStreams: streams
-                        .where((element) => element.type == dto.MediaStreamType.video)
+                        .where((element) =>
+                            element.type == dto.MediaStreamType.video)
                         .map(
                           (e) => VideoStreamModel.fromMediaStream(e),
                         )
                         .sortByExternal(),
                     audioStreams: streams
-                        .where((element) => element.type == dto.MediaStreamType.audio)
+                        .where((element) =>
+                            element.type == dto.MediaStreamType.audio)
                         .map(
                           (e) => AudioStreamModel.fromMediaStream(e),
                         )
                         .sortByExternal(),
                     subStreams: streams
-                        .where((element) => element.type == dto.MediaStreamType.subtitle)
+                        .where((element) =>
+                            element.type == dto.MediaStreamType.subtitle)
                         .map(
                           (sub) => SubStreamModel.fromMediaStream(sub, ref),
                         )
@@ -142,15 +160,20 @@ class MediaStreamsModel {
     int? defaultSubStreamIndex,
     List<VersionStreamModel>? versionStreams,
   }) {
-    final streamIndexChanged = versionStreamIndex != this.versionStreamIndex && versionStreamIndex != null;
+    final streamIndexChanged = versionStreamIndex != this.versionStreamIndex &&
+        versionStreamIndex != null;
     final currentVersionStreams = versionStreams ?? this.versionStreams;
     return MediaStreamsModel(
       versionStreamIndex: versionStreamIndex ?? this.versionStreamIndex,
       defaultAudioStreamIndex: streamIndexChanged
-          ? currentVersionStreams.elementAtOrNull(versionStreamIndex)?.defaultAudioStreamIndex
+          ? currentVersionStreams
+              .elementAtOrNull(versionStreamIndex)
+              ?.defaultAudioStreamIndex
           : defaultAudioStreamIndex ?? this.defaultAudioStreamIndex,
       defaultSubStreamIndex: streamIndexChanged
-          ? currentVersionStreams.elementAtOrNull(versionStreamIndex)?.defaultSubStreamIndex
+          ? currentVersionStreams
+              .elementAtOrNull(versionStreamIndex)
+              ?.defaultSubStreamIndex
           : defaultSubStreamIndex ?? this.defaultSubStreamIndex,
       versionStreams: versionStreams ?? this.versionStreams,
     );
@@ -201,6 +224,12 @@ class VersionStreamModel {
   final List<AudioStreamModel> audioStreams;
   final List<SubStreamModel> subStreams;
 
+  /// Conteneur (ex. "mkv"), taille en octets et débit global du fichier —
+  /// affichés dans le panneau "Informations" de l'écran de détail.
+  final String? container;
+  final int? size;
+  final int? bitrate;
+
   String get detailedResolutionLabel {
     final stream = videoStreams.firstOrNull;
     if (stream == null) return "Unknown";
@@ -218,6 +247,9 @@ class VersionStreamModel {
     required this.videoStreams,
     required this.audioStreams,
     required this.subStreams,
+    this.container,
+    this.size,
+    this.bitrate,
   });
 }
 
@@ -270,7 +302,10 @@ class VideoStreamModel extends StreamModel {
 //Instead of using sortBy(a.isExternal etc..) this one seems to be more consistent for some reason
 extension SortByExternalExtension<T extends StreamModel> on Iterable<T> {
   List<T> sortByExternal() {
-    return [...where((element) => !element.isExternal), ...where((element) => element.isExternal)];
+    return [
+      ...where((element) => !element.isExternal),
+      ...where((element) => element.isExternal)
+    ];
   }
 }
 
@@ -327,15 +362,23 @@ class AudioStreamModel extends AudioAndSubStreamModel {
     }
   }
 
-  String get title =>
-      [name, language, codec, channelLayout].nonNulls.where((element) => element.isNotEmpty).join(' - ');
+  String get title => [name, language, codec, channelLayout]
+      .nonNulls
+      .where((element) => element.isNotEmpty)
+      .join(' - ');
 
   String get shortTitle {
-    final parts = [language, channelLayout].nonNulls.where((element) => element.isNotEmpty).toList();
+    final parts = [language, channelLayout]
+        .nonNulls
+        .where((element) => element.isNotEmpty)
+        .toList();
     if (parts.isEmpty) {
       return displayTitle;
     } else {
-      return parts.nonNulls.where((element) => element.isNotEmpty).join(' - ').toUpperCase();
+      return parts.nonNulls
+          .where((element) => element.isNotEmpty)
+          .join(' - ')
+          .toUpperCase();
     }
   }
 
@@ -399,20 +442,28 @@ class SubStreamModel extends AudioAndSubStreamModel {
   }
 
   String get shortTitle {
-    final parts = [language].nonNulls.where((element) => element.isNotEmpty).toList();
+    final parts =
+        [language].nonNulls.where((element) => element.isNotEmpty).toList();
     if (parts.isEmpty) {
       return displayTitle;
     } else {
-      return parts.nonNulls.where((element) => element.isNotEmpty).join(' - ').toUpperCase();
+      return parts.nonNulls
+          .where((element) => element.isNotEmpty)
+          .join(' - ')
+          .toUpperCase();
     }
   }
 
   factory SubStreamModel.fromMediaStream(dto.MediaStream stream, Ref ref) {
     final deliveryUrl = stream.deliveryUrl;
     final deliveryUri = Uri.tryParse(deliveryUrl ?? '');
-    final relativeSrtUrl = deliveryUri?.replace(path: deliveryUri.path.replaceAll('.vtt', '.srt')).toString();
+    final relativeSrtUrl = deliveryUri
+        ?.replace(path: deliveryUri.path.replaceAll('.vtt', '.srt'))
+        .toString();
 
-    final subStreamUrl = relativeSrtUrl == null ? null : buildServerUrl(ref, relativeUrl: relativeSrtUrl);
+    final subStreamUrl = relativeSrtUrl == null
+        ? null
+        : buildServerUrl(ref, relativeUrl: relativeSrtUrl);
 
     return SubStreamModel(
       name: stream.title ?? "",
@@ -449,7 +500,8 @@ class SubStreamModel extends AudioAndSubStreamModel {
       displayTitle: displayTitle ?? this.displayTitle,
       language: language ?? this.language,
       url: url != null ? url() : this.url,
-      supportsExternalStream: supportsExternalStream ?? this.supportsExternalStream,
+      supportsExternalStream:
+          supportsExternalStream ?? this.supportsExternalStream,
       codec: codec ?? this.codec,
       isDefault: isDefault ?? this.isDefault,
       isExternal: isExternal ?? this.isExternal,
@@ -491,7 +543,8 @@ class SubStreamModel extends AudioAndSubStreamModel {
 
   String toJson() => json.encode(toMap());
 
-  factory SubStreamModel.fromJson(String source) => SubStreamModel.fromMap(json.decode(source));
+  factory SubStreamModel.fromJson(String source) =>
+      SubStreamModel.fromMap(json.decode(source));
 
   @override
   String toString() {
