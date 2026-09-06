@@ -160,7 +160,9 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel> {
         onEnter: (_) => setState(() => _hovering = true),
         onExit: (_) => setState(() => _hovering = false),
         child: ClipRRect(
-          borderRadius: AppRadii.cardBorder,
+          // Bandeau plein cadre, jusqu'aux bords de la zone de contenu :
+          // pas de coins arrondis, contrairement aux cartes de jaquettes.
+          borderRadius: BorderRadius.zero,
           child: ConstrainedBox(
             // Hauteur minimale, extensible si le titre (2 lignes max) le
             // demande — jamais de débordement : le contenu pilote la

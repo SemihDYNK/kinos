@@ -96,7 +96,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return const MusicDashboardScreen();
     }
 
-    final padding = AdaptiveLayout.adaptivePadding(context);
+    // horizontalPadding: AppSpacing.screenPadding — explicite, sinon
+    // adaptivePadding retombe sur son défaut interne (12) : le bandeau
+    // aligne son contenu sur AppSpacing.screenPadding, donc les titres de
+    // section en dessous (qui partagent ce même `padding`) doivent viser la
+    // même valeur pour rester alignés verticalement avec lui.
+    final padding = AdaptiveLayout.adaptivePadding(context,
+        horizontalPadding: AppSpacing.screenPadding);
     // `padding` inclut déjà la largeur de la barre latérale (cf.
     // AdaptiveLayout.adaptivePadding) : la barre latérale n'est pas une
     // colonne séparée, c'est un calque semi-transparent posé par-dessus un
@@ -180,12 +186,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 sliver: SliverMainAxisGroup(
                   slivers: [
+                    // Pleine largeur, jusqu'aux bords : pas de SliverPadding
+                    // ici, contrairement au reste de la page. L'alignement
+                    // de son contenu (sur-titre, titre, etc.) avec les
+                    // titres de section en dessous vient uniquement du
+                    // padding interne du bandeau (AppSpacing.screenPadding),
+                    // pas d'un padding externe superposé.
                     if (heroItems.isNotEmpty)
-                      SliverPadding(
-                        padding: innerPadding.copyWith(top: 0, bottom: 0),
-                        sliver: SliverToBoxAdapter(
-                          child: HeroCarousel(items: heroItems),
-                        ),
+                      SliverToBoxAdapter(
+                        child: HeroCarousel(items: heroItems),
                       ),
                     SliverPadding(
                       padding: EdgeInsets.only(
