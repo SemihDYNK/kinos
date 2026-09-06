@@ -269,7 +269,11 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                                   bottom: -posterBelowBanner,
                                   width: posterWidth,
                                   height: posterHeight,
-                                  child: _PosterCard(image: widget.poster),
+                                  child: _PosterCard(
+                                    image: widget.poster,
+                                    width: posterWidth,
+                                    height: posterHeight,
+                                  ),
                                 ),
                             ],
                           ),
@@ -545,21 +549,38 @@ class _Banner extends StatelessWidget {
 /// jamais par l'ombre" (cf. CLAUDE.md) : pas de BoxShadow, juste un liseré
 /// pour la détacher des deux fonds très proches (teinte, puis background)
 /// sur lesquels elle se pose.
+///
+/// [width]/[height] sont redondants avec le [Positioned] qui l'entoure côté
+/// appelant (déjà contraint en toute rigueur) — imposés ici aussi,
+/// explicitement, pour qu'elle ne dépende jamais uniquement de ce parent.
 class _PosterCard extends StatelessWidget {
   final ImageData? image;
+  final double width;
+  final double height;
 
-  const _PosterCard({required this.image});
+  const _PosterCard({
+    required this.image,
+    required this.width,
+    required this.height,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: AppRadii.cardBorder,
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: ClipRRect(
-        borderRadius: AppRadii.cardBorder,
-        child: FladderImage(image: image, fit: BoxFit.cover),
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: AppRadii.cardBorder,
+          border: Border.all(color: AppColors.borderStrong),
+        ),
+        child: ClipRRect(
+          borderRadius: AppRadii.cardBorder,
+          child: AspectRatio(
+            aspectRatio: 2 / 3,
+            child: FladderImage(image: image, fit: BoxFit.cover),
+          ),
+        ),
       ),
     );
   }
