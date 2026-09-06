@@ -6,6 +6,7 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/screens/shared/media/banner_play_button.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/focus_provider.dart';
@@ -48,13 +49,17 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
           builder: (context, constraints) {
             final maxExtent = (constraints.maxHeight * 2.1).clamp(
               250.0,
-              (MediaQuery.sizeOf(context).shortestSide * 0.75).clamp(251.0, double.maxFinite),
+              (MediaQuery.sizeOf(context).shortestSide * 0.75)
+                  .clamp(251.0, double.maxFinite),
             );
             final border = BorderRadius.circular(18);
-            final itemExtent = widget.items.length == 1 ? MediaQuery.sizeOf(context).width : maxExtent;
+            final itemExtent = widget.items.length == 1
+                ? MediaQuery.sizeOf(context).width
+                : maxExtent;
 
             return Padding(
-              padding: EdgeInsets.only(top: AdaptiveLayout.of(context).isDesktop ? 6 : 10),
+              padding: EdgeInsets.only(
+                  top: AdaptiveLayout.of(context).isDesktop ? 6 : 10),
               child: Stack(
                 children: [
                   CarouselView(
@@ -71,43 +76,58 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
                           builder: (context, constraints) {
                             final opacity = (constraints.maxWidth / maxExtent);
                             return FocusButton(
-                              onTap: () => widget.items[index].navigateTo(context),
+                              onTap: () =>
+                                  widget.items[index].navigateTo(context),
                               borderRadius: border,
                               onFocusChanged: (focused) {
                                 if (focused) {
                                   parentContext.ensureVisible();
                                 }
                               },
-                              onLongPress: AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer
-                                  ? null
-                                  : () {
-                                      final poster = widget.items[index];
-                                      showBottomSheetPill(
-                                        context: context,
-                                        item: poster,
-                                        content: (scrollContext, scrollController) => ListView(
-                                          shrinkWrap: true,
-                                          controller: scrollController,
-                                          children: poster
-                                              .generateActions(context, ref)
-                                              .listTileItems(scrollContext, useIcons: true),
-                                        ),
-                                      );
-                                    },
-                              onSecondaryTapDown: AdaptiveLayout.inputDeviceOf(context) == InputDevice.touch
-                                  ? null
-                                  : (details) async {
-                                      Offset localPosition = details.globalPosition;
-                                      RelativeRect position = RelativeRect.fromLTRB(
-                                          localPosition.dx, localPosition.dy, localPosition.dx, localPosition.dy);
-                                      final poster = widget.items[index];
+                              onLongPress:
+                                  AdaptiveLayout.inputDeviceOf(context) ==
+                                          InputDevice.pointer
+                                      ? null
+                                      : () {
+                                          final poster = widget.items[index];
+                                          showBottomSheetPill(
+                                            context: context,
+                                            item: poster,
+                                            content: (scrollContext,
+                                                    scrollController) =>
+                                                ListView(
+                                              shrinkWrap: true,
+                                              controller: scrollController,
+                                              children: poster
+                                                  .generateActions(context, ref)
+                                                  .listTileItems(scrollContext,
+                                                      useIcons: true),
+                                            ),
+                                          );
+                                        },
+                              onSecondaryTapDown:
+                                  AdaptiveLayout.inputDeviceOf(context) ==
+                                          InputDevice.touch
+                                      ? null
+                                      : (details) async {
+                                          Offset localPosition =
+                                              details.globalPosition;
+                                          RelativeRect position =
+                                              RelativeRect.fromLTRB(
+                                                  localPosition.dx,
+                                                  localPosition.dy,
+                                                  localPosition.dx,
+                                                  localPosition.dy);
+                                          final poster = widget.items[index];
 
-                                      await showMenu(
-                                        context: context,
-                                        position: position,
-                                        items: poster.generateActions(context, ref).popupMenuItems(useIcons: true),
-                                      );
-                                    },
+                                          await showMenu(
+                                            context: context,
+                                            position: position,
+                                            items: poster
+                                                .generateActions(context, ref)
+                                                .popupMenuItems(useIcons: true),
+                                          );
+                                        },
                               child: Stack(
                                 children: [
                                   FladderImage(image: item.bannerImage),
@@ -121,19 +141,46 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
                                               .dark
                                               .colorScheme
                                               .primaryContainer
-                                              .withValues(alpha: opacity.clamp(0, 1)),
+                                              .withValues(
+                                                  alpha: opacity.clamp(0, 1)),
                                           Colors.transparent,
                                         ],
+                                      ),
+                                    ),
+                                  ),
+                                  // Voile de contraste : le texte doit rester
+                                  // lisible même sur une jaquette claire, quelle
+                                  // que soit sa dominante.
+                                  Align(
+                                    alignment: Alignment.bottomCenter,
+                                    child: FractionallySizedBox(
+                                      heightFactor: 0.6,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.bottomCenter,
+                                            end: Alignment.topCenter,
+                                            colors: [
+                                              AppColors.scrim
+                                                  .withValues(alpha: 0.85),
+                                              Colors.transparent,
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
                                   Align(
                                     alignment: Alignment.bottomLeft,
                                     child: Padding(
-                                      padding: const EdgeInsets.all(16.0).copyWith(right: constraints.maxWidth * 0.2),
+                                      padding: const EdgeInsets.all(16.0)
+                                          .copyWith(
+                                              right:
+                                                  constraints.maxWidth * 0.2),
                                       child: Column(
                                         mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             item.title,
@@ -143,20 +190,31 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .headlineMedium
-                                                ?.copyWith(color: Colors.white),
+                                                ?.copyWith(
+                                                    color:
+                                                        AppColors.textPrimary),
                                           ),
-                                          if (item.label(context.localized) != null || item.subText != null)
+                                          if (item.label(context.localized) !=
+                                                  null ||
+                                              item.subText != null)
                                             Text(
-                                              item.label(context.localized) ?? item.subText ?? "",
+                                              item.label(context.localized) ??
+                                                  item.subText ??
+                                                  "",
                                               maxLines: 2,
                                               softWrap: false,
                                               overflow: TextOverflow.fade,
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleMedium
-                                                  ?.copyWith(color: Colors.white),
+                                                  ?.copyWith(
+                                                      color: AppColors
+                                                          .textPrimary
+                                                          .withValues(
+                                                              alpha: 0.75)),
                                             ),
-                                        ].addInBetween(const SizedBox(height: 4)),
+                                        ].addInBetween(
+                                            const SizedBox(height: 4)),
                                       ),
                                     ),
                                   ),
@@ -164,7 +222,8 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
                                     child: Container(
                                       decoration: BoxDecoration(
                                         border: Border.all(
-                                          color: Colors.white.withValues(alpha: 0.1),
+                                          color: AppColors.textPrimary
+                                              .withValues(alpha: 0.1),
                                           width: 1.0,
                                         ),
                                         borderRadius: border,
@@ -175,7 +234,8 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
                               ),
                               overlays: [
                                 ExcludeFocus(
-                                  child: BannerPlayButton(item: widget.items[index]),
+                                  child: BannerPlayButton(
+                                      item: widget.items[index]),
                                 ),
                               ],
                             );
@@ -184,7 +244,8 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
                       )
                     ],
                   ),
-                  if (AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer)
+                  if (AdaptiveLayout.inputDeviceOf(context) ==
+                      InputDevice.pointer)
                     ExcludeFocus(
                       child: AnimatedOpacity(
                         duration: const Duration(milliseconds: 250),
@@ -197,23 +258,34 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
                               alignment: Alignment.center,
                               child: Row(
                                 mainAxisSize: MainAxisSize.max,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   IconButton.filledTonal(
                                     onPressed: () {
-                                      final currentPos = carouselController.position;
-                                      carouselController.animateTo(currentPos.pixels - itemExtent,
-                                          curve: Curves.easeInOutCubic, duration: const Duration(milliseconds: 250));
+                                      final currentPos =
+                                          carouselController.position;
+                                      carouselController.animateTo(
+                                          currentPos.pixels - itemExtent,
+                                          curve: Curves.easeInOutCubic,
+                                          duration: const Duration(
+                                              milliseconds: 250));
                                     },
-                                    icon: const Icon(IconsaxPlusLinear.arrow_left_1),
+                                    icon: const Icon(
+                                        IconsaxPlusLinear.arrow_left_1),
                                   ),
                                   IconButton.filledTonal(
                                     onPressed: () {
-                                      final currentPos = carouselController.position;
-                                      carouselController.animateTo(currentPos.pixels + itemExtent,
-                                          curve: Curves.easeInOutCubic, duration: const Duration(milliseconds: 250));
+                                      final currentPos =
+                                          carouselController.position;
+                                      carouselController.animateTo(
+                                          currentPos.pixels + itemExtent,
+                                          curve: Curves.easeInOutCubic,
+                                          duration: const Duration(
+                                              milliseconds: 250));
                                     },
-                                    icon: const Icon(IconsaxPlusLinear.arrow_right_3),
+                                    icon: const Icon(
+                                        IconsaxPlusLinear.arrow_right_3),
                                   ),
                                 ],
                               ),

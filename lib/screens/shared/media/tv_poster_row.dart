@@ -14,6 +14,7 @@ import 'package:fladder/screens/details_screens/components/overview_header.dart'
 import 'package:fladder/screens/shared/media/components/media_header.dart';
 import 'package:fladder/screens/shared/media/components/poster_overlays.dart';
 import 'package:fladder/theme.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/focus_provider.dart';
@@ -70,9 +71,12 @@ class _TVPosterRowState extends ConsumerState<TVPosterRow> {
   }
 
   double _basePosterHeight(BuildContext context) {
-    final posterSize = ref.watch(clientSettingsProvider.select((value) => value.posterSize));
+    final posterSize =
+        ref.watch(clientSettingsProvider.select((value) => value.posterSize));
     final posterDefaults = AdaptiveLayout.poster(context);
-    return ((posterDefaults.size * posterSize) / math.pow(_smallAspectRatio, 0.55)) * 0.7;
+    return ((posterDefaults.size * posterSize) /
+            math.pow(_smallAspectRatio, 0.55)) *
+        0.7;
   }
 
   double _itemWidth(int index, double posterHeight) {
@@ -183,14 +187,18 @@ class _TVPosterItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final overlayColor = Theme.of(context).colorScheme.surfaceContainer.harmonizeWith(Colors.black);
+    final overlayColor = Theme.of(context)
+        .colorScheme
+        .surfaceContainer
+        .harmonizeWith(AppColors.background);
 
     final radius = FladderTheme.defaultShape.borderRadius;
 
     return FocusButton(
       onTap: onTap,
       onLongPress: () => _showBottomSheet(context, ref),
-      onSecondaryTapDown: (details) => _showContextMenu(context, ref, details.globalPosition),
+      onSecondaryTapDown: (details) =>
+          _showContextMenu(context, ref, details.globalPosition),
       onFocusChanged: onFocusChanged,
       child: AnimatedContainer(
         duration: _kAnimationDuration,
@@ -204,13 +212,15 @@ class _TVPosterItem extends ConsumerWidget {
           ),
           foregroundDecoration: BoxDecoration(
             borderRadius: radius,
-            border: Border.all(width: 1, color: Colors.white.withAlpha(45)),
+            border: Border.all(
+                width: 1, color: AppColors.textPrimary.withAlpha(45)),
           ),
           clipBehavior: Clip.hardEdge,
           child: Stack(
             children: [
               FladderImage(
-                key: ValueKey(poster.tvPosterLarge?.key ?? "${poster.id}_large"),
+                key:
+                    ValueKey(poster.tvPosterLarge?.key ?? "${poster.id}_large"),
                 image: poster.tvPosterLarge,
                 placeHolder: const _TVPosterPlaceholder(),
               ),
@@ -218,7 +228,8 @@ class _TVPosterItem extends ConsumerWidget {
                 duration: _kAnimationDuration,
                 opacity: focused ? 0 : 1,
                 child: FladderImage(
-                  key: ValueKey(poster.tvPosterSmall?.key ?? "${poster.id}_small"),
+                  key: ValueKey(
+                      poster.tvPosterSmall?.key ?? "${poster.id}_small"),
                   image: poster.tvPosterSmall,
                   placeHolder: const _TVPosterPlaceholder(),
                 ),
@@ -299,8 +310,10 @@ class _TVPosterItem extends ConsumerWidget {
     );
   }
 
-  Future<void> _showContextMenu(BuildContext context, WidgetRef ref, Offset globalPos) async {
-    final position = RelativeRect.fromLTRB(globalPos.dx, globalPos.dy, globalPos.dx, globalPos.dy);
+  Future<void> _showContextMenu(
+      BuildContext context, WidgetRef ref, Offset globalPos) async {
+    final position = RelativeRect.fromLTRB(
+        globalPos.dx, globalPos.dy, globalPos.dx, globalPos.dy);
     await showMenu(
       context: context,
       position: position,
@@ -333,13 +346,17 @@ class _TVBottomInfo extends StatelessWidget {
         children: switch (poster) {
           ChannelModel model => [
               ClickableText(
-                onTap: AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer
-                    ? () => poster.parentBaseModel.navigateTo(context)
-                    : null,
+                onTap:
+                    AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer
+                        ? () => poster.parentBaseModel.navigateTo(context)
+                        : null,
                 text: model.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -351,7 +368,10 @@ class _TVBottomInfo extends StatelessWidget {
                         text: model.subText ?? "",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     )
                   else
@@ -361,17 +381,25 @@ class _TVBottomInfo extends StatelessWidget {
                         text: model.subTextShort(context.localized) ?? "",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ),
                 ],
               ),
               ClickableText(
                 opacity: opacity,
-                text: model.subText?.isNotEmpty ?? false ? model.subTextShort(context.localized) ?? "" : "",
+                text: model.subText?.isNotEmpty ?? false
+                    ? model.subTextShort(context.localized) ?? ""
+                    : "",
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           EpisodeModel episode => [
@@ -382,7 +410,10 @@ class _TVBottomInfo extends StatelessWidget {
                     episode.episodeLabel(context.localized),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   CircleAvatar(
                     radius: 3,
@@ -413,7 +444,10 @@ class _TVBottomInfo extends StatelessWidget {
                     poster.detailedName(context.localized) ?? "",
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   MetadataLabels(
                     favourite: poster.userData.isFavourite ? true : null,

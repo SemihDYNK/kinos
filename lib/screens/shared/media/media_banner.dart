@@ -6,6 +6,7 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/screens/shared/media/banner_play_button.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/focus_provider.dart';
@@ -41,7 +42,8 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
   double dragIntensity = 1;
   double slidePosition = 1;
 
-  late final RestartableTimer timer = RestartableTimer(const Duration(seconds: 8), () => nextSlide());
+  late final RestartableTimer timer =
+      RestartableTimer(const Duration(seconds: 8), () => nextSlide());
 
   @override
   void initState() {
@@ -83,8 +85,10 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final overlayColor = ThemesData.of(context).dark.colorScheme.primaryContainer;
-    final currentItem = widget.items[currentPage.clamp(0, widget.items.length - 1)];
+    final overlayColor =
+        ThemesData.of(context).dark.colorScheme.primaryContainer;
+    final currentItem =
+        widget.items[currentPage.clamp(0, widget.items.length - 1)];
     final double dragOpacity = (1 - dragOffset.abs()).clamp(0, 1);
 
     return Padding(
@@ -96,7 +100,8 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
             constraints: BoxConstraints(maxHeight: widget.maxHeight),
             child: Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
               surfaceTintColor: overlayColor,
               color: overlayColor,
               child: MouseRegion(
@@ -134,7 +139,8 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
                             foregroundDecoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.10),
+                                  color: AppColors.textPrimary
+                                      .withValues(alpha: 0.10),
                                   strokeAlign: BorderSide.strokeAlignInside),
                               gradient: LinearGradient(
                                 begin: Alignment.bottomLeft,
@@ -147,39 +153,53 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
                             ),
                             child: FocusButton(
                               onTap: () => currentItem.navigateTo(context),
-                              onLongPress: AdaptiveLayout.inputDeviceOf(context) == InputDevice.touch
-                                  ? () async {
-                                      interacting = true;
-                                      final poster = currentItem;
-                                      showBottomSheetPill(
-                                        context: context,
-                                        item: poster,
-                                        content: (scrollContext, scrollController) => ListView(
-                                          shrinkWrap: true,
-                                          controller: scrollController,
-                                          children: poster
-                                              .generateActions(context, ref)
-                                              .listTileItems(scrollContext, useIcons: true),
-                                        ),
-                                      );
-                                      interacting = false;
-                                      timer.reset();
-                                    }
-                                  : null,
-                              onSecondaryTapDown: AdaptiveLayout.inputDeviceOf(context) == InputDevice.touch
-                                  ? null
-                                  : (details) async {
-                                      Offset localPosition = details.globalPosition;
-                                      RelativeRect position = RelativeRect.fromLTRB(
-                                          localPosition.dx - 320, localPosition.dy, localPosition.dx, localPosition.dy);
-                                      final poster = currentItem;
+                              onLongPress:
+                                  AdaptiveLayout.inputDeviceOf(context) ==
+                                          InputDevice.touch
+                                      ? () async {
+                                          interacting = true;
+                                          final poster = currentItem;
+                                          showBottomSheetPill(
+                                            context: context,
+                                            item: poster,
+                                            content: (scrollContext,
+                                                    scrollController) =>
+                                                ListView(
+                                              shrinkWrap: true,
+                                              controller: scrollController,
+                                              children: poster
+                                                  .generateActions(context, ref)
+                                                  .listTileItems(scrollContext,
+                                                      useIcons: true),
+                                            ),
+                                          );
+                                          interacting = false;
+                                          timer.reset();
+                                        }
+                                      : null,
+                              onSecondaryTapDown:
+                                  AdaptiveLayout.inputDeviceOf(context) ==
+                                          InputDevice.touch
+                                      ? null
+                                      : (details) async {
+                                          Offset localPosition =
+                                              details.globalPosition;
+                                          RelativeRect position =
+                                              RelativeRect.fromLTRB(
+                                                  localPosition.dx - 320,
+                                                  localPosition.dy,
+                                                  localPosition.dx,
+                                                  localPosition.dy);
+                                          final poster = currentItem;
 
-                                      await showMenu(
-                                        context: context,
-                                        position: position,
-                                        items: poster.generateActions(context, ref).popupMenuItems(useIcons: true),
-                                      );
-                                    },
+                                          await showMenu(
+                                            context: context,
+                                            position: position,
+                                            items: poster
+                                                .generateActions(context, ref)
+                                                .popupMenuItems(useIcons: true),
+                                          );
+                                        },
                               child: SizedBox(
                                 width: double.infinity,
                                 height: double.infinity,
@@ -191,6 +211,27 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
                                   ),
                                 ),
                               ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Voile de contraste : le texte doit rester lisible même
+                    // sur une jaquette claire, quelle que soit sa dominante.
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: FractionallySizedBox(
+                        heightFactor: 0.6,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                AppColors.scrim.withValues(alpha: 0.85),
+                                Colors.transparent,
+                              ],
                             ),
                           ),
                         ),
@@ -208,25 +249,40 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
                                 Flexible(
                                   child: IgnorePointer(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Flexible(
                                           child: Text(
                                             currentItem.title,
                                             maxLines: 2,
-                                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                                  color: Colors.white,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineMedium
+                                                ?.copyWith(
+                                                  color: AppColors.textPrimary,
                                                 ),
                                           ),
                                         ),
-                                        if (currentItem.label(context.localized) != null || currentItem.subText != null)
+                                        if (currentItem
+                                                    .label(context.localized) !=
+                                                null ||
+                                            currentItem.subText != null)
                                           Flexible(
                                             child: Text(
-                                              currentItem.label(context.localized) ?? currentItem.subText ?? "",
+                                              currentItem.label(
+                                                      context.localized) ??
+                                                  currentItem.subText ??
+                                                  "",
                                               maxLines: 2,
-                                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                    color: Colors.white.withValues(alpha: 0.75),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                    color: AppColors.textPrimary
+                                                        .withValues(
+                                                            alpha: 0.75),
                                                   ),
                                             ),
                                           ),
@@ -248,7 +304,8 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
                               children: [
                                 IconButton.filledTonal(
                                   onPressed: () => nextSlide(),
-                                  icon: const Icon(IconsaxPlusLinear.arrow_right_3),
+                                  icon: const Icon(
+                                      IconsaxPlusLinear.arrow_right_3),
                                 )
                               ],
                             ),
@@ -273,7 +330,8 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
                 activeTrackColor: Theme.of(context).colorScheme.surfaceDim,
                 inactiveTrackColor: Theme.of(context).colorScheme.surfaceDim,
                 max: widget.items.length.toDouble() - 1,
-                onChanged: (value) => setState(() => currentPage = value.round()),
+                onChanged: (value) =>
+                    setState(() => currentPage = value.round()),
               ),
             )
           else
@@ -286,7 +344,9 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
   void animateToTarget(int nextIndex) {
     int step = currentPage < nextIndex ? 1 : -1;
     void updateItem(int item) {
-      Future.delayed(Duration(milliseconds: 64 ~/ ((currentPage - nextIndex).abs() / 3)), () {
+      Future.delayed(
+          Duration(milliseconds: 64 ~/ ((currentPage - nextIndex).abs() / 3)),
+          () {
         setState(() {
           currentPage = item;
         });
