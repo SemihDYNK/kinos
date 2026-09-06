@@ -1,0 +1,226 @@
+import 'package:flutter/material.dart';
+
+import 'package:fladder/l10n/generated/app_localizations.dart';
+import 'package:fladder/models/item_base_model.dart';
+import 'package:fladder/models/items/episode_model.dart';
+import 'package:fladder/models/items/images_models.dart';
+import 'package:fladder/theme/app_theme.dart';
+import 'package:fladder/util/fladder_image.dart';
+import 'package:fladder/util/localization_helper.dart';
+import 'package:fladder/widgets/shared/focus_row.dart';
+import 'package:fladder/widgets/shared/grid_focus_traveler.dart';
+
+/// En dessous de ce nombre d'items, la rangée n'est pas étalée sur toute la
+/// largeur — cf. [_SparseRow].
+const _fullGridThreshold = 3;
+
+/// Rangée "Continuer à regarder" : grille de vignettes 16:9, pas un
+/// carrousel — elle remplit la largeur disponible (sauf rangée peu remplie,
+/// cf. [_SparseRow]). Sliver direct, à insérer dans les `slivers:` d'un
+/// [CustomScrollView].
+class ContinueWatchingSection extends StatelessWidget {
+  final List<ItemBaseModel> items;
+  final EdgeInsets contentPadding;
+
+  const ContinueWatchingSection({
+    required this.items,
+    required this.contentPadding,
+    super.key,
+  });
+
+  int _columnsFor(double width) {
+    const target = 280.0;
+    return (width / target).floor().clamp(4, 5);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    final width = MediaQuery.sizeOf(context).width - contentPadding.horizontal;
+    final columns = _columnsFor(width);
+    // Largeur qu'une vignette aurait dans une grille pleine à ce nombre de
+    // colonnes — réutilisée telle quelle par la rangée peu remplie.
+    final tileWidth = (width - (columns - 1) * AppSpacing.gridGap) / columns;
+
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverPadding(
+          padding: contentPadding,
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              'Continuer à regarder',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: contentPadding.copyWith(top: AppSpacing.sm),
+          sliver: items.length < _fullGridThreshold
+              ? SliverToBoxAdapter(
+                  child: _SparseRow(items: items, tileWidth: tileWidth),
+                )
+              : GridFocusTraveler(
+                  itemCount: items.length,
+                  crossAxisCount: columns,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: AppSpacing.gridGap,
+                    mainAxisSpacing: AppSpacing.gridGap,
+                    childAspectRatio: 16 / 9,
+                  ),
+                  itemBuilder: (context, selectedIndex, index) =>
+                      _ContinueWatchingCard(item: items[index]),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Rangée peu remplie (< [_fullGridThreshold] items) : largeur de vignette
+/// constante (celle d'une grille pleine), alignée à gauche — jamais étalée
+/// sur toute la largeur disponible.
+class _SparseRow extends StatelessWidget {
+  final List<ItemBaseModel> items;
+  final double tileWidth;
+
+  const _SparseRow({required this.items, required this.tileWidth});
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusRow(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final item in items) ...[
+            SizedBox(
+              width: tileWidth,
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: _ContinueWatchingCard(item: item),
+              ),
+            ),
+            if (item != items.last) const SizedBox(width: AppSpacing.gridGap),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ContinueWatchingCard extends StatelessWidget {
+  final ItemBaseModel item;
+
+  const _ContinueWatchingCard({required this.item});
+
+  String _subtitle(AppLocalizations l10n) {
+    final runTime = item.overview.runTime;
+    final remaining =
+        runTime != null ? runTime * (1 - item.userData.progress / 100) : null;
+    final remainingLabel = remaining == null
+        ? null
+        : remaining.inHours > 0
+            ? '${remaining.inHours}h ${remaining.inMinutes % 60} restantes'
+            : '${remaining.inMinutes} min restantes';
+
+    if (item case EpisodeModel episode) {
+      return [episode.seasonEpisodeLabel(l10n), remainingLabel]
+          .nonNulls
+          .join(' · ');
+    }
+    return remainingLabel ?? '';
+  }
+
+  /// Thumb en priorité (déjà en 16:9), repli sur un backdrop, Primary
+  /// (portrait) en dernier recours seulement — et dans ce cas on ne la
+  /// rogne pas : cf. [_ContinueWatchingThumbnail].
+  ImageData? get _thumbnail =>
+      item.getPosters?.thumb ?? item.getPosters?.randomBackDrop;
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusRing(
+      onActivate: () => item.navigateTo(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: AppRadii.cardBorder,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _ContinueWatchingThumbnail(
+                      thumbnail: _thumbnail,
+                      fallback: item.getPosters?.primary),
+                  if (item.userData.progress > 0)
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: SizedBox(
+                        height: 3,
+                        child: LinearProgressIndicator(
+                          value: (item.userData.progress / 100).clamp(0, 1),
+                          minHeight: 3,
+                          backgroundColor: AppColors.progressTrack,
+                          valueColor: const AlwaysStoppedAnimation(
+                              AppColors.textPrimary),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            item.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Text(
+            _subtitle(context.localized),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// La vignette reste au format 16:9 (alignement de grille), mais l'image
+/// elle-même n'est jamais rognée : cover si on a un vrai visuel 16:9
+/// (thumb/backdrop), contain + fond neutre si on retombe sur la Primary
+/// (portrait, 2:3) faute de mieux.
+class _ContinueWatchingThumbnail extends StatelessWidget {
+  final ImageData? thumbnail;
+  final ImageData? fallback;
+
+  const _ContinueWatchingThumbnail(
+      {required this.thumbnail, required this.fallback});
+
+  @override
+  Widget build(BuildContext context) {
+    if (thumbnail != null) {
+      return FladderImage(image: thumbnail, fit: BoxFit.cover);
+    }
+    if (fallback == null) {
+      return const ColoredBox(color: AppColors.surface);
+    }
+    return ColoredBox(
+      color: AppColors.surface,
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: 2 / 3,
+          child: FladderImage(image: fallback, fit: BoxFit.cover),
+        ),
+      ),
+    );
+  }
+}

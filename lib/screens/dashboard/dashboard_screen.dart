@@ -3,37 +3,37 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/models/collection_types.dart';
 import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/library_search/library_search_options.dart';
-import 'package:fladder/models/settings/home_settings_model.dart';
 import 'package:fladder/providers/dashboard_mode_provider.dart';
 import 'package:fladder/providers/dashboard_provider.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/providers/settings/home_settings_provider.dart';
+import 'package:fladder/providers/settings/home_rows_provider.dart';
 import 'package:fladder/providers/user_provider.dart';
 import 'package:fladder/providers/views_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/dashboard/home_banner_widget.dart';
+import 'package:fladder/screens/dashboard/continue_watching_section.dart';
+import 'package:fladder/screens/dashboard/hero_carousel.dart';
+import 'package:fladder/screens/dashboard/home_row_section.dart';
 import 'package:fladder/screens/dashboard/music_dashboard_screen.dart';
+import 'package:fladder/screens/dashboard/recently_added_section.dart';
+import 'package:fladder/routes/auto_router.gr.dart';
 import 'package:fladder/screens/home_screen.dart';
-import 'package:fladder/screens/shared/media/poster_row.dart';
 import 'package:fladder/screens/shared/nested_scaffold.dart';
 import 'package:fladder/screens/shared/nested_sliver_appbar.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/list_padding.dart';
-import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/sliver_list_padding.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/background_image.dart';
-import 'package:fladder/widgets/shared/pinch_poster_zoom.dart';
-import 'package:fladder/widgets/shared/poster_size_slider.dart';
 import 'package:fladder/widgets/shared/pull_to_refresh.dart';
+
+/// Types de collection dans le périmètre du projet — films et séries
+/// uniquement (cf. CLAUDE.md § Périmètre).
+const _dashboardCollectionTypes = {
+  CollectionType.movies,
+  CollectionType.tvshows,
+  CollectionType.boxsets,
+  CollectionType.homevideos,
+};
 
 @RoutePage()
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -42,16 +42,14 @@ class DashboardScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _DashboardScreenState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _DashboardScreenState();
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late final Timer _timer;
-  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
-
-  final textController = TextEditingController();
-
-  final selectedPoster = ValueNotifier<ItemBaseModel?>(null);
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
+      GlobalKey<RefreshIndicatorState>();
 
   @override
   void initState() {
@@ -75,6 +73,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
+  /// Films et séries non vus des ajouts récents, dédoublonnés, 8 max.
+  List<ItemBaseModel> _heroCandidates(List<ItemBaseModel> recentlyAdded) {
+    final seen = <String>{};
+    final candidates = <ItemBaseModel>[];
+    for (final item in recentlyAdded) {
+      if (item.type != FladderItemType.movie &&
+          item.type != FladderItemType.series) {
+        continue;
+      }
+      if (!item.unWatched) continue;
+      if (!seen.add(item.id)) continue;
+      candidates.add(item);
+      if (candidates.length >= 8) break;
+    }
+    return candidates;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (ref.watch(musicDashboardModeProvider)) {
@@ -82,195 +97,111 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
 
     final padding = AdaptiveLayout.adaptivePadding(context);
-    final bannerType = ref.watch(homeSettingsProvider.select((value) => value.homeBanner));
+    // `padding` inclut déjà la largeur de la barre latérale (cf.
+    // AdaptiveLayout.adaptivePadding) : la barre latérale n'est pas une
+    // colonne séparée, c'est un calque semi-transparent posé par-dessus un
+    // contenu plein cadre (SideNavigationRail). Le fond teinté ci-dessous
+    // doit donc s'arrêter *avant* cette largeur, sans quoi il transparaît
+    // sous elle — d'où la fuite. On sépare : `sideBarInset` appliqué une
+    // fois par le wrapper du fond, `innerPadding` (sans lui) pour le
+    // contenu qui vit à l'intérieur de ce même wrapper.
+    final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
+    final innerPadding = padding.copyWith(left: padding.left - sideBarInset);
     final dashboardData = ref.watch(dashboardProvider);
     final views = ref.watch(viewsProvider);
-    final homeSettings = ref.watch(homeSettingsProvider);
-    final homeBanner = ref.watch(homeSettingsProvider.select((value) => value.homeBanner)) != HomeBanner.hide;
-    final resumeVideo = dashboardData.resumeVideo;
-    final resumeAudio = dashboardData.resumeAudio;
-    final resumeBooks = dashboardData.resumeBooks;
-    final tvChannels = dashboardData.activePrograms;
+    final homeRows =
+        ref.watch(homeRowsProvider).where((row) => row.enabled).toList();
 
-    final allResume = [...resumeVideo, ...resumeAudio, ...resumeBooks].toList();
+    final recentlyAdded = views.dashboardViews
+        .where(
+            (view) => _dashboardCollectionTypes.contains(view.collectionType))
+        .expand((view) => view.recentlyAdded)
+        .toList();
 
-    final homeCarouselItems = switch (homeSettings.carouselSettings) {
-      HomeCarouselSettings.nextUp => dashboardData.nextUp,
-      HomeCarouselSettings.combined => [...allResume, ...dashboardData.nextUp],
-      HomeCarouselSettings.cont => allResume,
-    };
+    final heroItems = _heroCandidates(recentlyAdded);
 
-    final viewSize = AdaptiveLayout.viewSizeOf(context);
-
-    final useTVExpandedLayout = ref.watch(clientSettingsProvider.select((value) => value.useTVExpandedLayout));
+    // resumeVideo d'abord (déjà en cours), puis nextUp — dédoublonnés.
+    final seenContinue = <String>{};
+    final continueWatching = [
+      ...dashboardData.resumeVideo,
+      ...dashboardData.nextUp
+    ].where((item) => seenContinue.add(item.id)).toList();
 
     return NestedScaffold(
-      background: ValueListenableBuilder<ItemBaseModel?>(
-        valueListenable: selectedPoster,
-        builder: (_, value, __) {
-          return BackgroundImage(
-            images: (value != null
-                    ? [value]
-                    : [
-                        ...homeCarouselItems,
-                        ...dashboardData.nextUp,
-                        ...allResume,
-                      ])
-                .map((e) => e.images)
-                .nonNulls
-                .toList(),
-          );
-        },
-      ),
       body: PullToRefresh(
         refreshKey: _refreshIndicatorKey,
         displacement: 80 + MediaQuery.of(context).viewPadding.top,
         onRefresh: () async => await _refreshHome(),
-        child: (context) => PinchPosterZoom(
-          scaleDifference: (difference) => ref.read(clientSettingsProvider.notifier).addPosterSize(difference),
-          child: CustomScrollView(
-            controller: AdaptiveLayout.scrollOf(context, HomeTabs.dashboard),
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              if (bannerType != HomeBanner.detailedBanner) const DefaultSliverTopBadding(),
-              if (viewSize == ViewSize.phone)
-                NestedSliverAppBar(
-                  route: LibrarySearchRoute(),
-                  parent: context,
-                ),
-              if (homeBanner && homeCarouselItems.isNotEmpty) ...{
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: AdaptiveLayout.adaptivePadding(
-                      context,
-                      horizontalPadding: 0,
-                    ),
-                    child: HomeBannerWidget(
-                      posters: homeCarouselItems,
-                      onSelect: (poster) => selectedPoster.value = poster,
-                    ),
-                  ),
-                ),
-              },
-              if (AdaptiveLayout.of(context).isDesktop)
-                const SliverToBoxAdapter(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      PosterSizeWidget(),
+        child: (context) => CustomScrollView(
+          controller: AdaptiveLayout.scrollOf(context, HomeTabs.dashboard),
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            const DefaultSliverTopBadding(),
+            if (AdaptiveLayout.viewSizeOf(context) == ViewSize.phone)
+              NestedSliverAppBar(
+                route: LibrarySearchRoute(),
+                parent: context,
+              ),
+            // Fond de la zone de contenu : heroTint sous le bandeau, résorbé
+            // en AppColors.background avant la fin de cette rangée — donc
+            // bien avant "Ajouts récents". Un dégradé de couleur simple, pas
+            // un flou d'image : cette zone défile et change à chaque diapo.
+            // Inséré à `sideBarInset` : la barre latérale reste sur
+            // AppColors.background pur, jamais teintée.
+            SliverPadding(
+              padding: EdgeInsetsDirectional.only(start: sideBarInset),
+              sliver: DecoratedSliver(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0, 0.7],
+                    colors: [
+                      heroItems.isNotEmpty
+                          ? context.tokens.heroTint
+                          : AppColors.background,
+                      AppColors.background,
                     ],
                   ),
                 ),
-              ...[
-                if (tvChannels.isNotEmpty)
-                  PosterRow(
-                    contentPadding: padding,
-                    tvMode: useTVExpandedLayout,
-                    label: context.localized.activeTvChannels,
-                    collectionAspectRatio: 0.55,
-                    onLabelClick: () {
-                      return LiveTvRoute().navigate(context);
-                    },
-                    posters: tvChannels,
-                  ),
-                if (resumeVideo.isNotEmpty &&
-                    (homeSettings.nextUp == HomeNextUp.cont || homeSettings.nextUp == HomeNextUp.separate))
-                  PosterRow(
-                    tvMode: useTVExpandedLayout,
-                    contentPadding: padding,
-                    label: context.localized.dashboardContinueWatching,
-                    posters: resumeVideo,
-                  ),
-                if (resumeAudio.isNotEmpty &&
-                    (homeSettings.nextUp == HomeNextUp.cont || homeSettings.nextUp == HomeNextUp.separate))
-                  PosterRow(
-                    tvMode: useTVExpandedLayout,
-                    contentPadding: padding,
-                    label: context.localized.dashboardContinueListening,
-                    posters: resumeAudio,
-                  ),
-                if (resumeBooks.isNotEmpty &&
-                    (homeSettings.nextUp == HomeNextUp.cont || homeSettings.nextUp == HomeNextUp.separate))
-                  PosterRow(
-                    tvMode: useTVExpandedLayout,
-                    contentPadding: padding,
-                    label: context.localized.dashboardContinueReading,
-                    posters: resumeBooks,
-                  ),
-                if (dashboardData.nextUp.isNotEmpty &&
-                    (homeSettings.nextUp == HomeNextUp.nextUp || homeSettings.nextUp == HomeNextUp.separate))
-                  PosterRow(
-                    tvMode: useTVExpandedLayout,
-                    contentPadding: padding,
-                    label: context.localized.nextUp,
-                    posters: dashboardData.nextUp,
-                  ),
-                if ([...allResume, ...dashboardData.nextUp].isNotEmpty && homeSettings.nextUp == HomeNextUp.combined)
-                  PosterRow(
-                    tvMode: useTVExpandedLayout,
-                    contentPadding: padding,
-                    label: context.localized.dashboardContinue,
-                    posters: [...allResume, ...dashboardData.nextUp],
-                  ),
-                ...views.dashboardViews
-                    .where(
-                      (element) => element.recentlyAdded.isNotEmpty && element.collectionType != CollectionType.livetv,
-                    )
-                    .map(
-                      (view) => PosterRow(
-                        tvMode: useTVExpandedLayout,
-                        contentPadding: padding,
-                        label: context.localized.dashboardRecentlyAdded(view.name),
-                        collectionAspectRatio: view.collectionType.aspectRatio,
-                        onLabelClick: () {
-                          if (view.collectionType == CollectionType.livetv) {
-                            return LiveTvRoute().navigate(context);
-                          }
-                          return context.router.push(
-                            LibrarySearchRoute(
-                              parentId: [view.id],
-                              types: switch (view.collectionType) {
-                                CollectionType.tvshows => {
-                                    FladderItemType.episode: true,
-                                  },
-                                _ => {},
-                              },
-                              sortingOptions: switch (view.collectionType) {
-                                CollectionType.books ||
-                                CollectionType.boxsets ||
-                                CollectionType.folders ||
-                                CollectionType.music =>
-                                  SortingOptions.dateLastContentAdded,
-                                _ => SortingOptions.dateAdded,
-                              },
-                              sortOrder: SortingOrder.descending,
-                              recursive: true,
-                            ),
-                          );
-                        },
-                        posters: view.recentlyAdded,
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    if (heroItems.isNotEmpty)
+                      SliverPadding(
+                        padding: innerPadding.copyWith(top: 0, bottom: 0),
+                        sliver: SliverToBoxAdapter(
+                          child: HeroCarousel(items: heroItems),
+                        ),
+                      ),
+                    SliverPadding(
+                      padding: EdgeInsets.only(
+                          top: heroItems.isNotEmpty ? AppSpacing.xl : 0),
+                      sliver: ContinueWatchingSection(
+                        items: continueWatching,
+                        contentPadding: innerPadding,
                       ),
                     ),
-              ]
-                  .nonNulls
-                  .toList()
-                  .mapIndexed(
-                    (index, child) => SliverToBoxAdapter(
-                      child: FocusProvider(
-                        autoFocus: homeCarouselItems.isEmpty ? index == 0 : false,
-                        child: child,
-                      ),
-                    ),
-                  )
-                  .toList()
-                  .addInBetween(
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: 16),
-                    ),
-                  ),
-              const DefaultSliverBottomPadding(),
-            ],
-          ),
+                  ],
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.only(top: AppSpacing.xl),
+              sliver: RecentlyAddedSection(
+                items: recentlyAdded,
+                contentPadding: padding,
+              ),
+            ),
+            for (final row in homeRows)
+              SliverPadding(
+                padding: const EdgeInsets.only(top: AppSpacing.xl),
+                sliver: HomeRowSection(
+                  row: row,
+                  contentPadding: padding,
+                ),
+              ),
+            const DefaultSliverBottomPadding(),
+          ],
         ),
       ),
     );
