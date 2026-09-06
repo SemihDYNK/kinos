@@ -1,218 +1,193 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/settings/client_settings_model.dart';
+import 'package:fladder/models/account_model.dart';
+import 'package:fladder/models/item_base_model.dart';
+import 'package:fladder/models/library_filter_model.dart';
+import 'package:fladder/models/media_playback_model.dart';
 import 'package:fladder/providers/settings/client_settings_provider.dart';
+import 'package:fladder/providers/user_provider.dart';
+import 'package:fladder/providers/video_player_provider.dart';
 import 'package:fladder/routes/auto_router.dart';
 import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/shared/animated_fade_size.dart';
+import 'package:fladder/screens/shared/user_icon.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/adaptive_fab.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/background_image.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/collapse_button.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/destination_model.dart';
 import 'package:fladder/widgets/navigation_scaffold/components/navigation_body.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/navigation_button.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/settings_user_icon.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/side_navigation_buttons.dart';
 import 'package:fladder/widgets/shared/custom_tooltip.dart';
 
+/// Cible d'échappement clavier depuis le contenu : GridFocusTraveler et
+/// FocusRow y renvoient le focus quand on sort par la gauche (flèche
+/// gauche depuis le bord d'une grille ou d'une rangée). Rattachée ici à
+/// l'item actif de la barre — cf. [SideNavigationRail._railItems].
 final navBarNode = FocusNode();
 
-class SideNavigationRail extends ConsumerWidget {
-  final int currentIndex;
-  final List<DestinationModel> destinations;
-  final String currentLocation;
-  final Widget child;
-  final GlobalKey<ScaffoldState> scaffoldKey;
-  const SideNavigationRail({
-    required this.currentIndex,
-    required this.destinations,
-    required this.currentLocation,
-    required this.child,
-    required this.scaffoldKey,
-    super.key,
+/// Repli forcé de la barre pendant la lecture, indépendant du réglage
+/// persisté ([ClientSettingsModel.expandSideBar]).
+///
+/// Entièrement dérivé de [mediaPlaybackProvider] plutôt que basculé à la
+/// main : redevient faux exactement quand l'état repasse à
+/// [VideoPlayerState.disposed] (lecture réellement quittée), jamais avant —
+/// donc jamais en `minimized` (lecture réduite, barre flottante) ni en
+/// `fullScreen`. C'est ce qui garantit qu'elle ne réapparaît pas tant qu'on
+/// n'a pas quitté la lecture. Couvre aussi le lecteur audio plein écran, qui
+/// partage le même état : effet de bord accepté plutôt que dupliquer le
+/// mécanisme pour un cas hors périmètre (cf. CLAUDE.md § Périmètre).
+final sideBarForceCollapsedProvider = Provider<bool>((ref) {
+  final state = ref.watch(mediaPlaybackProvider.select((value) => value.state));
+  return state != VideoPlayerState.disposed;
+});
+
+const _collapsedWidth = 64.0;
+const _expandedWidth = 240.0;
+
+class _RailDestination {
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+  final bool selected;
+  final VoidCallback onTap;
+  const _RailDestination({
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+    required this.selected,
+    required this.onTap,
   });
+}
+
+/// Barre latérale de navigation.
+///
+/// Ce n'est pas une colonne séparée : le contenu est peint plein cadre en
+/// dessous ([AdaptiveLayout] y reporte la largeur courante via
+/// `sideBarWidth`, ce qui permet à des fonds teintés comme celui du tableau
+/// de bord de s'arrêter avant elle), et la barre elle-même est peinte
+/// par-dessus dans un [Positioned.fill] séparé. Fond `AppColors.background`
+/// pur — jamais teinté (cf. CLAUDE.md § Bandeau teinté).
+class SideNavigationRail extends ConsumerWidget {
+  final Widget child;
+  const SideNavigationRail({required this.child, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textDirection = Directionality.of(context);
     final isRtl = textDirection == TextDirection.rtl;
-    final expandedSideBar = ref.watch(clientSettingsProvider.select((value) => value.expandSideBar));
-
-    final expandedWidth = 200.0;
-
-    final padding = MediaQuery.paddingOf(context);
-    final directionalPadding = EdgeInsetsDirectional.fromSTEB(
-      padding.left,
-      padding.top,
-      padding.right,
-      padding.bottom,
-    );
-    final startInset = directionalPadding.resolve(textDirection).left;
     final tooltipPosition = isRtl ? TooltipPosition.left : TooltipPosition.right;
 
-    final largeBar = AdaptiveLayout.layoutModeOf(context) != LayoutMode.single;
-    final fullyExpanded = largeBar ? expandedSideBar : false;
-    final shouldExpand = fullyExpanded;
-    final isDesktop = AdaptiveLayout.of(context).isDesktop;
+    final persistedExpanded = ref.watch(clientSettingsProvider.select((value) => value.expandSideBar));
+    final forceCollapsed = ref.watch(sideBarForceCollapsedProvider);
+    final expanded = persistedExpanded && !forceCollapsed;
 
-    final railPadding = directionalPadding
-        .copyWith(
-          start: startInset,
-          end: 0,
-          top: isDesktop ? directionalPadding.top : null,
-        )
-        .resolve(textDirection);
-    final collapsedWidth = 90.0 + startInset;
+    final safePadding = MediaQuery.paddingOf(context);
+    final directionalPadding = EdgeInsetsDirectional.fromSTEB(
+      safePadding.left,
+      safePadding.top,
+      safePadding.right,
+      safePadding.bottom,
+    ).resolve(textDirection);
+    final startInset = directionalPadding.left;
+
+    // -0.1 : évite un liseré d'un pixel entre le contenu et la barre à
+    // certaines échelles d'écran (arrondi de layout).
+    final width = (expanded ? _expandedWidth : _collapsedWidth) + startInset - 0.1;
 
     final fullScreenChildRoute = fullScreenRoutes.contains(context.router.current.name);
 
-    final hasOverlay = AdaptiveLayout.layoutModeOf(context) == LayoutMode.dual ||
-        homeRoutes.any((element) => element.name.contains(context.router.current.name));
+    final isAdmin = ref.watch(userProvider.select((value) => value?.policy?.isAdministrator ?? false));
+    final seerrAvailable = ref.watch(userProvider.select((value) => value?.seerrCredentials?.isConfigured ?? false));
+    final user = ref.watch(userProvider);
 
-    final useBlurredBackground = ref.watch(clientSettingsProvider.select(
-          (value) => value.backgroundImage == BackgroundType.blurred && value.enableBlurEffects,
-        )) &&
-        !topBarNoBlurRoutes.contains(context.router.current.name);
-
-    final blurWidth = (shouldExpand ? expandedWidth : collapsedWidth) + 25;
-
-    final surfaceColor = Theme.of(context).colorScheme.surface;
+    final destinations = _railDestinations(
+      context: context,
+      isAdmin: isAdmin,
+      seerrAvailable: seerrAvailable,
+    );
+    // navBarNode doit toujours pouvoir reprendre le focus : rattaché à
+    // l'item actif, ou au premier par défaut si aucun ne correspond à la
+    // route courante (ex. réglages, panneau de contrôle hors "Gestion").
+    final navBarNodeIndex = destinations.indexWhere((d) => d.selected).clamp(0, destinations.length - 1);
 
     return Stack(
       children: [
         AdaptiveLayout(
-          data: AdaptiveLayout.of(context).copyWith(
-            // -0.1 offset to fix single visible pixel line
-            sideBarWidth: (fullyExpanded ? expandedWidth : collapsedWidth) - 0.1,
-          ),
+          data: AdaptiveLayout.of(context).copyWith(sideBarWidth: width),
           child: child,
         ),
         Positioned.fill(
           child: Align(
             alignment: AlignmentDirectional.topStart,
-            child: RepaintBoundary(
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 250),
-                opacity: !fullScreenChildRoute ? 1 : 0,
-                child: IgnorePointer(
-                  child: Container(
-                    width: blurWidth,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                        end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
-                        colors: [
-                          surfaceColor.withAlpha(255),
-                          surfaceColor.withAlpha(175),
-                          surfaceColor.withAlpha(0),
-                        ],
-                      ),
-                    ),
-                    child: useBlurredBackground
-                        ? ShaderMask(
-                            shaderCallback: (bounds) {
-                              return LinearGradient(
-                                begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                                end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
-                                colors: [
-                                  Colors.white.withAlpha(255),
-                                  Colors.white.withAlpha(175),
-                                  Colors.white.withAlpha(0),
-                                ],
-                              ).createShader(
-                                Rect.fromLTRB(0, 0, blurWidth, bounds.height),
-                              );
-                            },
-                            blendMode: BlendMode.dstIn,
-                            child: const BackgroundImage(),
-                          )
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: Align(
-            alignment: AlignmentDirectional.topStart,
-            child: FocusTraversalGroup(
-              policy: _RailTraversalPolicy(),
+            child: AnimatedOpacity(
+              duration: AppDurations.pageTransition,
+              opacity: fullScreenChildRoute ? 0 : 1,
               child: IgnorePointer(
-                ignoring: !hasOverlay || fullScreenChildRoute,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 250),
-                  opacity: !fullScreenChildRoute ? 1 : 0,
-                  child: SizedBox(
-                    width: shouldExpand ? expandedWidth : collapsedWidth,
-                    child: Padding(
-                      key: const Key('navigation_rail'),
-                      padding: railPadding,
-                      child: Column(
-                        spacing: 2,
-                        children: [
+                ignoring: fullScreenChildRoute,
+                child: FocusTraversalGroup(
+                  policy: _RailTraversalPolicy(),
+                  child: AnimatedContainer(
+                    duration: AppDurations.pageTransition,
+                    curve: Curves.easeOutCubic,
+                    width: width,
+                    color: AppColors.background,
+                    padding: EdgeInsetsDirectional.only(
+                      start: startInset,
+                      top: directionalPadding.top > 0 ? directionalPadding.top : AppSpacing.xs,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.xs),
+                          child: FocusRing(
+                            borderRadius: AppRadii.controlBorder,
+                            onActivate: () => ref.read(clientSettingsProvider.notifier).toggleSideBar(),
+                            child: _RailRow(
+                              icon: expanded ? IconsaxPlusLinear.sidebar_left : IconsaxPlusLinear.menu,
+                              expanded: false,
+                              label: '',
+                              selected: false,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        for (var i = 0; i < destinations.length; i++)
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: CollapseButton(
-                              label: shouldExpand ? Expanded(child: Text(context.localized.navigation)) : null,
-                              keepVisible: !(largeBar && expandedSideBar),
-                              icon: Icon(
-                                largeBar && expandedSideBar ? IconsaxPlusLinear.sidebar_left : IconsaxPlusLinear.menu,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(
-                                      alpha: largeBar && expandedSideBar ? 0.65 : 1,
-                                    ),
-                              ),
-                              onPressed: !largeBar
-                                  ? () => scaffoldKey.currentState?.openDrawer()
-                                  : () => ref
-                                      .read(clientSettingsProvider.notifier)
-                                      .update((state) => state.copyWith(expandSideBar: !state.expandSideBar)),
-                            ),
-                          ),
-                          if (largeBar) ...[
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4).copyWith(bottom: expandedSideBar ? 10 : 0),
-                              child: AnimatedFadeSize(
-                                duration: const Duration(milliseconds: 250),
-                                child: shouldExpand ? actionButton(context).extended : actionButton(context).normal,
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: 2),
+                            child: CustomTooltip(
+                              position: tooltipPosition,
+                              tooltipContent: expanded ? null : _TooltipBubble(label: destinations[i].label),
+                              child: FocusRing(
+                                borderRadius: AppRadii.controlBorder,
+                                focusNode: i == navBarNodeIndex ? navBarNode : null,
+                                onActivate: destinations[i].onTap,
+                                child: _RailRow(
+                                  icon: destinations[i].selected ? destinations[i].selectedIcon : destinations[i].icon,
+                                  label: destinations[i].label,
+                                  selected: destinations[i].selected,
+                                  expanded: expanded,
+                                ),
                               ),
                             ),
-                          ],
-                          Expanded(
-                            child: SideNavigationButtons(
-                              largeBar: largeBar,
-                              destinations: destinations,
-                              tooltipPosition: tooltipPosition,
-                              currentIndex: currentIndex,
-                              shouldExpand: shouldExpand,
+                          ),
+                        const Spacer(),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.xs, AppSpacing.sm, AppSpacing.xs, AppSpacing.sm),
+                          child: CustomTooltip(
+                            position: tooltipPosition,
+                            tooltipContent: expanded ? null : _TooltipBubble(label: context.localized.switchUser),
+                            child: FocusRing(
+                              borderRadius: AppRadii.controlBorder,
+                              onActivate: () => _switchProfile(context, ref),
+                              child: _ProfileRow(user: user, expanded: expanded),
                             ),
                           ),
-                          NavigationButton(
-                            label: context.localized.settings,
-                            selected: currentLocation.contains(const SettingsRoute().routeName),
-                            selectedIcon: const Icon(IconsaxPlusBold.setting_3),
-                            horizontal: true,
-                            expanded: shouldExpand,
-                            icon: const SizedBox.shrink(),
-                            customIcon: const ExcludeFocusTraversal(
-                                child: SizedBox.square(dimension: 40, child: SettingsUserIcon())),
-                            onPressed: () {
-                              if (AdaptiveLayout.layoutModeOf(context) == LayoutMode.single) {
-                                context.router.push(const SettingsRoute());
-                              } else {
-                                context.router.push(const ClientSettingsRoute());
-                              }
-                            },
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -224,20 +199,199 @@ class SideNavigationRail extends ConsumerWidget {
     );
   }
 
-  AdaptiveFab actionButton(BuildContext context) {
-    return ((currentIndex >= 0 && currentIndex < destinations.length)
-            ? destinations[currentIndex].floatingActionButton
-            : null) ??
-        AdaptiveFab(
-          context: context,
-          title: context.localized.search,
-          key: const Key("Search"),
-          onPressed: () => context.router.navigate(LibrarySearchRoute()),
-          child: const Icon(IconsaxPlusLinear.search_normal_1),
-        );
+  /// Accueil, Films, Séries, Recherche, Demandes, Gestion — dans cet ordre.
+  /// Demandes et Gestion n'apparaissent que si utilisables (Jellyseerr
+  /// configuré / compte administrateur) : les montrer sans condition mène
+  /// vers un écran cassé.
+  List<_RailDestination> _railDestinations({
+    required BuildContext context,
+    required bool isAdmin,
+    required bool seerrAvailable,
+  }) {
+    final args = context.router.current.args;
+    final activeTypes = args is LibrarySearchRouteArgs
+        ? (args.types?.entries.where((e) => e.value).map((e) => e.key).toSet() ?? const <FladderItemType>{})
+        : const <FladderItemType>{};
+    final isLibrarySearch = args is LibrarySearchRouteArgs;
+    final currentRouteName = context.router.current.name;
+
+    return [
+      _RailDestination(
+        label: context.localized.home,
+        icon: IconsaxPlusLinear.home_1,
+        selectedIcon: IconsaxPlusBold.home_1,
+        selected: currentRouteName == DashboardRoute.name,
+        onTap: () => context.router.navigate(const DashboardRoute()),
+      ),
+      _RailDestination(
+        label: context.localized.mediaTypeMovie(2),
+        icon: IconsaxPlusLinear.video_horizontal,
+        selectedIcon: IconsaxPlusBold.video_horizontal,
+        selected: setEquals(activeTypes, const {FladderItemType.movie}),
+        onTap: () => context.router.navigate(
+          LibrarySearchRoute().withFilter(
+            const LibraryFilterModel(types: {FladderItemType.movie: true}, recursive: true),
+          ),
+        ),
+      ),
+      _RailDestination(
+        label: context.localized.mediaTypeSeries(2),
+        icon: IconsaxPlusLinear.video_vertical,
+        selectedIcon: IconsaxPlusBold.video_vertical,
+        selected: setEquals(activeTypes, const {FladderItemType.series}),
+        onTap: () => context.router.navigate(
+          LibrarySearchRoute().withFilter(
+            const LibraryFilterModel(types: {FladderItemType.series: true}, recursive: true),
+          ),
+        ),
+      ),
+      _RailDestination(
+        label: context.localized.search,
+        icon: IconsaxPlusLinear.search_normal_1,
+        selectedIcon: IconsaxPlusBold.search_normal_1,
+        selected: isLibrarySearch && activeTypes.isEmpty,
+        onTap: () => context.router.navigate(LibrarySearchRoute()),
+      ),
+      if (seerrAvailable)
+        _RailDestination(
+          label: 'Demandes',
+          icon: IconsaxPlusLinear.receipt_add,
+          selectedIcon: IconsaxPlusBold.receipt_add,
+          selected: currentRouteName == SeerrRoute.name,
+          onTap: () => context.router.navigate(const SeerrRoute()),
+        ),
+      if (isAdmin)
+        _RailDestination(
+          label: 'Gestion',
+          icon: IconsaxPlusLinear.chart_3,
+          selectedIcon: IconsaxPlusBold.chart_3,
+          selected: currentRouteName.startsWith('Control'),
+          onTap: () => context.router.push(const ControlDashboardRoute()),
+        ),
+    ];
+  }
+
+  Future<void> _switchProfile(BuildContext context, WidgetRef ref) async {
+    await ref.read(userProvider.notifier).logoutUser();
+    if (context.mounted) context.router.replaceAll([LoginRoute()]);
   }
 }
 
+class _TooltipBubble extends StatelessWidget {
+  final String label;
+  const _TooltipBubble({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceHigh,
+        borderRadius: AppRadii.controlBorder,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textPrimary),
+        ),
+      ),
+    );
+  }
+}
+
+/// Icône (+ libellé en mode déplié) d'un item de la barre. L'indicateur
+/// d'item actif — fond `surfaceHigh` et icône `textPrimary` — reste le même
+/// dans les deux états ; le liseré vertical, lui, n'a de sens qu'avec un
+/// libellé à côté, donc seulement en mode déplié.
+class _RailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final bool expanded;
+  const _RailRow({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.expanded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected ? AppColors.textPrimary : AppColors.textSecondary;
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: selected ? AppColors.surfaceHigh : Colors.transparent,
+        borderRadius: AppRadii.controlBorder,
+      ),
+      child: expanded
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Row(
+                children: [
+                  Container(
+                    width: 3,
+                    height: selected ? 20 : 0,
+                    decoration: BoxDecoration(
+                      color: AppColors.textPrimary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Icon(icon, color: foreground, size: 22),
+                  if (label.isNotEmpty) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: foreground),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            )
+          : Center(child: Icon(icon, color: foreground, size: 22)),
+    );
+  }
+}
+
+class _ProfileRow extends StatelessWidget {
+  final AccountModel? user;
+  final bool expanded;
+  const _ProfileRow({required this.user, required this.expanded});
+
+  @override
+  Widget build(BuildContext context) {
+    final avatar = SizedBox.square(
+      dimension: 32,
+      child: UserIcon(user: user, cornerRadius: AppRadii.control),
+    );
+    if (!expanded) return Center(child: avatar);
+    return Row(
+      children: [
+        avatar,
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            user?.name ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Parcours haut/bas au clavier au sein de la barre, et sortie vers le
+/// contenu (flèche vers le sens de lecture) — cf. [GridFocusTravelerPolicy]
+/// côté contenu pour le trajet inverse (flèche gauche depuis le bord d'une
+/// grille, qui renvoie sur [navBarNode]).
 class _RailTraversalPolicy extends ReadingOrderTraversalPolicy {
   _RailTraversalPolicy();
 
@@ -293,12 +447,4 @@ class _RailTraversalPolicy extends ReadingOrderTraversalPolicy {
 bool _isLaidOut(FocusNode node) {
   final ro = node.context?.findRenderObject();
   return ro is RenderBox && ro.hasSize;
-}
-
-bool isNodeInCurrentRoute(FocusNode node) {
-  if (!node.canRequestFocus) return false;
-  if (node.context == null) return false;
-
-  final nearestScope = FocusScope.of(node.context!);
-  return nearestScope.hasFocus || nearestScope.isFirstFocus;
 }

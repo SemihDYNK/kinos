@@ -76,11 +76,7 @@ class _NavigationBodyState extends ConsumerState<NavigationBody> {
           ViewSize.phone => paddedChild(),
           ViewSize.tablet => hasOverlay
               ? SideNavigationRail(
-                  currentIndex: widget.currentIndex,
-                  destinations: widget.destinations,
-                  currentLocation: widget.currentLocation,
                   child: paddedChild(),
-                  scaffoldKey: widget.drawerKey,
                 )
               : paddedChild(),
           ViewSize.desktop || ViewSize.television => newTVLayout
@@ -92,11 +88,7 @@ class _NavigationBodyState extends ConsumerState<NavigationBody> {
                   scaffoldKey: widget.drawerKey,
                 )
               : SideNavigationRail(
-                  currentIndex: widget.currentIndex,
-                  destinations: widget.destinations,
-                  currentLocation: widget.currentLocation,
                   child: paddedChild(),
-                  scaffoldKey: widget.drawerKey,
                 ),
         },
       ),
