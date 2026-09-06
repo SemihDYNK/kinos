@@ -19,6 +19,7 @@ import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
 import 'package:fladder/util/item_base_model/play_item_helpers.dart';
 import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/router_extension.dart';
+import 'package:fladder/widgets/shared/item_actions.dart';
 
 class MovieDetailScreen extends ConsumerStatefulWidget {
   final ItemBaseModel item;
@@ -65,6 +66,9 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
           );
 
     final version = details?.mediaStreams.currentVersionStream;
+    // S'arrête après la note de la communauté : les informations techniques
+    // du fichier (conteneur, codecs, taille, débit) vivent dans le menu
+    // "...", pas ici.
     final info = details == null
         ? const <({String label, String value})>[]
         : <({String label, String value})>[
@@ -103,6 +107,11 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 label: context.localized.communityRating,
                 value: details.overview.communityRating!.toStringAsFixed(1)
               ),
+          ];
+
+    final technicalInfo = details == null
+        ? const <({String label, String value})>[]
+        : <({String label, String value})>[
             if (version?.container != null)
               (label: 'Conteneur', value: version!.container!.toUpperCase()),
             if (version?.videoStreams.firstOrNull?.codec.isNotEmpty ?? false)
@@ -127,7 +136,6 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
       label: item.name,
       item: item,
       backDrops: item.images,
-      poster: item.getPosters?.primary,
       onRefresh: () async =>
           await ref.read(providerInstance.notifier).fetchDetails(widget.item),
       title: item.name,
@@ -151,21 +159,30 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
           ),
       actions: details == null
           ? null
-          : (context) => details.generateActions(
-                context,
-                ref,
-                exclude: {
-                  ItemActions.play,
-                  ItemActions.playFromStart,
-                  ItemActions.details,
-                  ItemActions.markPlayed,
-                  ItemActions.markUnplayed,
-                  ItemActions.setFavorite,
-                },
-                onDeleteSuccesFully: (item) {
-                  if (context.mounted) context.router.popBack();
-                },
-              ),
+          : (context) => [
+                if (technicalInfo.isNotEmpty)
+                  ItemActionButton(
+                    icon: const Icon(Icons.info_outline_rounded),
+                    label: const Text('Informations techniques'),
+                    action: () => showMediaInfoSheet(
+                        context, 'Informations techniques', technicalInfo),
+                  ),
+                ...details.generateActions(
+                  context,
+                  ref,
+                  exclude: {
+                    ItemActions.play,
+                    ItemActions.playFromStart,
+                    ItemActions.details,
+                    ItemActions.markPlayed,
+                    ItemActions.markUnplayed,
+                    ItemActions.setFavorite,
+                  },
+                  onDeleteSuccesFully: (item) {
+                    if (context.mounted) context.router.popBack();
+                  },
+                ),
+              ],
       content: (context, padding) => details == null
           ? []
           : [

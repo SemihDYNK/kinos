@@ -37,11 +37,6 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
   final ImagesData? backDrops;
   final Future<void> Function()? onRefresh;
 
-  /// Affiche (jaquette Primary) posée à cheval sur le bandeau et le corps
-  /// — null si aucune n'est disponible (le titre reprend alors toute la
-  /// largeur du bandeau, sans décalage).
-  final ImageData? poster;
-
   final String title;
   final String? originalTitle;
   final String metaLine;
@@ -65,7 +60,6 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
     this.item,
     this.backDrops,
     this.onRefresh,
-    this.poster,
     required this.title,
     this.originalTitle,
     required this.metaLine,
@@ -180,21 +174,9 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
     final image = widget.backDrops?.randomBackDrop ?? widget.backDrops?.primary;
     final hasActions = widget.actions != null;
 
-    // Affiche à cheval sur le bandeau et le corps : 40% de sa hauteur dans
-    // le bandeau, 60% dessous. Le bloc titre se décale d'autant à droite
-    // (cf. _Banner.posterInset) ; le contenu (résumé, etc.) s'aligne déjà
-    // sur ce même bord gauche via `padding`, sans changement nécessaire.
-    final hasPoster = widget.poster != null;
-    final posterWidth = density == AppDensity.couch ? 260.0 : 200.0;
-    final posterHeight = posterWidth * 3 / 2;
-    // bottom: -posterBelowBanner avec une hauteur de posterHeight place le
-    // haut de l'affiche à (posterHeight - posterBelowBanner) = 40% de sa
-    // hauteur au-dessus du bord bas du bandeau — le reste (60%) déborde.
-    final posterBelowBanner = posterHeight * 0.6;
-    // Occupe l'espace du fondu au lieu d'une marge vide séparée : juste ce
-    // qu'il faut pour que l'affiche ait la place de déborder, plus un peu
-    // d'air avant le résumé.
-    final bleedHeight = hasPoster ? posterBelowBanner + AppSpacing.lg : 120.0;
+    // Marge de sortie sous le bandeau : juste assez pour un fondu long vers
+    // le fond, sans ligne de coupure ni bande vide.
+    const bleedHeight = 240.0;
     final tintHoldFraction =
         (minBannerHeight / (minBannerHeight + bleedHeight)).clamp(0.0, 1.0);
 
@@ -213,12 +195,11 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                 // dashboard_screen.dart — SliverPadding(start: sideBarInset)
                 // pour ne jamais teindre sous la barre latérale. Le bandeau
                 // fond lui-même dans la teinte à son propre bord bas (cf.
-                // _Banner, calque c bis) ; le dégradé ci-dessous prend le
-                // relais en pleine teinte à ce même point, puis s'étire sur
-                // la marge de sortie (juste assez pour l'affiche, cf.
-                // bleedHeight) avant de s'éteindre — fondu long, sans ligne
-                // de coupure. tintHoldFraction est une approximation : le
-                // bandeau est à hauteur minimale extensible, sa hauteur
+                // _Banner, calque c) ; le dégradé ci-dessous prend le relais
+                // en pleine teinte à ce même point, puis s'étire sur la
+                // marge de sortie avant de s'éteindre — fondu long, sans
+                // ligne de coupure. tintHoldFraction est une approximation :
+                // le bandeau est à hauteur minimale extensible, sa hauteur
                 // réelle n'est pas connue ici : viser un peu court plutôt
                 // qu'un peu long n'a pas d'incidence visible, les deux
                 // calques sont alors déjà la même teinte.
@@ -236,49 +217,25 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                     sliver: SliverMainAxisGroup(
                       slivers: [
                         SliverToBoxAdapter(
-                          // clipBehavior.none : l'affiche déborde
-                          // volontairement sous le bandeau (point 2) — rien
-                          // d'opaque ne la recouvre dans la marge de sortie
-                          // ci-dessous, elle reste visible par-dessus.
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              _Banner(
-                                minHeight: minBannerHeight,
-                                maxHeight: maxBannerHeight,
-                                image: image,
-                                heroTint: heroTint,
-                                heroTextSecondary: heroTextSecondary,
-                                posterInset:
-                                    hasPoster ? posterWidth + AppSpacing.lg : 0,
-                                title: widget.title,
-                                originalTitle: widget.originalTitle,
-                                metaLine: widget.metaLine,
-                                onPlay: widget.onPlay,
-                                isFavourite: widget.isFavourite,
-                                onToggleFavourite: widget.onToggleFavourite,
-                                isPlayed: widget.isPlayed,
-                                onTogglePlayed: widget.onTogglePlayed,
-                                onMore: hasActions
-                                    ? () => _showActions(context)
-                                    : null,
-                              ),
-                              if (hasPoster)
-                                Positioned(
-                                  left: AppSpacing.screenPadding,
-                                  bottom: -posterBelowBanner,
-                                  width: posterWidth,
-                                  height: posterHeight,
-                                  child: _PosterCard(
-                                    image: widget.poster,
-                                    width: posterWidth,
-                                    height: posterHeight,
-                                  ),
-                                ),
-                            ],
+                          child: _Banner(
+                            minHeight: minBannerHeight,
+                            maxHeight: maxBannerHeight,
+                            image: image,
+                            heroTint: heroTint,
+                            heroTextSecondary: heroTextSecondary,
+                            title: widget.title,
+                            originalTitle: widget.originalTitle,
+                            metaLine: widget.metaLine,
+                            onPlay: widget.onPlay,
+                            isFavourite: widget.isFavourite,
+                            onToggleFavourite: widget.onToggleFavourite,
+                            isPlayed: widget.isPlayed,
+                            onTogglePlayed: widget.onTogglePlayed,
+                            onMore:
+                                hasActions ? () => _showActions(context) : null,
                           ),
                         ),
-                        SliverToBoxAdapter(
+                        const SliverToBoxAdapter(
                             child: SizedBox(height: bleedHeight)),
                       ],
                     ),
@@ -319,10 +276,6 @@ class _Banner extends StatelessWidget {
   final ImageData? image;
   final Color heroTint;
   final Color heroTextSecondary;
-
-  /// Espace réservé à gauche pour l'affiche qui déborde par-dessus (0 si
-  /// aucune) — le bloc de texte s'en décale d'autant.
-  final double posterInset;
   final String title;
   final String? originalTitle;
   final String metaLine;
@@ -339,7 +292,6 @@ class _Banner extends StatelessWidget {
     required this.image,
     required this.heroTint,
     required this.heroTextSecondary,
-    required this.posterInset,
     required this.title,
     required this.originalTitle,
     required this.metaLine,
@@ -373,9 +325,17 @@ class _Banner extends StatelessWidget {
           children: [
             // a. Fond teinté — visible au chargement et sur les bords.
             Positioned.fill(child: ColoredBox(color: heroTint)),
-            // b. Backdrop plein cadre, cover.
+            // b. Backdrop plein cadre, cover — aligné centre-haut : un
+            // bandeau large et peu haut recadre lourdement en cover, mieux
+            // vaut perdre le bas de l'image (générique, décor) que le haut
+            // (où se trouvent le plus souvent les visages).
             Positioned.fill(
-                child: FladderImage(image: image, fit: BoxFit.cover)),
+              child: FladderImage(
+                image: image,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+              ),
+            ),
             // c. Fondu vers la teinte en bas de l'image : elle se fond
             // directement dans le fond teinté, pas de bord net entre
             // l'image et la teinte qui déborde ensuite sous le bandeau.
@@ -423,17 +383,11 @@ class _Banner extends StatelessWidget {
                 ),
               ),
             ),
-            // f. Bloc de texte, aligné en bas à gauche sur screenPadding
-            // (+ posterInset s'il y a une affiche à côté) — seul enfant non
-            // positionné : c'est lui qui pilote la hauteur du Stack entre
-            // minHeight et maxHeight.
+            // f. Bloc de texte, aligné en bas à gauche sur screenPadding —
+            // seul enfant non positionné : c'est lui qui pilote la hauteur
+            // du Stack entre minHeight et maxHeight.
             Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.screenPadding + posterInset,
-                AppSpacing.screenPadding,
-                AppSpacing.screenPadding,
-                AppSpacing.screenPadding,
-              ),
+              padding: const EdgeInsets.all(AppSpacing.screenPadding),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -539,47 +493,6 @@ class _Banner extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Affiche à cheval sur le bandeau et le corps. "Élévation par la valeur,
-/// jamais par l'ombre" (cf. CLAUDE.md) : pas de BoxShadow, juste un liseré
-/// pour la détacher des deux fonds très proches (teinte, puis background)
-/// sur lesquels elle se pose.
-///
-/// [width]/[height] sont redondants avec le [Positioned] qui l'entoure côté
-/// appelant (déjà contraint en toute rigueur) — imposés ici aussi,
-/// explicitement, pour qu'elle ne dépende jamais uniquement de ce parent.
-class _PosterCard extends StatelessWidget {
-  final ImageData? image;
-  final double width;
-  final double height;
-
-  const _PosterCard({
-    required this.image,
-    required this.width,
-    required this.height,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: AppRadii.cardBorder,
-          border: Border.all(color: AppColors.borderStrong),
-        ),
-        child: ClipRRect(
-          borderRadius: AppRadii.cardBorder,
-          child: AspectRatio(
-            aspectRatio: 2 / 3,
-            child: FladderImage(image: image, fit: BoxFit.cover),
-          ),
         ),
       ),
     );

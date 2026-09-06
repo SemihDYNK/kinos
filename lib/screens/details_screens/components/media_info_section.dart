@@ -82,7 +82,7 @@ class _CastGrid extends StatelessWidget {
   const _CastGrid({required this.people, required this.width});
 
   static const _tileWidth = 88.0;
-  static const _maxRows = 3;
+  static const _maxRows = 1;
 
   void _seeAll(BuildContext context) {
     showBottomSheetPill(
@@ -229,6 +229,45 @@ class _CastTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Feuille clé/valeur autonome — même style que le panneau "Informations",
+/// pour un sous-ensemble d'informations affiché ailleurs (ex. les infos
+/// techniques du fichier, déplacées dans le menu "..." du bandeau).
+void showMediaInfoSheet(
+  BuildContext context,
+  String title,
+  List<({String label, String value})> info,
+) {
+  showBottomSheetPill(
+    context: context,
+    content: (context, scrollController) => ListView(
+      controller: scrollController,
+      shrinkWrap: true,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Text(title, style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: AppSpacing.sm),
+        for (final entry in info)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(entry.label, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  entry.value,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: AppColors.textPrimary),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 class _InfoPanel extends StatelessWidget {
