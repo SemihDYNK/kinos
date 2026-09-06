@@ -83,6 +83,7 @@ class _CastGrid extends StatelessWidget {
 
   static const _tileWidth = 88.0;
   static const _maxRows = 1;
+  static const _tileAspectRatio = 0.72;
 
   void _seeAll(BuildContext context) {
     showBottomSheetPill(
@@ -130,6 +131,14 @@ class _CastGrid extends StatelessWidget {
     final maxVisible = columns * _maxRows;
     final visible = people.take(maxVisible).toList();
     final truncated = people.length > maxVisible;
+    // `visible` s'arrête déjà à une rangée (itemCount du GridView ne dépasse
+    // jamais `columns`), mais rien n'empêchait un éventuel dépassement de
+    // peindre au-delà — un fragment de vignette (visage tronqué) restait
+    // visible sous la rangée. Hauteur du conteneur contrainte à exactement
+    // une rangée (même calcul que `childAspectRatio` ci-dessous), et
+    // ClipRect en dernier rempart : rien ne peut plus déborder.
+    final cellWidth = (width - (columns - 1) * AppSpacing.sm) / columns;
+    final rowHeight = cellWidth / _tileAspectRatio;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,17 +173,23 @@ class _CastGrid extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: visible.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            crossAxisSpacing: AppSpacing.sm,
-            mainAxisSpacing: AppSpacing.sm,
-            childAspectRatio: 0.72,
+        ClipRect(
+          child: SizedBox(
+            height: rowHeight,
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: visible.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: AppSpacing.sm,
+                mainAxisSpacing: AppSpacing.sm,
+                childAspectRatio: _tileAspectRatio,
+              ),
+              itemBuilder: (context, index) =>
+                  _CastTile(person: visible[index]),
+            ),
           ),
-          itemBuilder: (context, index) => _CastTile(person: visible[index]),
         ),
       ],
     );
