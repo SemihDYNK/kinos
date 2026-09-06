@@ -309,17 +309,27 @@ class _BannerBackdrop extends StatelessWidget {
     required this.backdropHeight,
   });
 
+  /// Distance (montée de teinte + résorption vers le fond) sur laquelle le
+  /// voile se résout entièrement, comptée à rebours depuis `minTitleHeight`
+  /// — jamais depuis `backdropHeight`. `backdropHeight` peut largement
+  /// dépasser la hauteur réelle du contenu (résumé court, pas de casting…)
+  /// tandis que le bloc titre, lui, est TOUJOURS présent à cette hauteur :
+  /// c'est le seul point d'ancrage sûr. L'ancrer sur `backdropHeight`
+  /// laissait, sur un contenu court, le voile se faire couper avant d'avoir
+  /// fini de se résorber — d'où la ligne de démarcation observée.
+  static const _rampDistance = 200.0;
+  static const _resolveDistance = 150.0;
+
   @override
   Widget build(BuildContext context) {
-    // L'image reste nette et non voilée sur toute sa moitié haute ; le
-    // voile ne commence à monter qu'à l'approche du bloc titre
-    // (`minTitleHeight`), où il atteint une teinte pleinement opaque, puis
-    // continue vers le fond de page peu après (marge de 120px, pour que le
-    // résumé qui suit démarre déjà sur un aplat opaque, jamais sur une
-    // transparence résiduelle).
-    final titleFraction = (minTitleHeight / backdropHeight).clamp(0.0, 1.0);
+    final rampStart = (minTitleHeight - _rampDistance - _resolveDistance)
+        .clamp(0.0, minTitleHeight);
+    final tintOpaqueAt =
+        (minTitleHeight - _resolveDistance).clamp(0.0, minTitleHeight);
+    final rampStartFraction = (rampStart / backdropHeight).clamp(0.0, 1.0);
+    final tintOpaqueFraction = (tintOpaqueAt / backdropHeight).clamp(0.0, 1.0);
     final backgroundFraction =
-        ((minTitleHeight + 120) / backdropHeight).clamp(0.0, 1.0);
+        (minTitleHeight / backdropHeight).clamp(0.0, 1.0);
 
     return Stack(
       fit: StackFit.expand,
@@ -328,17 +338,22 @@ class _BannerBackdrop extends StatelessWidget {
         ColoredBox(color: heroTint),
         // b. Backdrop plein cadre, cover, centré.
         FladderImage(image: image, fit: BoxFit.cover),
-        // c. Voile dégradé vertical : transparent jusqu'à mi-hauteur (image
-        // nue et lisible sur toute sa moitié haute), puis heroTint qui monte
-        // rapidement à l'approche du bloc titre, puis fond de page opaque
-        // peu après — l'image continue derrière le contenu et disparaît
-        // sous ce voile, sans ligne de séparation.
+        // c. Voile dégradé vertical : transparent jusqu'à mi-hauteur du
+        // bloc titre (image nue et lisible), puis heroTint qui monte, puis
+        // fond de page pleinement opaque au plus tard à `minTitleHeight` —
+        // avant même la fin du bloc titre. L'image continue derrière le
+        // contenu et disparaît sous ce voile, sans ligne de séparation.
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              stops: [0, 0.5, titleFraction, backgroundFraction],
+              stops: [
+                0,
+                rampStartFraction,
+                tintOpaqueFraction,
+                backgroundFraction,
+              ],
               colors: [
                 heroTint.withValues(alpha: 0),
                 heroTint.withValues(alpha: 0),
@@ -347,6 +362,19 @@ class _BannerBackdrop extends StatelessWidget {
               ],
             ),
           ),
+        ),
+        // c2. Aplat opaque explicite en dessous — pas un dégradé dont on
+        // espère qu'il s'est bien résolu : un vrai ColoredBox, strictement
+        // AppColors.background, jusqu'au bord bas de ce calque. Exclut
+        // catégoriquement tout résidu de transparence ou artefact de
+        // rendu du dégradé sur cette zone, quelle que soit la hauteur
+        // réelle du contenu qui la recouvre.
+        Positioned(
+          top: minTitleHeight,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: const ColoredBox(color: AppColors.background),
         ),
         // d. Dégradé horizontal — contraste pour le texte à gauche (titre,
         // puis résumé sur la partie déjà voilée de l'image).
