@@ -135,6 +135,12 @@ class _CastGrid extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          // Sans ceci, le lien "tout voir" (FocusRing : bordure + padding)
+          // rend la ligne plus haute que le titre seul et centre celui-ci
+          // dedans, le décalant vers le bas — désaligné avec le titre
+          // "Informations" du panneau voisin, une simple Text sans Row.
+          // .start ancre le titre en haut de la ligne dans les deux cas.
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(context.localized.castAndCrew,
                 style: Theme.of(context).textTheme.headlineMedium),
@@ -157,7 +163,7 @@ class _CastGrid extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),

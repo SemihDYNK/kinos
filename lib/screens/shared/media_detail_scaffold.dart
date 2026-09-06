@@ -175,16 +175,22 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
     // casting, et s'efface sous le voile dégradé de _BannerBackdrop plutôt
     // que de s'arrêter net à la hauteur du titre. Plus de zone de
     // transition, donc plus de ligne de coupure visible.
-    final backdropHeight = density == AppDensity.couch ? 1080.0 : 1000.0;
+    final backdropHeight = density == AppDensity.couch ? 1300.0 : 1200.0;
     final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
-    // Même alignement que le tableau de bord : AppSpacing.screenPadding.
-    // Contrairement à `dashboard_screen.dart`, le corps de cet écran (résumé,
-    // casting, recommandations...) n'est PAS imbriqué dans un sliver déjà
-    // décalé de sideBarInset — il lui faut donc le padding complet, pas
-    // `innerPadding` (qui le retranche). L'oubli de cette distinction est
-    // ce qui faisait passer tout le contenu sous la barre latérale.
+    // `padding` inclut déjà la largeur de la barre latérale (cf.
+    // AdaptiveLayout.adaptivePadding) : la barre latérale n'est pas une
+    // colonne séparée, c'est un calque semi-transparent posé par-dessus un
+    // contenu plein cadre (SideNavigationRail). Le SliverPadding ci-dessous
+    // applique déjà `sideBarInset` une fois pour tout le bandeau ET le
+    // contenu (imbriqués ensemble dans le même SliverStack, cf. plus bas) :
+    // leur passer `padding` tel quel le décalerait une seconde fois, d'où
+    // `innerPadding` (sans lui) — même mécanique que dashboard_screen.dart.
+    // Le bloc titre, lui, n'a jamais eu ce problème : son padding est fixe
+    // (`AppSpacing.screenPadding`, dans _TitleBlock), pas dérivé de
+    // `adaptivePadding`.
     final padding = AdaptiveLayout.adaptivePadding(context,
         horizontalPadding: AppSpacing.screenPadding);
+    final innerPadding = padding.copyWith(left: padding.left - sideBarInset);
     final heroTint = context.tokens.heroTint;
     final heroTextSecondary = context.tokens.heroTextSecondary;
     final image = _bannerImage();
@@ -225,8 +231,12 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                         left: 0,
                         right: 0,
                         height: backdropHeight,
-                        child:
-                            _BannerBackdrop(image: image, heroTint: heroTint),
+                        child: _BannerBackdrop(
+                          image: image,
+                          heroTint: heroTint,
+                          minTitleHeight: minTitleHeight,
+                          backdropHeight: backdropHeight,
+                        ),
                       ),
                       SliverMainAxisGroup(
                         slivers: [
@@ -248,7 +258,7 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                                   : null,
                             ),
                           ),
-                          ...widget.content(context, padding),
+                          ...widget.content(context, innerPadding),
                         ],
                       ),
                     ],
@@ -289,11 +299,28 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
 class _BannerBackdrop extends StatelessWidget {
   final ImageData? image;
   final Color heroTint;
+  final double minTitleHeight;
+  final double backdropHeight;
 
-  const _BannerBackdrop({required this.image, required this.heroTint});
+  const _BannerBackdrop({
+    required this.image,
+    required this.heroTint,
+    required this.minTitleHeight,
+    required this.backdropHeight,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // L'image reste nette et non voilée sur toute sa moitié haute ; le
+    // voile ne commence à monter qu'à l'approche du bloc titre
+    // (`minTitleHeight`), où il atteint une teinte pleinement opaque, puis
+    // continue vers le fond de page peu après (marge de 120px, pour que le
+    // résumé qui suit démarre déjà sur un aplat opaque, jamais sur une
+    // transparence résiduelle).
+    final titleFraction = (minTitleHeight / backdropHeight).clamp(0.0, 1.0);
+    final backgroundFraction =
+        ((minTitleHeight + 120) / backdropHeight).clamp(0.0, 1.0);
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -301,19 +328,19 @@ class _BannerBackdrop extends StatelessWidget {
         ColoredBox(color: heroTint),
         // b. Backdrop plein cadre, cover, centré.
         FladderImage(image: image, fit: BoxFit.cover),
-        // c. Voile dégradé vertical : transparent en haut (image nue),
-        // heroTint qui monte progressivement jusqu'à 50%, puis fond de page
-        // opaque à partir de 70% — l'image continue derrière le contenu et
-        // disparaît sous ce voile, sans ligne de séparation. Le bloc titre
-        // (posé plus haut, vers 680-760px) et le résumé qui le suit se
-        // trouvent déjà sur fond quasi ou totalement opaque à ce stade.
+        // c. Voile dégradé vertical : transparent jusqu'à mi-hauteur (image
+        // nue et lisible sur toute sa moitié haute), puis heroTint qui monte
+        // rapidement à l'approche du bloc titre, puis fond de page opaque
+        // peu après — l'image continue derrière le contenu et disparaît
+        // sous ce voile, sans ligne de séparation.
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              stops: const [0, 0.5, 0.7],
+              stops: [0, 0.5, titleFraction, backgroundFraction],
               colors: [
+                heroTint.withValues(alpha: 0),
                 heroTint.withValues(alpha: 0),
                 heroTint,
                 AppColors.background,
@@ -414,8 +441,13 @@ class _TitleBlock extends StatelessWidget {
                       originalTitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      // 75%, pas moins : sur une image, même voilée, le texte
+                      // secondaire suit AppColors.textPrimary à 75% d'opacité
+                      // (règle du bandeau teinté, CLAUDE.md) — même valeur que
+                      // metaLine ci-dessous. À 55% (l'ancienne valeur), le
+                      // contraste n'était plus garanti.
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary.withValues(alpha: 0.55)),
+                          color: AppColors.textPrimary.withValues(alpha: 0.75)),
                     ),
                   ),
                 if (metaLine.isNotEmpty) ...[
