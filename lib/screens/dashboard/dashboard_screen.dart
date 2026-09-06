@@ -148,6 +148,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             // un flou d'image : cette zone défile et change à chaque diapo.
             // Inséré à `sideBarInset` : la barre latérale reste sur
             // AppColors.background pur, jamais teintée.
+            //
+            // Trois arrêts, pas deux : la teinte reste pleine jusqu'à ~0.55
+            // (couvre la hauteur du bandeau — 320-480 selon la densité —
+            // plus sa marge avant "Continuer à regarder", estimé sur un
+            // ratio hauteur bandeau / hauteur totale du bloc), puis descend
+            // progressivement pour n'atteindre le fond pur qu'au tout
+            // dernier point (fin de "Continuer à regarder"). Avec un seul
+            // arrêt intermédiaire, la teinte commençait à s'estomper dès le
+            // haut du bandeau et touchait déjà le fond pur bien avant la fin
+            // de la rangée — d'où la coupure nette perçue juste sous le
+            // bandeau.
             SliverPadding(
               padding: EdgeInsetsDirectional.only(start: sideBarInset),
               sliver: DecoratedSliver(
@@ -155,8 +166,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    stops: const [0, 0.7],
+                    stops: const [0, 0.55, 1],
                     colors: [
+                      heroItems.isNotEmpty
+                          ? context.tokens.heroTint
+                          : AppColors.background,
                       heroItems.isNotEmpty
                           ? context.tokens.heroTint
                           : AppColors.background,

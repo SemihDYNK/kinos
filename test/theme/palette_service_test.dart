@@ -66,8 +66,8 @@ void main() {
       final hsl = HSLColor.fromColor(palette.tint);
 
       // Tolérance : la teinte est quantifiée en RGB 8 bits entre le clamp
-      // HSL et cette relecture, `withLightness(0.16)` ne redonne donc pas
-      // exactement 0.16 une fois reconverti.
+      // HSL et cette relecture, `withLightness(maxLightness)` ne redonne
+      // donc pas exactement cette valeur une fois reconvertie.
       const epsilon = 0.01;
       expect(hsl.lightness,
           greaterThanOrEqualTo(TintLimits.minLightness - epsilon));
@@ -82,8 +82,9 @@ void main() {
     // Les deux vérifications sont des décisions séparées : un échec du
     // texte secondaire ne doit jamais entraîner le repli de la teinte de
     // fond, qui reste valide indépendamment. Avec le bridage de luminance
-    // actuel (0.06–0.16), la recherche de secondaire réussit en pratique
-    // pour toute teinte produite par le service (cf. groupe précédent) ;
+    // actuel (TintLimits.minLightness–maxLightness), la recherche de
+    // secondaire réussit en pratique pour toute teinte produite par le
+    // service (cf. groupe précédent) ;
     // ce test verrouille la garantie elle-même — texte secondaire toujours
     // égal à AppColors.textSecondary ou d'un contraste ≥ 5:1 avec la
     // teinte, jamais un compromis silencieux entre les deux.

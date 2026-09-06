@@ -9,8 +9,8 @@ import 'app_theme.dart';
 ///
 /// Règles du projet :
 ///   - seul le bandeau se teinte, jamais la zone principale ;
-///   - luminance bridée entre 0.06 et 0.16 ;
-///   - saturation plafonnée à 0.30 ;
+///   - luminance bridée entre 0.06 et 0.22 ;
+///   - saturation plafonnée à 0.40 ;
 ///   - contraste ≥ 4.5:1 entre la teinte et le texte principal, vérifié et
 ///     non supposé ; sous ce seuil, repli complet ;
 ///   - contraste ≥ 5.0:1 entre la teinte et le texte secondaire teinté ;
@@ -67,10 +67,10 @@ class HeroPalette {
 abstract final class TintLimits {
   /// Bornes de luminance HSL du fond.
   static const minLightness = 0.06;
-  static const maxLightness = 0.16;
+  static const maxLightness = 0.22;
 
   /// Plafond de saturation. Au-delà, on lit une couleur et non une ambiance.
-  static const maxSaturation = 0.30;
+  static const maxSaturation = 0.40;
 
   /// En dessous, la jaquette est trop désaturée : le résultat serait un
   /// gris-brun indéfinissable. Mieux vaut le repli neutre.

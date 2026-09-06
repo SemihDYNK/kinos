@@ -57,7 +57,7 @@ et tout ce qui suit restent sur `#0A0A0A` pur, pour que les jaquettes
 gardent leur contraste. Toujours un dégradé de couleur, jamais un
 `BackdropFilter` sur l'image : cette zone défile et change à chaque diapo.
 
-Luminance bridée 0.06–0.16, saturation ≤ 0.30, contraste texte ≥ 4.5:1,
+Luminance bridée 0.06–0.22, saturation ≤ 0.40, contraste texte ≥ 4.5:1,
 repli `#141414` en cas d'échec.
 
 La barre latérale n'est pas une colonne séparée : c'est un calque
