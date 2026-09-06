@@ -1036,6 +1036,7 @@ class JellyService {
     num? minCommunityRating,
     List<ItemFields>? fields,
     List<ImageType>? enableImageTypes,
+    bool? enableTotalRecordCount,
   }) async {
     return api.usersUserIdItemsGet(
       parentId: parentId,
@@ -1053,6 +1054,7 @@ class JellyService {
       minCommunityRating: minCommunityRating,
       fields: fields,
       enableImageTypes: enableImageTypes,
+      enableTotalRecordCount: enableTotalRecordCount,
     );
   }
 
