@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sliver_tools/sliver_tools.dart';
 
 import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/models/items/images_models.dart';
@@ -163,14 +164,18 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   @override
   Widget build(BuildContext context) {
     final density = context.tokens.density;
-    // Bandeau volontairement haut — 680/760 selon densité, jusqu'à +80 si
-    // le titre (2 lignes) le demande. Un cadre proche du ratio 16:9 de
-    // l'image source (backdrop/thumb) limite le recadrage qu'impose
-    // BoxFit.cover : l'ancien bandeau bas et large (480/560, ratio ~3,9:1)
-    // forçait un agrandissement énorme de l'image et en rognait plus de la
-    // moitié.
-    final minBannerHeight = density == AppDensity.couch ? 760.0 : 680.0;
-    final maxBannerHeight = minBannerHeight + 80;
+    // Hauteur du bloc titre/métadonnées/boutons — 680/760 selon densité,
+    // jusqu'à +80 si le titre (2 lignes) le demande. Ce bloc reste posé sur
+    // l'image, à la même position qu'avant ; c'est la hauteur de l'image de
+    // fond (ci-dessous) qui change.
+    final minTitleHeight = density == AppDensity.couch ? 760.0 : 680.0;
+    final maxTitleHeight = minTitleHeight + 80;
+    // Hauteur de l'image de fond — nettement plus haute que le bloc titre :
+    // elle continue derrière le résumé, les sélecteurs et le début du
+    // casting, et s'efface sous le voile dégradé de _BannerBackdrop plutôt
+    // que de s'arrêter net à la hauteur du titre. Plus de zone de
+    // transition, donc plus de ligne de coupure visible.
+    final backdropHeight = density == AppDensity.couch ? 1080.0 : 1000.0;
     final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
     // Même alignement que le tableau de bord : AppSpacing.screenPadding.
     // Contrairement à `dashboard_screen.dart`, le corps de cet écran (résumé,
@@ -198,33 +203,57 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                 const DefaultSliverTopBadding(),
                 // SliverPadding(start: sideBarInset) : la barre latérale
                 // reste sur AppColors.background pur, jamais teintée — même
-                // mécanique que dashboard_screen.dart. Le bandeau résorbe
-                // entièrement sa propre teinte avant son bord bas (cf.
-                // _Banner, calques c et c2) : le contenu qui suit démarre
-                // donc directement sur fond pur, sans zone tintée
-                // intercalée ni ligne de coupure.
+                // mécanique que dashboard_screen.dart.
+                //
+                // SliverStack (sliver_tools) superpose deux slivers dans le
+                // même espace de défilement, au lieu de les enchaîner :
+                // - _BannerBackdrop, épinglé en haut sur `backdropHeight`
+                //   (positionné via SliverPositioned, ne compte donc pas
+                //   dans la taille du groupe) ;
+                // - le bloc titre puis tout le contenu (`widget.content`),
+                //   qui déterminent la taille réelle du groupe.
+                // L'image continue donc derrière le résumé, les sélecteurs
+                // et le début du casting, tant que ce contenu tient dans
+                // `backdropHeight` ; au-delà, plus de calque image — juste
+                // le fond de la page, déjà atteint par le voile dégradé.
                 SliverPadding(
                   padding: EdgeInsetsDirectional.only(start: sideBarInset),
-                  sliver: SliverToBoxAdapter(
-                    child: _Banner(
-                      minHeight: minBannerHeight,
-                      maxHeight: maxBannerHeight,
-                      image: image,
-                      heroTint: heroTint,
-                      heroTextSecondary: heroTextSecondary,
-                      title: widget.title,
-                      originalTitle: widget.originalTitle,
-                      metaLine: widget.metaLine,
-                      onPlay: widget.onPlay,
-                      isFavourite: widget.isFavourite,
-                      onToggleFavourite: widget.onToggleFavourite,
-                      isPlayed: widget.isPlayed,
-                      onTogglePlayed: widget.onTogglePlayed,
-                      onMore: hasActions ? () => _showActions(context) : null,
-                    ),
+                  sliver: SliverStack(
+                    children: [
+                      SliverPositioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: backdropHeight,
+                        child:
+                            _BannerBackdrop(image: image, heroTint: heroTint),
+                      ),
+                      SliverMainAxisGroup(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: _TitleBlock(
+                              minHeight: minTitleHeight,
+                              maxHeight: maxTitleHeight,
+                              heroTextSecondary: heroTextSecondary,
+                              title: widget.title,
+                              originalTitle: widget.originalTitle,
+                              metaLine: widget.metaLine,
+                              onPlay: widget.onPlay,
+                              isFavourite: widget.isFavourite,
+                              onToggleFavourite: widget.onToggleFavourite,
+                              isPlayed: widget.isPlayed,
+                              onTogglePlayed: widget.onTogglePlayed,
+                              onMore: hasActions
+                                  ? () => _showActions(context)
+                                  : null,
+                            ),
+                          ),
+                          ...widget.content(context, padding),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                ...widget.content(context, padding),
                 const DefaultSliverBottomPadding(),
               ],
             ),
@@ -253,11 +282,72 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   }
 }
 
-class _Banner extends StatelessWidget {
-  final double minHeight;
-  final double maxHeight;
+/// Image de fond du haut d'écran — continue derrière le bloc titre et le
+/// début du contenu (résumé, sélecteurs, casting), et s'efface sous son
+/// propre voile dégradé plutôt que de s'arrêter net à une hauteur fixe.
+/// Occupe toute la hauteur `SliverPositioned` qui l'englobe (cf. l'appelant).
+class _BannerBackdrop extends StatelessWidget {
   final ImageData? image;
   final Color heroTint;
+
+  const _BannerBackdrop({required this.image, required this.heroTint});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // a. Fond teinté — visible au chargement et sur les bords.
+        ColoredBox(color: heroTint),
+        // b. Backdrop plein cadre, cover, centré.
+        FladderImage(image: image, fit: BoxFit.cover),
+        // c. Voile dégradé vertical : transparent en haut (image nue),
+        // heroTint qui monte progressivement jusqu'à 50%, puis fond de page
+        // opaque à partir de 70% — l'image continue derrière le contenu et
+        // disparaît sous ce voile, sans ligne de séparation. Le bloc titre
+        // (posé plus haut, vers 680-760px) et le résumé qui le suit se
+        // trouvent déjà sur fond quasi ou totalement opaque à ce stade.
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0, 0.5, 0.7],
+              colors: [
+                heroTint.withValues(alpha: 0),
+                heroTint,
+                AppColors.background,
+              ],
+            ),
+          ),
+        ),
+        // d. Dégradé horizontal — contraste pour le texte à gauche (titre,
+        // puis résumé sur la partie déjà voilée de l'image).
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              stops: const [0, 0.55],
+              colors: [
+                AppColors.scrim.withValues(alpha: 0.9),
+                AppColors.scrim.withValues(alpha: 0),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bloc titre/métadonnées/boutons — posé sur [_BannerBackdrop], pas de
+/// calque d'image ou de dégradé propre : le fond vient entièrement de la
+/// zone de _BannerBackdrop qui le recouvre (même espace de défilement, cf.
+/// le SliverStack de l'appelant).
+class _TitleBlock extends StatelessWidget {
+  final double minHeight;
+  final double maxHeight;
   final Color heroTextSecondary;
   final String title;
   final String? originalTitle;
@@ -269,11 +359,9 @@ class _Banner extends StatelessWidget {
   final VoidCallback? onTogglePlayed;
   final VoidCallback? onMore;
 
-  const _Banner({
+  const _TitleBlock({
     required this.minHeight,
     required this.maxHeight,
-    required this.image,
-    required this.heroTint,
     required this.heroTextSecondary,
     required this.title,
     required this.originalTitle,
@@ -296,213 +384,120 @@ class _Banner extends StatelessWidget {
       overlayColor: heroTextSecondary,
     );
 
-    // Fondu final teinte -> fond, sur les derniers `fadeDistance` pixels du
-    // bandeau : la teinte se résorbe entièrement avant son bord bas, pour
-    // que le contenu qui suit démarre directement sur fond pur, sans zone
-    // tintée résiduelle ni ligne de coupure (cf. calque c2 ci-dessous).
-    // Approximation sur `minHeight` : si le titre (2 lignes) pousse la
-    // hauteur vers `maxHeight`, l'écart (80px) est absorbé sans effet
-    // visible, les deux fonds étant alors déjà identiques à ce stade du
-    // dégradé.
-    const fadeDistance = 240.0;
-    final fadeStart = ((minHeight - fadeDistance) / minHeight).clamp(0.0, 1.0);
-
-    return ClipRect(
-      // Hauteur minimale, extensible si le titre (2 lignes max) le demande —
-      // même mécanique de dimensionnement que le bandeau du tableau de bord
-      // (le Column non positionné pilote la taille du Stack, les calques de
-      // fond suivent en Positioned.fill).
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: minHeight, maxHeight: maxHeight),
-        child: Stack(
-          alignment: Alignment.bottomLeft,
-          children: [
-            // a. Fond teinté — visible au chargement et sur les bords.
-            Positioned.fill(child: ColoredBox(color: heroTint)),
-            // b. Backdrop plein cadre, cover, centré : à 680/760px de haut,
-            // le cadre se rapproche du ratio 16:9 de l'image source — le
-            // recadrage cover reste modéré, plus besoin de privilégier le
-            // haut de l'image comme sur l'ancien bandeau bas et large, qui
-            // rognait lourdement dans un sens ou l'autre.
-            Positioned.fill(
-              child: FladderImage(image: image, fit: BoxFit.cover),
-            ),
-            // c. Fondu vers la teinte en bas de l'image : elle se fond
-            // directement dans le fond teinté, pas de bord net entre
-            // l'image et la teinte.
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    stops: const [0, 0.35],
-                    colors: [heroTint, heroTint.withValues(alpha: 0)],
-                  ),
+    // Hauteur minimale, extensible si le titre (2 lignes max) le demande —
+    // même mécanique de dimensionnement que le bandeau du tableau de bord
+    // (le Column non positionné pilote la taille du Stack).
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: minHeight, maxHeight: maxHeight),
+      child: Stack(
+        alignment: Alignment.bottomLeft,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.screenPadding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .displayLarge
+                      ?.copyWith(color: AppColors.textPrimary),
                 ),
-              ),
-            ),
-            // c2. Fondu final teinte -> fond, sur le bas du bandeau — cf.
-            // le calcul de `fadeStart` ci-dessus.
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: [0, fadeStart, 1],
-                    colors: [
-                      Colors.transparent,
-                      Colors.transparent,
-                      AppColors.background,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // d. Dégradé horizontal — contraste pour le texte à gauche.
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    stops: const [0, 0.55],
-                    colors: [
-                      AppColors.scrim.withValues(alpha: 0.9),
-                      AppColors.scrim.withValues(alpha: 0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // e. Dégradé vertical — contraste pour le texte en bas.
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    stops: const [0, 0.45],
-                    colors: [
-                      AppColors.scrim.withValues(alpha: 0.75),
-                      AppColors.scrim.withValues(alpha: 0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // f. Bloc de texte, aligné en bas à gauche sur screenPadding —
-            // seul enfant non positionné : c'est lui qui pilote la hauteur
-            // du Stack entre minHeight et maxHeight.
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.screenPadding),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .displayLarge
-                        ?.copyWith(color: AppColors.textPrimary),
-                  ),
-                  if (showOriginalTitle)
-                    Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                      child: Text(
-                        originalTitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                AppColors.textPrimary.withValues(alpha: 0.55)),
-                      ),
-                    ),
-                  if (metaLine.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      metaLine,
+                if (showOriginalTitle)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                    child: Text(
+                      originalTitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary.withValues(alpha: 0.75)),
+                          color: AppColors.textPrimary.withValues(alpha: 0.55)),
                     ),
-                  ],
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (onPlay != null)
-                        FocusRing(
-                          autofocus: AdaptiveLayout.inputDeviceOf(context) ==
-                              InputDevice.dPad,
-                          onActivate: onPlay,
-                          child: ExcludeFocus(
-                            child: FilledButton.icon(
-                              onPressed: onPlay,
-                              icon: const Icon(Icons.play_arrow_rounded),
-                              label: Text(context.localized.playLabel),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: AppSpacing.sm),
-                      if (onToggleFavourite != null)
-                        FocusRing(
-                          borderRadius: AppRadii.controlBorder,
-                          onActivate: onToggleFavourite,
-                          child: ExcludeFocus(
-                            child: IconButton.outlined(
-                              style: secondaryButtonStyle,
-                              onPressed: onToggleFavourite,
-                              icon: Icon(
-                                isFavourite
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: AppSpacing.xxs),
-                      if (onTogglePlayed != null)
-                        FocusRing(
-                          borderRadius: AppRadii.controlBorder,
-                          onActivate: onTogglePlayed,
-                          child: ExcludeFocus(
-                            child: IconButton.outlined(
-                              style: secondaryButtonStyle,
-                              onPressed: onTogglePlayed,
-                              icon: Icon(
-                                isPlayed
-                                    ? Icons.check_circle_rounded
-                                    : Icons.check_circle_outline_rounded,
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: AppSpacing.xxs),
-                      if (onMore != null)
-                        FocusRing(
-                          borderRadius: AppRadii.controlBorder,
-                          onActivate: onMore,
-                          child: ExcludeFocus(
-                            child: IconButton.outlined(
-                              style: secondaryButtonStyle,
-                              onPressed: onMore,
-                              icon: const Icon(Icons.more_horiz_rounded),
-                            ),
-                          ),
-                        ),
-                    ],
+                  ),
+                if (metaLine.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    metaLine,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textPrimary.withValues(alpha: 0.75)),
                   ),
                 ],
-              ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (onPlay != null)
+                      FocusRing(
+                        autofocus: AdaptiveLayout.inputDeviceOf(context) ==
+                            InputDevice.dPad,
+                        onActivate: onPlay,
+                        child: ExcludeFocus(
+                          child: FilledButton.icon(
+                            onPressed: onPlay,
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: Text(context.localized.playLabel),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: AppSpacing.sm),
+                    if (onToggleFavourite != null)
+                      FocusRing(
+                        borderRadius: AppRadii.controlBorder,
+                        onActivate: onToggleFavourite,
+                        child: ExcludeFocus(
+                          child: IconButton.outlined(
+                            style: secondaryButtonStyle,
+                            onPressed: onToggleFavourite,
+                            icon: Icon(
+                              isFavourite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: AppSpacing.xxs),
+                    if (onTogglePlayed != null)
+                      FocusRing(
+                        borderRadius: AppRadii.controlBorder,
+                        onActivate: onTogglePlayed,
+                        child: ExcludeFocus(
+                          child: IconButton.outlined(
+                            style: secondaryButtonStyle,
+                            onPressed: onTogglePlayed,
+                            icon: Icon(
+                              isPlayed
+                                  ? Icons.check_circle_rounded
+                                  : Icons.check_circle_outline_rounded,
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: AppSpacing.xxs),
+                    if (onMore != null)
+                      FocusRing(
+                        borderRadius: AppRadii.controlBorder,
+                        onActivate: onMore,
+                        child: ExcludeFocus(
+                          child: IconButton.outlined(
+                            style: secondaryButtonStyle,
+                            onPressed: onMore,
+                            icon: const Icon(Icons.more_horiz_rounded),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
