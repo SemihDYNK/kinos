@@ -139,6 +139,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final heroDisplayItem = _heroCurrent ?? heroItems.firstOrNull;
     final heroImage = heroDisplayItem?.getPosters?.randomBackDrop ??
         heroDisplayItem?.getPosters?.primary;
+    // `fadeCompleteBy` (hauteur minimale du carrousel, 320-400px) est
+    // nettement plus court que sur le bandeau film/série (680-760px) : les
+    // distances par défaut de FadingHeroBackdrop (200 + 150 = 350px), non
+    // scalées, y dépasseraient `fadeCompleteBy` lui-même et feraient
+    // démarrer la montée de teinte dès le haut du calque — l'image
+    // resterait visible bien moins longtemps que voulu. Réduites ici de
+    // sorte que l'image reste nue sur exactement la moitié de
+    // `fadeCompleteBy`, comme sur la fiche film.
+    final heroRampDistance = density == AppDensity.couch ? 110.0 : 90.0;
+    final heroResolveDistance = density == AppDensity.couch ? 90.0 : 70.0;
 
     // resumeVideo d'abord (déjà en cours), puis nextUp — dédoublonnés.
     final seenContinue = <String>{};
@@ -198,6 +208,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             image: heroImage,
                             heroTint: context.tokens.heroTint,
                             fadeCompleteBy: HeroCarousel.minHeightFor(density),
+                            rampDistance: heroRampDistance,
+                            resolveDistance: heroResolveDistance,
                           ),
                         ),
                         SliverMainAxisGroup(

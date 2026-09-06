@@ -34,17 +34,34 @@ class FadingHeroBackdrop extends StatelessWidget {
   /// court, le voile se faire couper avant d'avoir fini de se dissoudre.
   final double fadeCompleteBy;
 
+  /// Distance, comptée à rebours depuis [fadeCompleteBy], sur laquelle la
+  /// teinte monte progressivement (l'image reste nue avant ce point).
+  /// Par défaut 200px — le réglage validé sur le bandeau film/série, dont
+  /// `fadeCompleteBy` (680-760px) laisse largement la place à une image
+  /// nue sur toute sa moitié haute avant que la montée ne démarre. Un
+  /// `fadeCompleteBy` nettement plus court (ex. le bandeau carrousel de
+  /// l'accueil, 320-400px) doit fournir une distance plus courte : cette
+  /// valeur, combinée à [resolveDistance], ne doit pas dépasser la moitié
+  /// de [fadeCompleteBy], sous peine de faire démarrer la montée dès le
+  /// haut du calque (voire de la faire déborder, silencieusement bridée à
+  /// 0 par le `clamp` ci-dessous) — l'image resterait alors visible bien
+  /// moins longtemps que voulu.
+  final double rampDistance;
+
+  /// Distance, comptée à rebours depuis [fadeCompleteBy], sur laquelle la
+  /// teinte, déjà pleinement montée, se dissout ensuite vers la
+  /// transparence totale. Par défaut 150px, même origine que
+  /// [rampDistance].
+  final double resolveDistance;
+
   const FadingHeroBackdrop({
     required this.image,
     required this.heroTint,
     required this.fadeCompleteBy,
+    this.rampDistance = 200.0,
+    this.resolveDistance = 150.0,
     super.key,
   });
-
-  /// Distance (montée de teinte, puis dissolution) sur laquelle ce calque
-  /// s'efface, comptée à rebours depuis [fadeCompleteBy].
-  static const _rampDistance = 200.0;
-  static const _resolveDistance = 150.0;
 
   @override
   Widget build(BuildContext context) {
@@ -54,10 +71,10 @@ class FadingHeroBackdrop extends StatelessWidget {
         // (posé via SliverPositioned côté appelant) — pas d'un paramètre
         // séparé qui risquerait de diverger de la taille effective.
         final height = constraints.maxHeight;
-        final rampStart = (fadeCompleteBy - _rampDistance - _resolveDistance)
+        final rampStart = (fadeCompleteBy - rampDistance - resolveDistance)
             .clamp(0.0, fadeCompleteBy);
         final tintOpaqueAt =
-            (fadeCompleteBy - _resolveDistance).clamp(0.0, fadeCompleteBy);
+            (fadeCompleteBy - resolveDistance).clamp(0.0, fadeCompleteBy);
         final rampStartFraction = (rampStart / height).clamp(0.0, 1.0);
         final tintOpaqueFraction = (tintOpaqueAt / height).clamp(0.0, 1.0);
         final fadeEndFraction = (fadeCompleteBy / height).clamp(0.0, 1.0);
