@@ -1,0 +1,423 @@
+import 'package:flutter/material.dart';
+
+import 'package:auto_route/auto_route.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:fladder/models/item_base_model.dart';
+import 'package:fladder/models/items/images_models.dart';
+import 'package:fladder/providers/theme/app_theme_provider.dart';
+import 'package:fladder/providers/theme/palette_service_provider.dart';
+import 'package:fladder/providers/window_title_provider.dart';
+import 'package:fladder/theme/app_theme.dart';
+import 'package:fladder/theme/palette_service.dart';
+import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
+import 'package:fladder/util/fladder_image.dart';
+import 'package:fladder/util/localization_helper.dart';
+import 'package:fladder/util/router_extension.dart';
+import 'package:fladder/util/sliver_list_padding.dart';
+import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
+import 'package:fladder/widgets/shared/pull_to_refresh.dart';
+
+/// Écran de détail film/série — même langage visuel que le tableau de bord :
+/// bandeau plein cadre teinté par [PaletteService], contenu du reste de
+/// l'écran sur [AppColors.background] pur.
+///
+/// Volontairement séparé de `DetailScaffold` (l'ancien écran générique,
+/// encore utilisé par les écrans musique/Live TV/livres/photos/Seerr, hors
+/// périmètre — cf. CLAUDE.md § Périmètre) : cette réécriture ne devait
+/// affecter que films et séries, pas ces écrans-là.
+class MediaDetailScaffold extends ConsumerStatefulWidget {
+  /// Item côté données — sert uniquement à dériver la teinte du bandeau
+  /// (identité du cache palette) ; tout le contenu affiché passe par les
+  /// autres paramètres, explicites.
+  final ItemBaseModel? item;
+  final String label;
+  final String? windowTitle;
+  final ImagesData? backDrops;
+  final Future<void> Function()? onRefresh;
+
+  final String title;
+  final String? originalTitle;
+  final String metaLine;
+  final VoidCallback? onPlay;
+  final bool isFavourite;
+  final VoidCallback? onToggleFavourite;
+  final bool isPlayed;
+  final VoidCallback? onTogglePlayed;
+
+  /// Menu "..." — null si rien à proposer (masque le bouton).
+  final List<ItemAction>? Function(BuildContext context)? actions;
+
+  /// Slivers du corps, sous le bandeau — chacun gère son propre espacement
+  /// (même convention que `dashboard_screen.dart`), peut inclure
+  /// [SingleRowSection] directement.
+  final List<Widget> Function(BuildContext context, EdgeInsets padding) content;
+
+  const MediaDetailScaffold({
+    required this.label,
+    this.windowTitle,
+    this.item,
+    this.backDrops,
+    this.onRefresh,
+    required this.title,
+    this.originalTitle,
+    required this.metaLine,
+    this.onPlay,
+    this.isFavourite = false,
+    this.onToggleFavourite,
+    this.isPlayed = false,
+    this.onTogglePlayed,
+    this.actions,
+    required this.content,
+    super.key,
+  });
+
+  @override
+  ConsumerState<MediaDetailScaffold> createState() => _MediaDetailScaffoldState();
+}
+
+class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
+  ImageData? _lastPaletteImage;
+  WindowTitleNotifier? _windowTitleNotifier;
+
+  void _pushTitle() {
+    final isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
+    if (!isCurrent) return;
+    final newTitle = widget.windowTitle ?? widget.label;
+    if (newTitle.isNotEmpty) {
+      ref.read(windowTitleProvider.notifier).updateTitle(this, newTitle);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _updateHeroPalette();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _windowTitleNotifier = ref.read(windowTitleProvider.notifier);
+    _pushTitle();
+  }
+
+  @override
+  void dispose() {
+    _windowTitleNotifier?.removeTitle(this);
+    // Le bandeau est propre à cet écran : ne pas laisser sa teinte déteindre
+    // sur ce qui s'affiche ensuite.
+    ref.read(heroPaletteProvider.notifier).state = HeroPalette.fallback;
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant MediaDetailScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _pushTitle();
+    _updateHeroPalette();
+  }
+
+  /// Teinte extraite de la même image que celle affichée dans le bandeau
+  /// (le backdrop, pas la jaquette) — cohérent avec le tableau de bord.
+  Future<void> _updateHeroPalette() async {
+    final image = widget.backDrops?.randomBackDrop ?? widget.backDrops?.primary;
+    final itemId = widget.item?.id;
+    if (image == null || itemId == null || identical(image, _lastPaletteImage)) {
+      return;
+    }
+    _lastPaletteImage = image;
+
+    final palette = await ref.read(paletteServiceProvider).forItem(
+          itemId: itemId,
+          image: image.imageProvider,
+        );
+
+    if (!mounted || !identical(_lastPaletteImage, image)) return;
+    ref.read(heroPaletteProvider.notifier).state = palette;
+  }
+
+  void _showActions(BuildContext context) {
+    final actions = widget.actions?.call(context) ?? const [];
+    showBottomSheetPill(
+      context: context,
+      content: (context, scrollController) => ListView(
+        controller: scrollController,
+        shrinkWrap: true,
+        children: actions.listTileItems(context, useIcons: true),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final density = context.tokens.density;
+    final bannerHeight = density == AppDensity.couch ? 400.0 : 320.0;
+    final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
+    // Même alignement que le tableau de bord : AppSpacing.screenPadding.
+    final padding = AdaptiveLayout.adaptivePadding(context, horizontalPadding: AppSpacing.screenPadding);
+    final innerPadding = padding.copyWith(left: padding.left - sideBarInset);
+    final heroTint = context.tokens.heroTint;
+    final image = widget.backDrops?.randomBackDrop ?? widget.backDrops?.primary;
+    final hasActions = widget.actions != null;
+
+    return PullToRefresh(
+      onRefresh: () async => await widget.onRefresh?.call(),
+      refreshOnStart: true,
+      child: (context) => Scaffold(
+        backgroundColor: AppColors.background,
+        body: Stack(
+          children: [
+            CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                const DefaultSliverTopBadding(),
+                // Bandeau + résorption de la teinte : même mécanique que
+                // dashboard_screen.dart — SliverPadding(start: sideBarInset)
+                // pour ne jamais teindre sous la barre latérale, dégradé sur
+                // le bandeau plus une marge de sortie, jamais au-delà.
+                SliverPadding(
+                  padding: EdgeInsetsDirectional.only(start: sideBarInset),
+                  sliver: DecoratedSliver(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: const [0, 0.8, 1],
+                        colors: [heroTint, heroTint, AppColors.background],
+                      ),
+                    ),
+                    sliver: SliverMainAxisGroup(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: _Banner(
+                            height: bannerHeight,
+                            image: image,
+                            heroTint: heroTint,
+                            title: widget.title,
+                            originalTitle: widget.originalTitle,
+                            metaLine: widget.metaLine,
+                            onPlay: widget.onPlay,
+                            isFavourite: widget.isFavourite,
+                            onToggleFavourite: widget.onToggleFavourite,
+                            isPlayed: widget.isPlayed,
+                            onTogglePlayed: widget.onTogglePlayed,
+                            onMore: hasActions ? () => _showActions(context) : null,
+                          ),
+                        ),
+                        // Marge de sortie : la teinte déborde un peu sous le
+                        // bandeau avant de s'éteindre (cf. le dégradé
+                        // ci-dessus), plutôt qu'une coupure nette.
+                        const SliverToBoxAdapter(child: SizedBox(height: 96)),
+                      ],
+                    ),
+                  ),
+                ),
+                ...widget.content(context, innerPadding),
+                const DefaultSliverBottomPadding(),
+              ],
+            ),
+            PositionedDirectional(
+              top: MediaQuery.paddingOf(context).top + AppSpacing.sm,
+              start: sideBarInset + AppSpacing.sm,
+              child: FocusRing(
+                borderRadius: AppRadii.controlBorder,
+                onActivate: () => context.router.popBack(),
+                child: ExcludeFocus(
+                  child: IconButton.filledTonal(
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.scrim.withValues(alpha: 0.4),
+                      foregroundColor: AppColors.textPrimary,
+                    ),
+                    onPressed: () => context.router.popBack(),
+                    icon: const BackButtonIcon(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Banner extends StatelessWidget {
+  final double height;
+  final ImageData? image;
+  final Color heroTint;
+  final String title;
+  final String? originalTitle;
+  final String metaLine;
+  final VoidCallback? onPlay;
+  final bool isFavourite;
+  final VoidCallback? onToggleFavourite;
+  final bool isPlayed;
+  final VoidCallback? onTogglePlayed;
+  final VoidCallback? onMore;
+
+  const _Banner({
+    required this.height,
+    required this.image,
+    required this.heroTint,
+    required this.title,
+    required this.originalTitle,
+    required this.metaLine,
+    required this.onPlay,
+    required this.isFavourite,
+    required this.onToggleFavourite,
+    required this.isPlayed,
+    required this.onTogglePlayed,
+    required this.onMore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final showOriginalTitle = originalTitle != null && originalTitle!.toLowerCase() != title.toLowerCase();
+
+    return ClipRect(
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: Stack(
+          alignment: Alignment.bottomLeft,
+          fit: StackFit.expand,
+          children: [
+            // a. Fond teinté — visible au chargement et sur les bords.
+            ColoredBox(color: heroTint),
+            // b. Backdrop plein cadre, cover.
+            FladderImage(image: image, fit: BoxFit.cover),
+            // c. Dégradé horizontal — contraste pour le texte à gauche.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  stops: const [0, 0.55],
+                  colors: [
+                    AppColors.scrim.withValues(alpha: 0.9),
+                    AppColors.scrim.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+            // d. Dégradé vertical — contraste pour le texte en bas.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  stops: const [0, 0.45],
+                  colors: [
+                    AppColors.scrim.withValues(alpha: 0.75),
+                    AppColors.scrim.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+            // e. Bloc de texte, aligné en bas à gauche sur screenPadding.
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.screenPadding),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(color: AppColors.textPrimary),
+                  ),
+                  if (showOriginalTitle)
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                      child: Text(
+                        originalTitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.55)),
+                      ),
+                    ),
+                  if (metaLine.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      metaLine,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.75)),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (onPlay != null)
+                        FocusRing(
+                          autofocus: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad,
+                          onActivate: onPlay,
+                          child: ExcludeFocus(
+                            child: FilledButton.icon(
+                              onPressed: onPlay,
+                              icon: const Icon(Icons.play_arrow_rounded),
+                              label: Text(context.localized.playLabel),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: AppSpacing.sm),
+                      if (onToggleFavourite != null)
+                        FocusRing(
+                          borderRadius: AppRadii.controlBorder,
+                          onActivate: onToggleFavourite,
+                          child: ExcludeFocus(
+                            child: IconButton.outlined(
+                              onPressed: onToggleFavourite,
+                              icon: Icon(
+                                isFavourite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: AppSpacing.xxs),
+                      if (onTogglePlayed != null)
+                        FocusRing(
+                          borderRadius: AppRadii.controlBorder,
+                          onActivate: onTogglePlayed,
+                          child: ExcludeFocus(
+                            child: IconButton.outlined(
+                              onPressed: onTogglePlayed,
+                              icon: Icon(
+                                isPlayed ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: AppSpacing.xxs),
+                      if (onMore != null)
+                        FocusRing(
+                          borderRadius: AppRadii.controlBorder,
+                          onActivate: onMore,
+                          child: ExcludeFocus(
+                            child: IconButton.outlined(
+                              onPressed: onMore,
+                              icon: const Icon(Icons.more_horiz_rounded),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

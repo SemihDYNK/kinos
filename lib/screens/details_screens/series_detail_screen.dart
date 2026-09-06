@@ -2,35 +2,22 @@ import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/models/items/series_model.dart';
 import 'package:fladder/providers/items/series_details_provider.dart';
 import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/details_screens/components/media_stream_information.dart';
-import 'package:fladder/screens/details_screens/components/overview_header.dart';
-import 'package:fladder/screens/seerr/widgets/seerr_poster_row.dart';
-import 'package:fladder/screens/shared/detail_scaffold.dart';
-import 'package:fladder/screens/shared/media/components/media_play_button.dart';
-import 'package:fladder/screens/shared/media/episode_posters.dart';
-import 'package:fladder/screens/shared/media/expanding_text.dart';
-import 'package:fladder/screens/shared/media/external_urls.dart';
-import 'package:fladder/screens/shared/media/people_row.dart';
-import 'package:fladder/screens/shared/media/poster_row.dart';
-import 'package:fladder/screens/shared/media/season_row.dart';
-import 'package:fladder/screens/shared/media/special_features_row.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
+import 'package:fladder/screens/dashboard/single_row_section.dart';
+import 'package:fladder/screens/details_screens/components/media_meta_line.dart';
+import 'package:fladder/screens/details_screens/components/media_stream_selectors.dart';
+import 'package:fladder/screens/shared/media/media_cast_row.dart';
+import 'package:fladder/screens/shared/media/season_episode_section.dart';
+import 'package:fladder/screens/shared/media_detail_scaffold.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
 import 'package:fladder/util/item_base_model/play_item_helpers.dart';
-import 'package:fladder/util/list_padding.dart';
 import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/router_extension.dart';
-import 'package:fladder/widgets/shared/ensure_visible.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
-import 'package:fladder/widgets/shared/selectable_icon_button.dart';
 
 class SeriesDetailScreen extends ConsumerStatefulWidget {
   final ItemBaseModel item;
@@ -44,221 +31,120 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
   AutoDisposeStateNotifierProvider<SeriesDetailViewNotifier, SeriesModel?> get providerId =>
       seriesDetailsProvider(widget.item.id);
 
+  /// Largeur de lecture confortable pour le résumé — ~80 caractères.
+  static const _readingWidth = 640.0;
+
   @override
   Widget build(BuildContext context) {
     final details = ref.watch(providerId);
-    final wrapAlignment =
-        AdaptiveLayout.viewSizeOf(context) != ViewSize.phone ? WrapAlignment.start : WrapAlignment.center;
 
-    final currentEpisode = details?.nextUp;
+    if (details == null) {
+      return const SizedBox.shrink();
+    }
 
-    return DetailScaffold(
-      label: details?.name ?? "",
+    final currentEpisode = details.nextUp;
+    final resolution = currentEpisode?.mediaStreams.currentVersionStream?.detailedResolutionLabel;
+    final metaLine = buildMediaMetaLine(
+      year: details.overview.yearAired,
+      runTime: details.overview.runTime,
+      resolution: resolution,
+      communityRating: details.overview.communityRating,
+      genres: details.overview.genreItems.map((genre) => genre.name).toList(),
+    );
+
+    return MediaDetailScaffold(
+      label: details.name,
       item: details,
-      actions: (context) => details?.generateActions(
+      backDrops: details.images,
+      onRefresh: () => ref.read(providerId.notifier).fetchDetails(widget.item),
+      title: details.name,
+      originalTitle: details.originalTitle,
+      metaLine: metaLine,
+      onPlay: currentEpisode != null
+          ? () async {
+              await currentEpisode.play(context, ref);
+              ref.read(providerId.notifier).fetchDetails(widget.item);
+            }
+          : null,
+      isFavourite: details.userData.isFavourite,
+      onToggleFavourite: () => ref.read(userProvider.notifier).setAsFavorite(
+            !details.userData.isFavourite,
+            details.id,
+          ),
+      isPlayed: details.userData.played,
+      onTogglePlayed: () => ref.read(userProvider.notifier).markAsPlayed(
+            !details.userData.played,
+            details.id,
+          ),
+      actions: (context) => details.generateActions(
         context,
         ref,
         exclude: {
           ItemActions.play,
           ItemActions.playFromStart,
           ItemActions.details,
+          ItemActions.markPlayed,
+          ItemActions.markUnplayed,
+          ItemActions.setFavorite,
         },
         onDeleteSuccesFully: (item) {
-          if (context.mounted) {
-            context.router.popBack();
-          }
+          if (context.mounted) context.router.popBack();
         },
       ),
-      onRefresh: () => ref.read(providerId.notifier).fetchDetails(widget.item),
-      backDrops: details?.images,
-      content: (detailsContext, padding) => details != null
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 64),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  OverviewHeader(
-                    name: details.name,
-                    image: details.images,
-                    mainButton: currentEpisode != null
-                        ? MediaPlayButton(
-                            item: currentEpisode,
-                            onPressed: (restart) async {
-                              await currentEpisode.play(
-                                detailsContext,
-                                ref,
-                                startPosition: restart ? Duration.zero : null,
-                              );
-                              ref.read(providerId.notifier).fetchDetails(widget.item);
-                            },
-                            onLongPressed: (restart) async {
-                              await currentEpisode.play(
-                                detailsContext,
-                                ref,
-                                showPlaybackOption: true,
-                                startPosition: restart ? Duration.zero : null,
-                              );
-                              ref.read(providerId.notifier).fetchDetails(widget.item);
-                            },
-                          )
-                        : null,
-                    centerButtons: Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      alignment: wrapAlignment,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        SelectableIconButton(
-                          onPressed: () async {
-                            await ref
-                                .read(userProvider.notifier)
-                                .setAsFavorite(!details.userData.isFavourite, details.id);
-                          },
-                          selected: details.userData.isFavourite,
-                          selectedIcon: IconsaxPlusBold.heart,
-                          icon: IconsaxPlusLinear.heart,
-                        ),
-                        SelectableIconButton(
-                          onPressed: () async {
-                            await ref.read(userProvider.notifier).markAsPlayed(!details.userData.played, details.id);
-                          },
-                          selected: details.userData.played,
-                          selectedIcon: IconsaxPlusBold.tick_circle,
-                          icon: IconsaxPlusLinear.tick_circle,
-                        ),
-                        SelectableIconButton(
-                          onPressed: () {
-                            showBottomSheetPill(
-                              context: detailsContext,
-                              item: details,
-                              content: (context, scrollController) => ListView(
-                                controller: scrollController,
-                                shrinkWrap: true,
-                                children: details.generateActions(detailsContext, ref, exclude: {
-                                  ItemActions.openParent,
-                                  ItemActions.details
-                                }).listTileItems(context, useIcons: true),
-                              ),
-                            );
-                          },
-                          selected: false,
-                          refreshOnEnd: false,
-                          icon: IconsaxPlusLinear.more,
-                        ),
-                      ],
-                    ),
-                    padding: padding,
-                    originalTitle: details.originalTitle,
-                    productionYear: details.overview.yearAired.toString(),
-                    runTime: details.overview.runTime,
-                    studios: details.overview.studios,
-                    officialRating: details.overview.parentalRating,
-                    genres: details.overview.genreItems,
-                    onGenreClicked: (genre) {
-                      final itemViewId = details.parentId ?? "";
-                      LibrarySearchRoute(
-                        parentId: [itemViewId],
-                        genres: {genre.name: true},
-                      ).push(context);
-                    },
-                    mediaStreamHelper: currentEpisode?.mediaStreams != null
-                        ? MediaStreamHelper(
-                            mediaStream: currentEpisode!.mediaStreams,
-                            onItemChanged: (changed) {
-                              final updateEpisode = currentEpisode.copyWith(
-                                mediaStreams: changed,
-                              );
-                              ref.read(providerId.notifier).updateEpisodeInfo(updateEpisode);
-                            },
-                          )
-                        : null,
-                    communityRating: details.overview.communityRating,
-                  ),
-                  if (details.overview.summary.isNotEmpty)
-                    Padding(
-                      padding: padding,
-                      child: Builder(builder: (context) {
-                        return ExpandingText(
-                          text: details.overview.summary,
-                          onFocusChange: (onFocus) {
-                            if (onFocus) {
-                              context.ensureVisible(alignment: 1);
-                            }
-                          },
-                        );
-                      }),
-                    ),
-                  if (details.availableEpisodes?.isNotEmpty ?? false)
-                    Builder(builder: (context) {
-                      return EpisodePosters(
-                        contentPadding: padding,
-                        selectedEpisode: currentEpisode,
-                        seasons: details.seasons ?? [],
-                        titleActionsPosition:
-                            AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad ? null : VerticalDirection.down,
-                        label: context.localized.episode(details.availableEpisodes?.length ?? 2),
-                        onFocused: (episode) {
-                          context.ensureVisible(alignment: 0.8);
-                        },
-                        onEpisodeTap: (action, episode) async {
-                          action();
-                        },
-                        playEpisode: (episode) async {
-                          await episode.play(
-                            context,
-                            ref,
-                          );
-                          ref.read(providerId.notifier).fetchDetails(widget.item);
-                        },
-                        episodes: details.availableEpisodes ?? [],
-                      );
-                    }),
-                  if (details.seasons?.isNotEmpty ?? false)
-                    SeasonsRow(
-                      contentPadding: padding,
-                      seasons: details.seasons,
-                    ),
-                  if (details.overview.people.isNotEmpty)
-                    PeopleRow(
-                      people: details.overview.people,
-                      contentPadding: padding,
-                    ),
-                  if (details.specialFeatures?.isNotEmpty ?? false)
-                    SpecialFeaturesRow(
-                        contentPadding: padding,
-                        label: detailsContext.localized.specialFeature(details.specialFeatures?.length ?? 2),
-                        specialFeatures: details.specialFeatures ?? []),
-                  if (details.related.isNotEmpty)
-                    PosterRow(
-                      posters: details.related,
-                      contentPadding: padding,
-                      label: detailsContext.localized.related,
-                    ),
-                  if (details.seerrRecommended.isNotEmpty)
-                    SeerrPosterRow(
-                      posters: details.seerrRecommended,
-                      label:
-                          "${detailsContext.localized.discover} ${detailsContext.localized.recommended.toLowerCase()}",
-                      contentPadding: padding,
-                    ),
-                  if (details.seerrRelated.isNotEmpty)
-                    SeerrPosterRow(
-                      posters: details.seerrRelated,
-                      label: "${detailsContext.localized.discover} ${detailsContext.localized.related.toLowerCase()}",
-                      contentPadding: padding,
-                    ),
-                  if (details.overview.externalUrls?.isNotEmpty == true)
-                    Padding(
-                      padding: padding,
-                      child: ExternalUrlsRow(
-                        urls: details.overview.externalUrls,
-                      ),
-                    )
-                ].addPadding(const EdgeInsets.symmetric(vertical: 16)),
+      content: (context, padding) => [
+        if (details.overview.summary.isNotEmpty)
+          SliverPadding(
+            padding: padding,
+            sliver: SliverToBoxAdapter(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _readingWidth),
+                child: Text(
+                  details.overview.summary,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
-            )
-          : Container(),
+            ),
+          ),
+        // Saisons et épisodes juste sous le résumé, avant les sélecteurs de
+        // flux (qui concernent l'épisode "à suivre", pas la série entière).
+        if (details.seasons?.isNotEmpty ?? false)
+          SliverPadding(
+            padding: const EdgeInsets.only(top: AppSpacing.xl),
+            sliver: SliverToBoxAdapter(
+              child: SeasonEpisodeSection(seasons: details.seasons!, contentPadding: padding),
+            ),
+          ),
+        if (currentEpisode != null &&
+            (currentEpisode.mediaStreams.audioStreams.isNotEmpty ||
+                currentEpisode.mediaStreams.subStreams.isNotEmpty))
+          SliverPadding(
+            padding: padding.copyWith(top: AppSpacing.xl),
+            sliver: SliverToBoxAdapter(
+              child: MediaStreamSelectors(
+                mediaStream: currentEpisode.mediaStreams,
+                onChanged: (changed) => ref.read(providerId.notifier).updateEpisodeInfo(
+                      currentEpisode.copyWith(mediaStreams: changed),
+                    ),
+              ),
+            ),
+          ),
+        if (details.overview.people.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.only(top: AppSpacing.xl),
+            sliver: SliverToBoxAdapter(
+              child: MediaCastRow(people: details.overview.people, contentPadding: padding),
+            ),
+          ),
+        if (details.related.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.only(top: AppSpacing.xl),
+            sliver: SingleRowSection(
+              title: context.localized.related,
+              items: details.related,
+              contentPadding: padding,
+            ),
+          ),
+      ],
     );
   }
 }
