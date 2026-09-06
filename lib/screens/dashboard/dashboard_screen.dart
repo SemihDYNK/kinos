@@ -139,16 +139,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final heroDisplayItem = _heroCurrent ?? heroItems.firstOrNull;
     final heroImage = heroDisplayItem?.getPosters?.randomBackDrop ??
         heroDisplayItem?.getPosters?.primary;
-    // `fadeCompleteBy` (hauteur minimale du carrousel, 320-400px) est
-    // nettement plus court que sur le bandeau film/série (680-760px) : les
-    // distances par défaut de FadingHeroBackdrop (200 + 150 = 350px), non
-    // scalées, y dépasseraient `fadeCompleteBy` lui-même et feraient
-    // démarrer la montée de teinte dès le haut du calque — l'image
-    // resterait visible bien moins longtemps que voulu. Réduites ici de
-    // sorte que l'image reste nue sur exactement la moitié de
+    // `fadeCompleteBy` (hauteur minimale du carrousel, 560-640px) reste
+    // plus court que sur le bandeau film/série (680-760px) : les distances
+    // par défaut de FadingHeroBackdrop (200 + 150 = 350px), non scalées,
+    // laisseraient moins de la moitié de `fadeCompleteBy` nue à hauteur
+    // couch (640/2 = 320 < 350). Réduites ici, même ratio 4:3 que le
+    // défaut, de sorte que l'image reste nue sur exactement la moitié de
     // `fadeCompleteBy`, comme sur la fiche film.
-    final heroRampDistance = density == AppDensity.couch ? 110.0 : 90.0;
-    final heroResolveDistance = density == AppDensity.couch ? 90.0 : 70.0;
+    final heroRampDistance = density == AppDensity.couch ? 180.0 : 160.0;
+    final heroResolveDistance = density == AppDensity.couch ? 140.0 : 120.0;
 
     // resumeVideo d'abord (déjà en cours), puis nextUp — dédoublonnés.
     final seenContinue = <String>{};

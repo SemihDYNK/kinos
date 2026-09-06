@@ -34,10 +34,19 @@ class HeroCarousel extends ConsumerStatefulWidget {
   /// pour que l'appelant (dashboard_screen.dart) puisse dimensionner son
   /// propre fond ([FadingHeroBackdrop]) sur la même base, sans dupliquer
   /// ces valeurs.
+  ///
+  /// 560/640 (desk/couch) — même raisonnement que le bandeau film/série
+  /// (480 -> 680) : sur une largeur de contenu large (~1880px), un cadre
+  /// bas donne un ratio très éloigné du 16:9 des images sources, que
+  /// BoxFit.cover doit combler en agrandissant (et donc en rognant)
+  /// massivement l'image. Un cadre plus haut rapproche ce ratio du 16:9,
+  /// pour un recadrage bien moins agressif — indépendant de la hauteur de
+  /// la zone de fondu ([FadingHeroBackdrop], dimensionnée séparément par
+  /// l'appelant).
   static double minHeightFor(AppDensity density) =>
-      density == AppDensity.couch ? 400.0 : 320.0;
+      density == AppDensity.couch ? 640.0 : 560.0;
   static double maxHeightFor(AppDensity density) =>
-      density == AppDensity.couch ? 480.0 : 400.0;
+      density == AppDensity.couch ? 720.0 : 640.0;
 
   @override
   ConsumerState<HeroCarousel> createState() => _HeroCarouselState();
