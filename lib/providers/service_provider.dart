@@ -82,9 +82,11 @@ class JellyService {
   final JellyfinOpenApi _api;
 
   JellyfinOpenApi get api {
-    var authServer = ref.read(authProvider).serverLoginModel?.tempCredentials.url ?? "";
+    var authServer =
+        ref.read(authProvider).serverLoginModel?.tempCredentials.url ?? "";
     var currentServer = ref.read(userProvider)?.credentials.url;
-    if ((authServer.isNotEmpty ? authServer : currentServer) == FakeHelper.fakeTestServerUrl) {
+    if ((authServer.isNotEmpty ? authServer : currentServer) ==
+        FakeHelper.fakeTestServerUrl) {
       return FakeJellyfinOpenApi();
     } else {
       return _api;
@@ -95,7 +97,8 @@ class JellyService {
   AccountModel? get account => ref.read(userProvider);
 
   Future<Response<ItemBaseModel>> _syncedItemResponse(String? itemId) async {
-    final item = (await ref.read(syncProvider.notifier).getSyncedItem(itemId))?.itemModel;
+    final item = (await ref.read(syncProvider.notifier).getSyncedItem(itemId))
+        ?.itemModel;
     return Response<ItemBaseModel>(
       http.Response("", 202),
       item,
@@ -103,7 +106,8 @@ class JellyService {
   }
 
   Future<Response<LyricDto?>> _syncedLyricsResponse(String? itemId) async {
-    final lyrics = (await ref.read(syncProvider.notifier).getSyncedItem(itemId))?.lyrics;
+    final lyrics =
+        (await ref.read(syncProvider.notifier).getSyncedItem(itemId))?.lyrics;
     return Response<LyricDto?>(
       http.Response("", lyrics != null ? 202 : 404),
       lyrics,
@@ -123,7 +127,8 @@ class JellyService {
         userId: account?.id,
         itemId: itemId,
       );
-      return response.copyWith(body: ItemBaseModel.fromBaseDto(response.bodyOrThrow, ref));
+      return response.copyWith(
+          body: ItemBaseModel.fromBaseDto(response.bodyOrThrow, ref));
     } catch (e) {
       return _syncedItemResponse(itemId);
     }
@@ -134,7 +139,8 @@ class JellyService {
   }) async {
     final isOffline = ref.read(offlineStateProvider);
     if (isOffline) {
-      final syncedItem = await ref.read(syncProvider.notifier).getSyncedItem(itemId);
+      final syncedItem =
+          await ref.read(syncProvider.notifier).getSyncedItem(itemId);
       return syncedItem?.data != null
           ? Response<BaseItemDto>(
               http.Response("", 202),
@@ -152,7 +158,8 @@ class JellyService {
         itemId: itemId,
       );
     } catch (e) {
-      final syncedItem = await ref.read(syncProvider.notifier).getSyncedItem(itemId);
+      final syncedItem =
+          await ref.read(syncProvider.notifier).getSyncedItem(itemId);
       return syncedItem?.data != null
           ? Response<BaseItemDto>(
               http.Response("", 202),
@@ -299,7 +306,8 @@ class JellyService {
 
         syncedItems = itemsWithId.nonNulls.toList().toList();
       } else if (parentId != null) {
-        final parentItems = await ref.read(syncProvider.notifier).getSyncedItem(parentId);
+        final parentItems =
+            await ref.read(syncProvider.notifier).getSyncedItem(parentId);
 
         if (parentItems == null) {
           return Response(
@@ -312,14 +320,17 @@ class JellyService {
           );
         }
 
-        final children = await ref.read(syncProvider.notifier).getNestedChildren(parentItems);
+        final children = await ref
+            .read(syncProvider.notifier)
+            .getNestedChildren(parentItems);
 
         syncedItems = [parentItems, ...children];
       } else {
         final allItems = ref.read(syncProvider).items;
 
         for (var item in allItems) {
-          final nestedChildren = await ref.read(syncProvider.notifier).getNestedChildren(item);
+          final nestedChildren =
+              await ref.read(syncProvider.notifier).getNestedChildren(item);
           syncedItems.addAll(nestedChildren);
         }
 
@@ -342,23 +353,29 @@ class JellyService {
       final filteredItems = actualItems.where((element) {
         final type = element.data?.type;
 
-        if (parentId != null && (element.id == parentId || element.itemModel?.id == parentId)) {
+        if (parentId != null &&
+            (element.id == parentId || element.itemModel?.id == parentId)) {
           return false;
         }
 
-        if (excludeItemIds != null && excludeItemIds.contains(element.id)) return false;
+        if (excludeItemIds != null && excludeItemIds.contains(element.id))
+          return false;
 
         if (includeItemTypes != null && includeItemTypes.isNotEmpty) {
           if (type == null || !includeItemTypes.contains(type)) return false;
         }
 
         if (isFavorite != null) {
-          final isFav = element.itemModel?.userData.isFavourite ?? element.userData?.isFavourite ?? false;
+          final isFav = element.itemModel?.userData.isFavourite ??
+              element.userData?.isFavourite ??
+              false;
           if (isFav != isFavorite) return false;
         }
 
         if (isPlayed != null) {
-          final played = element.itemModel?.userData.played ?? element.userData?.played ?? false;
+          final played = element.itemModel?.userData.played ??
+              element.userData?.played ??
+              false;
           if (played != isPlayed) return false;
         }
 
@@ -368,7 +385,8 @@ class JellyService {
       if (sortBy?.contains(ItemSortBy.random) == true) {
         filteredItems.shuffle();
       } else {
-        filteredItems.sort((a, b) => _sortSyncedItems(a.data, b.data, sortBy, sortOrder));
+        filteredItems.sort(
+            (a, b) => _sortSyncedItems(a.data, b.data, sortBy, sortOrder));
       }
 
       final baseItems = filteredItems.map((e) => e.itemModel).nonNulls.toList();
@@ -423,7 +441,8 @@ class JellyService {
       sortOrder: sortOrder,
       sortBy: sortBy,
       parentId: parentId,
-      fields: {...?fields, ItemFields.candelete, ItemFields.candownload}.toList(),
+      fields:
+          {...?fields, ItemFields.candelete, ItemFields.candownload}.toList(),
       excludeItemTypes: excludeItemTypes,
       includeItemTypes: includeItemTypes,
       filters: filters,
@@ -472,7 +491,9 @@ class JellyService {
     );
 
     return response.copyWith(
-      body: ServerQueryResult.fromBaseQuery(response.bodyOrThrow.copyWith(items: response.bodyOrThrow.items), ref),
+      body: ServerQueryResult.fromBaseQuery(
+          response.bodyOrThrow.copyWith(items: response.bodyOrThrow.items),
+          ref),
     );
   }
 
@@ -494,11 +515,14 @@ class JellyService {
     String? searchTerm,
     int? limit,
     bool? isFavorite,
+    List<String>? personTypes,
   }) async {
     final response = await api.personsGet(
       userId: account?.id,
       limit: limit,
       isFavorite: isFavorite,
+      searchTerm: searchTerm,
+      personTypes: personTypes,
     );
     return response.copyWith(
       body: response.body?.items
@@ -581,7 +605,8 @@ class JellyService {
   }) async {
     return api.itemsItemIdImagesImageTypeDelete(
       itemId: itemId,
-      imageType: ItemsItemIdImagesImageTypeDeleteImageType.values.firstWhereOrNull(
+      imageType:
+          ItemsItemIdImagesImageTypeDeleteImageType.values.firstWhereOrNull(
         (element) => element.value == imageType?.value,
       ),
       imageIndex: imageIndex,
@@ -715,8 +740,10 @@ class JellyService {
     );
   }
 
-  Future<Response> sessionsPlayingPost({required PlaybackStartInfo? body}) async {
-    if (ref.read(incognitoProvider)) return Response(http.Response("", 200), null);
+  Future<Response> sessionsPlayingPost(
+      {required PlaybackStartInfo? body}) async {
+    if (ref.read(incognitoProvider))
+      return Response(http.Response("", 200), null);
     return _reportPlayback(
       eventType: PlaybackQueueEventType.start,
       itemId: body?.itemId,
@@ -728,12 +755,13 @@ class JellyService {
   Future<Response> sessionsPlayingStoppedPost({
     required PlaybackStopInfo? body,
   }) async {
-    if (ref.read(incognitoProvider)) return Response(http.Response("", 200), null);
+    if (ref.read(incognitoProvider))
+      return Response(http.Response("", 200), null);
     final positionTicks = body?.positionTicks;
     if (positionTicks != null) {
-      ref
-          .read(syncProvider.notifier)
-          .updatePlaybackPosition(itemId: body?.itemId, position: Duration(milliseconds: positionTicks ~/ 10000));
+      ref.read(syncProvider.notifier).updatePlaybackPosition(
+          itemId: body?.itemId,
+          position: Duration(milliseconds: positionTicks ~/ 10000));
     }
     return _reportPlayback(
       eventType: PlaybackQueueEventType.stop,
@@ -743,8 +771,10 @@ class JellyService {
     );
   }
 
-  Future<Response> sessionsPlayingProgressPost({required PlaybackProgressInfo? body}) async {
-    if (ref.read(incognitoProvider)) return Response(http.Response("", 200), null);
+  Future<Response> sessionsPlayingProgressPost(
+      {required PlaybackProgressInfo? body}) async {
+    if (ref.read(incognitoProvider))
+      return Response(http.Response("", 200), null);
     return _reportPlayback(
       eventType: PlaybackQueueEventType.progress,
       itemId: body?.itemId,
@@ -785,7 +815,8 @@ class JellyService {
         await db.deletePlaybackEvent(queueId);
       } else {
         await db.incrementPlaybackEventAttempts(queueId);
-        await db.recordPlaybackEventFailure(queueId, 'HTTP ${response.statusCode}');
+        await db.recordPlaybackEventFailure(
+            queueId, 'HTTP ${response.statusCode}');
       }
       return response;
     } catch (error) {
@@ -874,10 +905,12 @@ class JellyService {
     ShowsSeriesIdEpisodesGetSortBy? sortBy,
   }) async {
     Future<Response<BaseItemDtoQueryResult>> fetchOfflineEpisodes() async {
-      final seriesItem = await ref.read(syncProvider.notifier).getSyncedItem(seriesId);
+      final seriesItem =
+          await ref.read(syncProvider.notifier).getSyncedItem(seriesId);
       if (seriesItem != null) {
-        final episodes = await ref.read(syncProvider.notifier).getNestedChildren(seriesItem)
-          ..where((e) => e.itemModel is EpisodeModel);
+        final episodes =
+            await ref.read(syncProvider.notifier).getNestedChildren(seriesItem)
+              ..where((e) => e.itemModel is EpisodeModel);
         return Response<BaseItemDtoQueryResult>(
           http.Response("", 200),
           BaseItemDtoQueryResult(
@@ -934,16 +967,22 @@ class JellyService {
     required String? seriesId,
     String? seasonId,
   }) async {
-    final response = await showsSeriesIdEpisodesGet(seriesId: seriesId, seasonId: seasonId);
-    return response.body?.items?.map((e) => ItemBaseModel.fromBaseDto(e, ref)).toList() ?? [];
+    final response =
+        await showsSeriesIdEpisodesGet(seriesId: seriesId, seasonId: seasonId);
+    return response.body?.items
+            ?.map((e) => ItemBaseModel.fromBaseDto(e, ref))
+            .toList() ??
+        [];
   }
 
-  Future<Response<List<BaseItemDto>>> itemsItemIdSpecialFeaturesGet({required String itemId}) async {
+  Future<Response<List<BaseItemDto>>> itemsItemIdSpecialFeaturesGet(
+      {required String itemId}) async {
     final isOffline = ref.read(offlineStateProvider);
     if (isOffline) {
       return Response<List<BaseItemDto>>(http.Response("", 400), []);
     }
-    return api.itemsItemIdSpecialFeaturesGet(itemId: itemId, userId: account?.id);
+    return api.itemsItemIdSpecialFeaturesGet(
+        itemId: itemId, userId: account?.id);
   }
 
   Future<Response<BaseItemDtoQueryResult>> itemsItemIdSimilarGet({
@@ -968,11 +1007,15 @@ class JellyService {
     }
 
     try {
-      return await api.itemsItemIdSimilarGet(userId: account?.id, itemId: itemId, limit: limit, fields: [
-        ItemFields.parentid,
-        ItemFields.candelete,
-        ItemFields.candownload,
-      ]);
+      return await api.itemsItemIdSimilarGet(
+          userId: account?.id,
+          itemId: itemId,
+          limit: limit,
+          fields: [
+            ItemFields.parentid,
+            ItemFields.candelete,
+            ItemFields.candownload,
+          ]);
     } catch (e) {
       return fetchSimilarGet();
     }
@@ -985,6 +1028,14 @@ class JellyService {
     int? limit,
     bool? recursive,
     List<BaseItemKind>? includeItemTypes,
+    List<String>? genreIds,
+    List<String>? personIds,
+    List<String>? studioIds,
+    List<int>? years,
+    bool? isPlayed,
+    num? minCommunityRating,
+    List<ItemFields>? fields,
+    List<ImageType>? enableImageTypes,
   }) async {
     return api.usersUserIdItemsGet(
       parentId: parentId,
@@ -994,6 +1045,14 @@ class JellyService {
       sortOrder: sortOrder,
       includeItemTypes: includeItemTypes,
       limit: limit,
+      genreIds: genreIds,
+      personIds: personIds,
+      studioIds: studioIds,
+      years: years,
+      isPlayed: isPlayed,
+      minCommunityRating: minCommunityRating,
+      fields: fields,
+      enableImageTypes: enableImageTypes,
     );
   }
 
@@ -1028,7 +1087,8 @@ class JellyService {
     return response.copyWith(
       body: response.body?.map(
         (e) {
-          var imageUrl = ref.read(imageUtilityProvider).getUserImageUrl(e.id ?? "");
+          var imageUrl =
+              ref.read(imageUtilityProvider).getUserImageUrl(e.id ?? "");
           return AccountModel(
             name: e.name ?? "",
             credentials: credentials,
@@ -1046,7 +1106,8 @@ class JellyService {
           (response) => response.copyWith(
             body: response.body?.map(
               (e) {
-                var imageUrl = ref.read(imageUtilityProvider).getUserImageUrl(e.id ?? "");
+                var imageUrl =
+                    ref.read(imageUtilityProvider).getUserImageUrl(e.id ?? "");
                 return AccountModel(
                   name: e.name ?? "",
                   credentials: CredentialsModel.createNewCredentials(),
@@ -1075,33 +1136,41 @@ class JellyService {
     return (await api.localizationParentalRatingsGet()).body;
   }
 
-  Future<Response<UserDto>> createNewUser(CreateUserByName user) => api.usersNewPost(body: user);
+  Future<Response<UserDto>> createNewUser(CreateUserByName user) =>
+      api.usersNewPost(body: user);
 
-  Future<Response<dynamic>> setUserPolicy({required String id, required UserPolicy? policy}) =>
+  Future<Response<dynamic>> setUserPolicy(
+          {required String id, required UserPolicy? policy}) =>
       api.usersUserIdPolicyPost(
         userId: id,
         body: policy,
       );
 
-  Future<Response<BaseItemDtoQueryResult>> libraryMediaFolders() => api.libraryMediaFoldersGet();
+  Future<Response<BaseItemDtoQueryResult>> libraryMediaFolders() =>
+      api.libraryMediaFoldersGet();
 
   Future<Response<AuthenticationResult>> usersAuthenticateByNamePost({
     required String userName,
     required String password,
   }) async {
-    return api.usersAuthenticateByNamePost(body: AuthenticateUserByName(username: userName, pw: password));
+    return api.usersAuthenticateByNamePost(
+        body: AuthenticateUserByName(username: userName, pw: password));
   }
 
-  Future<void> deleteUser(String userId) => api.usersUserIdDelete(userId: userId);
+  Future<void> deleteUser(String userId) =>
+      api.usersUserIdDelete(userId: userId);
 
-  Future<Response<ServerConfiguration>> systemConfigurationGet() => api.systemConfigurationGet();
-  Future<Response<PublicSystemInfo>> systemInfoPublicGet() => api.systemInfoPublicGet();
+  Future<Response<ServerConfiguration>> systemConfigurationGet() =>
+      api.systemConfigurationGet();
+  Future<Response<PublicSystemInfo>> systemInfoPublicGet() =>
+      api.systemInfoPublicGet();
   Future<Response<SystemInfo>> systemInfoGet() => api.systemInfoGet();
 
   Future<void> systemConfigurationPost(ServerConfiguration serverConfig) =>
       api.systemConfigurationPost(body: serverConfig);
 
-  Future<Response<List<LocalizationOption>>> localizationOptions() => api.localizationOptionsGet();
+  Future<Response<List<LocalizationOption>>> localizationOptions() =>
+      api.localizationOptionsGet();
 
   Future<void> libraryRefreshPost() => api.libraryRefreshPost();
 
@@ -1121,10 +1190,13 @@ class JellyService {
         activeWithinSeconds: timeoutSeconds,
       );
 
-  Future<void> stopActiveTask(String taskId) => api.scheduledTasksRunningTaskIdDelete(taskId: taskId);
-  Future<void> startTask(String taskId) => api.scheduledTasksRunningTaskIdPost(taskId: taskId);
+  Future<void> stopActiveTask(String taskId) =>
+      api.scheduledTasksRunningTaskIdDelete(taskId: taskId);
+  Future<void> startTask(String taskId) =>
+      api.scheduledTasksRunningTaskIdPost(taskId: taskId);
 
-  Future<Response<dynamic>> updateTaskTriggers(String taskId, {required List<TaskTriggerInfo> triggers}) =>
+  Future<Response<dynamic>> updateTaskTriggers(String taskId,
+          {required List<TaskTriggerInfo> triggers}) =>
       api.scheduledTasksTaskIdTriggersPost(
         taskId: taskId,
         body: triggers,
@@ -1137,14 +1209,18 @@ class JellyService {
       $client: _client,
     );
     final customPrefs = response.body?.customPrefs?.parseValues();
-    final userPrefs = customPrefs != null ? UserSettings.fromJson(customPrefs) : UserSettings();
+    final userPrefs = customPrefs != null
+        ? UserSettings.fromJson(customPrefs)
+        : UserSettings();
     return response.copyWith(
       body: userPrefs,
     );
   }
 
-  Future<Response<dynamic>> setCustomConfig(UserSettings currentSettings) async {
-    final currentDisplayPreferences = await api.displayPreferencesDisplayPreferencesIdGet(
+  Future<Response<dynamic>> setCustomConfig(
+      UserSettings currentSettings) async {
+    final currentDisplayPreferences =
+        await api.displayPreferencesDisplayPreferencesIdGet(
       displayPreferencesId: _userSettings,
       $client: _client,
     );
@@ -1165,13 +1241,22 @@ class JellyService {
   }) =>
       api.itemsItemIdDownloadGet(itemId: itemId);
 
-  Future<Response> collectionsCollectionIdItemsPost({required String? collectionId, required List<String>? ids}) =>
-      api.collectionsCollectionIdItemsPost(collectionId: collectionId, ids: ids);
-  Future<Response> collectionsCollectionIdItemsDelete({required String? collectionId, required List<String>? ids}) =>
-      api.collectionsCollectionIdItemsDelete(collectionId: collectionId, ids: ids);
+  Future<Response> collectionsCollectionIdItemsPost(
+          {required String? collectionId, required List<String>? ids}) =>
+      api.collectionsCollectionIdItemsPost(
+          collectionId: collectionId, ids: ids);
+  Future<Response> collectionsCollectionIdItemsDelete(
+          {required String? collectionId, required List<String>? ids}) =>
+      api.collectionsCollectionIdItemsDelete(
+          collectionId: collectionId, ids: ids);
 
-  Future<Response> collectionsPost({String? name, List<String>? ids, String? parentId, bool? isLocked}) =>
-      api.collectionsPost(name: name, ids: ids, parentId: parentId, isLocked: isLocked);
+  Future<Response> collectionsPost(
+          {String? name,
+          List<String>? ids,
+          String? parentId,
+          bool? isLocked}) =>
+      api.collectionsPost(
+          name: name, ids: ids, parentId: parentId, isLocked: isLocked);
 
   Future<Response<BaseItemDtoQueryResult>> usersUserIdViewsGet({
     bool? includeExternalContent,
@@ -1185,19 +1270,24 @@ class JellyService {
         includeHidden: includeHidden,
       );
 
-  Future<Response<List<ExternalIdInfo>>> itemsItemIdExternalIdInfosGet({required String? itemId}) =>
+  Future<Response<List<ExternalIdInfo>>> itemsItemIdExternalIdInfosGet(
+          {required String? itemId}) =>
       api.itemsItemIdExternalIdInfosGet(itemId: itemId);
 
   Future<Response<List<RemoteSearchResult>>> itemsRemoteSearchSeriesPost(
           {required SeriesInfoRemoteSearchQuery? body}) =>
       api.itemsRemoteSearchSeriesPost(body: body);
 
-  Future<Response<List<RemoteSearchResult>>> itemsRemoteSearchMoviePost({required MovieInfoRemoteSearchQuery? body}) =>
+  Future<Response<List<RemoteSearchResult>>> itemsRemoteSearchMoviePost(
+          {required MovieInfoRemoteSearchQuery? body}) =>
       api.itemsRemoteSearchMoviePost(body: body);
 
-  Future<Response<List<CultureDto>>> localizationCulturesGet() => api.localizationCulturesGet();
-  Future<Response<List<CountryInfo>>> localizationCountriesGet() => api.localizationCountriesGet();
-  Future<Response<List<VirtualFolderInfo>>> libraryVirtualFoldersGet() => api.libraryVirtualFoldersGet();
+  Future<Response<List<CultureDto>>> localizationCulturesGet() =>
+      api.localizationCulturesGet();
+  Future<Response<List<CountryInfo>>> localizationCountriesGet() =>
+      api.localizationCountriesGet();
+  Future<Response<List<VirtualFolderInfo>>> libraryVirtualFoldersGet() =>
+      api.libraryVirtualFoldersGet();
 
   Future<Response<LibraryOptionsResultDto>> librariesAvailableOptionsGet({
     LibrariesAvailableOptionsGetLibraryContentType? libraryContentType,
@@ -1226,9 +1316,11 @@ class JellyService {
     List<ItemFields>? fields,
   }) async {
     Future<Response<BaseItemDtoQueryResult>> fetchOfflineSeasons() async {
-      final seriesItem = await ref.read(syncProvider.notifier).getSyncedItem(seriesId);
+      final seriesItem =
+          await ref.read(syncProvider.notifier).getSyncedItem(seriesId);
       if (seriesItem != null) {
-        final seasons = await ref.read(syncProvider.notifier).getChildren(seriesItem.id);
+        final seasons =
+            await ref.read(syncProvider.notifier).getChildren(seriesItem.id);
         return Response<BaseItemDtoQueryResult>(
           http.Response("", 200),
           BaseItemDtoQueryResult(
@@ -1336,7 +1428,11 @@ class JellyService {
       userId: account?.id,
       itemId: itemId,
       limit: limit,
-      fields: [ItemFields.primaryimageaspectratio, ItemFields.mediasources, ItemFields.mediastreams],
+      fields: [
+        ItemFields.primaryimageaspectratio,
+        ItemFields.mediasources,
+        ItemFields.mediastreams
+      ],
       enableImages: true,
       enableUserData: true,
       imageTypeLimit: 1,
@@ -1355,7 +1451,11 @@ class JellyService {
       userId: account?.id,
       itemId: itemId,
       limit: limit,
-      fields: [ItemFields.primaryimageaspectratio, ItemFields.mediasources, ItemFields.mediastreams],
+      fields: [
+        ItemFields.primaryimageaspectratio,
+        ItemFields.mediasources,
+        ItemFields.mediastreams
+      ],
       enableImages: true,
       enableUserData: true,
       imageTypeLimit: 1,
@@ -1374,7 +1474,11 @@ class JellyService {
       userId: account?.id,
       itemId: itemId,
       limit: limit,
-      fields: [ItemFields.primaryimageaspectratio, ItemFields.mediasources, ItemFields.mediastreams],
+      fields: [
+        ItemFields.primaryimageaspectratio,
+        ItemFields.mediasources,
+        ItemFields.mediastreams
+      ],
       enableImages: true,
       enableUserData: true,
       imageTypeLimit: 1,
@@ -1397,8 +1501,10 @@ class JellyService {
   }) async {
     final isOffline = ref.read(offlineStateProvider);
     if (isOffline) {
-      final syncedItem = await ref.read(syncProvider.notifier).getSyncedItem(playlistId);
-      final nestedItems = await ref.read(syncProvider.notifier).getNestedChildren(syncedItem);
+      final syncedItem =
+          await ref.read(syncProvider.notifier).getSyncedItem(playlistId);
+      final nestedItems =
+          await ref.read(syncProvider.notifier).getNestedChildren(syncedItem);
       return Response(
           http.Response("", 202),
           ServerQueryResult(
@@ -1424,7 +1530,8 @@ class JellyService {
     );
   }
 
-  Future<Response> playlistsPlaylistIdItemsDelete({required String? playlistId, List<String>? entryIds}) =>
+  Future<Response> playlistsPlaylistIdItemsDelete(
+          {required String? playlistId, List<String>? entryIds}) =>
       api.playlistsPlaylistIdItemsDelete(
         playlistId: playlistId,
         entryIds: entryIds,
@@ -1461,9 +1568,9 @@ class JellyService {
         userId: account?.id,
       );
     } finally {
-      await ref
-          .read(syncProvider.notifier)
-          .updateFavoriteItem(itemId, isFavorite: true, responseSuccessful: response?.isSuccessful ?? false);
+      await ref.read(syncProvider.notifier).updateFavoriteItem(itemId,
+          isFavorite: true,
+          responseSuccessful: response?.isSuccessful ?? false);
     }
     return response;
   }
@@ -1478,9 +1585,9 @@ class JellyService {
         userId: account?.id,
       );
     } finally {
-      await ref
-          .read(syncProvider.notifier)
-          .updateFavoriteItem(itemId, isFavorite: false, responseSuccessful: response?.isSuccessful ?? false);
+      await ref.read(syncProvider.notifier).updateFavoriteItem(itemId,
+          isFavorite: false,
+          responseSuccessful: response?.isSuccessful ?? false);
     }
     return response;
   }
@@ -1491,7 +1598,8 @@ class JellyService {
   }) async {
     Response<UserItemDataDto>? response;
     try {
-      response = await api.userPlayedItemsItemIdPost(itemId: itemId, userId: account?.id, datePlayed: datePlayed);
+      response = await api.userPlayedItemsItemIdPost(
+          itemId: itemId, userId: account?.id, datePlayed: datePlayed);
     } finally {
       await ref.read(syncProvider.notifier).updatePlayedItem(
             itemId,
@@ -1528,7 +1636,8 @@ class JellyService {
   }) async {
     try {
       final response = await api.mediaSegmentsItemIdGet(itemId: id);
-      final newSegments = response.body?.items?.map((e) => e.toSegment).toList() ?? [];
+      final newSegments =
+          response.body?.items?.map((e) => e.toSegment).toList() ?? [];
       return response.copyWith(
         body: MediaSegmentsModel(segments: newSegments),
       );
@@ -1573,7 +1682,8 @@ class JellyService {
                     (e) {
                       final parsed = Uri.tryParse(e);
                       if (parsed == null) return '';
-                      if (parsed.hasScheme && parsed.host.isNotEmpty) return parsed.toString();
+                      if (parsed.hasScheme && parsed.host.isNotEmpty)
+                        return parsed.toString();
                       return buildServerUrl(
                         ref,
                         pathSegments: [
@@ -1584,7 +1694,11 @@ class JellyService {
                           ...parsed.pathSegments.where((s) => s.isNotEmpty),
                         ],
                         queryParameters: parsed.queryParameters.isNotEmpty
-                            ? {for (final entry in parsed.queryParameters.entries) entry.key: entry.value}
+                            ? {
+                                for (final entry
+                                    in parsed.queryParameters.entries)
+                                  entry.key: entry.value
+                              }
                             : null,
                       );
                     },
@@ -1597,17 +1711,23 @@ class JellyService {
     }
   }
 
-  Future<Response<List<SessionInfoDto>>> sessionsInfo(String deviceId) async => api.sessionsGet(deviceId: deviceId);
+  Future<Response<List<SessionInfoDto>>> sessionsInfo(String deviceId) async =>
+      api.sessionsGet(deviceId: deviceId);
 
-  Future<Response<bool>> quickConnect(String code) async => api.quickConnectAuthorizePost(code: code);
+  Future<Response<bool>> quickConnect(String code) async =>
+      api.quickConnectAuthorizePost(code: code);
 
-  Future<Response<bool>> quickConnectEnabled() async => api.quickConnectEnabledGet();
+  Future<Response<bool>> quickConnectEnabled() async =>
+      api.quickConnectEnabledGet();
 
-  Future<Response<BrandingOptionsDto>> getBranding() async => api.brandingConfigurationGet();
+  Future<Response<BrandingOptionsDto>> getBranding() async =>
+      api.brandingConfigurationGet();
 
-  Future<Response<dynamic>> deleteItem(String itemId) => api.itemsItemIdDelete(itemId: itemId);
+  Future<Response<dynamic>> deleteItem(String itemId) =>
+      api.itemsItemIdDelete(itemId: itemId);
 
-  Future<UserConfiguration?> _updateUserConfiguration(UserConfiguration newUserConfiguration) async {
+  Future<UserConfiguration?> _updateUserConfiguration(
+      UserConfiguration newUserConfiguration) async {
     if (account?.id == null) return null;
 
     final response = await api.usersConfigurationPost(
@@ -1626,7 +1746,8 @@ class JellyService {
     if (currentUserConfiguration == null) return Future.value(null);
 
     final updated = currentUserConfiguration.copyWith(
-      rememberAudioSelections: !(currentUserConfiguration.rememberAudioSelections ?? false),
+      rememberAudioSelections:
+          !(currentUserConfiguration.rememberAudioSelections ?? false),
     );
     return _updateUserConfiguration(updated);
   }
@@ -1636,12 +1757,14 @@ class JellyService {
     if (current == null) return Future.value(null);
 
     final updated = current.copyWith(
-      rememberSubtitleSelections: !(current.rememberSubtitleSelections ?? false),
+      rememberSubtitleSelections:
+          !(current.rememberSubtitleSelections ?? false),
     );
     return _updateUserConfiguration(updated);
   }
 
-  Future<UserConfiguration?> updateUserConfiguration(UserConfiguration newConfiguration) {
+  Future<UserConfiguration?> updateUserConfiguration(
+      UserConfiguration newConfiguration) {
     return _updateUserConfiguration(newConfiguration);
   }
 
@@ -1655,7 +1778,8 @@ class JellyService {
     return api.quickConnectConnectGet(secret: secret);
   }
 
-  Future<Response<AuthenticationResult>> quickConnectAuthenticate(String secret) async {
+  Future<Response<AuthenticationResult>> quickConnectAuthenticate(
+      String secret) async {
     return api.usersAuthenticateWithQuickConnectPost(
       body: QuickConnectDto(secret: secret),
     );
@@ -1695,9 +1819,11 @@ class JellyService {
     }
   }
 
-  Future<Response<DefaultDirectoryBrowserInfoDto>> defaultDirectoryGet() => api.environmentDefaultDirectoryBrowserGet();
+  Future<Response<DefaultDirectoryBrowserInfoDto>> defaultDirectoryGet() =>
+      api.environmentDefaultDirectoryBrowserGet();
 
-  Future<Response<List<FileSystemEntryInfo>>> getDriveLocations() => api.environmentDrivesGet();
+  Future<Response<List<FileSystemEntryInfo>>> getDriveLocations() =>
+      api.environmentDrivesGet();
 
   Future<Response<List<FileSystemEntryInfo>>> directoryContentsGet({
     required String? path,
@@ -1738,11 +1864,16 @@ class JellyService {
     return api.libraryVirtualFoldersPost(
       name: newFolder.name ?? "",
       collectionType: switch (newFolder.collectionType) {
-        CollectionTypeOptions.movies => LibraryVirtualFoldersPostCollectionType.movies,
-        CollectionTypeOptions.tvshows => LibraryVirtualFoldersPostCollectionType.tvshows,
-        CollectionTypeOptions.music => LibraryVirtualFoldersPostCollectionType.music,
-        CollectionTypeOptions.books => LibraryVirtualFoldersPostCollectionType.books,
-        CollectionTypeOptions.homevideos => LibraryVirtualFoldersPostCollectionType.homevideos,
+        CollectionTypeOptions.movies =>
+          LibraryVirtualFoldersPostCollectionType.movies,
+        CollectionTypeOptions.tvshows =>
+          LibraryVirtualFoldersPostCollectionType.tvshows,
+        CollectionTypeOptions.music =>
+          LibraryVirtualFoldersPostCollectionType.music,
+        CollectionTypeOptions.books =>
+          LibraryVirtualFoldersPostCollectionType.books,
+        CollectionTypeOptions.homevideos =>
+          LibraryVirtualFoldersPostCollectionType.homevideos,
         _ => LibraryVirtualFoldersPostCollectionType.mixed,
       },
       paths: newFolder.locations,
@@ -1802,7 +1933,8 @@ class JellyService {
     }
   }
 
-  Future<Response> updateLiveTvConfiguration(LiveTvOptions liveTvOptions) async {
+  Future<Response> updateLiveTvConfiguration(
+      LiveTvOptions liveTvOptions) async {
     return api.systemConfigurationKeyPost(key: 'livetv', body: liveTvOptions);
   }
 
@@ -1815,7 +1947,8 @@ class JellyService {
     return api.liveTvTunerHostsDelete(id: id);
   }
 
-  Future<Response<List<TunerHostInfo>>> discoverTuners({bool? newDevicesOnly}) async {
+  Future<Response<List<TunerHostInfo>>> discoverTuners(
+      {bool? newDevicesOnly}) async {
     return api.liveTvTunersDiscoverGet(newDevicesOnly: newDevicesOnly);
   }
 
@@ -1894,9 +2027,13 @@ class JellyService {
     bool? enableAudioVbrEncoding,
   }) {
     final serverUrl =
-        ref.read(authProvider).serverLoginModel?.tempCredentials.url ?? ref.read(userProvider)?.credentials.url ?? '';
+        ref.read(authProvider).serverLoginModel?.tempCredentials.url ??
+            ref.read(userProvider)?.credentials.url ??
+            '';
 
-    final baseUrl = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl;
+    final baseUrl = serverUrl.endsWith('/')
+        ? serverUrl.substring(0, serverUrl.length - 1)
+        : serverUrl;
     final path = '/Videos/$itemId/stream.$container';
 
     // Build query parameters
@@ -1905,65 +2042,99 @@ class JellyService {
     if ($static != null) queryParams['static'] = $static.toString();
     if (params != null) queryParams['params'] = params;
     if (tag != null) queryParams['tag'] = tag;
-    if (deviceProfileId != null) queryParams['deviceProfileId'] = deviceProfileId;
+    if (deviceProfileId != null)
+      queryParams['deviceProfileId'] = deviceProfileId;
     if (playSessionId != null) queryParams['playSessionId'] = playSessionId;
-    if (segmentContainer != null) queryParams['segmentContainer'] = segmentContainer;
-    if (segmentLength != null) queryParams['segmentLength'] = segmentLength.toString();
-    if (minSegments != null) queryParams['minSegments'] = minSegments.toString();
+    if (segmentContainer != null)
+      queryParams['segmentContainer'] = segmentContainer;
+    if (segmentLength != null)
+      queryParams['segmentLength'] = segmentLength.toString();
+    if (minSegments != null)
+      queryParams['minSegments'] = minSegments.toString();
     if (mediaSourceId != null) queryParams['mediaSourceId'] = mediaSourceId;
     if (deviceId != null) queryParams['deviceId'] = deviceId;
     if (audioCodec != null) queryParams['audioCodec'] = audioCodec;
-    if (enableAutoStreamCopy != null) queryParams['enableAutoStreamCopy'] = enableAutoStreamCopy.toString();
-    if (allowVideoStreamCopy != null) queryParams['allowVideoStreamCopy'] = allowVideoStreamCopy.toString();
-    if (allowAudioStreamCopy != null) queryParams['allowAudioStreamCopy'] = allowAudioStreamCopy.toString();
-    if (breakOnNonKeyFrames != null) queryParams['breakOnNonKeyFrames'] = breakOnNonKeyFrames.toString();
-    if (audioSampleRate != null) queryParams['audioSampleRate'] = audioSampleRate.toString();
-    if (maxAudioBitDepth != null) queryParams['maxAudioBitDepth'] = maxAudioBitDepth.toString();
-    if (audioBitRate != null) queryParams['audioBitRate'] = audioBitRate.toString();
-    if (audioChannels != null) queryParams['audioChannels'] = audioChannels.toString();
-    if (maxAudioChannels != null) queryParams['maxAudioChannels'] = maxAudioChannels.toString();
+    if (enableAutoStreamCopy != null)
+      queryParams['enableAutoStreamCopy'] = enableAutoStreamCopy.toString();
+    if (allowVideoStreamCopy != null)
+      queryParams['allowVideoStreamCopy'] = allowVideoStreamCopy.toString();
+    if (allowAudioStreamCopy != null)
+      queryParams['allowAudioStreamCopy'] = allowAudioStreamCopy.toString();
+    if (breakOnNonKeyFrames != null)
+      queryParams['breakOnNonKeyFrames'] = breakOnNonKeyFrames.toString();
+    if (audioSampleRate != null)
+      queryParams['audioSampleRate'] = audioSampleRate.toString();
+    if (maxAudioBitDepth != null)
+      queryParams['maxAudioBitDepth'] = maxAudioBitDepth.toString();
+    if (audioBitRate != null)
+      queryParams['audioBitRate'] = audioBitRate.toString();
+    if (audioChannels != null)
+      queryParams['audioChannels'] = audioChannels.toString();
+    if (maxAudioChannels != null)
+      queryParams['maxAudioChannels'] = maxAudioChannels.toString();
     if (profile != null) queryParams['profile'] = profile;
     if (level != null) queryParams['level'] = level;
     if (framerate != null) queryParams['framerate'] = framerate.toString();
-    if (maxFramerate != null) queryParams['maxFramerate'] = maxFramerate.toString();
-    if (copyTimestamps != null) queryParams['copyTimestamps'] = copyTimestamps.toString();
-    if (startTimeTicks != null) queryParams['startTimeTicks'] = startTimeTicks.toString();
+    if (maxFramerate != null)
+      queryParams['maxFramerate'] = maxFramerate.toString();
+    if (copyTimestamps != null)
+      queryParams['copyTimestamps'] = copyTimestamps.toString();
+    if (startTimeTicks != null)
+      queryParams['startTimeTicks'] = startTimeTicks.toString();
     if (width != null) queryParams['width'] = width.toString();
     if (height != null) queryParams['height'] = height.toString();
     if (maxWidth != null) queryParams['maxWidth'] = maxWidth.toString();
     if (maxHeight != null) queryParams['maxHeight'] = maxHeight.toString();
-    if (videoBitRate != null) queryParams['videoBitRate'] = videoBitRate.toString();
-    if (subtitleStreamIndex != null) queryParams['subtitleStreamIndex'] = subtitleStreamIndex.toString();
-    if (subtitleMethod != null) queryParams['subtitleMethod'] = subtitleMethod.value.toString();
-    if (maxRefFrames != null) queryParams['maxRefFrames'] = maxRefFrames.toString();
-    if (maxVideoBitDepth != null) queryParams['maxVideoBitDepth'] = maxVideoBitDepth.toString();
+    if (videoBitRate != null)
+      queryParams['videoBitRate'] = videoBitRate.toString();
+    if (subtitleStreamIndex != null)
+      queryParams['subtitleStreamIndex'] = subtitleStreamIndex.toString();
+    if (subtitleMethod != null)
+      queryParams['subtitleMethod'] = subtitleMethod.value.toString();
+    if (maxRefFrames != null)
+      queryParams['maxRefFrames'] = maxRefFrames.toString();
+    if (maxVideoBitDepth != null)
+      queryParams['maxVideoBitDepth'] = maxVideoBitDepth.toString();
     if (requireAvc != null) queryParams['requireAvc'] = requireAvc.toString();
-    if (deInterlace != null) queryParams['deInterlace'] = deInterlace.toString();
-    if (requireNonAnamorphic != null) queryParams['requireNonAnamorphic'] = requireNonAnamorphic.toString();
+    if (deInterlace != null)
+      queryParams['deInterlace'] = deInterlace.toString();
+    if (requireNonAnamorphic != null)
+      queryParams['requireNonAnamorphic'] = requireNonAnamorphic.toString();
     if (transcodingMaxAudioChannels != null) {
-      queryParams['transcodingMaxAudioChannels'] = transcodingMaxAudioChannels.toString();
+      queryParams['transcodingMaxAudioChannels'] =
+          transcodingMaxAudioChannels.toString();
     }
-    if (cpuCoreLimit != null) queryParams['cpuCoreLimit'] = cpuCoreLimit.toString();
+    if (cpuCoreLimit != null)
+      queryParams['cpuCoreLimit'] = cpuCoreLimit.toString();
     if (liveStreamId != null) queryParams['liveStreamId'] = liveStreamId;
-    if (enableMpegtsM2TsMode != null) queryParams['enableMpegtsM2TsMode'] = enableMpegtsM2TsMode.toString();
+    if (enableMpegtsM2TsMode != null)
+      queryParams['enableMpegtsM2TsMode'] = enableMpegtsM2TsMode.toString();
     if (videoCodec != null) queryParams['videoCodec'] = videoCodec;
     if (subtitleCodec != null) queryParams['subtitleCodec'] = subtitleCodec;
-    if (transcodeReasons != null) queryParams['transcodeReasons'] = transcodeReasons;
-    if (audioStreamIndex != null) queryParams['audioStreamIndex'] = audioStreamIndex.toString();
-    if (videoStreamIndex != null) queryParams['videoStreamIndex'] = videoStreamIndex.toString();
+    if (transcodeReasons != null)
+      queryParams['transcodeReasons'] = transcodeReasons;
+    if (audioStreamIndex != null)
+      queryParams['audioStreamIndex'] = audioStreamIndex.toString();
+    if (videoStreamIndex != null)
+      queryParams['videoStreamIndex'] = videoStreamIndex.toString();
     if (context != null) queryParams['context'] = context.value.toString();
-    if (streamOptions != null) queryParams['streamOptions'] = streamOptions.toString();
-    if (enableAudioVbrEncoding != null) queryParams['enableAudioVbrEncoding'] = enableAudioVbrEncoding.toString();
+    if (streamOptions != null)
+      queryParams['streamOptions'] = streamOptions.toString();
+    if (enableAudioVbrEncoding != null)
+      queryParams['enableAudioVbrEncoding'] = enableAudioVbrEncoding.toString();
 
     // Build the query string
-    final queryString =
-        queryParams.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&');
+    final queryString = queryParams.entries
+        .map((e) =>
+            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
 
     return queryString.isEmpty ? '$baseUrl$path' : '$baseUrl$path?$queryString';
   }
 }
 
-int _sortSyncedItems(BaseItemDto? aItem, BaseItemDto? bItem, List<ItemSortBy>? sortBy, List<SortOrder>? sortOrder) {
+int _sortSyncedItems(BaseItemDto? aItem, BaseItemDto? bItem,
+    List<ItemSortBy>? sortBy, List<SortOrder>? sortOrder) {
   final a = aItem;
   final b = bItem;
   if (a == null && b == null) return 0;
@@ -1974,8 +2145,9 @@ int _sortSyncedItems(BaseItemDto? aItem, BaseItemDto? bItem, List<ItemSortBy>? s
     for (int i = 0; i < sortBy.length; i++) {
       final sortField = sortBy[i];
 
-      final order =
-          (sortOrder != null && sortOrder.length > i) ? sortOrder[i] : (sortOrder?.firstOrNull ?? SortOrder.ascending);
+      final order = (sortOrder != null && sortOrder.length > i)
+          ? sortOrder[i]
+          : (sortOrder?.firstOrNull ?? SortOrder.ascending);
 
       final isAscending = order != SortOrder.descending;
       int comp = 0;
@@ -1988,10 +2160,12 @@ int _sortSyncedItems(BaseItemDto? aItem, BaseItemDto? bItem, List<ItemSortBy>? s
           comp = (a.sortName ?? '').compareTo(b.sortName ?? '');
           break;
         case ItemSortBy.premieredate:
-          comp = (a.premiereDate ?? DateTime(0)).compareTo(b.premiereDate ?? DateTime(0));
+          comp = (a.premiereDate ?? DateTime(0))
+              .compareTo(b.premiereDate ?? DateTime(0));
           break;
         case ItemSortBy.datecreated:
-          comp = (a.dateCreated ?? DateTime(0)).compareTo(b.dateCreated ?? DateTime(0));
+          comp = (a.dateCreated ?? DateTime(0))
+              .compareTo(b.dateCreated ?? DateTime(0));
           break;
         case ItemSortBy.communityrating:
           comp = (a.communityRating ?? 0.0).compareTo(b.communityRating ?? 0.0);
@@ -2006,10 +2180,12 @@ int _sortSyncedItems(BaseItemDto? aItem, BaseItemDto? bItem, List<ItemSortBy>? s
           comp = (a.productionYear ?? 0).compareTo(b.productionYear ?? 0);
           break;
         case ItemSortBy.playcount:
-          comp = (a.userData?.playCount ?? 0).compareTo(b.userData?.playCount ?? 0);
+          comp = (a.userData?.playCount ?? 0)
+              .compareTo(b.userData?.playCount ?? 0);
           break;
         case ItemSortBy.isfavoriteorliked:
-          comp = ((a.userData?.isFavorite ?? false) ? 1 : 0).compareTo((b.userData?.isFavorite ?? false) ? 1 : 0);
+          comp = ((a.userData?.isFavorite ?? false) ? 1 : 0)
+              .compareTo((b.userData?.isFavorite ?? false) ? 1 : 0);
           break;
         default:
           comp = 0;
@@ -2039,7 +2215,8 @@ extension ParsedMap on Map<String, dynamic> {
           parsedMap[key] = int.tryParse(value);
         } else if (double.tryParse(value) != null) {
           parsedMap[key] = double.tryParse(value);
-        } else if (value.toLowerCase() == 'true' || value.toLowerCase() == 'false') {
+        } else if (value.toLowerCase() == 'true' ||
+            value.toLowerCase() == 'false') {
           parsedMap[key] = value.toLowerCase() == 'true';
         } else {
           parsedMap[key] = value;

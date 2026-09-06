@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fladder/models/settings/home_settings_model.dart';
 import 'package:fladder/providers/settings/client_settings_provider.dart';
 import 'package:fladder/providers/settings/home_settings_provider.dart';
+import 'package:fladder/routes/auto_router.gr.dart';
 import 'package:fladder/screens/settings/settings_list_tile.dart';
 import 'package:fladder/screens/settings/widgets/settings_label_divider.dart';
 import 'package:fladder/screens/settings/widgets/settings_list_group.dart';
@@ -29,26 +31,28 @@ List<Widget> buildClientSettingsDashboard(BuildContext context, WidgetRef ref) {
             .map(
               (entry) => ItemActionButton(
                 label: Text(entry.label(context)),
-                action: () =>
-                    ref.read(homeSettingsProvider.notifier).update((context) => context.copyWith(homeBanner: entry)),
+                action: () => ref
+                    .read(homeSettingsProvider.notifier)
+                    .update((context) => context.copyWith(homeBanner: entry)),
               ),
             )
             .toList(),
       ),
-      if (ref.watch(homeSettingsProvider.select((value) => value.homeBanner)) != HomeBanner.hide)
+      if (ref.watch(homeSettingsProvider.select((value) => value.homeBanner)) !=
+          HomeBanner.hide)
         SettingsListTileEnum(
           label: Text(context.localized.settingsHomeBannerInformationTitle),
           subLabel: Text(context.localized.settingsHomeBannerInformationDesc),
           current: ref.watch(
-            homeSettingsProvider.select((value) => value.carouselSettings.label(context)),
+            homeSettingsProvider
+                .select((value) => value.carouselSettings.label(context)),
           ),
           itemBuilder: (context) => HomeCarouselSettings.values
               .map(
                 (entry) => ItemActionButton(
                   label: Text(entry.label(context)),
-                  action: () => ref
-                      .read(homeSettingsProvider.notifier)
-                      .update((context) => context.copyWith(carouselSettings: entry)),
+                  action: () => ref.read(homeSettingsProvider.notifier).update(
+                      (context) => context.copyWith(carouselSettings: entry)),
                 ),
               )
               .toList(),
@@ -65,8 +69,9 @@ List<Widget> buildClientSettingsDashboard(BuildContext context, WidgetRef ref) {
             .map(
               (entry) => ItemActionButton(
                 label: Text(entry.label(context)),
-                action: () =>
-                    ref.read(homeSettingsProvider.notifier).update((context) => context.copyWith(nextUp: entry)),
+                action: () => ref
+                    .read(homeSettingsProvider.notifier)
+                    .update((context) => context.copyWith(nextUp: entry)),
               ),
             )
             .toList(),
@@ -74,15 +79,21 @@ List<Widget> buildClientSettingsDashboard(BuildContext context, WidgetRef ref) {
       SettingsListTile(
         label: Text(context.localized.clientSettingsShowAllCollectionsTitle),
         subLabel: Text(context.localized.clientSettingsShowAllCollectionsDesc),
-        onTap: () => ref
-            .read(clientSettingsProvider.notifier)
-            .update((current) => current.copyWith(showAllCollectionTypes: !current.showAllCollectionTypes)),
+        onTap: () => ref.read(clientSettingsProvider.notifier).update(
+            (current) => current.copyWith(
+                showAllCollectionTypes: !current.showAllCollectionTypes)),
         trailing: Switch(
           value: clientSettings.showAllCollectionTypes,
           onChanged: (value) => ref
               .read(clientSettingsProvider.notifier)
-              .update((current) => current.copyWith(showAllCollectionTypes: value)),
+              .update(
+                  (current) => current.copyWith(showAllCollectionTypes: value)),
         ),
+      ),
+      SettingsListTile(
+        label: const Text('Rangées de l\'accueil'),
+        subLabel: const Text('Genre, réalisateur, studio, collection...'),
+        onTap: () => context.router.push(const HomeRowsSettingsRoute()),
       ),
     ],
   );
