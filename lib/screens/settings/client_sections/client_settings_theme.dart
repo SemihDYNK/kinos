@@ -105,16 +105,6 @@ List<Widget> buildClientSettingsTheme(BuildContext context, WidgetRef ref) {
       ),
     ),
     SettingsListTile(
-      label: Text(context.localized.itemColorsTitle),
-      subLabel: Text(context.localized.itemColorsDesc),
-      onTap: () =>
-          ref.read(clientSettingsProvider.notifier).setDerivedColorsFromItem(!clientSettings.deriveColorsFromItem),
-      trailing: Switch(
-        value: clientSettings.deriveColorsFromItem,
-        onChanged: (value) => ref.read(clientSettingsProvider.notifier).setDerivedColorsFromItem(value),
-      ),
-    ),
-    SettingsListTile(
       label: Text(context.localized.posterColorsTitle),
       subLabel: Text(context.localized.posterColorsDesc),
       onTap: () =>

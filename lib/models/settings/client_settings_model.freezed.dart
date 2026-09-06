@@ -24,7 +24,6 @@ mixin _$ClientSettingsModel implements DiagnosticableTreeMixin {
   Duration get updateNotificationsInterval;
   ThemeMode get themeMode;
   ColorThemes? get themeColor;
-  bool get deriveColorsFromItem;
   bool get dynamicPosterColors;
   bool get amoledBlack;
   bool get blurPlaceHolders;
@@ -56,7 +55,8 @@ mixin _$ClientSettingsModel implements DiagnosticableTreeMixin {
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $ClientSettingsModelCopyWith<ClientSettingsModel> get copyWith =>
-      _$ClientSettingsModelCopyWithImpl<ClientSettingsModel>(this as ClientSettingsModel, _$identity);
+      _$ClientSettingsModelCopyWithImpl<ClientSettingsModel>(
+          this as ClientSettingsModel, _$identity);
 
   /// Serializes this ClientSettingsModel to a JSON map.
   Map<String, dynamic> toJson();
@@ -66,16 +66,18 @@ mixin _$ClientSettingsModel implements DiagnosticableTreeMixin {
     properties
       ..add(DiagnosticsProperty('type', 'ClientSettingsModel'))
       ..add(DiagnosticsProperty('syncPath', syncPath))
-      ..add(DiagnosticsProperty('transcodeDownloadModel', transcodeDownloadModel))
-      ..add(DiagnosticsProperty('transcodeMusicDownloadModel', transcodeMusicDownloadModel))
+      ..add(
+          DiagnosticsProperty('transcodeDownloadModel', transcodeDownloadModel))
+      ..add(DiagnosticsProperty(
+          'transcodeMusicDownloadModel', transcodeMusicDownloadModel))
       ..add(DiagnosticsProperty('position', position))
       ..add(DiagnosticsProperty('size', size))
       ..add(DiagnosticsProperty('timeOut', timeOut))
       ..add(DiagnosticsProperty('nextUpDateCutoff', nextUpDateCutoff))
-      ..add(DiagnosticsProperty('updateNotificationsInterval', updateNotificationsInterval))
+      ..add(DiagnosticsProperty(
+          'updateNotificationsInterval', updateNotificationsInterval))
       ..add(DiagnosticsProperty('themeMode', themeMode))
       ..add(DiagnosticsProperty('themeColor', themeColor))
-      ..add(DiagnosticsProperty('deriveColorsFromItem', deriveColorsFromItem))
       ..add(DiagnosticsProperty('dynamicPosterColors', dynamicPosterColors))
       ..add(DiagnosticsProperty('amoledBlack', amoledBlack))
       ..add(DiagnosticsProperty('blurPlaceHolders', blurPlaceHolders))
@@ -87,8 +89,10 @@ mixin _$ClientSettingsModel implements DiagnosticableTreeMixin {
       ..add(DiagnosticsProperty('mouseDragSupport', mouseDragSupport))
       ..add(DiagnosticsProperty('requireWifi', requireWifi))
       ..add(DiagnosticsProperty('expandSideBar', expandSideBar))
-      ..add(DiagnosticsProperty('showAllCollectionTypes', showAllCollectionTypes))
-      ..add(DiagnosticsProperty('maxConcurrentDownloads', maxConcurrentDownloads))
+      ..add(
+          DiagnosticsProperty('showAllCollectionTypes', showAllCollectionTypes))
+      ..add(
+          DiagnosticsProperty('maxConcurrentDownloads', maxConcurrentDownloads))
       ..add(DiagnosticsProperty('schemeVariant', schemeVariant))
       ..add(DiagnosticsProperty('backgroundImage', backgroundImage))
       ..add(DiagnosticsProperty('enableBlurEffects', enableBlurEffects))
@@ -104,13 +108,14 @@ mixin _$ClientSettingsModel implements DiagnosticableTreeMixin {
 
   @override
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
-    return 'ClientSettingsModel(syncPath: $syncPath, transcodeDownloadModel: $transcodeDownloadModel, transcodeMusicDownloadModel: $transcodeMusicDownloadModel, position: $position, size: $size, timeOut: $timeOut, nextUpDateCutoff: $nextUpDateCutoff, updateNotificationsInterval: $updateNotificationsInterval, themeMode: $themeMode, themeColor: $themeColor, deriveColorsFromItem: $deriveColorsFromItem, dynamicPosterColors: $dynamicPosterColors, amoledBlack: $amoledBlack, blurPlaceHolders: $blurPlaceHolders, blurUpcomingEpisodes: $blurUpcomingEpisodes, selectedLocale: $selectedLocale, enableMediaKeys: $enableMediaKeys, posterSize: $posterSize, pinchPosterZoom: $pinchPosterZoom, mouseDragSupport: $mouseDragSupport, requireWifi: $requireWifi, expandSideBar: $expandSideBar, showAllCollectionTypes: $showAllCollectionTypes, maxConcurrentDownloads: $maxConcurrentDownloads, schemeVariant: $schemeVariant, backgroundImage: $backgroundImage, enableBlurEffects: $enableBlurEffects, checkForUpdates: $checkForUpdates, usePosterForLibrary: $usePosterForLibrary, useSystemIME: $useSystemIME, useTVExpandedLayout: $useTVExpandedLayout, forceLeanBackMode: $forceLeanBackMode, lastViewedUpdate: $lastViewedUpdate, libraryPageSize: $libraryPageSize, shortcuts: $shortcuts)';
+    return 'ClientSettingsModel(syncPath: $syncPath, transcodeDownloadModel: $transcodeDownloadModel, transcodeMusicDownloadModel: $transcodeMusicDownloadModel, position: $position, size: $size, timeOut: $timeOut, nextUpDateCutoff: $nextUpDateCutoff, updateNotificationsInterval: $updateNotificationsInterval, themeMode: $themeMode, themeColor: $themeColor, dynamicPosterColors: $dynamicPosterColors, amoledBlack: $amoledBlack, blurPlaceHolders: $blurPlaceHolders, blurUpcomingEpisodes: $blurUpcomingEpisodes, selectedLocale: $selectedLocale, enableMediaKeys: $enableMediaKeys, posterSize: $posterSize, pinchPosterZoom: $pinchPosterZoom, mouseDragSupport: $mouseDragSupport, requireWifi: $requireWifi, expandSideBar: $expandSideBar, showAllCollectionTypes: $showAllCollectionTypes, maxConcurrentDownloads: $maxConcurrentDownloads, schemeVariant: $schemeVariant, backgroundImage: $backgroundImage, enableBlurEffects: $enableBlurEffects, checkForUpdates: $checkForUpdates, usePosterForLibrary: $usePosterForLibrary, useSystemIME: $useSystemIME, useTVExpandedLayout: $useTVExpandedLayout, forceLeanBackMode: $forceLeanBackMode, lastViewedUpdate: $lastViewedUpdate, libraryPageSize: $libraryPageSize, shortcuts: $shortcuts)';
   }
 }
 
 /// @nodoc
 abstract mixin class $ClientSettingsModelCopyWith<$Res> {
-  factory $ClientSettingsModelCopyWith(ClientSettingsModel value, $Res Function(ClientSettingsModel) _then) =
+  factory $ClientSettingsModelCopyWith(
+          ClientSettingsModel value, $Res Function(ClientSettingsModel) _then) =
       _$ClientSettingsModelCopyWithImpl;
   @useResult
   $Res call(
@@ -124,7 +129,6 @@ abstract mixin class $ClientSettingsModelCopyWith<$Res> {
       Duration updateNotificationsInterval,
       ThemeMode themeMode,
       ColorThemes? themeColor,
-      bool deriveColorsFromItem,
       bool dynamicPosterColors,
       bool amoledBlack,
       bool blurPlaceHolders,
@@ -154,7 +158,8 @@ abstract mixin class $ClientSettingsModelCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$ClientSettingsModelCopyWithImpl<$Res> implements $ClientSettingsModelCopyWith<$Res> {
+class _$ClientSettingsModelCopyWithImpl<$Res>
+    implements $ClientSettingsModelCopyWith<$Res> {
   _$ClientSettingsModelCopyWithImpl(this._self, this._then);
 
   final ClientSettingsModel _self;
@@ -175,7 +180,6 @@ class _$ClientSettingsModelCopyWithImpl<$Res> implements $ClientSettingsModelCop
     Object? updateNotificationsInterval = null,
     Object? themeMode = null,
     Object? themeColor = freezed,
-    Object? deriveColorsFromItem = null,
     Object? dynamicPosterColors = null,
     Object? amoledBlack = null,
     Object? blurPlaceHolders = null,
@@ -242,10 +246,6 @@ class _$ClientSettingsModelCopyWithImpl<$Res> implements $ClientSettingsModelCop
           ? _self.themeColor
           : themeColor // ignore: cast_nullable_to_non_nullable
               as ColorThemes?,
-      deriveColorsFromItem: null == deriveColorsFromItem
-          ? _self.deriveColorsFromItem
-          : deriveColorsFromItem // ignore: cast_nullable_to_non_nullable
-              as bool,
       dynamicPosterColors: null == dynamicPosterColors
           ? _self.dynamicPosterColors
           : dynamicPosterColors // ignore: cast_nullable_to_non_nullable
@@ -350,7 +350,8 @@ class _$ClientSettingsModelCopyWithImpl<$Res> implements $ClientSettingsModelCop
   @override
   @pragma('vm:prefer-inline')
   $TranscodeDownloadModelCopyWith<$Res> get transcodeDownloadModel {
-    return $TranscodeDownloadModelCopyWith<$Res>(_self.transcodeDownloadModel, (value) {
+    return $TranscodeDownloadModelCopyWith<$Res>(_self.transcodeDownloadModel,
+        (value) {
       return _then(_self.copyWith(transcodeDownloadModel: value));
     });
   }
@@ -460,7 +461,6 @@ extension ClientSettingsModelPatterns on ClientSettingsModel {
             Duration updateNotificationsInterval,
             ThemeMode themeMode,
             ColorThemes? themeColor,
-            bool deriveColorsFromItem,
             bool dynamicPosterColors,
             bool amoledBlack,
             bool blurPlaceHolders,
@@ -502,7 +502,6 @@ extension ClientSettingsModelPatterns on ClientSettingsModel {
             _that.updateNotificationsInterval,
             _that.themeMode,
             _that.themeColor,
-            _that.deriveColorsFromItem,
             _that.dynamicPosterColors,
             _that.amoledBlack,
             _that.blurPlaceHolders,
@@ -558,7 +557,6 @@ extension ClientSettingsModelPatterns on ClientSettingsModel {
             Duration updateNotificationsInterval,
             ThemeMode themeMode,
             ColorThemes? themeColor,
-            bool deriveColorsFromItem,
             bool dynamicPosterColors,
             bool amoledBlack,
             bool blurPlaceHolders,
@@ -599,7 +597,6 @@ extension ClientSettingsModelPatterns on ClientSettingsModel {
             _that.updateNotificationsInterval,
             _that.themeMode,
             _that.themeColor,
-            _that.deriveColorsFromItem,
             _that.dynamicPosterColors,
             _that.amoledBlack,
             _that.blurPlaceHolders,
@@ -654,7 +651,6 @@ extension ClientSettingsModelPatterns on ClientSettingsModel {
             Duration updateNotificationsInterval,
             ThemeMode themeMode,
             ColorThemes? themeColor,
-            bool deriveColorsFromItem,
             bool dynamicPosterColors,
             bool amoledBlack,
             bool blurPlaceHolders,
@@ -695,7 +691,6 @@ extension ClientSettingsModelPatterns on ClientSettingsModel {
             _that.updateNotificationsInterval,
             _that.themeMode,
             _that.themeColor,
-            _that.deriveColorsFromItem,
             _that.dynamicPosterColors,
             _that.amoledBlack,
             _that.blurPlaceHolders,
@@ -728,7 +723,8 @@ extension ClientSettingsModelPatterns on ClientSettingsModel {
 
 /// @nodoc
 @JsonSerializable()
-class _ClientSettingsModel extends ClientSettingsModel with DiagnosticableTreeMixin {
+class _ClientSettingsModel extends ClientSettingsModel
+    with DiagnosticableTreeMixin {
   _ClientSettingsModel(
       {this.syncPath,
       required this.transcodeDownloadModel,
@@ -740,7 +736,6 @@ class _ClientSettingsModel extends ClientSettingsModel with DiagnosticableTreeMi
       this.updateNotificationsInterval = const Duration(hours: 1),
       this.themeMode = ThemeMode.system,
       this.themeColor,
-      this.deriveColorsFromItem = true,
       this.dynamicPosterColors = true,
       this.amoledBlack = false,
       this.blurPlaceHolders = true,
@@ -767,7 +762,8 @@ class _ClientSettingsModel extends ClientSettingsModel with DiagnosticableTreeMi
       final Map<GlobalHotKeys, KeyCombination> shortcuts = const {}})
       : _shortcuts = shortcuts,
         super._();
-  factory _ClientSettingsModel.fromJson(Map<String, dynamic> json) => _$ClientSettingsModelFromJson(json);
+  factory _ClientSettingsModel.fromJson(Map<String, dynamic> json) =>
+      _$ClientSettingsModelFromJson(json);
 
   @override
   final String? syncPath;
@@ -795,9 +791,6 @@ class _ClientSettingsModel extends ClientSettingsModel with DiagnosticableTreeMi
   final ThemeMode themeMode;
   @override
   final ColorThemes? themeColor;
-  @override
-  @JsonKey()
-  final bool deriveColorsFromItem;
   @override
   @JsonKey()
   final bool dynamicPosterColors;
@@ -880,7 +873,8 @@ class _ClientSettingsModel extends ClientSettingsModel with DiagnosticableTreeMi
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   _$ClientSettingsModelCopyWith<_ClientSettingsModel> get copyWith =>
-      __$ClientSettingsModelCopyWithImpl<_ClientSettingsModel>(this, _$identity);
+      __$ClientSettingsModelCopyWithImpl<_ClientSettingsModel>(
+          this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
@@ -894,16 +888,18 @@ class _ClientSettingsModel extends ClientSettingsModel with DiagnosticableTreeMi
     properties
       ..add(DiagnosticsProperty('type', 'ClientSettingsModel.internal'))
       ..add(DiagnosticsProperty('syncPath', syncPath))
-      ..add(DiagnosticsProperty('transcodeDownloadModel', transcodeDownloadModel))
-      ..add(DiagnosticsProperty('transcodeMusicDownloadModel', transcodeMusicDownloadModel))
+      ..add(
+          DiagnosticsProperty('transcodeDownloadModel', transcodeDownloadModel))
+      ..add(DiagnosticsProperty(
+          'transcodeMusicDownloadModel', transcodeMusicDownloadModel))
       ..add(DiagnosticsProperty('position', position))
       ..add(DiagnosticsProperty('size', size))
       ..add(DiagnosticsProperty('timeOut', timeOut))
       ..add(DiagnosticsProperty('nextUpDateCutoff', nextUpDateCutoff))
-      ..add(DiagnosticsProperty('updateNotificationsInterval', updateNotificationsInterval))
+      ..add(DiagnosticsProperty(
+          'updateNotificationsInterval', updateNotificationsInterval))
       ..add(DiagnosticsProperty('themeMode', themeMode))
       ..add(DiagnosticsProperty('themeColor', themeColor))
-      ..add(DiagnosticsProperty('deriveColorsFromItem', deriveColorsFromItem))
       ..add(DiagnosticsProperty('dynamicPosterColors', dynamicPosterColors))
       ..add(DiagnosticsProperty('amoledBlack', amoledBlack))
       ..add(DiagnosticsProperty('blurPlaceHolders', blurPlaceHolders))
@@ -915,8 +911,10 @@ class _ClientSettingsModel extends ClientSettingsModel with DiagnosticableTreeMi
       ..add(DiagnosticsProperty('mouseDragSupport', mouseDragSupport))
       ..add(DiagnosticsProperty('requireWifi', requireWifi))
       ..add(DiagnosticsProperty('expandSideBar', expandSideBar))
-      ..add(DiagnosticsProperty('showAllCollectionTypes', showAllCollectionTypes))
-      ..add(DiagnosticsProperty('maxConcurrentDownloads', maxConcurrentDownloads))
+      ..add(
+          DiagnosticsProperty('showAllCollectionTypes', showAllCollectionTypes))
+      ..add(
+          DiagnosticsProperty('maxConcurrentDownloads', maxConcurrentDownloads))
       ..add(DiagnosticsProperty('schemeVariant', schemeVariant))
       ..add(DiagnosticsProperty('backgroundImage', backgroundImage))
       ..add(DiagnosticsProperty('enableBlurEffects', enableBlurEffects))
@@ -932,13 +930,15 @@ class _ClientSettingsModel extends ClientSettingsModel with DiagnosticableTreeMi
 
   @override
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
-    return 'ClientSettingsModel.internal(syncPath: $syncPath, transcodeDownloadModel: $transcodeDownloadModel, transcodeMusicDownloadModel: $transcodeMusicDownloadModel, position: $position, size: $size, timeOut: $timeOut, nextUpDateCutoff: $nextUpDateCutoff, updateNotificationsInterval: $updateNotificationsInterval, themeMode: $themeMode, themeColor: $themeColor, deriveColorsFromItem: $deriveColorsFromItem, dynamicPosterColors: $dynamicPosterColors, amoledBlack: $amoledBlack, blurPlaceHolders: $blurPlaceHolders, blurUpcomingEpisodes: $blurUpcomingEpisodes, selectedLocale: $selectedLocale, enableMediaKeys: $enableMediaKeys, posterSize: $posterSize, pinchPosterZoom: $pinchPosterZoom, mouseDragSupport: $mouseDragSupport, requireWifi: $requireWifi, expandSideBar: $expandSideBar, showAllCollectionTypes: $showAllCollectionTypes, maxConcurrentDownloads: $maxConcurrentDownloads, schemeVariant: $schemeVariant, backgroundImage: $backgroundImage, enableBlurEffects: $enableBlurEffects, checkForUpdates: $checkForUpdates, usePosterForLibrary: $usePosterForLibrary, useSystemIME: $useSystemIME, useTVExpandedLayout: $useTVExpandedLayout, forceLeanBackMode: $forceLeanBackMode, lastViewedUpdate: $lastViewedUpdate, libraryPageSize: $libraryPageSize, shortcuts: $shortcuts)';
+    return 'ClientSettingsModel.internal(syncPath: $syncPath, transcodeDownloadModel: $transcodeDownloadModel, transcodeMusicDownloadModel: $transcodeMusicDownloadModel, position: $position, size: $size, timeOut: $timeOut, nextUpDateCutoff: $nextUpDateCutoff, updateNotificationsInterval: $updateNotificationsInterval, themeMode: $themeMode, themeColor: $themeColor, dynamicPosterColors: $dynamicPosterColors, amoledBlack: $amoledBlack, blurPlaceHolders: $blurPlaceHolders, blurUpcomingEpisodes: $blurUpcomingEpisodes, selectedLocale: $selectedLocale, enableMediaKeys: $enableMediaKeys, posterSize: $posterSize, pinchPosterZoom: $pinchPosterZoom, mouseDragSupport: $mouseDragSupport, requireWifi: $requireWifi, expandSideBar: $expandSideBar, showAllCollectionTypes: $showAllCollectionTypes, maxConcurrentDownloads: $maxConcurrentDownloads, schemeVariant: $schemeVariant, backgroundImage: $backgroundImage, enableBlurEffects: $enableBlurEffects, checkForUpdates: $checkForUpdates, usePosterForLibrary: $usePosterForLibrary, useSystemIME: $useSystemIME, useTVExpandedLayout: $useTVExpandedLayout, forceLeanBackMode: $forceLeanBackMode, lastViewedUpdate: $lastViewedUpdate, libraryPageSize: $libraryPageSize, shortcuts: $shortcuts)';
   }
 }
 
 /// @nodoc
-abstract mixin class _$ClientSettingsModelCopyWith<$Res> implements $ClientSettingsModelCopyWith<$Res> {
-  factory _$ClientSettingsModelCopyWith(_ClientSettingsModel value, $Res Function(_ClientSettingsModel) _then) =
+abstract mixin class _$ClientSettingsModelCopyWith<$Res>
+    implements $ClientSettingsModelCopyWith<$Res> {
+  factory _$ClientSettingsModelCopyWith(_ClientSettingsModel value,
+          $Res Function(_ClientSettingsModel) _then) =
       __$ClientSettingsModelCopyWithImpl;
   @override
   @useResult
@@ -953,7 +953,6 @@ abstract mixin class _$ClientSettingsModelCopyWith<$Res> implements $ClientSetti
       Duration updateNotificationsInterval,
       ThemeMode themeMode,
       ColorThemes? themeColor,
-      bool deriveColorsFromItem,
       bool dynamicPosterColors,
       bool amoledBlack,
       bool blurPlaceHolders,
@@ -984,7 +983,8 @@ abstract mixin class _$ClientSettingsModelCopyWith<$Res> implements $ClientSetti
 }
 
 /// @nodoc
-class __$ClientSettingsModelCopyWithImpl<$Res> implements _$ClientSettingsModelCopyWith<$Res> {
+class __$ClientSettingsModelCopyWithImpl<$Res>
+    implements _$ClientSettingsModelCopyWith<$Res> {
   __$ClientSettingsModelCopyWithImpl(this._self, this._then);
 
   final _ClientSettingsModel _self;
@@ -1005,7 +1005,6 @@ class __$ClientSettingsModelCopyWithImpl<$Res> implements _$ClientSettingsModelC
     Object? updateNotificationsInterval = null,
     Object? themeMode = null,
     Object? themeColor = freezed,
-    Object? deriveColorsFromItem = null,
     Object? dynamicPosterColors = null,
     Object? amoledBlack = null,
     Object? blurPlaceHolders = null,
@@ -1072,10 +1071,6 @@ class __$ClientSettingsModelCopyWithImpl<$Res> implements _$ClientSettingsModelC
           ? _self.themeColor
           : themeColor // ignore: cast_nullable_to_non_nullable
               as ColorThemes?,
-      deriveColorsFromItem: null == deriveColorsFromItem
-          ? _self.deriveColorsFromItem
-          : deriveColorsFromItem // ignore: cast_nullable_to_non_nullable
-              as bool,
       dynamicPosterColors: null == dynamicPosterColors
           ? _self.dynamicPosterColors
           : dynamicPosterColors // ignore: cast_nullable_to_non_nullable
@@ -1180,7 +1175,8 @@ class __$ClientSettingsModelCopyWithImpl<$Res> implements _$ClientSettingsModelC
   @override
   @pragma('vm:prefer-inline')
   $TranscodeDownloadModelCopyWith<$Res> get transcodeDownloadModel {
-    return $TranscodeDownloadModelCopyWith<$Res>(_self.transcodeDownloadModel, (value) {
+    return $TranscodeDownloadModelCopyWith<$Res>(_self.transcodeDownloadModel,
+        (value) {
       return _then(_self.copyWith(transcodeDownloadModel: value));
     });
   }

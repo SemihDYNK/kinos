@@ -147,6 +147,7 @@ dependencies:
 
   # Fix cjk font rendering issue on Windows
   chinese_font_library: ^1.2.0
+  palette_generator: ^0.3.3+7
 
 dependency_overrides:
   pip:
@@ -228,6 +229,11 @@ flutter:
     - assets/
 
   fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter/Inter-VariableFont_opsz_wght.ttf
+          style: normal
+
     - family: Rubik
       fonts:
         - asset: assets/fonts/rubik/Rubik-VariableFont_wght.ttf

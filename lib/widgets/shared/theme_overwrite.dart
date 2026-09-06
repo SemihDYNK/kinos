@@ -48,9 +48,10 @@ class _ThemeOverwriteState extends ConsumerState<ThemeOverwrite> {
 
   @override
   Widget build(BuildContext context) {
-    final deriveColorFromItem = ref.watch(clientSettingsProvider.select((value) => value.deriveColorsFromItem));
-    if (!deriveColorFromItem) return widget.child(context);
-
+    // `deriveColorsFromItem` a disparu avec le passage du detail_scaffold à
+    // PaletteService (cf. lib/screens/shared/detail_scaffold.dart). Ce widget
+    // ne sert plus qu'aux écrans musique, hors périmètre du projet — laissé
+    // tel quel jusqu'à leur retrait.
     final schemeVariant = ref.watch(clientSettingsProvider.select((value) => value.schemeVariant));
     final amoledBlack = ref.watch(clientSettingsProvider.select((value) => value.amoledBlack));
     final isDarkTheme = Theme.brightnessOf(context) == Brightness.dark;

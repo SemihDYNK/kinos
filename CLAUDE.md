@@ -1,0 +1,103 @@
+# Contexte projet
+
+Fork de Fladder (client Jellyfin Flutter, GPL-3.0-only).
+Cible : Linux desktop uniquement — CachyOS / COSMIC / AMD RDNA2.
+
+## Règles de fork
+
+| Zone | Politique |
+|---|---|
+| `lib/providers/`, `lib/models/`, `lib/wrappers/` | Rester au plus près de l'amont. Corrections et ajouts seulement. |
+| `lib/screens/`, `lib/widgets/` | Divergence libre. C'est notre UI. |
+| Module Arr (à venir) | Code neuf, dossiers séparés, zéro conflit avec l'amont. |
+
+`upstream` est un remote. Ne jamais restructurer la couche données sans raison :
+chaque divergence coûte à chaque merge.
+
+## Contraintes techniques
+
+- **Pas de HDR.** COSMIC n'implémente pas `wp-color-management-v1`, et Flutter
+  compose en SDR 8-bit. Le tonemapping libplacebo vers SDR est définitif.
+  Ne pas proposer de chemin passthrough.
+- **Moteur mpv obligatoire** sur Linux (`lib/wrappers/players/lib_mpv.dart`),
+  jamais MDK. Vérifier que `gpu-next` reste actif.
+- Le `DeviceProfile` natif est volontairement permissif (direct play sans
+  restriction de codec). Ne pas y ajouter de `codecProfiles`.
+
+## Direction UI
+
+Austère dans les éléments, spectaculaire dans la typographie et l'imagerie.
+Le caractère vient de l'échelle typographique, du mouvement et de l'image —
+jamais de l'ornement. Pas de couleur d'accent décorative.
+
+Jetons : voir `lib/theme/app_theme.dart`. Ne jamais coder une couleur ou une
+taille en dur dans un widget.
+
+### Règles anti-mobile-first
+
+- Aucune navigation en bas d'écran
+- États de survol partout
+- Menus contextuels au clic droit
+- Grilles à 6–8 colonnes, jamais 3 centrées
+- Aucun bouton flottant
+- Raccourcis clavier visibles dans l'interface
+
+### Règle absolue
+
+**Tout élément interactif doit être atteignable au clavier directionnel**,
+avec un focus visible. À tenir sur chaque écran, dès le premier. Une UI en
+mode salon est prévue (double densité, même code).
+
+### Bandeau teinté
+
+La dominante du film (`heroTint`) part du bandeau d'accueil et s'étend au
+fond de la zone de contenu par un dégradé vertical, résorbé à 100% avant la
+fin de "Continuer à regarder" — jamais au-delà. La grille "Ajouts récents"
+et tout ce qui suit restent sur `#0A0A0A` pur, pour que les jaquettes
+gardent leur contraste. Toujours un dégradé de couleur, jamais un
+`BackdropFilter` sur l'image : cette zone défile et change à chaque diapo.
+
+Luminance bridée 0.06–0.16, saturation ≤ 0.30, contraste texte ≥ 4.5:1,
+repli `#141414` en cas d'échec.
+
+La barre latérale n'est pas une colonne séparée : c'est un calque
+semi-transparent posé par-dessus un contenu plein cadre
+(`SideNavigationRail`). Tout fond teinté doit donc s'arrêter *avant* sa
+largeur (`AdaptiveLayout.of(context).sideBarWidth`), sans quoi il
+transparaît sous elle — c'est la cause du débordement observé une première
+fois. La barre latérale et les grilles de jaquettes ne se teignent jamais.
+
+Ne se teignent jamais non plus : anneau de focus, bouton de lecture
+principal, barres de progression.
+
+### Texte sur image
+
+Les jetons de texte secondaire (`AppColors.textSecondary`, `context.tokens
+.heroTextSecondary`) supposent un fond plat : ils n'ont pas de garantie de
+contraste sur une jaquette. Sur une image (bandeaux, jaquettes), utiliser
+`AppColors.textPrimary` pour le texte principal et `textPrimary` à 75 %
+d'opacité pour le texte secondaire, toujours accompagnés d'un voile sombre
+dégradé (`AppColors.scrim` à 0,85 en bas vers transparent, sur ~60 % de la
+hauteur) qui garantit la lisibilité indépendamment de la dominante de
+l'image.
+
+## Conventions
+
+- Riverpod pour tout l'état. Aucun appel `jellyApiProvider` depuis un widget.
+- Drift pour la base locale. Toute nouvelle table passe par une migration.
+- Les rapports de lecture passent par `playback_queue`, jamais en appel direct.
+- Les secrets vont dans `flutter_secure_storage`, jamais dans SharedPreferences.
+- Répondre en français.
+
+## Périmètre
+
+Films et séries uniquement. Hors périmètre : musique, Live TV, livres,
+photos, SyncPlay, contrôle à distance.
+
+Un serveur, plusieurs profils utilisateurs.
+
+## Reste à faire
+
+- [ ] Réécriture UI complète
+- [ ] Module Sonarr/Radarr (file, calendrier, recherche interactive, blocklist)
+- [ ] Renommage du projet et nouveau logo (la GPL ne couvre pas la marque)

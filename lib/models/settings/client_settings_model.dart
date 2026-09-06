@@ -75,7 +75,6 @@ abstract class ClientSettingsModel with _$ClientSettingsModel {
     @Default(Duration(hours: 1)) Duration updateNotificationsInterval,
     @Default(ThemeMode.system) ThemeMode themeMode,
     ColorThemes? themeColor,
-    @Default(true) bool deriveColorsFromItem,
     @Default(true) bool dynamicPosterColors,
     @Default(false) bool amoledBlack,
     @Default(true) bool blurPlaceHolders,

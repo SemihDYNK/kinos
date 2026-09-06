@@ -13,7 +13,9 @@ import 'package:fladder/providers/crash_log_provider.dart';
 import 'package:fladder/providers/settings/client_settings_provider.dart';
 import 'package:fladder/providers/shared_provider.dart';
 import 'package:fladder/providers/sync_provider.dart';
+import 'package:fladder/providers/theme/app_theme_provider.dart';
 import 'package:fladder/routes/auto_router.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/application_info.dart';
 import 'package:fladder/util/deep_link_helper.dart';
@@ -21,7 +23,6 @@ import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/themes_data.dart';
 import 'package:fladder/widgets/media_query_scaler.dart';
 import 'package:fladder/widgets/pip_lifecycle_controller.dart';
-import 'package:fladder/widgets/shared/adaptive_color.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,64 +69,57 @@ class _FladderApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(clientSettingsProvider.select((value) => value.themeMode));
-    final amoledBlack = ref.watch(clientSettingsProvider.select((value) => value.amoledBlack));
     final mouseDrag = ref.watch(clientSettingsProvider.select((value) => value.mouseDragSupport));
     final language = ref.watch(clientSettingsProvider
         .select((value) => value.selectedLocale ?? WidgetsBinding.instance.platformDispatcher.locale));
     final scrollBehaviour = const MaterialScrollBehavior();
-    final amoledOverwrite = amoledBlack ? Colors.black : null;
+    final theme = ref.watch(appThemeProvider);
 
-    return AdaptiveColor(
-      child: (darkTheme, lightTheme) => ThemesData(
-        light: lightTheme,
-        dark: darkTheme,
-        child: MaterialApp.router(
-          theme: lightTheme,
-          scrollBehavior: scrollBehaviour.copyWith(
-            dragDevices: {
-              ...scrollBehaviour.dragDevices,
-              mouseDrag ? PointerDeviceKind.mouse : null,
-            }.nonNulls.toSet(),
-          ),
-          localizationsDelegates: FladderLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: language,
-          localeResolutionCallback: (locale, supportedLocales) {
-            const fallback = Locale('en');
-            if (locale == null) return fallback;
-            if (supportedLocales.contains(locale)) {
-              return locale;
-            }
-            final matchByLanguage = supportedLocales.firstWhere(
-              (l) => l.languageCode == locale.languageCode,
-              orElse: () => fallback,
-            );
+    // Thème sombre unique (lib/theme/app_theme.dart) : pas de variante claire,
+    // pas de couleur d'accent dynamique. `light`/`dark` restent identiques
+    // uniquement pour ne pas casser les écrans qui lisent encore ThemesData.
+    return ThemesData(
+      light: theme,
+      dark: theme,
+      child: MaterialApp.router(
+        theme: theme,
+        themeMode: ThemeMode.dark,
+        scrollBehavior: scrollBehaviour.copyWith(
+          dragDevices: {
+            ...scrollBehaviour.dragDevices,
+            mouseDrag ? PointerDeviceKind.mouse : null,
+          }.nonNulls.toSet(),
+        ),
+        localizationsDelegates: FladderLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: language,
+        localeResolutionCallback: (locale, supportedLocales) {
+          const fallback = Locale('en');
+          if (locale == null) return fallback;
+          if (supportedLocales.contains(locale)) {
+            return locale;
+          }
+          final matchByLanguage = supportedLocales.firstWhere(
+            (l) => l.languageCode == locale.languageCode,
+            orElse: () => fallback,
+          );
 
-            return matchByLanguage;
-          },
-          builder: (context, child) => MediaQueryScaler(
+          return matchByLanguage;
+        },
+        builder: (context, child) => AnimatedTheme(
+          duration: AppDurations.heroTint,
+          data: ref.watch(appThemeProvider),
+          child: MediaQueryScaler(
             child: LocalizationContextWrapper(
               child: PipLifecycleController(child: child ?? Container()),
               currentLocale: language,
             ),
             enable: ref.read(argumentsStateProvider).leanBackMode,
           ),
-          debugShowCheckedModeBanner: false,
-          darkTheme: darkTheme.copyWith(
-            scaffoldBackgroundColor: amoledOverwrite,
-            cardColor: amoledOverwrite,
-            canvasColor: amoledOverwrite,
-            colorScheme: darkTheme.colorScheme.copyWith(
-              surface: amoledOverwrite,
-              surfaceContainerHighest: amoledOverwrite,
-              surfaceContainerLow: amoledOverwrite,
-            ),
-          ),
-          themeMode: themeMode,
-          routerConfig: autoRouter.config(
-            deepLinkBuilder: (deepLink) => deepLinkBuilder(deepLink.uri),
-          ),
+        ),
+        debugShowCheckedModeBanner: false,
+        routerConfig: autoRouter.config(
+          deepLinkBuilder: (deepLink) => deepLinkBuilder(deepLink.uri),
         ),
       ),
     );
