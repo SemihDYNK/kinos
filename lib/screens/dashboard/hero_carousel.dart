@@ -241,12 +241,26 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'à voir',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(color: heroTextSecondary),
+                        // letterSpacing positif (AppTypography.overline,
+                        // 0.96) : Flutter le distribue de part et d'autre de
+                        // chaque glyphe, y compris avant le premier — sans
+                        // compensation, son bord gauche mord sur le cadre du
+                        // texte et se fait rogner par le ClipRRect du
+                        // bandeau. Aucun souci sur le titre juste en dessous
+                        // (displayLarge, letterSpacing négatif). Un padding
+                        // de gauche à moitié de la valeur restitue le glyphe
+                        // en entier sans décaler visiblement le sur-titre.
+                        Padding(
+                          padding: EdgeInsetsDirectional.only(
+                            start: (AppTypography.overline.letterSpacing ?? 0) / 2,
+                          ),
+                          child: Text(
+                            'à voir',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(color: heroTextSecondary),
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.xxs),
                         Text(

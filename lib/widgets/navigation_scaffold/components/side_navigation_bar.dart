@@ -225,8 +225,11 @@ class SideNavigationRail extends ConsumerWidget {
       ),
       _RailDestination(
         label: context.localized.mediaTypeMovie(2),
-        icon: IconsaxPlusLinear.video_horizontal,
-        selectedIcon: IconsaxPlusBold.video_horizontal,
+        // Pas de clap de cinéma dans iconsax_plus (seule bibliothèque
+        // d'icônes du projet) : le plus proche disponible, distinct d'un
+        // écran de télévision.
+        icon: IconsaxPlusLinear.video_play,
+        selectedIcon: IconsaxPlusBold.video_play,
         selected: setEquals(activeTypes, const {FladderItemType.movie}),
         onTap: () => context.router.navigate(
           LibrarySearchRoute().withFilter(
@@ -236,8 +239,8 @@ class SideNavigationRail extends ConsumerWidget {
       ),
       _RailDestination(
         label: context.localized.mediaTypeSeries(2),
-        icon: IconsaxPlusLinear.video_vertical,
-        selectedIcon: IconsaxPlusBold.video_vertical,
+        icon: IconsaxPlusLinear.monitor,
+        selectedIcon: IconsaxPlusBold.monitor,
         selected: setEquals(activeTypes, const {FladderItemType.series}),
         onTap: () => context.router.navigate(
           LibrarySearchRoute().withFilter(
@@ -255,8 +258,8 @@ class SideNavigationRail extends ConsumerWidget {
       if (seerrAvailable)
         _RailDestination(
           label: 'Demandes',
-          icon: IconsaxPlusLinear.receipt_add,
-          selectedIcon: IconsaxPlusBold.receipt_add,
+          icon: IconsaxPlusLinear.send_2,
+          selectedIcon: IconsaxPlusBold.send_2,
           selected: currentRouteName == SeerrRoute.name,
           onTap: () => context.router.navigate(const SeerrRoute()),
         ),
