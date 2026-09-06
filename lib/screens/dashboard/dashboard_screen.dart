@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sliver_tools/sliver_tools.dart';
 
 import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
 import 'package:fladder/models/item_base_model.dart';
@@ -24,6 +25,7 @@ import 'package:fladder/screens/shared/nested_sliver_appbar.dart';
 import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/sliver_list_padding.dart';
+import 'package:fladder/widgets/shared/fading_hero_backdrop.dart';
 import 'package:fladder/widgets/shared/pull_to_refresh.dart';
 
 /// Types de collection dans le périmètre du projet — films et séries
@@ -50,6 +52,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late final Timer _timer;
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
+
+  // Diapo affichée par HeroCarousel — reportée ici via son callback pour
+  // que FadingHeroBackdrop (posé derrière lui ET "Continuer à regarder")
+  // suive la même image, sans dupliquer l'état de rotation à deux endroits.
+  ItemBaseModel? _heroCurrent;
 
   @override
   void initState() {
@@ -125,6 +132,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .toList();
 
     final heroItems = _heroCandidates(recentlyAdded);
+    final density = context.tokens.density;
+    // Diapo réellement affichée par HeroCarousel une fois montée
+    // (`_heroCurrent`, reporté par son callback) ; en repli, la première
+    // diapo, pour ne pas laisser le fond nu le temps du premier frame.
+    final heroDisplayItem = _heroCurrent ?? heroItems.firstOrNull;
+    final heroImage = heroDisplayItem?.getPosters?.randomBackDrop ??
+        heroDisplayItem?.getPosters?.primary;
 
     // resumeVideo d'abord (déjà en cours), puis nextUp — dédoublonnés.
     final seenContinue = <String>{};
@@ -148,65 +162,73 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 route: LibrarySearchRoute(),
                 parent: context,
               ),
-            // Fond de la zone de contenu : heroTint sous le bandeau, résorbé
-            // en AppColors.background avant la fin de cette rangée — donc
-            // bien avant "Ajouts récents". Un dégradé de couleur simple, pas
-            // un flou d'image : cette zone défile et change à chaque diapo.
-            // Inséré à `sideBarInset` : la barre latérale reste sur
+            // Fond de la zone bandeau + "Continuer à regarder" : même
+            // principe que MediaDetailScaffold (FadingHeroBackdrop) —
+            // l'image continue derrière "Continuer à regarder" et se
+            // dissout sous un voile, plutôt que de s'arrêter net à la
+            // hauteur du carrousel. SliverStack (sliver_tools) superpose,
+            // dans le même espace de défilement :
+            // - FadingHeroBackdrop, épinglé en haut sur `backdropHeight`
+            //   (positionné via SliverPositioned, hors du calcul de taille
+            //   du groupe) ;
+            // - HeroCarousel puis "Continuer à regarder", qui déterminent
+            //   la taille réelle du groupe.
+            // La dissolution complète (jamais un aplat de substitution —
+            // une seule surface peinte au final, celle de la page) est
+            // garantie au plus tard à la hauteur minimale du carrousel
+            // (`HeroCarousel.minHeightFor`), la seule hauteur de contenu
+            // garantie ici — "Continuer à regarder" peut être vide. Inséré
+            // à `sideBarInset` : la barre latérale reste sur
             // AppColors.background pur, jamais teintée.
-            //
-            // Trois arrêts, pas deux : la teinte reste pleine jusqu'à ~0.55
-            // (couvre la hauteur du bandeau — 320-480 selon la densité —
-            // plus sa marge avant "Continuer à regarder", estimé sur un
-            // ratio hauteur bandeau / hauteur totale du bloc), puis descend
-            // progressivement pour n'atteindre le fond pur qu'au tout
-            // dernier point (fin de "Continuer à regarder"). Avec un seul
-            // arrêt intermédiaire, la teinte commençait à s'estomper dès le
-            // haut du bandeau et touchait déjà le fond pur bien avant la fin
-            // de la rangée — d'où la coupure nette perçue juste sous le
-            // bandeau.
             SliverPadding(
               padding: EdgeInsetsDirectional.only(start: sideBarInset),
-              sliver: DecoratedSliver(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: const [0, 0.55, 1],
-                    colors: [
-                      heroItems.isNotEmpty
-                          ? context.tokens.heroTint
-                          : AppColors.background,
-                      heroItems.isNotEmpty
-                          ? context.tokens.heroTint
-                          : AppColors.background,
-                      AppColors.background,
-                    ],
-                  ),
-                ),
-                sliver: SliverMainAxisGroup(
-                  slivers: [
-                    // Pleine largeur, jusqu'aux bords : pas de SliverPadding
-                    // ici, contrairement au reste de la page. L'alignement
-                    // de son contenu (sur-titre, titre, etc.) avec les
-                    // titres de section en dessous vient uniquement du
-                    // padding interne du bandeau (AppSpacing.screenPadding),
-                    // pas d'un padding externe superposé.
-                    if (heroItems.isNotEmpty)
-                      SliverToBoxAdapter(
-                        child: HeroCarousel(items: heroItems),
-                      ),
-                    SliverPadding(
-                      padding: EdgeInsets.only(
-                          top: heroItems.isNotEmpty ? AppSpacing.xl : 0),
-                      sliver: ContinueWatchingSection(
-                        items: continueWatching,
-                        contentPadding: innerPadding,
-                      ),
+              sliver: heroItems.isEmpty
+                  ? ContinueWatchingSection(
+                      items: continueWatching,
+                      contentPadding: innerPadding,
+                    )
+                  : SliverStack(
+                      children: [
+                        SliverPositioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: density == AppDensity.couch ? 1000.0 : 900.0,
+                          child: FadingHeroBackdrop(
+                            image: heroImage,
+                            heroTint: context.tokens.heroTint,
+                            fadeCompleteBy: HeroCarousel.minHeightFor(density),
+                          ),
+                        ),
+                        SliverMainAxisGroup(
+                          slivers: [
+                            // Pleine largeur, jusqu'aux bords : pas de
+                            // SliverPadding ici, contrairement au reste de
+                            // la page. L'alignement de son contenu
+                            // (sur-titre, titre, etc.) avec les titres de
+                            // section en dessous vient uniquement du
+                            // padding interne du bandeau
+                            // (AppSpacing.screenPadding), pas d'un padding
+                            // externe superposé.
+                            SliverToBoxAdapter(
+                              child: HeroCarousel(
+                                items: heroItems,
+                                onCurrentChanged: (item) =>
+                                    setState(() => _heroCurrent = item),
+                              ),
+                            ),
+                            SliverPadding(
+                              padding:
+                                  const EdgeInsets.only(top: AppSpacing.xl),
+                              sliver: ContinueWatchingSection(
+                                items: continueWatching,
+                                contentPadding: innerPadding,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
             ),
             SliverPadding(
               padding: const EdgeInsets.only(top: AppSpacing.xl),

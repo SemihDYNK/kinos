@@ -10,7 +10,6 @@ import 'package:fladder/providers/user_provider.dart';
 import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/theme/palette_service.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/humanize_duration.dart';
 import 'package:fladder/util/item_base_model/play_item_helpers.dart';
 import 'package:fladder/util/refresh_state.dart';
@@ -24,7 +23,21 @@ class HeroCarousel extends ConsumerStatefulWidget {
   /// Films et séries non vus, déjà filtrés et limités par l'appelant.
   final List<ItemBaseModel> items;
 
-  const HeroCarousel({required this.items, super.key});
+  /// Appelé à chaque changement de diapo (y compris la première, au
+  /// montage) — permet à l'appelant de poser un fond ([FadingHeroBackdrop])
+  /// qui suit la même image, sans dupliquer l'état de rotation ici et là.
+  final ValueChanged<ItemBaseModel>? onCurrentChanged;
+
+  const HeroCarousel({required this.items, this.onCurrentChanged, super.key});
+
+  /// Hauteur minimale, extensible (cf. [_HeroCarouselState.build]) — publiée
+  /// pour que l'appelant (dashboard_screen.dart) puisse dimensionner son
+  /// propre fond ([FadingHeroBackdrop]) sur la même base, sans dupliquer
+  /// ces valeurs.
+  static double minHeightFor(AppDensity density) =>
+      density == AppDensity.couch ? 400.0 : 320.0;
+  static double maxHeightFor(AppDensity density) =>
+      density == AppDensity.couch ? 480.0 : 400.0;
 
   @override
   ConsumerState<HeroCarousel> createState() => _HeroCarouselState();
@@ -71,6 +84,10 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel> {
     final item = _current;
     if (identical(item, _lastPaletteItem)) return;
     _lastPaletteItem = item;
+    // Synchrone, avant le calcul de palette (asynchrone) : le fond doit
+    // amorcer son fondu vers la nouvelle image immédiatement, pas attendre
+    // que sa teinte soit connue.
+    widget.onCurrentChanged?.call(item);
 
     final image = item.getPosters?.randomBackDrop ?? item.getPosters?.primary;
     if (image == null) return;
@@ -144,11 +161,10 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel> {
     if (widget.items.isEmpty) return const SizedBox.shrink();
 
     final density = context.tokens.density;
-    final minHeight = density == AppDensity.couch ? 400.0 : 320.0;
-    final maxHeight = density == AppDensity.couch ? 480.0 : 400.0;
+    final minHeight = HeroCarousel.minHeightFor(density);
+    final maxHeight = HeroCarousel.maxHeightFor(density);
     final item = _current;
     final isDpad = AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad;
-    final heroTint = context.tokens.heroTint;
     final heroTextSecondary = context.tokens.heroTextSecondary;
 
     return Focus(
@@ -173,36 +189,12 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel> {
             child: Stack(
               alignment: Alignment.bottomLeft,
               children: [
-                // a. Fond teinté — visible au chargement et sur les bords.
-                Positioned.fill(child: ColoredBox(color: heroTint)),
-                // b. Backdrop plein cadre, cover.
-                Positioned.fill(
-                  child: AnimatedSwitcher(
-                    duration: AppDurations.heroTint,
-                    child: FladderImage(
-                      key: ValueKey(item.id),
-                      image: item.getPosters?.randomBackDrop ??
-                          item.getPosters?.primary,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                // c. Dégradé horizontal — contraste pour le texte à gauche.
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        stops: const [0, 0.55],
-                        colors: [
-                          AppColors.scrim.withValues(alpha: 0.9),
-                          AppColors.scrim.withValues(alpha: 0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                // Fond (image, teinte, dégradé horizontal) : plus ici — posé
+                // par [FadingHeroBackdrop], derrière ce carrousel ET
+                // "Continuer à regarder", dans le même espace de défilement
+                // (cf. dashboard_screen.dart). Ce Stack ne porte plus que le
+                // texte et les contrôles, sur fond transparent.
+                //
                 // d. Dégradé vertical — contraste pour le texte en bas.
                 Positioned.fill(
                   child: DecoratedBox(
@@ -252,7 +244,8 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel> {
                         // en entier sans décaler visiblement le sur-titre.
                         Padding(
                           padding: EdgeInsetsDirectional.only(
-                            start: (AppTypography.overline.letterSpacing ?? 0) / 2,
+                            start:
+                                (AppTypography.overline.letterSpacing ?? 0) / 2,
                           ),
                           child: Text(
                             'à voir',

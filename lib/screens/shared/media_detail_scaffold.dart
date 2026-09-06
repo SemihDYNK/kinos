@@ -12,10 +12,10 @@ import 'package:fladder/providers/window_title_provider.dart';
 import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/theme/palette_service.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/router_extension.dart';
 import 'package:fladder/util/sliver_list_padding.dart';
+import 'package:fladder/widgets/shared/fading_hero_backdrop.dart';
 import 'package:fladder/widgets/shared/item_actions.dart';
 import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
 import 'package:fladder/widgets/shared/pull_to_refresh.dart';
@@ -213,15 +213,16 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                 //
                 // SliverStack (sliver_tools) superpose deux slivers dans le
                 // même espace de défilement, au lieu de les enchaîner :
-                // - _BannerBackdrop, épinglé en haut sur `backdropHeight`
+                // - FadingHeroBackdrop, épinglé en haut sur `backdropHeight`
                 //   (positionné via SliverPositioned, ne compte donc pas
                 //   dans la taille du groupe) ;
                 // - le bloc titre puis tout le contenu (`widget.content`),
                 //   qui déterminent la taille réelle du groupe.
                 // L'image continue donc derrière le résumé, les sélecteurs
-                // et le début du casting, tant que ce contenu tient dans
-                // `backdropHeight` ; au-delà, plus de calque image — juste
-                // le fond de la page, déjà atteint par le voile dégradé.
+                // et le début du casting, et se dissout entièrement (jamais
+                // un aplat de substitution — une seule surface peinte au
+                // final, celle du Scaffold) au plus tard à `minTitleHeight`,
+                // cf. FadingHeroBackdrop.
                 SliverPadding(
                   padding: EdgeInsetsDirectional.only(start: sideBarInset),
                   sliver: SliverStack(
@@ -231,11 +232,10 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                         left: 0,
                         right: 0,
                         height: backdropHeight,
-                        child: _BannerBackdrop(
+                        child: FadingHeroBackdrop(
                           image: image,
                           heroTint: heroTint,
-                          minTitleHeight: minTitleHeight,
-                          backdropHeight: backdropHeight,
+                          fadeCompleteBy: minTitleHeight,
                         ),
                       ),
                       SliverMainAxisGroup(
@@ -292,114 +292,10 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   }
 }
 
-/// Image de fond du haut d'écran — continue derrière le bloc titre et le
-/// début du contenu (résumé, sélecteurs, casting), et s'efface sous son
-/// propre voile dégradé plutôt que de s'arrêter net à une hauteur fixe.
-/// Occupe toute la hauteur `SliverPositioned` qui l'englobe (cf. l'appelant).
-class _BannerBackdrop extends StatelessWidget {
-  final ImageData? image;
-  final Color heroTint;
-  final double minTitleHeight;
-  final double backdropHeight;
-
-  const _BannerBackdrop({
-    required this.image,
-    required this.heroTint,
-    required this.minTitleHeight,
-    required this.backdropHeight,
-  });
-
-  /// Distance (montée de teinte + résorption vers le fond) sur laquelle le
-  /// voile se résout entièrement, comptée à rebours depuis `minTitleHeight`
-  /// — jamais depuis `backdropHeight`. `backdropHeight` peut largement
-  /// dépasser la hauteur réelle du contenu (résumé court, pas de casting…)
-  /// tandis que le bloc titre, lui, est TOUJOURS présent à cette hauteur :
-  /// c'est le seul point d'ancrage sûr. L'ancrer sur `backdropHeight`
-  /// laissait, sur un contenu court, le voile se faire couper avant d'avoir
-  /// fini de se résorber — d'où la ligne de démarcation observée.
-  static const _rampDistance = 200.0;
-  static const _resolveDistance = 150.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final rampStart = (minTitleHeight - _rampDistance - _resolveDistance)
-        .clamp(0.0, minTitleHeight);
-    final tintOpaqueAt =
-        (minTitleHeight - _resolveDistance).clamp(0.0, minTitleHeight);
-    final rampStartFraction = (rampStart / backdropHeight).clamp(0.0, 1.0);
-    final tintOpaqueFraction = (tintOpaqueAt / backdropHeight).clamp(0.0, 1.0);
-    final backgroundFraction =
-        (minTitleHeight / backdropHeight).clamp(0.0, 1.0);
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // a. Fond teinté — visible au chargement et sur les bords.
-        ColoredBox(color: heroTint),
-        // b. Backdrop plein cadre, cover, centré.
-        FladderImage(image: image, fit: BoxFit.cover),
-        // c. Voile dégradé vertical : transparent jusqu'à mi-hauteur du
-        // bloc titre (image nue et lisible), puis heroTint qui monte, puis
-        // fond de page pleinement opaque au plus tard à `minTitleHeight` —
-        // avant même la fin du bloc titre. L'image continue derrière le
-        // contenu et disparaît sous ce voile, sans ligne de séparation.
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: [
-                0,
-                rampStartFraction,
-                tintOpaqueFraction,
-                backgroundFraction,
-              ],
-              colors: [
-                heroTint.withValues(alpha: 0),
-                heroTint.withValues(alpha: 0),
-                heroTint,
-                AppColors.background,
-              ],
-            ),
-          ),
-        ),
-        // c2. Aplat opaque explicite en dessous — pas un dégradé dont on
-        // espère qu'il s'est bien résolu : un vrai ColoredBox, strictement
-        // AppColors.background, jusqu'au bord bas de ce calque. Exclut
-        // catégoriquement tout résidu de transparence ou artefact de
-        // rendu du dégradé sur cette zone, quelle que soit la hauteur
-        // réelle du contenu qui la recouvre.
-        Positioned(
-          top: minTitleHeight,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: const ColoredBox(color: AppColors.background),
-        ),
-        // d. Dégradé horizontal — contraste pour le texte à gauche (titre,
-        // puis résumé sur la partie déjà voilée de l'image).
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              stops: const [0, 0.55],
-              colors: [
-                AppColors.scrim.withValues(alpha: 0.9),
-                AppColors.scrim.withValues(alpha: 0),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Bloc titre/métadonnées/boutons — posé sur [_BannerBackdrop], pas de
+/// Bloc titre/métadonnées/boutons — posé sur [FadingHeroBackdrop], pas de
 /// calque d'image ou de dégradé propre : le fond vient entièrement de la
-/// zone de _BannerBackdrop qui le recouvre (même espace de défilement, cf.
-/// le SliverStack de l'appelant).
+/// zone de FadingHeroBackdrop qui le recouvre (même espace de défilement,
+/// cf. le SliverStack de l'appelant).
 class _TitleBlock extends StatelessWidget {
   final double minHeight;
   final double maxHeight;
