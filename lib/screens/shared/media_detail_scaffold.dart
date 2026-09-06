@@ -153,12 +153,20 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   @override
   Widget build(BuildContext context) {
     final density = context.tokens.density;
-    final bannerHeight = density == AppDensity.couch ? 400.0 : 320.0;
+    // Hauteur minimale, extensible (cf. le bandeau du tableau de bord) :
+    // 480/560 selon densité, jusqu'à +80 si le titre (2 lignes) le demande.
+    final minBannerHeight = density == AppDensity.couch ? 560.0 : 480.0;
+    final maxBannerHeight = minBannerHeight + 80;
     final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
     // Même alignement que le tableau de bord : AppSpacing.screenPadding.
+    // Contrairement à `dashboard_screen.dart`, le corps de cet écran (résumé,
+    // casting, recommandations...) n'est PAS imbriqué dans un sliver déjà
+    // décalé de sideBarInset — il lui faut donc le padding complet, pas
+    // `innerPadding` (qui le retranche). L'oubli de cette distinction est
+    // ce qui faisait passer tout le contenu sous la barre latérale.
     final padding = AdaptiveLayout.adaptivePadding(context, horizontalPadding: AppSpacing.screenPadding);
-    final innerPadding = padding.copyWith(left: padding.left - sideBarInset);
     final heroTint = context.tokens.heroTint;
+    final heroTextSecondary = context.tokens.heroTextSecondary;
     final image = widget.backDrops?.randomBackDrop ?? widget.backDrops?.primary;
     final hasActions = widget.actions != null;
 
@@ -175,8 +183,16 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                 const DefaultSliverTopBadding(),
                 // Bandeau + résorption de la teinte : même mécanique que
                 // dashboard_screen.dart — SliverPadding(start: sideBarInset)
-                // pour ne jamais teindre sous la barre latérale, dégradé sur
-                // le bandeau plus une marge de sortie, jamais au-delà.
+                // pour ne jamais teindre sous la barre latérale. Le bandeau
+                // fond lui-même dans la teinte à son propre bord bas (cf.
+                // _Banner, calque c bis) ; le dégradé ci-dessous prend le
+                // relais en pleine teinte à ce même point, puis s'étire sur
+                // une longue marge (280) avant de s'éteindre — fondu long,
+                // sans ligne de coupure. La fraction de palier (~0.65) est
+                // une approximation : le bandeau est à hauteur minimale
+                // extensible, sa hauteur réelle n'est pas connue ici : viser
+                // un peu court plutôt qu'un peu long n'a pas d'incidence
+                // visible, les deux calques sont alors déjà la même teinte.
                 SliverPadding(
                   padding: EdgeInsetsDirectional.only(start: sideBarInset),
                   sliver: DecoratedSliver(
@@ -184,7 +200,7 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        stops: const [0, 0.8, 1],
+                        stops: const [0, 0.65, 1],
                         colors: [heroTint, heroTint, AppColors.background],
                       ),
                     ),
@@ -192,9 +208,11 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                       slivers: [
                         SliverToBoxAdapter(
                           child: _Banner(
-                            height: bannerHeight,
+                            minHeight: minBannerHeight,
+                            maxHeight: maxBannerHeight,
                             image: image,
                             heroTint: heroTint,
+                            heroTextSecondary: heroTextSecondary,
                             title: widget.title,
                             originalTitle: widget.originalTitle,
                             metaLine: widget.metaLine,
@@ -206,15 +224,12 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                             onMore: hasActions ? () => _showActions(context) : null,
                           ),
                         ),
-                        // Marge de sortie : la teinte déborde un peu sous le
-                        // bandeau avant de s'éteindre (cf. le dégradé
-                        // ci-dessus), plutôt qu'une coupure nette.
-                        const SliverToBoxAdapter(child: SizedBox(height: 96)),
+                        const SliverToBoxAdapter(child: SizedBox(height: 280)),
                       ],
                     ),
                   ),
                 ),
-                ...widget.content(context, innerPadding),
+                ...widget.content(context, padding),
                 const DefaultSliverBottomPadding(),
               ],
             ),
@@ -244,9 +259,11 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
 }
 
 class _Banner extends StatelessWidget {
-  final double height;
+  final double minHeight;
+  final double maxHeight;
   final ImageData? image;
   final Color heroTint;
+  final Color heroTextSecondary;
   final String title;
   final String? originalTitle;
   final String metaLine;
@@ -258,9 +275,11 @@ class _Banner extends StatelessWidget {
   final VoidCallback? onMore;
 
   const _Banner({
-    required this.height,
+    required this.minHeight,
+    required this.maxHeight,
     required this.image,
     required this.heroTint,
+    required this.heroTextSecondary,
     required this.title,
     required this.originalTitle,
     required this.metaLine,
@@ -275,48 +294,76 @@ class _Banner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showOriginalTitle = originalTitle != null && originalTitle!.toLowerCase() != title.toLowerCase();
+    final secondaryButtonStyle = IconButton.styleFrom(
+      side: BorderSide(color: heroTextSecondary),
+      foregroundColor: heroTextSecondary,
+      overlayColor: heroTextSecondary,
+    );
 
     return ClipRect(
-      child: SizedBox(
-        height: height,
-        width: double.infinity,
+      // Hauteur minimale, extensible si le titre (2 lignes max) le demande —
+      // même mécanique de dimensionnement que le bandeau du tableau de bord
+      // (le Column non positionné pilote la taille du Stack, les calques de
+      // fond suivent en Positioned.fill).
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: minHeight, maxHeight: maxHeight),
         child: Stack(
           alignment: Alignment.bottomLeft,
-          fit: StackFit.expand,
           children: [
             // a. Fond teinté — visible au chargement et sur les bords.
-            ColoredBox(color: heroTint),
+            Positioned.fill(child: ColoredBox(color: heroTint)),
             // b. Backdrop plein cadre, cover.
-            FladderImage(image: image, fit: BoxFit.cover),
-            // c. Dégradé horizontal — contraste pour le texte à gauche.
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  stops: const [0, 0.55],
-                  colors: [
-                    AppColors.scrim.withValues(alpha: 0.9),
-                    AppColors.scrim.withValues(alpha: 0),
-                  ],
+            Positioned.fill(child: FladderImage(image: image, fit: BoxFit.cover)),
+            // c. Fondu vers la teinte en bas de l'image : elle se fond
+            // directement dans le fond teinté, pas de bord net entre
+            // l'image et la teinte qui déborde ensuite sous le bandeau.
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    stops: const [0, 0.35],
+                    colors: [heroTint, heroTint.withValues(alpha: 0)],
+                  ),
                 ),
               ),
             ),
-            // d. Dégradé vertical — contraste pour le texte en bas.
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  stops: const [0, 0.45],
-                  colors: [
-                    AppColors.scrim.withValues(alpha: 0.75),
-                    AppColors.scrim.withValues(alpha: 0),
-                  ],
+            // d. Dégradé horizontal — contraste pour le texte à gauche.
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    stops: const [0, 0.55],
+                    colors: [
+                      AppColors.scrim.withValues(alpha: 0.9),
+                      AppColors.scrim.withValues(alpha: 0),
+                    ],
+                  ),
                 ),
               ),
             ),
-            // e. Bloc de texte, aligné en bas à gauche sur screenPadding.
+            // e. Dégradé vertical — contraste pour le texte en bas.
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    stops: const [0, 0.45],
+                    colors: [
+                      AppColors.scrim.withValues(alpha: 0.75),
+                      AppColors.scrim.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // f. Bloc de texte, aligné en bas à gauche sur screenPadding —
+            // seul enfant non positionné : c'est lui qui pilote la hauteur
+            // du Stack entre minHeight et maxHeight.
             Padding(
               padding: const EdgeInsets.all(AppSpacing.screenPadding),
               child: Column(
@@ -377,6 +424,7 @@ class _Banner extends StatelessWidget {
                           onActivate: onToggleFavourite,
                           child: ExcludeFocus(
                             child: IconButton.outlined(
+                              style: secondaryButtonStyle,
                               onPressed: onToggleFavourite,
                               icon: Icon(
                                 isFavourite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
@@ -391,6 +439,7 @@ class _Banner extends StatelessWidget {
                           onActivate: onTogglePlayed,
                           child: ExcludeFocus(
                             child: IconButton.outlined(
+                              style: secondaryButtonStyle,
                               onPressed: onTogglePlayed,
                               icon: Icon(
                                 isPlayed ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
@@ -405,6 +454,7 @@ class _Banner extends StatelessWidget {
                           onActivate: onMore,
                           child: ExcludeFocus(
                             child: IconButton.outlined(
+                              style: secondaryButtonStyle,
                               onPressed: onMore,
                               icon: const Icon(Icons.more_horiz_rounded),
                             ),

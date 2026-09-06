@@ -100,13 +100,24 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = item.getPosters?.primary ?? item.getPosters?.thumb;
+    // Primary est déjà en 2:3, comme la cellule : cover ne recadre rien.
+    // Les replis (thumb/backdrop, en 16:9) recadreraient lourdement en
+    // cover dans une cellule 2:3 — contain sur fond surface, comme la
+    // vignette "Continuer à regarder" pour le même cas de figure.
+    final image = item.getPosters?.primary;
+    final fallback = image == null ? (item.getPosters?.thumb ?? item.getPosters?.randomBackDrop) : null;
 
     return FocusRing(
       onActivate: () => item.navigateTo(context),
       child: ClipRRect(
         borderRadius: AppRadii.cardBorder,
-        child: FladderImage(image: image, fit: BoxFit.cover),
+        child: ColoredBox(
+          color: AppColors.surface,
+          child: FladderImage(
+            image: image ?? fallback,
+            fit: image != null ? BoxFit.cover : BoxFit.contain,
+          ),
+        ),
       ),
     );
   }
