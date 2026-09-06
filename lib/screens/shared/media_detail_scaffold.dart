@@ -120,10 +120,17 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
     _updateHeroPalette();
   }
 
+  /// Source d'image pour le bandeau — préfère un Backdrop (généralement
+  /// large, pensé pour ce format) à un Thumb, lui-même préféré à la
+  /// jaquette Primary (portrait, dernier recours).
+  ImageData? _bannerImage() => widget.backDrops?.backDrop?.isNotEmpty == true
+      ? widget.backDrops!.randomBackDrop
+      : widget.backDrops?.thumb ?? widget.backDrops?.primary;
+
   /// Teinte extraite de la même image que celle affichée dans le bandeau
   /// (le backdrop, pas la jaquette) — cohérent avec le tableau de bord.
   Future<void> _updateHeroPalette() async {
-    final image = widget.backDrops?.randomBackDrop ?? widget.backDrops?.primary;
+    final image = _bannerImage();
     final itemId = widget.item?.id;
     if (image == null ||
         itemId == null ||
@@ -156,9 +163,13 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   @override
   Widget build(BuildContext context) {
     final density = context.tokens.density;
-    // Hauteur minimale, extensible (cf. le bandeau du tableau de bord) :
-    // 480/560 selon densité, jusqu'à +80 si le titre (2 lignes) le demande.
-    final minBannerHeight = density == AppDensity.couch ? 560.0 : 480.0;
+    // Bandeau volontairement haut — 680/760 selon densité, jusqu'à +80 si
+    // le titre (2 lignes) le demande. Un cadre proche du ratio 16:9 de
+    // l'image source (backdrop/thumb) limite le recadrage qu'impose
+    // BoxFit.cover : l'ancien bandeau bas et large (480/560, ratio ~3,9:1)
+    // forçait un agrandissement énorme de l'image et en rognait plus de la
+    // moitié.
+    final minBannerHeight = density == AppDensity.couch ? 760.0 : 680.0;
     final maxBannerHeight = minBannerHeight + 80;
     final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
     // Même alignement que le tableau de bord : AppSpacing.screenPadding.
@@ -171,14 +182,8 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
         horizontalPadding: AppSpacing.screenPadding);
     final heroTint = context.tokens.heroTint;
     final heroTextSecondary = context.tokens.heroTextSecondary;
-    final image = widget.backDrops?.randomBackDrop ?? widget.backDrops?.primary;
+    final image = _bannerImage();
     final hasActions = widget.actions != null;
-
-    // Marge de sortie sous le bandeau : juste assez pour un fondu long vers
-    // le fond, sans ligne de coupure ni bande vide.
-    const bleedHeight = 240.0;
-    final tintHoldFraction =
-        (minBannerHeight / (minBannerHeight + bleedHeight)).clamp(0.0, 1.0);
 
     return PullToRefresh(
       onRefresh: () async => await widget.onRefresh?.call(),
@@ -191,53 +196,31 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 const DefaultSliverTopBadding(),
-                // Bandeau + résorption de la teinte : même mécanique que
-                // dashboard_screen.dart — SliverPadding(start: sideBarInset)
-                // pour ne jamais teindre sous la barre latérale. Le bandeau
-                // fond lui-même dans la teinte à son propre bord bas (cf.
-                // _Banner, calque c) ; le dégradé ci-dessous prend le relais
-                // en pleine teinte à ce même point, puis s'étire sur la
-                // marge de sortie avant de s'éteindre — fondu long, sans
-                // ligne de coupure. tintHoldFraction est une approximation :
-                // le bandeau est à hauteur minimale extensible, sa hauteur
-                // réelle n'est pas connue ici : viser un peu court plutôt
-                // qu'un peu long n'a pas d'incidence visible, les deux
-                // calques sont alors déjà la même teinte.
+                // SliverPadding(start: sideBarInset) : la barre latérale
+                // reste sur AppColors.background pur, jamais teintée — même
+                // mécanique que dashboard_screen.dart. Le bandeau résorbe
+                // entièrement sa propre teinte avant son bord bas (cf.
+                // _Banner, calques c et c2) : le contenu qui suit démarre
+                // donc directement sur fond pur, sans zone tintée
+                // intercalée ni ligne de coupure.
                 SliverPadding(
                   padding: EdgeInsetsDirectional.only(start: sideBarInset),
-                  sliver: DecoratedSliver(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        stops: [0, tintHoldFraction, 1],
-                        colors: [heroTint, heroTint, AppColors.background],
-                      ),
-                    ),
-                    sliver: SliverMainAxisGroup(
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: _Banner(
-                            minHeight: minBannerHeight,
-                            maxHeight: maxBannerHeight,
-                            image: image,
-                            heroTint: heroTint,
-                            heroTextSecondary: heroTextSecondary,
-                            title: widget.title,
-                            originalTitle: widget.originalTitle,
-                            metaLine: widget.metaLine,
-                            onPlay: widget.onPlay,
-                            isFavourite: widget.isFavourite,
-                            onToggleFavourite: widget.onToggleFavourite,
-                            isPlayed: widget.isPlayed,
-                            onTogglePlayed: widget.onTogglePlayed,
-                            onMore:
-                                hasActions ? () => _showActions(context) : null,
-                          ),
-                        ),
-                        const SliverToBoxAdapter(
-                            child: SizedBox(height: bleedHeight)),
-                      ],
+                  sliver: SliverToBoxAdapter(
+                    child: _Banner(
+                      minHeight: minBannerHeight,
+                      maxHeight: maxBannerHeight,
+                      image: image,
+                      heroTint: heroTint,
+                      heroTextSecondary: heroTextSecondary,
+                      title: widget.title,
+                      originalTitle: widget.originalTitle,
+                      metaLine: widget.metaLine,
+                      onPlay: widget.onPlay,
+                      isFavourite: widget.isFavourite,
+                      onToggleFavourite: widget.onToggleFavourite,
+                      isPlayed: widget.isPlayed,
+                      onTogglePlayed: widget.onTogglePlayed,
+                      onMore: hasActions ? () => _showActions(context) : null,
                     ),
                   ),
                 ),
@@ -313,6 +296,17 @@ class _Banner extends StatelessWidget {
       overlayColor: heroTextSecondary,
     );
 
+    // Fondu final teinte -> fond, sur les derniers `fadeDistance` pixels du
+    // bandeau : la teinte se résorbe entièrement avant son bord bas, pour
+    // que le contenu qui suit démarre directement sur fond pur, sans zone
+    // tintée résiduelle ni ligne de coupure (cf. calque c2 ci-dessous).
+    // Approximation sur `minHeight` : si le titre (2 lignes) pousse la
+    // hauteur vers `maxHeight`, l'écart (80px) est absorbé sans effet
+    // visible, les deux fonds étant alors déjà identiques à ce stade du
+    // dégradé.
+    const fadeDistance = 240.0;
+    final fadeStart = ((minHeight - fadeDistance) / minHeight).clamp(0.0, 1.0);
+
     return ClipRect(
       // Hauteur minimale, extensible si le titre (2 lignes max) le demande —
       // même mécanique de dimensionnement que le bandeau du tableau de bord
@@ -325,20 +319,17 @@ class _Banner extends StatelessWidget {
           children: [
             // a. Fond teinté — visible au chargement et sur les bords.
             Positioned.fill(child: ColoredBox(color: heroTint)),
-            // b. Backdrop plein cadre, cover — aligné centre-haut : un
-            // bandeau large et peu haut recadre lourdement en cover, mieux
-            // vaut perdre le bas de l'image (générique, décor) que le haut
-            // (où se trouvent le plus souvent les visages).
+            // b. Backdrop plein cadre, cover, centré : à 680/760px de haut,
+            // le cadre se rapproche du ratio 16:9 de l'image source — le
+            // recadrage cover reste modéré, plus besoin de privilégier le
+            // haut de l'image comme sur l'ancien bandeau bas et large, qui
+            // rognait lourdement dans un sens ou l'autre.
             Positioned.fill(
-              child: FladderImage(
-                image: image,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-              ),
+              child: FladderImage(image: image, fit: BoxFit.cover),
             ),
             // c. Fondu vers la teinte en bas de l'image : elle se fond
             // directement dans le fond teinté, pas de bord net entre
-            // l'image et la teinte qui déborde ensuite sous le bandeau.
+            // l'image et la teinte.
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -347,6 +338,24 @@ class _Banner extends StatelessWidget {
                     end: Alignment.topCenter,
                     stops: const [0, 0.35],
                     colors: [heroTint, heroTint.withValues(alpha: 0)],
+                  ),
+                ),
+              ),
+            ),
+            // c2. Fondu final teinte -> fond, sur le bas du bandeau — cf.
+            // le calcul de `fadeStart` ci-dessus.
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0, fadeStart, 1],
+                    colors: [
+                      Colors.transparent,
+                      Colors.transparent,
+                      AppColors.background,
+                    ],
                   ),
                 ),
               ),
