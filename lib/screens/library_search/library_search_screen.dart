@@ -93,7 +93,40 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
 
   bool loadOnStart = false;
 
-  Key get uniqueKey => Key(widget.parentId?.join(',').toString() ?? "EmptySearch");
+  /// Identifie la DESTINATION de cette recherche (dossier/vue parcouru,
+  /// ou filtres de départ posés par l'appelant — ex. "Films" pousse
+  /// `types: {movie: true}`, "Séries" pousse `types: {series: true}`),
+  /// pas son état vivant : `LibrarySearchRoute` sert aussi bien à
+  /// "Recherche", "Films" et "Séries" (barre latérale) qu'à "Favoris" ou
+  /// à une ligne de genre du tableau de bord — toutes vers la même
+  /// route, seuls les paramètres de requête diffèrent. Sans eux dans la
+  /// clé, ces destinations partagent le même [librarySearchProvider] et
+  /// donc le même état de filtres (cocher "Série" dans l'une le coche
+  /// dans les trois). Ne PAS y inclure les champs que l'écran modifie
+  /// lui-même après coup (tri, recherche texte en direct...) : eux
+  /// doivent rester dans l'état vivant du provider, pas re-fragmenter
+  /// l'instance à chaque frappe.
+  Key get uniqueKey {
+    String mapSignature<K>(Map<K, bool>? map, String Function(K) keyToString) {
+      if (map == null) return '';
+      final activeKeys = map.entries.where((e) => e.value).map((e) => keyToString(e.key)).toList()..sort();
+      return activeKeys.join(',');
+    }
+
+    final signature = [
+      widget.parentId?.join(','),
+      widget.favourites?.toString(),
+      mapSignature(widget.types, (type) => type.name),
+      mapSignature(widget.genres, (genre) => genre),
+      mapSignature(widget.studios, (studio) => studio.id),
+      mapSignature(widget.itemFilters, (filter) => filter.name),
+      mapSignature(widget.tags, (tag) => tag),
+      mapSignature(widget.years, (year) => year.toString()),
+    ].where((part) => part != null && part.isNotEmpty).join('|');
+
+    return Key(signature.isEmpty ? "EmptySearch" : signature);
+  }
+
   AutoDisposeStateNotifierProvider<LibrarySearchNotifier, LibrarySearchModel> get providerKey =>
       librarySearchProvider(uniqueKey);
   LibrarySearchNotifier get libraryProvider => ref.read(librarySearchProvider(uniqueKey).notifier);
