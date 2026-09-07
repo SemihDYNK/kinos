@@ -218,11 +218,13 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                 //   dans la taille du groupe) ;
                 // - le bloc titre puis tout le contenu (`widget.content`),
                 //   qui déterminent la taille réelle du groupe.
-                // L'image continue donc derrière le résumé, les sélecteurs
-                // et le début du casting, et se dissout entièrement (jamais
-                // un aplat de substitution — une seule surface peinte au
-                // final, celle du Scaffold) au plus tard à `minTitleHeight`,
-                // cf. FadingHeroBackdrop.
+                // L'image reste pleinement nette sur toute la hauteur du
+                // bloc titre (`holdUntil: minTitleHeight`, posé par-dessus
+                // elle) ; le voile ne commence qu'après, et se dissout
+                // entièrement (jamais un aplat de substitution — une seule
+                // surface peinte au final, celle du Scaffold) pendant que
+                // l'image continue derrière le résumé, les sélecteurs et le
+                // début du casting — cf. FadingHeroBackdrop.
                 SliverPadding(
                   padding: EdgeInsetsDirectional.only(start: sideBarInset),
                   sliver: SliverStack(
@@ -235,7 +237,7 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                         child: FadingHeroBackdrop(
                           image: image,
                           heroTint: heroTint,
-                          fadeCompleteBy: minTitleHeight,
+                          holdUntil: minTitleHeight,
                         ),
                       ),
                       SliverMainAxisGroup(

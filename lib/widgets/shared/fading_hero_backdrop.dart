@@ -10,6 +10,11 @@ import 'package:fladder/util/fladder_image.dart';
 /// film/série) et le tableau de bord (bandeau carrousel), pour un seul
 /// composant de fond entre les deux écrans.
 ///
+/// Le bloc titre (posé PAR-DESSUS ce calque par l'appelant, cf.
+/// `_TitleBlock`/`HeroCarousel`) reste donc sur une image pleinement
+/// visible sur toute sa hauteur — le voile ne commence à agir qu'APRÈS
+/// [holdUntil], jamais dans la zone du titre lui-même.
+///
 /// Une seule surface peinte, jamais deux : ce calque se dissout dans une
 /// transparence TOTALE (`ShaderMask`), pas dans un aplat de substitution
 /// posé par-dessus le fond de la page. Deux calques opaques distincts —
@@ -25,39 +30,35 @@ class FadingHeroBackdrop extends StatelessWidget {
   /// l'image glisse avant de se dissoudre.
   final Color heroTint;
 
-  /// Hauteur, depuis le haut de ce calque, à partir de laquelle il doit
-  /// être entièrement dissous (opacité 0). Doit correspondre à la seule
-  /// hauteur de contenu garantie présente juste après ce calque (le bloc
-  /// titre du bandeau, toujours là) — jamais à la hauteur totale de ce
-  /// calque lui-même, qui peut largement dépasser un contenu réel plus
-  /// court : ancrer la dissolution sur elle laisserait, sur un contenu
-  /// court, le voile se faire couper avant d'avoir fini de se dissoudre.
-  final double fadeCompleteBy;
+  /// Hauteur, depuis le haut de ce calque, jusqu'à laquelle l'image reste
+  /// pleinement nette (aucune teinte, aucune dissolution) : la hauteur du
+  /// bloc titre posé par-dessus (toujours présent, contrairement au
+  /// contenu qui le suit — résumé, casting, "Continuer à regarder"...).
+  /// Le voile (montée de teinte, puis dissolution) ne commence qu'APRÈS
+  /// ce point, jamais dans la zone du titre lui-même.
+  final double holdUntil;
 
-  /// Distance, comptée à rebours depuis [fadeCompleteBy], sur laquelle la
-  /// teinte monte progressivement (l'image reste nue avant ce point).
-  /// Par défaut 200px — le réglage validé sur le bandeau film/série, dont
-  /// `fadeCompleteBy` (680-760px) laisse largement la place à une image
-  /// nue sur toute sa moitié haute avant que la montée ne démarre. Un
-  /// `fadeCompleteBy` nettement plus court (ex. le bandeau carrousel de
-  /// l'accueil, 320-400px) doit fournir une distance plus courte : cette
-  /// valeur, combinée à [resolveDistance], ne doit pas dépasser la moitié
-  /// de [fadeCompleteBy], sous peine de faire démarrer la montée dès le
-  /// haut du calque (voire de la faire déborder, silencieusement bridée à
-  /// 0 par le `clamp` ci-dessous) — l'image resterait alors visible bien
-  /// moins longtemps que voulu.
+  /// Distance, comptée à partir de [holdUntil], sur laquelle la teinte
+  /// monte progressivement jusqu'à pleinement opaque. Par défaut 200px —
+  /// le réglage validé sur le bandeau film/série.
   final double rampDistance;
 
-  /// Distance, comptée à rebours depuis [fadeCompleteBy], sur laquelle la
-  /// teinte, déjà pleinement montée, se dissout ensuite vers la
-  /// transparence totale. Par défaut 150px, même origine que
-  /// [rampDistance].
+  /// Distance, comptée après la fin de la montée de teinte (soit
+  /// `holdUntil + rampDistance`), sur laquelle la teinte, déjà pleinement
+  /// montée, se dissout ensuite vers la transparence totale. Par défaut
+  /// 150px, même origine que [rampDistance].
+  ///
+  /// `holdUntil + rampDistance + resolveDistance` doit rester nettement
+  /// inférieur à la hauteur réelle de ce calque (posée par l'appelant via
+  /// `SliverPositioned`) — sous peine de voir la dissolution se faire
+  /// couper avant d'avoir fini, silencieusement bridée à 1.0 par le
+  /// `clamp` ci-dessous.
   final double resolveDistance;
 
   const FadingHeroBackdrop({
     required this.image,
     required this.heroTint,
-    required this.fadeCompleteBy,
+    required this.holdUntil,
     this.rampDistance = 200.0,
     this.resolveDistance = 150.0,
     super.key,
@@ -71,20 +72,26 @@ class FadingHeroBackdrop extends StatelessWidget {
         // (posé via SliverPositioned côté appelant) — pas d'un paramètre
         // séparé qui risquerait de diverger de la taille effective.
         final height = constraints.maxHeight;
-        final rampStart = (fadeCompleteBy - rampDistance - resolveDistance)
-            .clamp(0.0, fadeCompleteBy);
-        final tintOpaqueAt =
-            (fadeCompleteBy - resolveDistance).clamp(0.0, fadeCompleteBy);
-        final rampStartFraction = (rampStart / height).clamp(0.0, 1.0);
+        final tintOpaqueAt = holdUntil + rampDistance;
+        final dissolveAt = tintOpaqueAt + resolveDistance;
+        final holdUntilFraction = (holdUntil / height).clamp(0.0, 1.0);
         final tintOpaqueFraction = (tintOpaqueAt / height).clamp(0.0, 1.0);
-        final fadeEndFraction = (fadeCompleteBy / height).clamp(0.0, 1.0);
+        final dissolveFraction = (dissolveAt / height).clamp(0.0, 1.0);
+        // Le voile de lisibilité vertical (cf. calque e) monte vers son
+        // maximum sur les derniers 45% de la zone du titre — même
+        // proportion que l'ancien calque local de HeroCarousel/_Banner,
+        // appliquée ici à `holdUntil` plutôt qu'à la hauteur totale de ce
+        // calque (bien plus grande) : la lisibilité se joue au niveau du
+        // titre, pas sur toute la hauteur de l'image.
+        final scrimRiseStartFraction =
+            ((holdUntil * 0.55) / height).clamp(0.0, 1.0);
 
         return ShaderMask(
           blendMode: BlendMode.dstIn,
           shaderCallback: (rect) => LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            stops: [0, tintOpaqueFraction, fadeEndFraction],
+            stops: [0, tintOpaqueFraction, dissolveFraction],
             colors: const [Colors.white, Colors.white, Colors.transparent],
           ).createShader(rect),
           child: Stack(
@@ -104,17 +111,17 @@ class FadingHeroBackdrop extends StatelessWidget {
                   fit: BoxFit.cover,
                 ),
               ),
-              // c. Teinte qui monte progressivement : image nue jusqu'à
-              // `rampStartFraction`, pleinement teintée (mais encore
-              // opaque) à `tintOpaqueFraction`. La dissolution vers la
-              // transparence totale est le rôle du ShaderMask ci-dessus,
-              // pas de ce calque.
+              // c. Teinte qui monte progressivement à partir de
+              // `holdUntil` (image nue jusque-là) jusqu'à pleinement
+              // teintée (mais encore opaque) à `tintOpaqueFraction`. La
+              // dissolution vers la transparence totale est le rôle du
+              // ShaderMask ci-dessus, pas de ce calque.
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    stops: [0, rampStartFraction, tintOpaqueFraction],
+                    stops: [0, holdUntilFraction, tintOpaqueFraction],
                     colors: [
                       heroTint.withValues(alpha: 0),
                       heroTint.withValues(alpha: 0),
@@ -133,6 +140,22 @@ class FadingHeroBackdrop extends StatelessWidget {
                     colors: [
                       AppColors.scrim.withValues(alpha: 0.9),
                       AppColors.scrim.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+              // e. Dégradé vertical — contraste pour le texte en bas
+              // (titre, métadonnées, boutons), qui vit dans les derniers
+              // pixels de la zone `holdUntil`.
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [scrimRiseStartFraction, holdUntilFraction],
+                    colors: [
+                      AppColors.scrim.withValues(alpha: 0),
+                      AppColors.scrim.withValues(alpha: 0.75),
                     ],
                   ),
                 ),

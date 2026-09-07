@@ -198,42 +198,24 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel> {
             child: Stack(
               alignment: Alignment.bottomLeft,
               children: [
-                // Fond (image, teinte, dégradé horizontal) : plus ici — posé
-                // par [FadingHeroBackdrop], derrière ce carrousel ET
-                // "Continuer à regarder", dans le même espace de défilement
-                // (cf. dashboard_screen.dart). Ce Stack ne porte plus que le
+                // Fond (image, teinte, dégradés de lisibilité horizontal ET
+                // vertical) : plus ici — posé par [FadingHeroBackdrop],
+                // derrière ce carrousel ET "Continuer à regarder", dans le
+                // même espace de défilement (cf. dashboard_screen.dart),
+                // avec `holdUntil` réglé sur la hauteur de ce carrousel :
+                // l'image (et ses dégradés) reste pleinement nette et
+                // visible sur toute cette hauteur, exactement comme si elle
+                // était peinte ici. Ce Stack ne porte donc plus que le
                 // texte et les contrôles, sur fond transparent.
                 //
-                // d. Dégradé vertical — contraste pour le texte en bas.
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        stops: const [0, 0.45],
-                        colors: [
-                          AppColors.scrim.withValues(alpha: 0.75),
-                          AppColors.scrim.withValues(alpha: 0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // Pas de dégradé de sortie ici : la jonction avec le fond
-                // de la zone de contenu (heroTint → AppColors.background)
-                // est gérée au niveau de la page (dashboard_screen.dart),
-                // sur tout l'espace bandeau + "Continuer à regarder" — pas
-                // seulement la hauteur du bandeau lui-même.
-                //
-                // e. Flou local derrière le texte : abandonné. Sans moyen de
+                // Flou local derrière le texte : abandonné. Sans moyen de
                 // vérifier visuellement le rendu ici (pas d'affichage dans
                 // cet environnement), le risque d'un bord de flou visible
-                // est trop élevé — les dégradés (c, d) suffisent au
-                // contraste. Cf. consigne : mieux vaut l'absence de flou
-                // qu'un rectangle net.
+                // est trop élevé — les dégradés de FadingHeroBackdrop
+                // suffisent au contraste. Cf. consigne : mieux vaut
+                // l'absence de flou qu'un rectangle net.
                 //
-                // f. Bloc de texte.
+                // Bloc de texte.
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.screenPadding),
                   child: FractionallySizedBox(

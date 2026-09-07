@@ -139,13 +139,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final heroDisplayItem = _heroCurrent ?? heroItems.firstOrNull;
     final heroImage = heroDisplayItem?.getPosters?.randomBackDrop ??
         heroDisplayItem?.getPosters?.primary;
-    // `fadeCompleteBy` (hauteur minimale du carrousel, 560-640px) reste
-    // plus court que sur le bandeau film/série (680-760px) : les distances
-    // par défaut de FadingHeroBackdrop (200 + 150 = 350px), non scalées,
-    // laisseraient moins de la moitié de `fadeCompleteBy` nue à hauteur
-    // couch (640/2 = 320 < 350). Réduites ici, même ratio 4:3 que le
-    // défaut, de sorte que l'image reste nue sur exactement la moitié de
-    // `fadeCompleteBy`, comme sur la fiche film.
+    // `holdUntil` (hauteur minimale du carrousel, 560-640px) reste plus
+    // court que sur le bandeau film/série (680-760px), pour une zone de
+    // fondu (`backdropHeight` ci-dessous) elle aussi plus courte
+    // (900-1000px contre 1200-1300px) : les distances par défaut de
+    // FadingHeroBackdrop (200 + 150 = 350px) y feraient déborder la
+    // dissolution au-delà de `backdropHeight` (560/640 + 350 = 910/990,
+    // à peine sous 900/1000 — trop juste). Réduites ici pour que la
+    // dissolution reste confortablement dans `backdropHeight`.
     final heroRampDistance = density == AppDensity.couch ? 180.0 : 160.0;
     final heroResolveDistance = density == AppDensity.couch ? 140.0 : 120.0;
 
@@ -182,13 +183,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             //   du groupe) ;
             // - HeroCarousel puis "Continuer à regarder", qui déterminent
             //   la taille réelle du groupe.
-            // La dissolution complète (jamais un aplat de substitution —
-            // une seule surface peinte au final, celle de la page) est
-            // garantie au plus tard à la hauteur minimale du carrousel
-            // (`HeroCarousel.minHeightFor`), la seule hauteur de contenu
-            // garantie ici — "Continuer à regarder" peut être vide. Inséré
-            // à `sideBarInset` : la barre latérale reste sur
-            // AppColors.background pur, jamais teintée.
+            // L'image reste pleinement nette sur toute la hauteur du
+            // carrousel (`holdUntil: HeroCarousel.minHeightFor`, posé
+            // par-dessus elle — la seule hauteur de contenu garantie ici,
+            // "Continuer à regarder" pouvant être vide) ; le voile ne
+            // commence qu'après, et se dissout entièrement (jamais un
+            // aplat de substitution — une seule surface peinte au final,
+            // celle de la page). Inséré à `sideBarInset` : la barre
+            // latérale reste sur AppColors.background pur, jamais teintée.
             SliverPadding(
               padding: EdgeInsetsDirectional.only(start: sideBarInset),
               sliver: heroItems.isEmpty
@@ -206,7 +208,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           child: FadingHeroBackdrop(
                             image: heroImage,
                             heroTint: context.tokens.heroTint,
-                            fadeCompleteBy: HeroCarousel.minHeightFor(density),
+                            holdUntil: HeroCarousel.minHeightFor(density),
                             rampDistance: heroRampDistance,
                             resolveDistance: heroResolveDistance,
                           ),
