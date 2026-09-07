@@ -12,6 +12,7 @@ import 'package:fladder/routes/auto_router.gr.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_request_popup.dart';
 import 'package:fladder/seerr/seerr_models.dart';
 import 'package:fladder/theme.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/focus_provider.dart';
@@ -102,59 +103,45 @@ class SeerrPosterCard extends ConsumerWidget {
               clipBehavior: Clip.hardEdge,
               child: FladderImage(
                 image: image,
-                placeHolder: Center(
-                  child: Text(
-                    poster.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                ),
+                placeHolder: _SeerrPosterFallback(poster: poster),
               ),
             ),
             onSecondaryTapDown: (details) => _showContextMenu(context, itemActions, ref, details.globalPosition),
             onLongPress: () => _showBottomSheet(context, itemActions, ref),
             focusedOverlays: [
+              // Sobre au survol : cadre fin sur voile sombre, jamais une
+              // pastille pleine colorée (règle du projet, cf. FilterButton).
               if (!poster.hasDisplayStatus &&
                   canRequest &&
                   AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer)
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.scrim.withValues(alpha: 0.55),
+                        borderRadius: AppRadii.controlBorder,
+                        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.4)),
+                      ),
+                      child: InkWell(
+                        borderRadius: AppRadii.controlBorder,
+                        onTap: () => openSeerrRequestPopup(context, poster),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(IconsaxPlusLinear.add_square, color: AppColors.textPrimary, size: 18),
+                              const SizedBox(width: AppSpacing.xxs),
+                              Text(
+                                context.localized.request,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            onPressed: () => openSeerrRequestPopup(context, poster),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  IconsaxPlusBold.add_square,
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                  size: 21,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  context.localized.request,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Theme.of(context).colorScheme.onPrimary,
-                                      ),
-                                ),
-                              ],
-                            ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -183,24 +170,19 @@ class SeerrPosterCard extends ConsumerWidget {
                     ),
                   ),
                 ),
+              // Discret plutôt que supprimé : une icône seule, sans fond
+              // coloré plein — jamais une pastille "Film"/"Série" (règle du
+              // projet). Un léger voile derrière l'icône garantit sa
+              // lisibilité, quelle que soit la jaquette en dessous.
               Align(
                 alignment: Alignment.topLeft,
                 child: Padding(
-                  padding: const EdgeInsets.all(6.0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      poster.type == SeerrMediaType.movie
-                          ? context.localized.mediaTypeMovie(1)
-                          : context.localized.mediaTypeSeries(1),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
-                          ),
-                    ),
+                  padding: const EdgeInsets.all(AppSpacing.xxs),
+                  child: Icon(
+                    poster.type == SeerrMediaType.movie ? Icons.movie_outlined : Icons.tv_outlined,
+                    size: 16,
+                    color: AppColors.textPrimary,
+                    shadows: const [Shadow(color: AppColors.scrim, blurRadius: 4)],
                   ),
                 ),
               )
@@ -257,6 +239,44 @@ class SeerrPosterCard extends ConsumerWidget {
       position: position,
       items: itemActions.popupMenuItems(
         useIcons: true,
+      ),
+    );
+  }
+}
+
+/// Repli visuel d'une jaquette manquante — jamais un simple rectangle vide
+/// avec le titre dessus : une icône de type discrète (mêmes proportions
+/// que [PosterPlaceholder], le repli des jaquettes Jellyfin) sur un fond
+/// de surface, avec le titre centré en dessous.
+class _SeerrPosterFallback extends StatelessWidget {
+  final SeerrDashboardPosterModel poster;
+  const _SeerrPosterFallback({required this.poster});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.surfaceHigh,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              poster.type == SeerrMediaType.movie ? Icons.movie_outlined : Icons.tv_outlined,
+              size: 32,
+              color: AppColors.textDisabled,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              poster.title,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
       ),
     );
   }
