@@ -35,9 +35,15 @@ void main() {
       expect(release.indexer, 'SomeIndexer');
       expect(release.title, 'Movie.Title.2024.1080p.BluRay.x264-GROUP');
       expect(release.size, 4294967296);
-      // Le champ `age` (jours entiers) prime sur `ageHours` quand les deux
-      // sont présents.
-      expect(release.ageDays, 3);
+      // `publishDate` prime toujours sur `age`/`ageHours` quand elle est
+      // présente et lisible — ce sont ces derniers qui ne servent que de
+      // repli (cf. le commentaire sur `ageDays`).
+      final expectedAgeDays = DateTime.now()
+              .toUtc()
+              .difference(DateTime.parse('2024-01-01T00:00:00Z'))
+              .inMinutes /
+          (60 * 24);
+      expect(release.ageDays, closeTo(expectedAgeDays, 0.01));
       expect(release.seeders, 42);
       expect(release.leechers, 3);
       expect(release.protocol, ArrReleaseProtocol.torrent);
@@ -90,6 +96,42 @@ void main() {
 
       expect(release.ageDays, isNotNull);
       expect(release.ageDays!, closeTo(2, 0.1));
+    });
+
+    test(
+        'prefers publishDate over the (potentially stale/cached) age fields '
+        'when both are present', () {
+      final publishDate =
+          DateTime.now().toUtc().subtract(const Duration(days: 5));
+      final release = ArrRelease.fromJson({
+        'guid': 'g',
+        'indexerId': 1,
+        'indexer': 'X',
+        'title': 'X',
+        // Champs `age`/`ageHours` volontairement incohérents avec
+        // `publishDate`, pour prouver que publishDate gagne.
+        'age': 538,
+        'ageHours': 538 * 24,
+        'publishDate': publishDate.toIso8601String(),
+        'protocol': 'torrent',
+        'rejected': false,
+      });
+
+      expect(release.ageDays, closeTo(5, 0.1));
+    });
+
+    test('falls back to the age field when publishDate is absent', () {
+      final release = ArrRelease.fromJson({
+        'guid': 'g',
+        'indexerId': 1,
+        'indexer': 'X',
+        'title': 'X',
+        'age': 3,
+        'protocol': 'torrent',
+        'rejected': false,
+      });
+
+      expect(release.ageDays, 3);
     });
 
     test('captures rejection reasons on a rejected release', () {

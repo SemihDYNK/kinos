@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:http/http.dart' as http;
 
@@ -210,6 +211,23 @@ abstract class ArrApiClient {
       return const ArrFailure(
           ArrApiError.invalidResponse, 'Réponse inattendue');
     }
+    // Diagnostic (build debug uniquement, retiré des builds release par
+    // `assert`) : imprime les champs bruts du premier résultat, pour
+    // confirmer les noms de champs réellement renvoyés par le serveur en
+    // cas de doute (âge, score, rejet...) sans avoir à ajouter un point
+    // d'arrêt.
+    assert(() {
+      final first =
+          data.isNotEmpty && data.first is Map ? data.first as Map : null;
+      if (first != null) {
+        log('Arr release (diagnostic) — rejected=${first['rejected']} '
+            '(${first['rejected'].runtimeType}), rejections=${first['rejections']}, '
+            'customFormatScore=${first['customFormatScore']} '
+            '(${first['customFormatScore'].runtimeType}), age=${first['age']}, '
+            'ageHours=${first['ageHours']}, publishDate=${first['publishDate']}');
+      }
+      return true;
+    }());
     try {
       return ArrSuccess(data
           .whereType<Map<String, dynamic>>()
@@ -260,7 +278,8 @@ class RadarrApiClient extends ArrApiClient {
     return switch (result) {
       ArrSuccess(:final data) when data is List => ArrSuccess(data
           .whereType<Map<String, dynamic>>()
-          .map(ArrMovie.fromJson)
+          .map((json) =>
+              ArrMovie.fromJson(json, baseUrl: baseUrl, apiKey: apiKey))
           .where((movie) => _matchesQuery(movie.title, query))
           .toList()),
       ArrSuccess() =>
@@ -287,7 +306,8 @@ class SonarrApiClient extends ArrApiClient {
     return switch (result) {
       ArrSuccess(:final data) when data is List => ArrSuccess(data
           .whereType<Map<String, dynamic>>()
-          .map(ArrSeries.fromJson)
+          .map((json) =>
+              ArrSeries.fromJson(json, baseUrl: baseUrl, apiKey: apiKey))
           .where((series) => _matchesQuery(series.title, query))
           .toList()),
       ArrSuccess() =>

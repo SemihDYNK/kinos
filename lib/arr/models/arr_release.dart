@@ -35,9 +35,13 @@ class ArrRelease {
   /// garanti par l'API).
   final int? size;
 
-  /// Âge en jours (fractionnaire) — pris directement du champ `age`/
-  /// `ageHours` de la réponse quand présent, sinon dérivé de
-  /// `publishDate`.
+  /// Âge en jours (fractionnaire), toujours dérivé de `publishDate`
+  /// (l'horodatage de PUBLICATION DE CETTE RELEASE chez l'indexeur — pas
+  /// une date liée au film/à la série lui-même) recalculé à la volée par
+  /// rapport à l'heure courante. Les champs `age`/`ageHours` renvoyés par
+  /// l'API sont un instantané figé au moment où le serveur *Arr a
+  /// construit sa réponse (potentiellement mis en cache) : ne servent que
+  /// de repli si `publishDate` est absente ou illisible.
   final double? ageDays;
 
   final int? seeders;
@@ -73,12 +77,13 @@ class ArrRelease {
     final publishDate = DateTime.tryParse(json['publishDate'] as String? ?? '');
     final ageField = json['age'];
     final ageHoursField = json['ageHours'];
-    final ageDays = ageField is num
-        ? ageField.toDouble()
-        : ageHoursField is num
-            ? ageHoursField.toDouble() / 24
-            : publishDate != null
-                ? DateTime.now().difference(publishDate).inMinutes / (60 * 24)
+    final ageDays = publishDate != null
+        ? DateTime.now().toUtc().difference(publishDate.toUtc()).inMinutes /
+            (60 * 24)
+        : ageField is num
+            ? ageField.toDouble()
+            : ageHoursField is num
+                ? ageHoursField.toDouble() / 24
                 : null;
 
     final rawLanguages = json['languages'];

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fladder/arr/models/arr_grab_status.dart';
@@ -299,47 +300,9 @@ class _ArrSearchScreenState extends ConsumerState<ArrSearchScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final entry in _libraryResults)
-          FocusRing(
-            borderRadius: AppRadii.controlBorder,
-            onActivate: () => _selectEntry(entry),
-            child: ExcludeFocus(
-              child: InkWell(
-                borderRadius: AppRadii.controlBorder,
-                onTap: () => _selectEntry(entry),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs, vertical: AppSpacing.sm),
-                  child: Row(
-                    children: [
-                      Icon(
-                        entry.isMovie
-                            ? Icons.movie_outlined
-                            : Icons.tv_outlined,
-                        size: 18,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          entry.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                      if (entry.year != null)
-                        Text(
-                          entry.year.toString(),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: AppColors.textSecondary),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          _ArrLibraryResultRow(
+            entry: entry,
+            onSelect: () => _selectEntry(entry),
           ),
       ],
     );
@@ -403,6 +366,138 @@ class _ArrSearchScreenState extends ConsumerState<ArrSearchScreen> {
             onGrab: _grab,
           ),
       ],
+    );
+  }
+}
+
+/// Une ligne de résultat bibliothèque — vignette à gauche (jaquette Primary
+/// Radarr/Sonarr), puis titre/année/statut/qualité/saisons. Jamais une
+/// simple ligne de texte : le poster est ce qui permet de distinguer deux
+/// titres homonymes ou une simple faute de frappe au premier coup d'œil.
+class _ArrLibraryResultRow extends StatelessWidget {
+  final ArrLibraryEntry entry;
+  final VoidCallback onSelect;
+
+  const _ArrLibraryResultRow({required this.entry, required this.onSelect});
+
+  static const _posterWidth = 40.0;
+  static const _posterHeight = 60.0;
+
+  Color _statusColor() {
+    if (!entry.monitored) return AppColors.textDisabled;
+    if (entry.isComplete) return AppColors.success;
+    if (entry.hasContent) return AppColors.textSecondary;
+    return AppColors.error;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitleStyle = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: AppColors.textSecondary);
+
+    final details = <String>[
+      entry.statusLabel,
+      if (entry.qualityName != null) entry.qualityName!,
+      if (entry.seasonCount != null)
+        '${entry.seasonCount} saison${entry.seasonCount! > 1 ? 's' : ''}',
+    ];
+
+    return FocusRing(
+      borderRadius: AppRadii.controlBorder,
+      onActivate: onSelect,
+      child: ExcludeFocus(
+        child: InkWell(
+          borderRadius: AppRadii.controlBorder,
+          onTap: onSelect,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs, vertical: AppSpacing.sm),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: AppRadii.controlBorder,
+                  child: SizedBox(
+                    width: _posterWidth,
+                    height: _posterHeight,
+                    child: entry.posterUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: entry.posterUrl!,
+                            fit: BoxFit.cover,
+                            errorWidget: (context, url, error) =>
+                                _ArrPosterFallback(isMovie: entry.isMovie),
+                            placeholder: (context, url) =>
+                                const ColoredBox(color: AppColors.surfaceHigh),
+                          )
+                        : _ArrPosterFallback(isMovie: entry.isMovie),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              entry.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                          if (entry.year != null) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            Text('(${entry.year})', style: subtitleStyle),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Row(
+                        children: [
+                          Icon(Icons.circle, size: 7, color: _statusColor()),
+                          const SizedBox(width: AppSpacing.xxs),
+                          Flexible(
+                            child: Text(
+                              details.join(' · '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: subtitleStyle,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ArrPosterFallback extends StatelessWidget {
+  final bool isMovie;
+  const _ArrPosterFallback({required this.isMovie});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.surfaceHigh,
+      child: Center(
+        child: Icon(
+          isMovie ? Icons.movie_outlined : Icons.tv_outlined,
+          size: 18,
+          color: AppColors.textDisabled,
+        ),
+      ),
     );
   }
 }

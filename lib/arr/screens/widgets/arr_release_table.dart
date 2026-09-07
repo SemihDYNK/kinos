@@ -18,8 +18,9 @@ enum _ArrReleaseColumn {
 }
 
 /// Tableau des résultats de recherche interactive — sobre : texte aligné,
-/// pas de pastilles ni de badges arrondis. Une ligne = une release ;
-/// cliquer dessus l'envoie au téléchargement (cf. [onGrab]).
+/// pas de pastilles ni de badges arrondis. Une ligne = une release ; le
+/// téléchargement se déclenche uniquement via le bouton dédié en fin de
+/// ligne (cf. [onGrab]), jamais par un clic sur la ligne elle-même.
 ///
 /// Largeurs de colonnes fixes (hors Titre, seule colonne extensible) :
 /// une table de données n'a pas d'échelle d'espacement à suivre comme un
@@ -45,6 +46,9 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
   _ArrReleaseColumn _sortColumn = _ArrReleaseColumn.score;
   bool _ascending = false;
 
+  bool _hideRejected = false;
+  int _minSeeders = 0;
+
   static const _rejectedWidth = 28.0;
   static const _ageWidth = 56.0;
   static const _indexerWidth = 128.0;
@@ -53,6 +57,7 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
   static const _qualityWidth = 116.0;
   static const _languagesWidth = 116.0;
   static const _scoreWidth = 64.0;
+  static const _actionWidth = 40.0;
 
   int _compareNum(num? a, num? b) {
     if (a == null && b == null) return 0;
@@ -67,9 +72,21 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
     return left.compareTo(right);
   }
 
-  List<ArrRelease> get _sorted {
-    final sorted = [...widget.releases];
-    sorted.sort((a, b) {
+  List<ArrRelease> get _visible {
+    final filtered = widget.releases.where((release) {
+      if (_hideRejected && release.rejected) return false;
+      if (_minSeeders > 0) {
+        // Une release usenet n'a pas de seeders : le seuil ne s'applique
+        // qu'au torrent, on ne masque pas les résultats usenet.
+        if (release.protocol == ArrReleaseProtocol.torrent &&
+            (release.seeders ?? 0) < _minSeeders) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+
+    filtered.sort((a, b) {
       final result = switch (_sortColumn) {
         _ArrReleaseColumn.rejected =>
           (a.rejected ? 1 : 0).compareTo(b.rejected ? 1 : 0),
@@ -86,7 +103,7 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
       };
       return _ascending ? result : -result;
     });
-    return sorted;
+    return filtered;
   }
 
   void _onHeaderTap(_ArrReleaseColumn column) {
@@ -100,12 +117,53 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
     });
   }
 
+  Future<void> _handleGrab(ArrRelease release) async {
+    if (release.rejected) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Release rejetée'),
+          content: Text(
+            release.rejections.isEmpty
+                ? 'Cette release a été rejetée par les critères de qualité. '
+                    'L\'envoyer au téléchargement quand même ?'
+                : 'Cette release a été rejetée pour :\n'
+                    '${release.rejections.map((r) => '• $r').join('\n')}\n\n'
+                    'L\'envoyer au téléchargement quand même ?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Envoyer quand même'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    widget.onGrab(release);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final releases = _sorted;
+    final releases = _visible;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _ArrReleaseFilterBar(
+          hideRejected: _hideRejected,
+          minSeeders: _minSeeders,
+          onHideRejectedChanged: (value) =>
+              setState(() => _hideRejected = value),
+          onMinSeedersChanged: (value) => setState(() => _minSeeders = value),
+          shownCount: releases.length,
+          totalCount: widget.releases.length,
+        ),
+        const SizedBox(height: AppSpacing.sm),
         _ArrReleaseHeaderRow(
           sortColumn: _sortColumn,
           ascending: _ascending,
@@ -118,23 +176,135 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
           qualityWidth: _qualityWidth,
           languagesWidth: _languagesWidth,
           scoreWidth: _scoreWidth,
+          actionWidth: _actionWidth,
         ),
         const Divider(height: 1, thickness: 1, color: AppColors.border),
-        for (final release in releases)
-          _ArrReleaseRow(
-            key: ValueKey('${release.indexerId}:${release.guid}'),
-            release: release,
-            grabStatus: widget.grabStatuses[release.guid] ?? ArrGrabStatus.idle,
-            onGrab: () => widget.onGrab(release),
-            rejectedWidth: _rejectedWidth,
-            ageWidth: _ageWidth,
-            indexerWidth: _indexerWidth,
-            sizeWidth: _sizeWidth,
-            seedsWidth: _seedsWidth,
-            qualityWidth: _qualityWidth,
-            languagesWidth: _languagesWidth,
-            scoreWidth: _scoreWidth,
+        if (releases.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: Text(
+              'Aucune release ne correspond aux filtres.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          )
+        else
+          for (final (index, release) in releases.indexed)
+            _ArrReleaseRow(
+              key: ValueKey('${release.indexerId}:${release.guid}'),
+              release: release,
+              grabStatus:
+                  widget.grabStatuses[release.guid] ?? ArrGrabStatus.idle,
+              onGrab: () => _handleGrab(release),
+              striped: index.isOdd,
+              rejectedWidth: _rejectedWidth,
+              ageWidth: _ageWidth,
+              indexerWidth: _indexerWidth,
+              sizeWidth: _sizeWidth,
+              seedsWidth: _seedsWidth,
+              qualityWidth: _qualityWidth,
+              languagesWidth: _languagesWidth,
+              scoreWidth: _scoreWidth,
+              actionWidth: _actionWidth,
+            ),
+      ],
+    );
+  }
+}
+
+/// Barre de filtres rapides au-dessus du tableau : masquer les rejetées, et
+/// un seuil de seeders minimum (torrent uniquement).
+class _ArrReleaseFilterBar extends StatelessWidget {
+  final bool hideRejected;
+  final int minSeeders;
+  final ValueChanged<bool> onHideRejectedChanged;
+  final ValueChanged<int> onMinSeedersChanged;
+  final int shownCount;
+  final int totalCount;
+
+  const _ArrReleaseFilterBar({
+    required this.hideRejected,
+    required this.minSeeders,
+    required this.onHideRejectedChanged,
+    required this.onMinSeedersChanged,
+    required this.shownCount,
+    required this.totalCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final labelStyle = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: AppColors.textSecondary);
+
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.xs,
+      children: [
+        FocusRing(
+          borderRadius: AppRadii.controlBorder,
+          onActivate: () => onHideRejectedChanged(!hideRejected),
+          child: ExcludeFocus(
+            child: InkWell(
+              borderRadius: AppRadii.controlBorder,
+              onTap: () => onHideRejectedChanged(!hideRejected),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xxs, vertical: AppSpacing.xxs),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: hideRejected,
+                      onChanged: (value) =>
+                          onHideRejectedChanged(value ?? false),
+                    ),
+                    const SizedBox(width: AppSpacing.xxs),
+                    Text('Masquer les rejetées', style: labelStyle),
+                  ],
+                ),
+              ),
+            ),
           ),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Seeders min.', style: labelStyle),
+            const SizedBox(width: AppSpacing.xs),
+            SizedBox(
+              width: 64,
+              child: TextFormField(
+                initialValue: minSeeders == 0 ? '' : minSeeders.toString(),
+                keyboardType: TextInputType.number,
+                style: Theme.of(context).textTheme.bodySmall,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  hintText: '0',
+                  hintStyle: TextStyle(color: AppColors.textDisabled),
+                  contentPadding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs, vertical: AppSpacing.xxs),
+                  border: OutlineInputBorder(
+                    borderRadius: AppRadii.controlBorder,
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: AppRadii.controlBorder,
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: AppRadii.controlBorder,
+                    borderSide: BorderSide(color: AppColors.focus),
+                  ),
+                ),
+                onChanged: (value) =>
+                    onMinSeedersChanged(int.tryParse(value) ?? 0),
+              ),
+            ),
+          ],
+        ),
+        Text('$shownCount / $totalCount', style: labelStyle),
       ],
     );
   }
@@ -152,6 +322,7 @@ class _ArrReleaseHeaderRow extends StatelessWidget {
   final double qualityWidth;
   final double languagesWidth;
   final double scoreWidth;
+  final double actionWidth;
 
   const _ArrReleaseHeaderRow({
     required this.sortColumn,
@@ -165,6 +336,7 @@ class _ArrReleaseHeaderRow extends StatelessWidget {
     required this.qualityWidth,
     required this.languagesWidth,
     required this.scoreWidth,
+    required this.actionWidth,
   });
 
   Widget _header(BuildContext context, String label, double width,
@@ -187,6 +359,16 @@ class _ArrReleaseHeaderRow extends StatelessWidget {
                     ? MainAxisAlignment.end
                     : MainAxisAlignment.start,
                 children: [
+                  if (align == TextAlign.end && selected) ...[
+                    Icon(
+                      ascending
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
+                      size: 12,
+                      color: AppColors.textPrimary,
+                    ),
+                    const SizedBox(width: AppSpacing.xxs),
+                  ],
                   Flexible(
                     child: Text(
                       label,
@@ -199,7 +381,7 @@ class _ArrReleaseHeaderRow extends StatelessWidget {
                               : AppColors.textSecondary),
                     ),
                   ),
-                  if (selected) ...[
+                  if (align != TextAlign.end && selected) ...[
                     const SizedBox(width: AppSpacing.xxs),
                     Icon(
                       ascending
@@ -225,7 +407,9 @@ class _ArrReleaseHeaderRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(width: rejectedWidth),
-          _header(context, 'Âge', ageWidth, _ArrReleaseColumn.age),
+          _header(context, 'Âge', ageWidth, _ArrReleaseColumn.age,
+              align: TextAlign.end),
+          const SizedBox(width: AppSpacing.xs),
           Expanded(
               child: _header(context, 'Release', double.infinity,
                   _ArrReleaseColumn.title)),
@@ -239,6 +423,7 @@ class _ArrReleaseHeaderRow extends StatelessWidget {
               context, 'Langues', languagesWidth, _ArrReleaseColumn.languages),
           _header(context, 'Score', scoreWidth, _ArrReleaseColumn.score,
               align: TextAlign.end),
+          SizedBox(width: actionWidth),
         ],
       ),
     );
@@ -249,6 +434,7 @@ class _ArrReleaseRow extends StatelessWidget {
   final ArrRelease release;
   final ArrGrabStatus grabStatus;
   final VoidCallback onGrab;
+  final bool striped;
   final double rejectedWidth;
   final double ageWidth;
   final double indexerWidth;
@@ -257,11 +443,13 @@ class _ArrReleaseRow extends StatelessWidget {
   final double qualityWidth;
   final double languagesWidth;
   final double scoreWidth;
+  final double actionWidth;
 
   const _ArrReleaseRow({
     required this.release,
     required this.grabStatus,
     required this.onGrab,
+    required this.striped,
     required this.rejectedWidth,
     required this.ageWidth,
     required this.indexerWidth,
@@ -270,6 +458,7 @@ class _ArrReleaseRow extends StatelessWidget {
     required this.qualityWidth,
     required this.languagesWidth,
     required this.scoreWidth,
+    required this.actionWidth,
     super.key,
   });
 
@@ -300,22 +489,48 @@ class _ArrReleaseRow extends StatelessWidget {
     );
   }
 
-  Widget _grabIndicator(BuildContext context) {
+  Widget _actionButton(BuildContext context) {
+    final sending = grabStatus == ArrGrabStatus.sending;
     switch (grabStatus) {
-      case ArrGrabStatus.idle:
-        return const SizedBox.shrink();
-      case ArrGrabStatus.sending:
-        return const SizedBox(
-          width: 14,
-          height: 14,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        );
       case ArrGrabStatus.success:
-        return const Icon(Icons.check_circle_rounded,
-            size: 16, color: AppColors.success);
+        return const Tooltip(
+          message: 'Envoyée au téléchargement',
+          child: Icon(Icons.check_circle_rounded,
+              size: 18, color: AppColors.success),
+        );
+      case ArrGrabStatus.sending:
+      case ArrGrabStatus.idle:
       case ArrGrabStatus.failed:
-        return const Icon(Icons.error_rounded,
-            size: 16, color: AppColors.error);
+        return FocusRing(
+          borderRadius: AppRadii.controlBorder,
+          onActivate: sending ? null : onGrab,
+          child: ExcludeFocus(
+            child: Tooltip(
+              message: grabStatus == ArrGrabStatus.failed
+                  ? 'Échec — réessayer le téléchargement'
+                  : 'Télécharger cette release',
+              child: IconButton(
+                onPressed: sending ? null : onGrab,
+                iconSize: 18,
+                visualDensity: VisualDensity.compact,
+                icon: sending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        grabStatus == ArrGrabStatus.failed
+                            ? Icons.refresh_rounded
+                            : Icons.download_rounded,
+                        color: grabStatus == ArrGrabStatus.failed
+                            ? AppColors.error
+                            : AppColors.textSecondary,
+                      ),
+              ),
+            ),
+          ),
+        );
     }
   }
 
@@ -327,93 +542,93 @@ class _ArrReleaseRow extends StatelessWidget {
             ? AppColors.textDisabled
             : AppColors.textPrimary.withValues(alpha: 0.9));
 
-    return FocusRing(
-      onActivate: grabStatus == ArrGrabStatus.sending ? null : onGrab,
-      child: ExcludeFocus(
-        child: InkWell(
-          onTap: grabStatus == ArrGrabStatus.sending ? null : onGrab,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xs, vertical: AppSpacing.xs),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: rejectedWidth,
-                  child: _rejectionIndicator(context),
-                ),
-                SizedBox(
-                  width: ageWidth,
-                  child: Text(_ageLabel, style: baseStyle),
-                ),
-                Expanded(
-                  child: Tooltip(
-                    message: release.title,
-                    child: Text(
-                      release.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: baseStyle,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: indexerWidth,
-                  child: Text(
-                    release.indexer,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: baseStyle,
-                  ),
-                ),
-                SizedBox(
-                  width: sizeWidth,
-                  child: Text(
-                    formatFileSize(release.size) ?? '—',
-                    textAlign: TextAlign.end,
-                    style: baseStyle,
-                  ),
-                ),
-                SizedBox(
-                  width: seedsWidth,
-                  child: Text(
-                    _seedsLabel,
-                    textAlign: TextAlign.end,
-                    style: baseStyle,
-                  ),
-                ),
-                SizedBox(
-                  width: qualityWidth,
-                  child: Text(
-                    release.qualityName ?? '—',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: baseStyle,
-                  ),
-                ),
-                SizedBox(
-                  width: languagesWidth,
-                  child: Text(
-                    release.languages.isEmpty
-                        ? '—'
-                        : release.languages.join(', '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: baseStyle,
-                  ),
-                ),
-                SizedBox(
-                  width: scoreWidth,
-                  child: Text(
-                    release.customFormatScore.toString(),
-                    textAlign: TextAlign.end,
-                    style: baseStyle,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                SizedBox(width: 16, child: _grabIndicator(context)),
-              ],
+    return ColoredBox(
+      color: striped ? AppColors.surface : Colors.transparent,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs, vertical: AppSpacing.sm),
+        child: Row(
+          children: [
+            SizedBox(
+              width: rejectedWidth,
+              child: _rejectionIndicator(context),
             ),
-          ),
+            SizedBox(
+              width: ageWidth,
+              child:
+                  Text(_ageLabel, textAlign: TextAlign.end, style: baseStyle),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Tooltip(
+                message: release.title,
+                child: Text(
+                  release.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: baseStyle,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: indexerWidth,
+              child: Text(
+                release.indexer,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: baseStyle,
+              ),
+            ),
+            SizedBox(
+              width: sizeWidth,
+              child: Text(
+                formatFileSize(release.size) ?? '—',
+                textAlign: TextAlign.end,
+                style: baseStyle,
+              ),
+            ),
+            SizedBox(
+              width: seedsWidth,
+              child: Text(
+                _seedsLabel,
+                textAlign: TextAlign.end,
+                style: baseStyle,
+              ),
+            ),
+            SizedBox(
+              width: qualityWidth,
+              child: Text(
+                release.qualityName ?? '—',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: baseStyle,
+              ),
+            ),
+            SizedBox(
+              width: languagesWidth,
+              child: Text(
+                release.languages.isEmpty ? '—' : release.languages.join(', '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: baseStyle,
+              ),
+            ),
+            SizedBox(
+              width: scoreWidth,
+              child: Text(
+                release.customFormatScore.toString(),
+                textAlign: TextAlign.end,
+                style: baseStyle,
+              ),
+            ),
+            SizedBox(
+              width: actionWidth,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _actionButton(context),
+              ),
+            ),
+          ],
         ),
       ),
     );
