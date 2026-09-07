@@ -36,8 +36,13 @@ import 'package:fladder/util/list_extensions.dart';
 import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/map_bool_helper.dart';
 
-final librarySearchProvider =
-    StateNotifierProvider.family.autoDispose<LibrarySearchNotifier, LibrarySearchModel, Key>((ref, id) {
+/// Pas d'`autoDispose` : chaque destination (Films, Séries, Recherche,
+/// Favoris, un dossier parcouru...) a sa propre clé (cf.
+/// `LibrarySearchScreen.uniqueKey`) et doit garder son état — filtres
+/// compris — quand on la quitte puis qu'on y revient, pas seulement tant
+/// qu'un widget l'observe. `autoDispose` réinitialisait tout dès qu'on
+/// changeait d'écran, y compris en revenant sur la MÊME destination.
+final librarySearchProvider = StateNotifierProvider.family<LibrarySearchNotifier, LibrarySearchModel, Key>((ref, id) {
   return LibrarySearchNotifier(ref);
 });
 

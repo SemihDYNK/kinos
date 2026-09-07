@@ -127,8 +127,7 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
     return Key(signature.isEmpty ? "EmptySearch" : signature);
   }
 
-  AutoDisposeStateNotifierProvider<LibrarySearchNotifier, LibrarySearchModel> get providerKey =>
-      librarySearchProvider(uniqueKey);
+  StateNotifierProvider<LibrarySearchNotifier, LibrarySearchModel> get providerKey => librarySearchProvider(uniqueKey);
   LibrarySearchNotifier get libraryProvider => ref.read(librarySearchProvider(uniqueKey).notifier);
 
   @override
