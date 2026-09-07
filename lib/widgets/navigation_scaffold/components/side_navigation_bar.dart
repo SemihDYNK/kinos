@@ -15,6 +15,7 @@ import 'package:fladder/providers/video_player_provider.dart';
 import 'package:fladder/routes/auto_router.dart';
 import 'package:fladder/routes/auto_router.gr.dart';
 import 'package:fladder/screens/shared/user_icon.dart';
+import 'package:fladder/seerr/seerr_models.dart';
 import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/localization_helper.dart';
@@ -264,11 +265,12 @@ class SideNavigationRail extends ConsumerWidget {
     }
   }
 
-  /// Accueil, Films, Séries, Recherche, Demandes, Gestion — dans cet ordre.
-  /// Demandes n'apparaît que si utilisable (Jellyseerr configuré) : la
-  /// montrer sans condition mène vers un écran cassé. Gestion, elle, reste
-  /// toujours visible même sans aucun service *Arr configuré — c'est par
-  /// elle qu'on les configure, la masquer la rendrait inatteignable.
+  /// Accueil, Films, Séries, Recherche, Découverte, Demandes, Gestion —
+  /// dans cet ordre. Découverte et Demandes n'apparaissent que si
+  /// utilisables (Jellyseerr configuré) : les montrer sans condition mène
+  /// vers un écran cassé. Gestion, elle, reste toujours visible même sans
+  /// aucun service *Arr configuré — c'est par elle qu'on les configure, la
+  /// masquer la rendrait inatteignable.
   List<_RailDestination> _railDestinations({
     required BuildContext context,
     required bool seerrAvailable,
@@ -326,6 +328,15 @@ class SideNavigationRail extends ConsumerWidget {
         selected: isLibrarySearch && activeTypes.isEmpty,
         onTap: () => context.router.navigate(LibrarySearchRoute()),
       ),
+      if (seerrAvailable)
+        _RailDestination(
+          label: 'Découverte',
+          icon: IconsaxPlusLinear.discover,
+          selectedIcon: IconsaxPlusBold.discover,
+          selected: currentRouteName == SeerrSearchRoute.name,
+          onTap: () => context.router
+              .navigate(SeerrSearchRoute(mode: SeerrSearchMode.search)),
+        ),
       if (seerrAvailable)
         _RailDestination(
           label: 'Demandes',
