@@ -2,34 +2,31 @@ import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:fladder/models/items/images_models.dart';
-import 'package:fladder/models/items/item_shared_models.dart';
 import 'package:fladder/models/seerr/seerr_dashboard_model.dart';
 import 'package:fladder/providers/seerr/seerr_details_provider.dart';
-import 'package:fladder/screens/details_screens/components/overview_header.dart';
+import 'package:fladder/screens/details_screens/components/media_meta_line.dart';
 import 'package:fladder/screens/seerr/seerr_media_management.dart';
 import 'package:fladder/screens/seerr/widgets/download_status_label.dart';
 import 'package:fladder/screens/seerr/widgets/season_download_progress_widget.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_poster_row.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_request_popup.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_requests_sheet.dart';
-import 'package:fladder/screens/shared/detail_scaffold.dart';
-import 'package:fladder/screens/shared/media/expanding_text.dart';
 import 'package:fladder/screens/shared/media/external_urls.dart';
 import 'package:fladder/screens/shared/media/people_row.dart';
+import 'package:fladder/screens/shared/media_detail_scaffold.dart';
 import 'package:fladder/seerr/seerr_models.dart';
 import 'package:fladder/theme.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/list_padding.dart';
 import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/util/widget_extensions.dart';
 import 'package:fladder/widgets/shared/ensure_visible.dart';
+import 'package:fladder/widgets/shared/item_actions.dart';
 
 @RoutePage()
 class SeerrDetailsScreen extends ConsumerWidget {
@@ -44,6 +41,10 @@ class SeerrDetailsScreen extends ConsumerWidget {
     super.key,
   });
 
+  /// Largeur de lecture confortable pour le résumé — même valeur que les
+  /// fiches film/série Jellyfin ([MovieDetailScreen]/[SeriesDetailScreen]).
+  static const _readingWidth = 640.0;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = seerrDetailsProvider(
@@ -55,12 +56,6 @@ class SeerrDetailsScreen extends ConsumerWidget {
     final notifier = ref.read(provider.notifier);
 
     final currentPoster = state.poster;
-    final wrapAlignment =
-        AdaptiveLayout.viewSizeOf(context) != ViewSize.phone ? WrapAlignment.start : WrapAlignment.center;
-
-    final radius = BorderRadius.circular(16);
-    final theme = Theme.of(context);
-
     final itemBaseModel = currentPoster?.itemBaseModel;
 
     final externalUrls = state.buildExternalUrls();
@@ -88,318 +83,196 @@ class SeerrDetailsScreen extends ConsumerWidget {
         ? context.localized.request
         : (canRequestMore ? context.localized.requestMore : context.localized.request);
 
-    return DetailScaffold(
+    // "PG · 2026 · 6.1 · Family, Fantasy, Comedy, Adventure" — texte simple,
+    // jamais de badges, même règle que les fiches film/série Jellyfin (cf.
+    // buildMediaMetaLine). La classification vient de TMDB via Seerr : les
+    // fiches Jellyfin ne la branchent pas encore, mais le paramètre est
+    // commun aux deux.
+    final metaLine = currentPoster == null
+        ? ''
+        : buildMediaMetaLine(
+            officialRating: state.contentRating,
+            year: int.tryParse(currentPoster.releaseYear ?? ''),
+            communityRating: state.voteAverage,
+            genres: state.genres.map((genre) => genre.name).nonNulls.toList(),
+          );
+
+    return MediaDetailScaffold(
       label: currentPoster?.title ?? context.localized.request,
+      item: itemBaseModel,
+      // Repli d'identité de teinte quand le titre n'est pas (encore) dans
+      // la bibliothèque Jellyfin — cf. la doc de [MediaDetailScaffold.paletteId].
+      paletteId: itemBaseModel == null && currentPoster != null ? 'seerr-tmdb-${currentPoster.tmdbId}' : null,
       backDrops: currentPoster?.images,
       onRefresh: notifier.fetch,
-      posterFillsContent: true,
-      content: (context, padding) => currentPoster == null
-          ? const SizedBox.shrink()
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 64, top: 64),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    height: MediaQuery.paddingOf(context).top + 16,
-                  ),
-                  OverviewHeader(
-                    minHeight: 50,
-                    name: currentPoster.title,
-                    logoAlignment: Alignment.center,
-                    poster: currentPoster.images.primary != null
-                        ? SizedBox(
-                            width: 175,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.max,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              spacing: 6,
-                              children: [
-                                if (hasKnownStatus) const SizedBox(height: 16),
-                                SizedBox(
-                                  width: 175,
-                                  child: AspectRatio(
-                                    aspectRatio: 2 / 3,
-                                    child: FocusButton(
-                                      onTap: itemBaseModel != null ? () => itemBaseModel.navigateTo(context) : null,
-                                      onFocusChanged: (focus) {
-                                        if (focus) {
-                                          context.ensureVisible();
-                                        }
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: FladderTheme.defaultPosterDecoration.borderRadius,
-                                        ),
-                                        foregroundDecoration: FladderTheme.defaultPosterDecoration,
-                                        clipBehavior: Clip.hardEdge,
-                                        child: FladderImage(
-                                          image: currentPoster.images.primary,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                if (hasKnownStatus) DownloadStatusLabel(poster: currentPoster)
-                              ],
-                            ),
-                          )
-                        : null,
-                    image: currentPoster.images,
-                    padding: padding,
-                    productionYear: currentPoster.releaseYear,
-                    officialRating: state.contentRating,
-                    communityRating: state.voteAverage,
-                    additionalLabels: [
-                      if (rottenTomatoes != null)
-                        if (rottenTomatoes.criticsScore != null) ...[
-                          SimpleLabel(
-                            label: Text("${rottenTomatoes.criticsScore}%"),
-                            iconWidget: SvgPicture.asset(
-                              'icons/tomato.svg',
-                              width: 16,
-                              height: 16,
-                              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                            ),
-                            iconColor: Colors.white,
-                            color: Colors.redAccent.shade700,
-                          ),
-                          if (rottenTomatoes.audienceScore != null)
-                            SimpleLabel(
-                              label: Text("${rottenTomatoes.audienceScore}%"),
-                              iconWidget: SvgPicture.asset(
-                                'icons/popcorn_bucket.svg',
-                                width: 16,
-                                height: 16,
-                                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                              ),
-                              iconColor: Colors.white,
-                              color: Colors.orange.shade700,
-                            ),
-                        ],
-                    ],
-                    genres:
-                        state.genres.map((e) => GenreItems(id: e.id?.toString() ?? "", name: e.name ?? "")).toList(),
-                    mainButton: Builder(
-                      builder: (context) {
-                        return FocusButton(
-                          autoFocus: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad,
-                          onTap: canRequestMore ? () => openSeerrRequestPopup(context, currentPoster) : null,
-                          borderRadius: radius,
-                          onFocusChanged: (value) {
-                            if (value) {
-                              context.ensureVisible(
-                                alignment: 1.0,
-                              );
-                            }
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer.withAlpha(canRequestMore ? 255 : 100),
-                              borderRadius: radius,
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(10.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                spacing: 8,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      mainButtonLabel,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.fade,
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color:
-                                            theme.colorScheme.onPrimaryContainer.withAlpha(canRequestMore ? 255 : 100),
-                                      ),
-                                    ),
-                                  ),
-                                  Icon(
-                                    IconsaxPlusLinear.add,
-                                    color: theme.colorScheme.onPrimaryContainer.withAlpha(canRequestMore ? 255 : 100),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+      title: currentPoster?.title ?? context.localized.request,
+      metaLine: metaLine,
+      // Pas de lecture ici (contenu pas nécessairement téléchargé) : le
+      // bouton principal envoie une demande Seerr, d'où l'icône dédiée.
+      onPlay: currentPoster != null && canRequestMore ? () => openSeerrRequestPopup(context, currentPoster) : null,
+      playIcon: Icons.add_rounded,
+      playLabel: mainButtonLabel,
+      actions: currentPoster == null
+          ? null
+          : (context) => [
+                if (hasVisibleRequests)
+                  ItemActionButton(
+                    icon: const Icon(IconsaxPlusBold.folder_open),
+                    label: Text(
+                      pendingRequests.isNotEmpty
+                          ? '${context.localized.manageRequest} (${pendingRequests.length})'
+                          : context.localized.manageRequest,
                     ),
-                    centerButtons: (hasVisibleRequests || state.hasTrailerAction)
-                        ? Builder(
-                            builder: (context) {
-                              return Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                alignment: wrapAlignment,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  if (hasVisibleRequests)
-                                    FocusButton(
-                                      autoFocus: false,
-                                      onTap: () async {
-                                        await showSeerrRequestsSheet(
-                                          context: context,
-                                          poster: currentPoster,
-                                          requests: requests,
-                                          onApprove: notifier.approveRequest,
-                                          onDecline: notifier.declineRequest,
-                                        );
-                                      },
-                                      borderRadius: radius,
-                                      onFocusChanged: (value) {
-                                        if (value) {
-                                          context.ensureVisible(
-                                            alignment: 1.0,
-                                          );
-                                        }
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.tertiaryContainer,
-                                          borderRadius: radius,
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            spacing: 8,
-                                            children: [
-                                              Text(
-                                                context.localized.pendingRequests(pendingRequests.length),
-                                                style: theme.textTheme.titleMedium?.copyWith(
-                                                  fontWeight: FontWeight.w700,
-                                                  color: theme.colorScheme.onTertiaryContainer,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  if (state.hasTrailerAction)
-                                    FocusButton(
-                                      autoFocus: false,
-                                      onTap: () async {
-                                        if (officialTrailerUrl == null) return;
-                                        await launchUrl(context, officialTrailerUrl);
-                                      },
-                                      borderRadius: radius,
-                                      onFocusChanged: (value) {
-                                        if (value) {
-                                          context.ensureVisible(
-                                            alignment: 1.0,
-                                          );
-                                        }
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.tertiaryContainer,
-                                          borderRadius: radius,
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            spacing: 8,
-                                            children: [
-                                              Text(
-                                                context.localized.viewTrailer,
-                                                style: theme.textTheme.titleMedium?.copyWith(
-                                                  fontWeight: FontWeight.w700,
-                                                  color: theme.colorScheme.onTertiaryContainer,
-                                                ),
-                                              ),
-                                              Icon(
-                                                IconsaxPlusLinear.video_play,
-                                                color: theme.colorScheme.onTertiaryContainer,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  if (hasVisibleRequests && currentPoster.mediaInfo != null)
-                                    FocusButton(
-                                      autoFocus: false,
-                                      onTap: () async {
-                                        await showMediaManagementSheet(
-                                          context: context,
-                                          mediaInfo: currentPoster,
-                                          onActionComplete: () => context.refreshData(),
-                                        );
-                                      },
-                                      borderRadius: radius,
-                                      onFocusChanged: (value) {
-                                        if (value) {
-                                          context.ensureVisible(
-                                            alignment: 1.0,
-                                          );
-                                        }
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.tertiaryContainer,
-                                          borderRadius: radius,
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(10.0),
-                                          child: Icon(
-                                            IconsaxPlusLinear.setting_4,
-                                            color: theme.colorScheme.onTertiaryContainer,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              );
-                            },
-                          )
-                        : null,
+                    action: () => showSeerrRequestsSheet(
+                      context: context,
+                      poster: currentPoster,
+                      requests: requests,
+                      onApprove: notifier.approveRequest,
+                      onDecline: notifier.declineRequest,
+                    ),
                   ),
-                  ExpandingText(
-                    text: currentPoster.overview.trim().isEmpty
-                        ? context.localized.noOverviewAvailable
-                        : currentPoster.overview,
-                  ).padding(padding),
-                  if (currentPoster.type == SeerrMediaType.tvshow && (currentPoster.seasons?.isNotEmpty ?? false))
-                    _SeerrSeasonsSection(
+                if (state.hasTrailerAction)
+                  ItemActionButton(
+                    icon: const Icon(IconsaxPlusLinear.video_play),
+                    label: Text(context.localized.viewTrailer),
+                    action: () async {
+                      if (officialTrailerUrl == null) return;
+                      await launchUrl(context, officialTrailerUrl);
+                    },
+                  ),
+                if (hasVisibleRequests && currentPoster.mediaInfo != null)
+                  ItemActionButton(
+                    icon: const Icon(IconsaxPlusLinear.setting_4),
+                    label: const Text('Gérer le média'),
+                    action: () => showMediaManagementSheet(
+                      context: context,
+                      mediaInfo: currentPoster,
+                      onActionComplete: () => context.refreshData(),
+                    ),
+                  ),
+              ],
+      content: (context, padding) => currentPoster == null
+          ? []
+          : [
+              if (hasKnownStatus || rottenTomatoes?.criticsScore != null || rottenTomatoes?.audienceScore != null)
+                SliverPadding(
+                  padding: padding,
+                  sliver: SliverToBoxAdapter(
+                    child: _SeerrStatusLine(
+                      poster: currentPoster,
+                      hasKnownStatus: hasKnownStatus,
+                      criticsScore: rottenTomatoes?.criticsScore,
+                      audienceScore: rottenTomatoes?.audienceScore,
+                    ),
+                  ),
+                ),
+              SliverPadding(
+                padding: padding.copyWith(top: AppSpacing.sm),
+                sliver: SliverToBoxAdapter(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _readingWidth),
+                    child: Text(
+                      currentPoster.overview.trim().isEmpty
+                          ? context.localized.noOverviewAvailable
+                          : currentPoster.overview,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ),
+              ),
+              if (currentPoster.type == SeerrMediaType.tvshow && (currentPoster.seasons?.isNotEmpty ?? false))
+                SliverPadding(
+                  padding: padding.copyWith(top: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: _SeerrSeasonsSection(
                       state: state,
                       notifier: notifier,
-                      onToggle: (seasonNumber, enabled) {},
                       seasons: currentPoster.seasons ?? const [],
                       seasonStatuses: state.seasonStatuses,
-                    ).padding(padding),
-                  if (state.people.isNotEmpty)
-                    PeopleRow(
+                    ),
+                  ),
+                ),
+              if (state.people.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: PeopleRow(
                       people: state.people,
                       contentPadding: padding,
                       onTap: () {},
                     ),
-                  if (state.recommended.isNotEmpty)
-                    SeerrPosterRow(
+                  ),
+                ),
+              if (state.recommended.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: SeerrPosterRow(
                       posters: state.recommended,
                       label: "${context.localized.discover} ${context.localized.recommended.toLowerCase()}",
                       contentPadding: padding,
                     ),
-                  if (state.similar.isNotEmpty)
-                    SeerrPosterRow(
+                  ),
+                ),
+              if (state.similar.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: SeerrPosterRow(
                       posters: state.similar,
                       label: "${context.localized.discover} ${context.localized.related.toLowerCase()}",
                       contentPadding: padding,
                     ),
-                  if (externalUrls.isNotEmpty)
-                    ExternalUrlsRow(
-                      urls: externalUrls,
-                    ).padding(padding),
-                ].addPadding(const EdgeInsets.symmetric(vertical: 16)),
-              ),
-            ),
+                  ),
+                ),
+              if (externalUrls.isNotEmpty)
+                SliverPadding(
+                  padding: padding.copyWith(top: AppSpacing.xl, bottom: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: ExternalUrlsRow(urls: externalUrls),
+                  ),
+                ),
+            ],
+    );
+  }
+}
+
+/// Statut de disponibilité/téléchargement (badge fonctionnel — état, pas
+/// une métadonnée cosmétique, laissé tel quel, cf. [DownloadStatusLabel])
+/// puis scores Rotten Tomatoes en texte discret : jamais de pilule
+/// colorée, juste le libellé et le pourcentage.
+class _SeerrStatusLine extends StatelessWidget {
+  final SeerrDashboardPosterModel poster;
+  final bool hasKnownStatus;
+  final int? criticsScore;
+  final int? audienceScore;
+
+  const _SeerrStatusLine({
+    required this.poster,
+    required this.hasKnownStatus,
+    required this.criticsScore,
+    required this.audienceScore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final rtParts = <String>[
+      if (criticsScore != null) '$criticsScore % critiques',
+      if (audienceScore != null) '$audienceScore % public',
+    ];
+
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xxs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (hasKnownStatus) DownloadStatusLabel(poster: poster),
+        if (rtParts.isNotEmpty)
+          Text(
+            'Rotten Tomatoes : ${rtParts.join(' · ')}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+      ],
     );
   }
 }
@@ -409,14 +282,12 @@ class _SeerrSeasonsSection extends StatelessWidget {
   final SeerrDetails notifier;
   final List<SeerrSeason> seasons;
   final Map<int, SeerrMediaStatus> seasonStatuses;
-  final void Function(int seasonNumber, bool enabled) onToggle;
 
   const _SeerrSeasonsSection({
     required this.state,
     required this.notifier,
     required this.seasons,
     required this.seasonStatuses,
-    required this.onToggle,
   });
 
   @override

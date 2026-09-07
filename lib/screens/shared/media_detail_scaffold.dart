@@ -20,19 +20,27 @@ import 'package:fladder/widgets/shared/item_actions.dart';
 import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
 import 'package:fladder/widgets/shared/pull_to_refresh.dart';
 
-/// Écran de détail film/série — même langage visuel que le tableau de bord :
-/// bandeau plein cadre teinté par [PaletteService], contenu du reste de
-/// l'écran sur [AppColors.background] pur.
+/// Écran de détail film/série (et fiche Seerr, cf. `SeerrDetailsScreen`) —
+/// même langage visuel que le tableau de bord : bandeau plein cadre teinté
+/// par [PaletteService], contenu du reste de l'écran sur
+/// [AppColors.background] pur.
 ///
 /// Volontairement séparé de `DetailScaffold` (l'ancien écran générique,
-/// encore utilisé par les écrans musique/Live TV/livres/photos/Seerr, hors
+/// encore utilisé par les écrans musique/Live TV/livres/photos, hors
 /// périmètre — cf. CLAUDE.md § Périmètre) : cette réécriture ne devait
-/// affecter que films et séries, pas ces écrans-là.
+/// affecter que films, séries et Seerr, pas ces écrans-là.
 class MediaDetailScaffold extends ConsumerStatefulWidget {
   /// Item côté données — sert uniquement à dériver la teinte du bandeau
   /// (identité du cache palette) ; tout le contenu affiché passe par les
   /// autres paramètres, explicites.
   final ItemBaseModel? item;
+
+  /// Identité de repli pour le cache de teinte quand il n'y a pas
+  /// d'[ItemBaseModel] Jellyfin (ex. fiche Seerr d'un titre pas encore
+  /// présent dans la bibliothèque) — sans elle, [item] étant `null`, le
+  /// bandeau resterait sur la couleur de repli plutôt que la teinte de
+  /// l'image. Ignorée si [item] est fourni.
+  final String? paletteId;
   final String label;
   final String? windowTitle;
   final ImagesData? backDrops;
@@ -47,6 +55,10 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
 
   final String metaLine;
   final VoidCallback? onPlay;
+
+  /// Icône du bouton principal — celle d'une lecture par défaut ; une
+  /// fiche Seerr (bouton "Demander", pas de lecture) passe autre chose.
+  final IconData playIcon;
 
   /// Libellé du bouton principal — "Lire" (`context.localized.playLabel`)
   /// si absent. Un épisode identifié (série, épisode ouvert directement)
@@ -71,6 +83,7 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
     required this.label,
     this.windowTitle,
     this.item,
+    this.paletteId,
     this.backDrops,
     this.onRefresh,
     required this.title,
@@ -78,6 +91,7 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
     this.parentLink,
     required this.metaLine,
     this.onPlay,
+    this.playIcon = Icons.play_arrow_rounded,
     this.playLabel,
     this.isFavourite = false,
     this.onToggleFavourite,
@@ -146,7 +160,7 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   /// (le backdrop, pas la jaquette) — cohérent avec le tableau de bord.
   Future<void> _updateHeroPalette() async {
     final image = _bannerImage();
-    final itemId = widget.item?.id;
+    final itemId = widget.item?.id ?? widget.paletteId;
     if (image == null ||
         itemId == null ||
         identical(image, _lastPaletteImage)) {
@@ -266,6 +280,7 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                               parentLink: widget.parentLink,
                               metaLine: widget.metaLine,
                               onPlay: widget.onPlay,
+                              playIcon: widget.playIcon,
                               playLabel: widget.playLabel,
                               isFavourite: widget.isFavourite,
                               onToggleFavourite: widget.onToggleFavourite,
@@ -323,6 +338,7 @@ class _TitleBlock extends StatelessWidget {
   final ({String label, VoidCallback onTap})? parentLink;
   final String metaLine;
   final VoidCallback? onPlay;
+  final IconData playIcon;
   final String? playLabel;
   final bool isFavourite;
   final VoidCallback? onToggleFavourite;
@@ -339,6 +355,7 @@ class _TitleBlock extends StatelessWidget {
     required this.parentLink,
     required this.metaLine,
     required this.onPlay,
+    required this.playIcon,
     required this.playLabel,
     required this.isFavourite,
     required this.onToggleFavourite,
@@ -449,7 +466,7 @@ class _TitleBlock extends StatelessWidget {
                         child: ExcludeFocus(
                           child: FilledButton.icon(
                             onPressed: onPlay,
-                            icon: const Icon(Icons.play_arrow_rounded),
+                            icon: Icon(playIcon),
                             label:
                                 Text(playLabel ?? context.localized.playLabel),
                           ),
