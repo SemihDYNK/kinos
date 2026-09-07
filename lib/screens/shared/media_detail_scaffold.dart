@@ -40,8 +40,20 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
 
   final String title;
   final String? originalTitle;
+
+  /// Lien contextuel sous le titre — ex. la série parente d'un épisode.
+  /// Absent (défaut) pour un film ou une série, qui n'en ont pas.
+  final ({String label, VoidCallback onTap})? parentLink;
+
   final String metaLine;
   final VoidCallback? onPlay;
+
+  /// Libellé du bouton principal — "Lire" (`context.localized.playLabel`)
+  /// si absent. Un épisode identifié (série, épisode ouvert directement)
+  /// passe un libellé contextuel : "Lire S1 E1" / "Reprendre S1 E3" (cf.
+  /// `ItemBaseModel.playButtonLabel`).
+  final String? playLabel;
+
   final bool isFavourite;
   final VoidCallback? onToggleFavourite;
   final bool isPlayed;
@@ -63,8 +75,10 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
     this.onRefresh,
     required this.title,
     this.originalTitle,
+    this.parentLink,
     required this.metaLine,
     this.onPlay,
+    this.playLabel,
     this.isFavourite = false,
     this.onToggleFavourite,
     this.isPlayed = false,
@@ -249,8 +263,10 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                               heroTextSecondary: heroTextSecondary,
                               title: widget.title,
                               originalTitle: widget.originalTitle,
+                              parentLink: widget.parentLink,
                               metaLine: widget.metaLine,
                               onPlay: widget.onPlay,
+                              playLabel: widget.playLabel,
                               isFavourite: widget.isFavourite,
                               onToggleFavourite: widget.onToggleFavourite,
                               isPlayed: widget.isPlayed,
@@ -304,8 +320,10 @@ class _TitleBlock extends StatelessWidget {
   final Color heroTextSecondary;
   final String title;
   final String? originalTitle;
+  final ({String label, VoidCallback onTap})? parentLink;
   final String metaLine;
   final VoidCallback? onPlay;
+  final String? playLabel;
   final bool isFavourite;
   final VoidCallback? onToggleFavourite;
   final bool isPlayed;
@@ -318,8 +336,10 @@ class _TitleBlock extends StatelessWidget {
     required this.heroTextSecondary,
     required this.title,
     required this.originalTitle,
+    required this.parentLink,
     required this.metaLine,
     required this.onPlay,
+    required this.playLabel,
     required this.isFavourite,
     required this.onToggleFavourite,
     required this.isPlayed,
@@ -360,6 +380,37 @@ class _TitleBlock extends StatelessWidget {
                       .displayLarge
                       ?.copyWith(color: AppColors.textPrimary),
                 ),
+                if (parentLink != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                    child: FocusRing(
+                      borderRadius: AppRadii.controlBorder,
+                      onActivate: parentLink!.onTap,
+                      child: ExcludeFocus(
+                        child: InkWell(
+                          borderRadius: AppRadii.controlBorder,
+                          onTap: parentLink!.onTap,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.subdirectory_arrow_right_rounded,
+                                  size: 16, color: heroTextSecondary),
+                              const SizedBox(width: AppSpacing.xxs),
+                              Text(
+                                parentLink!.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(color: heroTextSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (showOriginalTitle)
                   Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.xxs),
@@ -399,7 +450,8 @@ class _TitleBlock extends StatelessWidget {
                           child: FilledButton.icon(
                             onPressed: onPlay,
                             icon: const Icon(Icons.play_arrow_rounded),
-                            label: Text(context.localized.playLabel),
+                            label:
+                                Text(playLabel ?? context.localized.playLabel),
                           ),
                         ),
                       ),

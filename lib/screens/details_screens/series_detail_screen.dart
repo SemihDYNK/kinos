@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fladder/models/item_base_model.dart';
@@ -15,6 +16,7 @@ import 'package:fladder/screens/details_screens/components/media_stream_selector
 import 'package:fladder/screens/shared/media/season_episode_section.dart';
 import 'package:fladder/screens/shared/media_detail_scaffold.dart';
 import 'package:fladder/theme/app_theme.dart';
+import 'package:fladder/util/humanize_duration.dart';
 import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
 import 'package:fladder/util/item_base_model/play_item_helpers.dart';
 import 'package:fladder/util/localization_helper.dart';
@@ -52,14 +54,28 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
     final item = details ?? widget.item;
 
     final currentEpisode = details?.nextUp;
-    final resolution = currentEpisode
-        ?.mediaStreams.currentVersionStream?.detailedResolutionLabel;
+    // Saison de l'épisode "à suivre" : la section saisons/épisodes s'y
+    // ouvre directement, plutôt que sur la première saison par défaut.
+    final initialSeasonId = details?.seasons
+        ?.firstWhereOrNull((season) => season.season == currentEpisode?.season)
+        ?.id;
+    // Métadonnées de série, pas d'épisode : nombre de saisons et durée
+    // moyenne d'un épisode remplacent durée totale et résolution (qui
+    // n'ont pas de sens au niveau de la série entière).
+    final seasonCount = details?.seasons
+            ?.where((season) => season.episodes.isNotEmpty)
+            .length ??
+        0;
     final metaLine = details == null
         ? ''
         : buildMediaMetaLine(
             year: details.overview.yearAired,
-            runTime: details.overview.runTime,
-            resolution: resolution,
+            extras: [
+              if (seasonCount > 0)
+                '$seasonCount ${context.localized.season(seasonCount)}',
+              if (details.overview.runTime?.humanize != null)
+                details.overview.runTime!.humanize!,
+            ],
             communityRating: details.overview.communityRating,
             genres:
                 details.overview.genreItems.map((genre) => genre.name).toList(),
@@ -143,6 +159,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
               ref.read(providerId.notifier).fetchDetails(widget.item);
             }
           : null,
+      // "Reprendre S1 E3" / "Lire S1 E1" selon l'état de visionnage de
+      // l'épisode "à suivre" — cf. EpisodeModel.playButtonLabel.
+      playLabel: currentEpisode?.playButtonLabel(context.localized),
       isFavourite: item.userData.isFavourite,
       onToggleFavourite: () => ref.read(userProvider.notifier).setAsFavorite(
             !item.userData.isFavourite,
@@ -203,7 +222,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
                   padding: const EdgeInsets.only(top: AppSpacing.xl),
                   sliver: SliverToBoxAdapter(
                     child: SeasonEpisodeSection(
-                        seasons: details.seasons!, contentPadding: padding),
+                      seasons: details.seasons!,
+                      contentPadding: padding,
+                      initialSeasonId: initialSeasonId,
+                    ),
                   ),
                 ),
               if (currentEpisode != null &&

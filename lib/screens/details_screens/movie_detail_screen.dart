@@ -15,6 +15,7 @@ import 'package:fladder/screens/details_screens/components/media_meta_line.dart'
 import 'package:fladder/screens/details_screens/components/media_stream_selectors.dart';
 import 'package:fladder/screens/shared/media_detail_scaffold.dart';
 import 'package:fladder/theme/app_theme.dart';
+import 'package:fladder/util/humanize_duration.dart';
 import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
 import 'package:fladder/util/item_base_model/play_item_helpers.dart';
 import 'package:fladder/util/localization_helper.dart';
@@ -58,8 +59,9 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
         ? ''
         : buildMediaMetaLine(
             year: details.premiereDate.year,
-            runTime: details.overview.runTime,
-            resolution: resolution,
+            extras: [details.overview.runTime?.humanize, resolution]
+                .nonNulls
+                .toList(),
             communityRating: details.overview.communityRating,
             genres:
                 details.overview.genreItems.map((genre) => genre.name).toList(),

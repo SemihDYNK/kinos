@@ -5,10 +5,11 @@ import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/models/items/episode_model.dart';
 import 'package:fladder/models/items/images_models.dart';
 import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/widgets/shared/focus_row.dart';
 import 'package:fladder/widgets/shared/grid_focus_traveler.dart';
+import 'package:fladder/widgets/shared/media_progress_bar.dart';
+import 'package:fladder/widgets/shared/media_thumbnail.dart';
 
 /// En dessous de ce nombre d'items, la rangée n'est pas étalée sur toute la
 /// largeur — cf. [_SparseRow].
@@ -154,23 +155,10 @@ class _ContinueWatchingCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  _ContinueWatchingThumbnail(
+                  MediaThumbnail(
                       thumbnail: _thumbnail,
                       fallback: item.getPosters?.primary),
-                  if (item.userData.progress > 0)
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: SizedBox(
-                        height: 3,
-                        child: LinearProgressIndicator(
-                          value: (item.userData.progress / 100).clamp(0, 1),
-                          minHeight: 3,
-                          backgroundColor: AppColors.progressTrack,
-                          valueColor: const AlwaysStoppedAnimation(
-                              AppColors.textPrimary),
-                        ),
-                      ),
-                    ),
+                  MediaProgressBar(progress: item.userData.progress),
                 ],
               ),
             ),
@@ -189,37 +177,6 @@ class _ContinueWatchingCard extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// La vignette reste au format 16:9 (alignement de grille), mais l'image
-/// elle-même n'est jamais rognée : cover si on a un vrai visuel 16:9
-/// (thumb/backdrop), contain + fond neutre si on retombe sur la Primary
-/// (portrait, 2:3) faute de mieux.
-class _ContinueWatchingThumbnail extends StatelessWidget {
-  final ImageData? thumbnail;
-  final ImageData? fallback;
-
-  const _ContinueWatchingThumbnail(
-      {required this.thumbnail, required this.fallback});
-
-  @override
-  Widget build(BuildContext context) {
-    if (thumbnail != null) {
-      return FladderImage(image: thumbnail, fit: BoxFit.cover);
-    }
-    if (fallback == null) {
-      return const ColoredBox(color: AppColors.surface);
-    }
-    return ColoredBox(
-      color: AppColors.surface,
-      child: Center(
-        child: AspectRatio(
-          aspectRatio: 2 / 3,
-          child: FladderImage(image: fallback, fit: BoxFit.cover),
-        ),
       ),
     );
   }

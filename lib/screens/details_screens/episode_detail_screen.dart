@@ -2,237 +2,233 @@ import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:intl/intl.dart';
 
 import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/providers/items/episode_details_provider.dart';
 import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/details_screens/components/media_stream_information.dart';
-import 'package:fladder/screens/details_screens/components/overview_header.dart';
-import 'package:fladder/screens/shared/detail_scaffold.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/screens/shared/media/chapter_row.dart';
-import 'package:fladder/screens/shared/media/components/media_play_button.dart';
-import 'package:fladder/screens/shared/media/episode_posters.dart';
-import 'package:fladder/screens/shared/media/expanding_text.dart';
-import 'package:fladder/screens/shared/media/external_urls.dart';
-import 'package:fladder/screens/shared/media/people_row.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
+import 'package:fladder/screens/details_screens/components/media_info_formatters.dart';
+import 'package:fladder/screens/details_screens/components/media_info_section.dart';
+import 'package:fladder/screens/details_screens/components/media_meta_line.dart';
+import 'package:fladder/screens/details_screens/components/media_stream_selectors.dart';
+import 'package:fladder/screens/shared/media_detail_scaffold.dart';
+import 'package:fladder/theme/app_theme.dart';
+import 'package:fladder/util/humanize_duration.dart';
 import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
 import 'package:fladder/util/item_base_model/play_item_helpers.dart';
-import 'package:fladder/util/list_padding.dart';
 import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/people_extension.dart';
 import 'package:fladder/util/router_extension.dart';
-import 'package:fladder/util/widget_extensions.dart';
 import 'package:fladder/widgets/shared/item_actions.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
-import 'package:fladder/widgets/shared/selectable_icon_button.dart';
 
+/// Fiche d'un épisode ouvert directement (recherche, "Continuer à
+/// regarder"...) — même structure que [MediaDetailScaffold] pour film et
+/// série (bandeau plein cadre, bloc titre superposé, voile, alignement
+/// unique du contenu), avec un lien vers la série parente sous le titre.
 class EpisodeDetailScreen extends ConsumerStatefulWidget {
   final ItemBaseModel item;
   const EpisodeDetailScreen({required this.item, super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ItemDetailScreenState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _EpisodeDetailScreenState();
 }
 
-class _ItemDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
-  AutoDisposeStateNotifierProvider<EpisodeDetailsProvider, EpisodeDetailModel> get providerInstance =>
-      episodeDetailsProvider(widget.item.id);
+class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
+  AutoDisposeStateNotifierProvider<EpisodeDetailsProvider, EpisodeDetailModel>
+      get providerId => episodeDetailsProvider(widget.item.id);
+
+  /// Largeur de lecture confortable pour le résumé — ~80 caractères.
+  static const _readingWidth = 640.0;
 
   @override
   Widget build(BuildContext context) {
-    final details = ref.watch(providerInstance);
-    final seasonDetails = details.series;
-    final episodeDetails = details.episode;
-    final wrapAlignment =
-        AdaptiveLayout.viewSizeOf(context) != ViewSize.phone ? WrapAlignment.start : WrapAlignment.center;
+    final state = ref.watch(providerId);
+    // `state.episode` est null tant que le premier fetchDetails n'a pas
+    // abouti — cf. le même repli que movie/series_detail_screen.dart :
+    // MediaDetailScaffold doit toujours être construit (c'est son
+    // PullToRefresh interne qui déclenche fetchDetails), avec repli sur
+    // `widget.item` tant que le chargement n'est pas terminé.
+    final details = state.episode;
+    final series = state.series;
+    final item = details ?? widget.item;
 
-    final actors = details.episode?.overview.people ?? [];
+    final version = details?.mediaStreams.currentVersionStream;
+    final metaLine = details == null
+        ? ''
+        : buildMediaMetaLine(
+            extras: [
+              details.seasonEpisodeLabel(context.localized),
+              if (details.dateAired != null)
+                DateFormat.yMMMd(Localizations.localeOf(context).toString())
+                    .format(details.dateAired!),
+              if (details.overview.runTime?.humanize != null)
+                details.overview.runTime!.humanize!,
+            ],
+            communityRating: details.overview.communityRating,
+            genres: (series?.overview.genreItems ?? details.overview.genreItems)
+                .map((genre) => genre.name)
+                .toList(),
+          );
 
-    return DetailScaffold(
-      label: widget.item.name,
-      windowTitle: widget.item.windowTitle(context.localized),
-      item: details.episode,
-      actions: (context) => details.episode?.generateActions(
-        context,
-        ref,
-        exclude: {
-          if (details.series == null) ItemActions.openShow,
-          ItemActions.details,
-        },
-        onDeleteSuccesFully: (item) {
-          if (context.mounted) {
-            context.router.popBack();
-          }
-        },
-      ),
-      onRefresh: () async => await ref.read(providerInstance.notifier).fetchDetails(widget.item),
-      backDrops: details.episode?.images ?? details.series?.images,
-      content: (detailsContext, padding) => seasonDetails != null && episodeDetails != null
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 64),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  OverviewHeader(
-                    name: details.series?.name ?? "",
-                    image: seasonDetails.images,
-                    mainButton: episodeDetails.playAble
-                        ? MediaPlayButton(
-                            item: episodeDetails,
-                            onPressed: (restart) async {
-                              await details.episode.play(
-                                detailsContext,
-                                ref,
-                                startPosition: restart ? Duration.zero : null,
-                              );
-                              ref.read(providerInstance.notifier).fetchDetails(widget.item);
-                            },
-                            onLongPressed: (restart) async {
-                              await details.episode.play(
-                                detailsContext,
-                                ref,
-                                showPlaybackOption: true,
-                                startPosition: restart ? Duration.zero : null,
-                              );
-                              ref.read(providerInstance.notifier).fetchDetails(widget.item);
-                            },
-                          )
-                        : null,
-                    centerButtons: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: wrapAlignment,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        SelectableIconButton(
-                          onPressed: () async {
-                            await ref
-                                .read(userProvider.notifier)
-                                .setAsFavorite(!(episodeDetails.userData.isFavourite), episodeDetails.id);
-                          },
-                          selected: episodeDetails.userData.isFavourite,
-                          selectedIcon: IconsaxPlusBold.heart,
-                          icon: IconsaxPlusLinear.heart,
-                        ),
-                        SelectableIconButton(
-                          onPressed: () async {
-                            await ref
-                                .read(userProvider.notifier)
-                                .markAsPlayed(!(episodeDetails.userData.played), episodeDetails.id);
-                          },
-                          selected: episodeDetails.userData.played,
-                          selectedIcon: IconsaxPlusBold.tick_circle,
-                          icon: IconsaxPlusLinear.tick_circle,
-                        ),
-                        SelectableIconButton(
-                          refreshOnEnd: false,
-                          onPressed: () async {
-                            await showBottomSheetPill(
-                              context: detailsContext,
-                              content: (context, scrollController) => ListView(
-                                controller: scrollController,
-                                shrinkWrap: true,
-                                children: episodeDetails
-                                    .generateActions(detailsContext, ref)
-                                    .listTileItems(context, useIcons: true),
-                              ),
-                            );
-                          },
-                          selected: false,
-                          icon: IconsaxPlusLinear.more,
-                        ),
-                      ].nonNulls.toList(),
-                    ),
-                    padding: padding,
-                    subTitle: details.episode?.detailedName(detailsContext.localized),
-                    originalTitle: details.series?.originalTitle,
-                    onTitleClicked: () => details.series?.navigateTo(detailsContext),
-                    productionYear: details.episode?.dateAired != null
-                        ? DateFormat.yMMMEd(context.localized.localeName).format(details.episode!.dateAired!)
-                        : null,
-                    runTime: details.episode?.overview.runTime,
-                    studios: details.series?.overview.studios ?? [],
-                    genres: details.series?.overview.genreItems ?? [],
-                    onGenreClicked: (genre) {
-                      final itemViewId = details.series?.parentId ?? "";
-                      LibrarySearchRoute(
-                        parentId: [itemViewId],
-                        genres: {genre.name: true},
-                      ).push(context);
-                    },
-                    officialRating: details.episode?.overview.parentalRating,
-                    communityRating: details.episode?.overview.communityRating,
-                    mediaStreamHelper: details.episode?.mediaStreams != null
-                        ? MediaStreamHelper(
-                            mediaStream: details.episode!.mediaStreams,
-                            onItemChanged: (changed) {
-                              final updateEpisode = details.episode!.copyWith(
-                                mediaStreams: changed,
-                              );
-                              ref.read(providerInstance.notifier).updateEpisode(updateEpisode);
-                            },
-                          )
-                        : null,
-                  ),
-                  if (episodeDetails.overview.summary.isNotEmpty == true)
-                    ExpandingText(
-                      text: episodeDetails.overview.summary,
-                    ).padding(padding),
-                  if (episodeDetails.chapters.isNotEmpty)
-                    ChapterRow(
-                      chapters: episodeDetails.chapters,
-                      contentPadding: padding,
-                      onPressed: (chapter) async {
-                        await details.episode?.play(detailsContext, ref, startPosition: chapter.startPosition);
-                        ref.read(providerInstance.notifier).fetchDetails(widget.item);
-                      },
-                    ),
-                  if (actors.mainCast.isNotEmpty == true)
-                    PeopleRow(
-                      people: actors.mainCast,
-                      contentPadding: padding,
-                    ),
-                  if (actors.guestActors.isNotEmpty == true)
-                    PeopleRow(
-                      people: actors.guestActors,
-                      contentPadding: padding,
-                    ),
-                  if (details.episodes.length > 1)
-                    EpisodePosters(
-                      contentPadding: padding,
-                      label: detailsContext.localized
-                          .moreFrom("${detailsContext.localized.season(1).toLowerCase()} ${episodeDetails.season}"),
-                      onEpisodeTap: (action, episodeModel) {
-                        if (episodeModel.id == episodeDetails.id) {
-                          FladderSnack.show(detailsContext.localized.selectedWith(detailsContext.localized.episode(0)),
-                              context: detailsContext);
-                        } else {
-                          action();
-                        }
-                      },
-                      playEpisode: (episode) => episode.play(
-                        detailsContext,
-                        ref,
-                      ),
-                      episodes: details.episodes.where((element) => element.season == episodeDetails.season).toList(),
-                    ),
-                  if (details.series?.overview.externalUrls?.isNotEmpty == true)
-                    Padding(
-                      padding: padding,
-                      child: ExternalUrlsRow(
-                        urls: details.series?.overview.externalUrls,
-                      ),
-                    )
-                ].addPadding(const EdgeInsets.symmetric(vertical: 16)),
+    final info = details == null
+        ? const <({String label, String value})>[]
+        : <({String label, String value})>[
+            if (details.overview.directors.isNotEmpty)
+              (
+                label: context.localized
+                    .director(details.overview.directors.length),
+                value: details.overview.directors.map((p) => p.name).join(', '),
               ),
-            )
-          : Container(),
+            if (details.overview.writers.isNotEmpty)
+              (
+                label:
+                    context.localized.writer(details.overview.writers.length),
+                value: details.overview.writers.map((p) => p.name).join(', '),
+              ),
+            if (details.dateAired != null)
+              (
+                label: context.localized.releaseDate,
+                value:
+                    DateFormat.yMMMd(Localizations.localeOf(context).toString())
+                        .format(details.dateAired!),
+              ),
+            if (details.overview.communityRating != null &&
+                details.overview.communityRating != 0)
+              (
+                label: context.localized.communityRating,
+                value: details.overview.communityRating!.toStringAsFixed(1)
+              ),
+          ];
+
+    final technicalInfo = details == null
+        ? const <({String label, String value})>[]
+        : <({String label, String value})>[
+            if (version?.container != null)
+              (label: 'Conteneur', value: version!.container!.toUpperCase()),
+            if (version?.videoStreams.firstOrNull?.codec.isNotEmpty ?? false)
+              (
+                label: 'Codec vidéo',
+                value: version!.videoStreams.first.codec.toUpperCase()
+              ),
+            if (details.mediaStreams.currentAudioStream?.codec.isNotEmpty ??
+                false)
+              (
+                label: 'Codec audio',
+                value:
+                    details.mediaStreams.currentAudioStream!.codec.toUpperCase()
+              ),
+            if (formatFileSize(version?.size) != null)
+              (label: 'Taille', value: formatFileSize(version?.size)!),
+            if (formatBitrate(version?.bitrate) != null)
+              (label: 'Débit', value: formatBitrate(version?.bitrate)!),
+          ];
+
+    return MediaDetailScaffold(
+      label: item.name,
+      item: item,
+      // L'épisode a sa propre vignette (le plan qui l'illustre) ; à
+      // défaut, celle de la série.
+      backDrops: details?.images ?? series?.images,
+      onRefresh: () async =>
+          await ref.read(providerId.notifier).fetchDetails(widget.item),
+      title: item.name,
+      parentLink: series == null
+          ? null
+          : (label: series.name, onTap: () => series.navigateTo(context)),
+      metaLine: metaLine,
+      onPlay: details == null
+          ? null
+          : () async {
+              await details.play(context, ref);
+              ref.read(providerId.notifier).fetchDetails(widget.item);
+            },
+      // "Reprendre S1 E3" / "Lire S1 E1" selon l'état de visionnage.
+      playLabel: details?.playButtonLabel(context.localized),
+      isFavourite: item.userData.isFavourite,
+      onToggleFavourite: () => ref.read(userProvider.notifier).setAsFavorite(
+            !item.userData.isFavourite,
+            item.id,
+          ),
+      isPlayed: item.userData.played,
+      onTogglePlayed: () => ref.read(userProvider.notifier).markAsPlayed(
+            !item.userData.played,
+            item.id,
+          ),
+      actions: details == null
+          ? null
+          : (context) => [
+                if (technicalInfo.isNotEmpty)
+                  ItemActionButton(
+                    icon: const Icon(Icons.info_outline_rounded),
+                    label: const Text('Informations techniques'),
+                    action: () => showMediaInfoSheet(
+                        context, 'Informations techniques', technicalInfo),
+                  ),
+                ...details.generateActions(
+                  context,
+                  ref,
+                  exclude: {
+                    ItemActions.play,
+                    ItemActions.playFromStart,
+                    ItemActions.details,
+                    ItemActions.markPlayed,
+                    ItemActions.markUnplayed,
+                    ItemActions.setFavorite,
+                    if (series == null) ItemActions.openShow,
+                  },
+                  onDeleteSuccesFully: (item) {
+                    if (context.mounted) context.router.popBack();
+                  },
+                ),
+              ],
+      content: (context, padding) => details == null
+          ? []
+          : [
+              if (details.overview.summary.isNotEmpty)
+                SliverPadding(
+                  padding: padding,
+                  sliver: SliverToBoxAdapter(
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxWidth: _readingWidth),
+                      child: Text(
+                        details.overview.summary,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ),
+                ),
+              if (details.mediaStreams.audioStreams.isNotEmpty ||
+                  details.mediaStreams.subStreams.isNotEmpty)
+                SliverPadding(
+                  padding: padding.copyWith(top: AppSpacing.lg),
+                  sliver: SliverToBoxAdapter(
+                    child: MediaStreamSelectors(
+                      mediaStream: details.mediaStreams,
+                      onChanged: (changed) => ref
+                          .read(providerId.notifier)
+                          .updateEpisode(
+                              details.copyWith(mediaStreams: changed)),
+                    ),
+                  ),
+                ),
+              if (details.overview.people.isNotEmpty ||
+                  state.guestActors.isNotEmpty ||
+                  info.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(
+                    child: MediaInfoSection(
+                      people: [
+                        ...details.overview.people,
+                        ...state.guestActors,
+                      ],
+                      info: info,
+                      contentPadding: padding,
+                    ),
+                  ),
+                ),
+            ],
     );
   }
 }
