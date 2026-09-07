@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
@@ -15,12 +14,12 @@ import 'package:fladder/providers/user_provider.dart';
 import 'package:fladder/routes/auto_router.gr.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_filter_dialogs.dart';
 import 'package:fladder/screens/shared/chips/category_chip.dart';
+import 'package:fladder/screens/shared/chips/filter_button.dart';
 import 'package:fladder/seerr/seerr_models.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/map_bool_helper.dart';
-import 'package:fladder/util/position_provider.dart';
 import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/widgets/shared/button_group.dart';
 
 class LibraryFilterChips extends ConsumerStatefulWidget {
   const LibraryFilterChips({super.key});
@@ -46,9 +45,9 @@ class _LibraryFilterChipsState extends ConsumerState<LibraryFilterChips> {
 
     final chips = [
       if (seerrAuthenticated)
-        ExpressiveButton(
-          isSelected: true,
-          icon: const Icon(IconsaxPlusBold.discover),
+        FilterButton(
+          isSelected: false,
+          icon: IconsaxPlusLinear.discover,
           label: Text(context.localized.discover),
           onPressed: () => context.pushRoute(SeerrSearchRoute(mode: SeerrSearchMode.search)),
         ),
@@ -84,11 +83,11 @@ class _LibraryFilterChipsState extends ConsumerState<LibraryFilterChips> {
         onSave: (value) => libraryProvider.setTypes(value),
         onClear: () => libraryProvider.setTypes(librarySearchResults.filters.types.setAll(false)),
       ),
-      ExpressiveButton(
+      FilterButton(
         isSelected: favourites != null,
         icon: switch (favourites) {
-          true => const Icon(IconsaxPlusBold.heart),
-          false => const Icon(IconsaxPlusBold.heart_slash),
+          true => IconsaxPlusBold.heart,
+          false => IconsaxPlusBold.heart_slash,
           null => null,
         },
         label: Text(context.localized.favorites),
@@ -106,9 +105,9 @@ class _LibraryFilterChipsState extends ConsumerState<LibraryFilterChips> {
           context.refreshData();
         },
       ),
-      ExpressiveButton(
+      FilterButton(
         isSelected: recursive == true,
-        icon: recursive == true ? const Icon(IconsaxPlusBold.tick_circle) : null,
+        icon: recursive == true ? IconsaxPlusBold.tick_circle : null,
         label: Text(context.localized.recursive),
         onPressed: () {
           libraryProvider.toggleRecursive();
@@ -126,9 +125,9 @@ class _LibraryFilterChipsState extends ConsumerState<LibraryFilterChips> {
           onClear: () => libraryProvider.setGenres(librarySearchResults.filters.genres.setAll(false)),
         ),
       if (librarySearchResults.filters.years.isNotEmpty)
-        ExpressiveButton(
+        FilterButton(
           isSelected: librarySearchResults.yearRange.$1 != null || librarySearchResults.yearRange.$2 != null,
-          icon: const Icon(IconsaxPlusBold.calendar_1),
+          icon: IconsaxPlusBold.calendar_1,
           label: Text(yearLabel(context, librarySearchResults.yearRange)),
           onPressed: () => openYearDialog(
             context,
@@ -160,9 +159,9 @@ class _LibraryFilterChipsState extends ConsumerState<LibraryFilterChips> {
           onCancel: () => libraryProvider.setTags(librarySearchResults.filters.tags),
           onClear: () => libraryProvider.setTags(librarySearchResults.filters.tags.setAll(false)),
         ),
-      ExpressiveButton(
+      FilterButton(
         isSelected: groupBy != GroupBy.none,
-        icon: groupBy != GroupBy.none ? const Icon(IconsaxPlusBold.bag_tick) : null,
+        icon: groupBy != GroupBy.none ? IconsaxPlusBold.bag_tick : null,
         label: Text(context.localized.group),
         onPressed: () {
           _openGroupDialogue(context, ref, libraryProvider, uniqueKey);
@@ -176,9 +175,9 @@ class _LibraryFilterChipsState extends ConsumerState<LibraryFilterChips> {
         onClear: () => libraryProvider.setFilters(librarySearchResults.filters.itemFilters.setAll(false)),
       ),
       if (librarySearchResults.filters.types[FladderItemType.series] == true)
-        ExpressiveButton(
+        FilterButton(
           isSelected: !hideEmpty,
-          icon: !hideEmpty ? const Icon(IconsaxPlusBold.ghost) : null,
+          icon: !hideEmpty ? IconsaxPlusBold.ghost : null,
           label: Text(!hideEmpty ? context.localized.hideEmpty : context.localized.showEmpty),
           onPressed: libraryProvider.toggleEmptyShows,
         ),
@@ -197,15 +196,8 @@ class _LibraryFilterChipsState extends ConsumerState<LibraryFilterChips> {
     return FocusTraversalGroup(
       policy: ReadingOrderTraversalPolicy(),
       child: Row(
-        spacing: 4,
-        children: chips.mapIndexed(
-          (index, element) {
-            final position = index == 0
-                ? PositionContext.first
-                : (index == chips.length - 1 ? PositionContext.last : PositionContext.middle);
-            return PositionProvider(position: position, child: element);
-          },
-        ).toList(),
+        spacing: AppSpacing.xxs,
+        children: chips,
       ),
     );
   }

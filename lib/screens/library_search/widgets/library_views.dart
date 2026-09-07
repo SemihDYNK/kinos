@@ -118,7 +118,10 @@ class LibraryViews extends ConsumerWidget {
         Widget createGrid(List<ItemBaseModel> items) {
           final width = MediaQuery.of(context).size.width;
           final cellWidth = (width / posterSize).floorToDouble();
-          final crossAxisCount = ((width / cellWidth).floor()).clamp(2, 10);
+          // Même plancher que columnsFor() (cf. AppDensity) : jamais une
+          // grille à 2 colonnes, trop proche d'une mise en page mobile
+          // (règle anti-mobile-first, CLAUDE.md).
+          final crossAxisCount = ((width / cellWidth).floor()).clamp(3, 10);
           return GridFocusTraveler(
             itemCount: items.length,
             crossAxisCount: crossAxisCount,

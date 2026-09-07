@@ -39,7 +39,6 @@ import 'package:fladder/util/refresh_state.dart';
 import 'package:fladder/util/router_extension.dart';
 import 'package:fladder/widgets/navigation_scaffold/components/background_image.dart';
 import 'package:fladder/widgets/navigation_scaffold/components/settings_user_icon.dart';
-import 'package:fladder/widgets/shared/bottom_menu_bar.dart';
 import 'package:fladder/widgets/shared/fladder_scrollbar.dart';
 import 'package:fladder/widgets/shared/hide_on_scroll.dart';
 import 'package:fladder/widgets/shared/item_actions.dart';
@@ -592,22 +591,10 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
             extendBody: true,
             backgroundColor: Colors.transparent,
             extendBodyBehindAppBar: true,
-            bottomNavigationBar: AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad
-                ? HideOnScroll(
-                    controller: scrollController,
-                    visibleBuilder: (visible) => BottomMenuBar(
-                      actions: generateQuickActions(false),
-                      combined: true,
-                      extended: visible,
-                      sticky: librarySearchResults.selecteMode,
-                      fabAction: FloatingActionButton(
-                        onPressed: () => playLibrary(false),
-                        tooltip: context.localized.libraryPlayItems,
-                        child: const Icon(IconsaxPlusBold.play),
-                      ),
-                    ),
-                  )
-                : null,
+            // Pas de navigation en bas d'écran ni de bouton flottant (règle
+            // anti-mobile-first, CLAUDE.md) : lire/mélanger/sélectionner
+            // vivent uniquement dans la barre d'outils du haut
+            // (LibraryAppBar.quickActions), plus jamais dupliqués ici.
             body: PinchPosterZoom(
               scaleDifference: (difference) => ref.read(clientSettingsProvider.notifier).addPosterSize(difference),
               child: FladderScrollbar(
@@ -900,7 +887,10 @@ class LibraryAppBar extends ConsumerWidget {
               ),
             ],
           ),
-          if (AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad)
+          // Toujours visible (souris comme dPad) : seul point d'accès à
+          // lire/mélanger/sélectionner depuis que la barre du bas a été
+          // retirée (règle anti-mobile-first, CLAUDE.md).
+          if (quickActions.isNotEmpty)
             Container(
               padding: EdgeInsets.only(
                 right: AdaptiveLayout.adaptivePadding(context).right,
