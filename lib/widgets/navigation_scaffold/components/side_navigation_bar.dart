@@ -211,6 +211,39 @@ class SideNavigationRail extends ConsumerWidget {
                             ),
                           ),
                         ),
+                        // Séparateur : les réglages ne sont pas une
+                        // destination de navigation comme les autres, d'où
+                        // le trait plutôt qu'un simple espacement.
+                        const Padding(
+                          padding: EdgeInsetsDirectional.symmetric(
+                              horizontal: AppSpacing.sm),
+                          child: Divider(
+                              height: AppSpacing.sm,
+                              thickness: 1,
+                              color: AppColors.border),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xs, vertical: 2),
+                          child: CustomTooltip(
+                            position: tooltipPosition,
+                            tooltipContent: expanded
+                                ? null
+                                : _TooltipBubble(
+                                    label: context.localized.settings),
+                            child: FocusRing(
+                              borderRadius: AppRadii.controlBorder,
+                              onActivate: () => _openSettings(context),
+                              child: _RailRow(
+                                icon: IconsaxPlusLinear.setting_2,
+                                label: context.localized.settings,
+                                selected: context.router.current.name
+                                    .contains('Settings'),
+                                expanded: expanded,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -221,6 +254,14 @@ class SideNavigationRail extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  void _openSettings(BuildContext context) {
+    if (AdaptiveLayout.layoutModeOf(context) == LayoutMode.single) {
+      context.router.push(const SettingsRoute());
+    } else {
+      context.router.push(const ClientSettingsRoute());
+    }
   }
 
   /// Accueil, Films, Séries, Recherche, Demandes, Gestion — dans cet ordre.
