@@ -8,6 +8,7 @@ import 'package:fladder/providers/seerr/seerr_request_provider.dart';
 import 'package:fladder/screens/seerr/widgets/season_download_progress_widget.dart';
 import 'package:fladder/seerr/seerr_models.dart';
 import 'package:fladder/theme.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/focus_provider.dart';
 import 'package:fladder/util/localization_helper.dart';
@@ -63,10 +64,9 @@ class SeerrSeasonsSection extends ConsumerWidget {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: selected
-                        ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : Theme.of(context).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
-                    borderRadius: FladderTheme.smallShape.borderRadius,
+                    color: selected ? AppColors.surfaceHigh : Colors.transparent,
+                    borderRadius: AppRadii.controlBorder,
+                    border: Border.all(color: selected ? AppColors.borderStrong : AppColors.border),
                   ),
                   padding: const EdgeInsets.all(8),
                   child: Row(
@@ -151,7 +151,7 @@ class SeerrSeasonsSection extends ConsumerWidget {
             });
           },
         ),
-        FilledButton(
+        OutlinedButton(
           onPressed: () => notifier.selectAllSeasons(),
           child: Text(context.localized.requestAll),
         )

@@ -74,6 +74,7 @@ abstract final class AppRadii {
 
   static const cardBorder = BorderRadius.all(Radius.circular(card));
   static const controlBorder = BorderRadius.all(Radius.circular(control));
+  static const sheetBorder = BorderRadius.all(Radius.circular(sheet));
 }
 
 abstract final class AppDurations {

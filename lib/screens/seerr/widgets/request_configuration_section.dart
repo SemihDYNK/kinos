@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fladder/providers/seerr/seerr_request_provider.dart';
-import 'package:fladder/seerr/seerr_models.dart';
+import 'package:fladder/screens/seerr/widgets/seerr_config_selector.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_user_label.dart';
+import 'package:fladder/seerr/seerr_models.dart';
 import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/enum_selection.dart';
 import 'package:fladder/widgets/shared/item_actions.dart';
 
 class RequestConfigurationSection extends ConsumerWidget {
@@ -51,7 +51,7 @@ class RequestConfigurationSection extends ConsumerWidget {
           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         if (availableServers.isNotEmpty && availableServers.length > 1)
-          EnumSelection(
+          SeerrConfigSelector(
             label: Text(context.localized.server),
             current: requestState.serverLabel(currentServer),
             itemBuilder: (context) => availableServers
@@ -64,7 +64,7 @@ class RequestConfigurationSection extends ConsumerWidget {
                 .toList(),
           ),
         if (availableProfiles.isNotEmpty)
-          EnumSelection(
+          SeerrConfigSelector(
             label: Text(context.localized.qualityProfile),
             current: requestState.selectedProfile?.name ?? context.localized.selectProfile,
             itemBuilder: (context) => availableProfiles
@@ -75,7 +75,7 @@ class RequestConfigurationSection extends ConsumerWidget {
                 .toList(),
           ),
         if (availableRootFolders.isNotEmpty)
-          EnumSelection(
+          SeerrConfigSelector(
             label: Text(context.localized.rootFolder),
             current: requestState.selectedRootFolder != null
                 ? rootFolderLabel(context, requestState.selectedRootFolder!, defaultRootFolder)
@@ -88,7 +88,7 @@ class RequestConfigurationSection extends ConsumerWidget {
                 .toList(),
           ),
         if (availableTags.isNotEmpty)
-          EnumSelection(
+          SeerrConfigSelector(
             label: Text(context.localized.tags),
             current: requestState.selectedTags.isEmpty
                 ? context.localized.noTags
@@ -114,7 +114,7 @@ class RequestConfigurationSection extends ConsumerWidget {
             ],
           ),
         if (requestState.currentUser?.canManageUsers == true)
-          EnumSelection(
+          SeerrConfigSelector(
             label: Text(context.localized.requestAs),
             current: requestState.selectedUser?.label ?? requestState.currentUser?.label ?? context.localized.unknown,
             currentWidget: SeerrUserLabel(user: requestState.selectedUser ?? requestState.currentUser),

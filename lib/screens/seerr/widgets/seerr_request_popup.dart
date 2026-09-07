@@ -4,10 +4,10 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/models/seerr/seerr_dashboard_model.dart';
 import 'package:fladder/providers/seerr/seerr_request_provider.dart';
 import 'package:fladder/providers/user_provider.dart';
+import 'package:fladder/screens/details_screens/components/media_meta_line.dart';
 import 'package:fladder/screens/seerr/widgets/request_configuration_section.dart';
 import 'package:fladder/screens/seerr/widgets/request_popup_widgets.dart';
 import 'package:fladder/screens/seerr/widgets/seasons_section.dart';
@@ -15,7 +15,7 @@ import 'package:fladder/screens/shared/adaptive_dialog.dart';
 import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
 import 'package:fladder/screens/shared/media/external_urls.dart';
 import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/theme.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/fladder_image.dart';
 import 'package:fladder/util/focus_provider.dart';
@@ -30,6 +30,8 @@ Future<void> openSeerrRequestPopup(
 ) async {
   await showDialogAdaptive(
     context: context,
+    backgroundColor: AppColors.surfaceHigh,
+    shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder),
     builder: (context) => SeerrRequestPopup(
       requestModel: poster,
     ),
@@ -93,12 +95,21 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
     final currentUser = requestState.currentUser;
     final canShowAdvancedConfiguration = currentUser?.canManageRequests ?? false;
 
+    // "PG · 2026 · 6.1 · Family, Fantasy, Comedy, Adventure" — texte simple,
+    // jamais de badges colorés (même règle que la fiche détail Seerr).
+    final metaLine = buildMediaMetaLine(
+      officialRating: requestState.contentRating,
+      year: DateTime.tryParse(requestState.releaseDate ?? '')?.year,
+      communityRating: requestState.voteAverage,
+      genres: requestState.genres.map((genre) => genre.name).nonNulls.toList(),
+    );
+
     return PullToRefresh(
       onRefresh: () => notifier.initialize(widget.requestModel),
       child: (context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
         child: Column(
-          spacing: 8,
+          spacing: AppSpacing.sm,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -107,7 +118,7 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
-                  spacing: 8,
+                  spacing: AppSpacing.sm,
                   children: [
                     AutoApproveBanner(user: currentUser, isTv: requestState.isTv),
                     if (requestState.activeQuota != null && requestState.activeQuota?.hasRestrictions == true)
@@ -117,22 +128,25 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                       ),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 16,
+                      spacing: AppSpacing.md,
                       children: [
                         if (model.images.primary != null)
                           FocusButton(
                             onTap: () => openSeerrLink(context, model),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: AppRadii.cardBorder,
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: AppRadii.cardBorder,
                               child: SizedBox(
                                 width: 100,
                                 height: 150,
                                 child: FladderImage(
                                   image: model.images.primary,
-                                  placeHolder: Container(
-                                    color: Colors.grey,
-                                    child: Icon(FladderItemType.movie.icon),
+                                  placeHolder: ColoredBox(
+                                    color: AppColors.surfaceHigh,
+                                    child: Icon(
+                                      model.type == SeerrMediaType.movie ? Icons.movie_outlined : Icons.tv_outlined,
+                                      color: AppColors.textDisabled,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -142,149 +156,59 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
-                            spacing: 4,
+                            spacing: AppSpacing.xxs,
                             children: [
-                              Flexible(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        model.title,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge
-                                            ?.copyWith(fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    if (model.hasDisplayStatus)
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                            decoration: BoxDecoration(
-                                              color: model.displayStatusColor.withAlpha(200),
-                                              borderRadius: FladderTheme.smallShape.borderRadius,
-                                            ),
-                                            child: Text(
-                                              model.displayStatusLabel(context),
-                                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primaryContainer,
-                                      borderRadius: FladderTheme.smallShape.borderRadius,
-                                    ),
+                                  Expanded(
                                     child: Text(
-                                      model.type == SeerrMediaType.movie
-                                          ? context.localized.mediaTypeMovie(1)
-                                          : context.localized.mediaTypeSeries(1),
-                                      style: Theme.of(context).textTheme.bodyMedium,
+                                      model.title,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium
+                                          ?.copyWith(color: AppColors.textPrimary),
                                     ),
                                   ),
-                                  if (requestState.voteAverage != null && requestState.voteAverage! > 0)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.secondaryContainer,
-                                        borderRadius: FladderTheme.smallShape.borderRadius,
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        spacing: 4,
-                                        children: [
-                                          Icon(
-                                            IconsaxPlusBold.star_1,
-                                            size: 16,
-                                            color: Theme.of(context).colorScheme.onSecondaryContainer,
-                                          ),
-                                          Text(
-                                            requestState.voteAverage!.toStringAsFixed(1),
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                  color: Theme.of(context).colorScheme.onSecondaryContainer,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  if (requestState.contentRating != null && requestState.contentRating!.isNotEmpty)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.tertiaryContainer,
-                                        borderRadius: FladderTheme.smallShape.borderRadius,
-                                      ),
-                                      child: Text(
-                                        requestState.contentRating!,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: Theme.of(context).colorScheme.onTertiaryContainer,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                      ),
-                                    ),
-                                  if (requestState.releaseDate != null && requestState.releaseDate!.isNotEmpty)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                        borderRadius: FladderTheme.smallShape.borderRadius,
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        spacing: 4,
-                                        children: [
-                                          Icon(
-                                            IconsaxPlusBold.calendar,
-                                            size: 14,
-                                            color: Theme.of(context).colorScheme.onSurface,
-                                          ),
-                                          Text(
-                                            DateTime.tryParse(requestState.releaseDate!)?.year.toString() ??
-                                                requestState.releaseDate!,
-                                            style: Theme.of(context).textTheme.bodyMedium,
-                                          ),
-                                        ],
+                                  // Statut (disponible/en attente...) : un vrai
+                                  // indicateur d'état, pas une pastille
+                                  // cosmétique — laissé tel quel.
+                                  if (model.hasDisplayStatus)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: AppSpacing.xs),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.sm, vertical: AppSpacing.xxs),
+                                        decoration: BoxDecoration(
+                                          color: model.displayStatusColor.withAlpha(200),
+                                          borderRadius: AppRadii.controlBorder,
+                                        ),
+                                        child: Text(
+                                          model.displayStatusLabel(context),
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
                                       ),
                                     ),
                                 ],
                               ),
-                              if (requestState.genres.isNotEmpty)
-                                Wrap(
-                                  spacing: 4,
-                                  runSpacing: 4,
-                                  children: requestState.genres.map((genre) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        genre.name ?? '',
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                      ),
-                                    );
-                                  }).toList(),
+                              if (metaLine.isNotEmpty)
+                                Text(
+                                  metaLine,
+                                  style:
+                                      Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
                                 ),
-                              SelectableText(
-                                model.overview.trim().isEmpty ? context.localized.noOverviewAvailable : model.overview,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                maxLines: 4,
+                              Padding(
+                                padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                                child: SelectableText(
+                                  model.overview.trim().isEmpty
+                                      ? context.localized.noOverviewAvailable
+                                      : model.overview,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
+                                  maxLines: 4,
+                                ),
                               ),
                             ],
                           ),
@@ -292,7 +216,7 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                       ],
                     ),
                     if (model.type == SeerrMediaType.tvshow && seasons.isNotEmpty) ...[
-                      const Divider(),
+                      const Divider(color: AppColors.border),
                       SeerrSeasonsSection(
                         model: model,
                         requestState: requestState,
@@ -301,7 +225,7 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                       ),
                     ],
                     if (canShowAdvancedConfiguration) ...[
-                      const Divider(),
+                      const Divider(color: AppColors.border),
                       RequestConfigurationSection(
                         requestState: requestState,
                       ),
@@ -310,14 +234,14 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                 ),
               ),
             ),
-            const Divider(),
+            const Divider(color: AppColors.border),
             if (requestState.hasRequestPermission == false) ...[
               const PermissionDeniedWarning(),
             ],
             if (requestState.isAnime) ...[
               Text(
                 context.localized.seerrAnimeSeriesNote,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.secondary),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               ),
             ],
             FilledButtonAwait(
@@ -334,14 +258,14 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                   : null,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                spacing: 8,
+                spacing: AppSpacing.xs,
                 children: [
                   const Icon(IconsaxPlusBold.send_2),
                   Text(context.localized.submitRequest),
                 ],
               ),
             ),
-            ElevatedButton(
+            OutlinedButton(
               autofocus: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad,
               focusNode: _closeButtonFocusNode,
               onPressed: () => context.pop(),
