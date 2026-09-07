@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:fladder/providers/seerr_search_provider.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_filter_dialogs.dart';
 import 'package:fladder/screens/shared/chips/category_chip.dart';
+import 'package:fladder/screens/shared/chips/filter_button.dart';
 import 'package:fladder/seerr/seerr_models.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/map_bool_helper.dart';
-import 'package:fladder/util/position_provider.dart';
 import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/widgets/shared/button_group.dart';
 
 class SeerrFilterChips extends ConsumerWidget {
   const SeerrFilterChips({super.key});
@@ -47,15 +46,15 @@ class SeerrFilterChips extends ConsumerWidget {
             },
           ),
         if (searchMode == SeerrSearchMode.discoverMovies)
-          ExpressiveButton(
+          FilterButton(
             isSelected: filters.studio != null,
-            icon: filters.studio != null ? const Icon(IconsaxPlusBold.building) : null,
+            icon: filters.studio != null ? IconsaxPlusBold.building : null,
             label: Text(filters.studio?.name ?? context.localized.studio(1)),
             onPressed: () => openStudioDialog(context, notifier, filters),
           ),
-        ExpressiveButton(
+        FilterButton(
           isSelected: filters.yearGte != null || filters.yearLte != null,
-          icon: const Icon(IconsaxPlusBold.calendar_1),
+          icon: IconsaxPlusBold.calendar_1,
           label: Text(yearLabel(context, (filters.yearGte, filters.yearLte))),
           onPressed: () => openYearDialog(
             context,
@@ -64,9 +63,9 @@ class SeerrFilterChips extends ConsumerWidget {
           ),
         ),
         if (watchRegions.isNotEmpty)
-          ExpressiveButton(
+          FilterButton(
             isSelected: true,
-            icon: const Icon(Icons.public),
+            icon: Icons.public,
             label: Text('${context.localized.countryRegion}: ${filters.watchRegion ?? 'US'}'),
             onPressed: () => openWatchRegionDialog(context, notifier, filters, watchRegions),
           ),
@@ -106,11 +105,9 @@ class SeerrFilterChips extends ConsumerWidget {
               context.refreshData();
             },
           ),
-        ExpressiveButton(
+        FilterButton(
           isSelected: filters.voteAverageGte != null || filters.voteAverageLte != null,
-          icon: filters.voteAverageGte != null || filters.voteAverageLte != null
-              ? const Icon(IconsaxPlusBold.star)
-              : null,
+          icon: filters.voteAverageGte != null || filters.voteAverageLte != null ? IconsaxPlusBold.star : null,
           label: Text(ratingLabel(context, filters)),
           onPressed: () => openRatingDialog(context, notifier, filters),
         ),
@@ -130,9 +127,9 @@ class SeerrFilterChips extends ConsumerWidget {
             },
           ),
         if (searchMode == SeerrSearchMode.discoverMovies)
-          ExpressiveButton(
+          FilterButton(
             isSelected: filters.runtimeGte != null || filters.runtimeLte != null,
-            icon: filters.runtimeGte != null || filters.runtimeLte != null ? const Icon(IconsaxPlusBold.timer) : null,
+            icon: filters.runtimeGte != null || filters.runtimeLte != null ? IconsaxPlusBold.timer : null,
             label: Text(runtimeLabel(context, filters)),
             onPressed: () => openRuntimeDialog(context, notifier, filters),
           ),
@@ -142,23 +139,16 @@ class SeerrFilterChips extends ConsumerWidget {
     return FocusTraversalGroup(
       policy: ReadingOrderTraversalPolicy(),
       child: Row(
-        spacing: 4,
+        spacing: AppSpacing.xxs,
         children: [
-          ExpressiveButton(
+          FilterButton(
             isSelected: true,
-            icon: Icon(searchMode.icon),
+            icon: searchMode.icon,
             label: Text(searchMode.label(context)),
             onPressed: () => openSearchModeDialog(context, notifier, searchMode),
           ),
           const VerticalDivider(),
-          ...chips.mapIndexed(
-            (index, element) {
-              final position = index == 0
-                  ? PositionContext.first
-                  : (index == chips.length - 1 ? PositionContext.last : PositionContext.middle);
-              return PositionProvider(position: position, child: element);
-            },
-          )
+          ...chips,
         ],
       ),
     );

@@ -6,8 +6,10 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:fladder/models/items/images_models.dart';
 import 'package:fladder/models/seerr/seerr_dashboard_model.dart';
+import 'package:fladder/providers/seerr_dashboard_provider.dart';
 import 'package:fladder/providers/seerr_search_provider.dart';
 import 'package:fladder/providers/settings/client_settings_provider.dart';
+import 'package:fladder/screens/seerr/widgets/seerr_discover_rows.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_filter_chips.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_filter_dialogs.dart';
 import 'package:fladder/screens/seerr/widgets/seerr_poster_card.dart';
@@ -25,7 +27,6 @@ import 'package:fladder/util/router_extension.dart';
 import 'package:fladder/util/sliver_list_padding.dart';
 import 'package:fladder/widgets/navigation_scaffold/components/background_image.dart';
 import 'package:fladder/widgets/navigation_scaffold/components/settings_user_icon.dart';
-import 'package:fladder/widgets/shared/bottom_menu_bar.dart';
 import 'package:fladder/widgets/shared/ensure_visible.dart';
 import 'package:fladder/widgets/shared/grid_focus_traveler.dart';
 import 'package:fladder/widgets/shared/hide_on_scroll.dart';
@@ -69,6 +70,10 @@ class _SeerrSearchScreenState extends ConsumerState<SeerrSearchScreen> {
       if (widget.yearGte != null) {
         notifier.setYearRange(minYear: widget.yearGte);
       }
+      // Rangées de découverte par défaut (mode recherche, aucune requête
+      // tapée) : mêmes données que le tableau de bord "Demandes", jamais
+      // un écran vide en attendant une saisie — cf. SeerrDiscoverRows.
+      ref.read(seerrDashboardProvider.notifier).fetchDashboard();
       scrollController.addListener(_onScroll);
 
       _maybeTriggerLoadMore();
@@ -194,18 +199,9 @@ class _SeerrSearchScreenState extends ConsumerState<SeerrSearchScreen> {
           extendBody: true,
           backgroundColor: Colors.transparent,
           extendBodyBehindAppBar: true,
-          bottomNavigationBar: AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad
-              ? HideOnScroll(
-                  controller: scrollController,
-                  canHide: !floatingAppBar,
-                  child: IgnorePointer(
-                    ignoring: searchState.isLoading,
-                    child: _SeerrSearchBottomBar(
-                      actions: additonalActions,
-                    ),
-                  ),
-                )
-              : null,
+          // Pas de navigation en bas d'écran (règle anti-mobile-first,
+          // CLAUDE.md) : tri/filtres vivent uniquement dans la barre
+          // d'outils du haut (_SeerSearchScreenAppBar.menuActions).
           body: PullToRefresh(
             refreshKey: refreshKey,
             onRefresh: _refreshSearch,
@@ -250,7 +246,20 @@ class _SeerrSearchScreenState extends ConsumerState<SeerrSearchScreen> {
                     ),
                   ),
                 ),
-                if (searchResults.isEmpty && !searchState.isLoading)
+                if (searchResults.isEmpty &&
+                    !searchState.isLoading &&
+                    searchState.searchMode == SeerrSearchMode.search &&
+                    searchState.query.isEmpty &&
+                    !searchState.hasFilters)
+                  const SliverPadding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverToBoxAdapter(
+                      child: SeerrDiscoverRows(
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                    ),
+                  )
+                else if (searchResults.isEmpty && !searchState.isLoading)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(
@@ -267,7 +276,9 @@ class _SeerrSearchScreenState extends ConsumerState<SeerrSearchScreen> {
                                 ref.watch(clientSettingsProvider.select((value) => value.posterSize)));
                         final width = MediaQuery.of(context).size.width;
                         final cellWidth = (width / posterSize).floorToDouble();
-                        final crossAxisCount = ((width / cellWidth).floor()).clamp(2, 10);
+                        // Même plancher que columnsFor() (cf. AppDensity) :
+                        // jamais une grille à 2 colonnes.
+                        final crossAxisCount = ((width / cellWidth).floor()).clamp(3, 10);
 
                         return GridFocusTraveler(
                           itemCount: searchResults.length,
@@ -400,7 +411,10 @@ class _SeerSearchScreenAppBar extends StatelessWidget {
               ),
             ],
           ),
-          if (AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad)
+          // Toujours visible (souris comme dPad) : seul point d'accès à
+          // tri/filtres depuis que la barre du bas a été retirée (règle
+          // anti-mobile-first, CLAUDE.md).
+          if (menuActions.isNotEmpty)
             Container(
               padding: EdgeInsets.only(
                 right: AdaptiveLayout.adaptivePadding(context).right,
@@ -412,20 +426,6 @@ class _SeerSearchScreenAppBar extends StatelessWidget {
             )
         ],
       ),
-    );
-  }
-}
-
-class _SeerrSearchBottomBar extends StatelessWidget {
-  final List<ItemAction> actions;
-  const _SeerrSearchBottomBar({
-    required this.actions,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomMenuBar(
-      actions: actions,
     );
   }
 }
