@@ -54,6 +54,7 @@ class AutoRouter extends RootStackRouter {
           path: controlPanelPageRoute,
           children: _controlPanelRoutes,
         ),
+        AutoRoute(page: ArrHomeRoute.page, path: 'arr'),
       ],
     ),
     AutoRoute(page: LockRoute.page, path: '/locked'),
@@ -105,21 +106,42 @@ final List<AutoRoute> _defaultRoutes = [
 
 final List<AutoRoute> _settingsChildren = [
   AutoRoute(page: SettingsSelectionRoute.page, path: 'list'),
-  AutoRoute(page: ClientSettingsRoute.page, path: 'client', maintainState: false),
-  AutoRoute(page: ProfileSettingsRoute.page, path: 'security', maintainState: false),
-  AutoRoute(page: PlayerSettingsRoute.page, path: 'player', maintainState: false),
+  AutoRoute(
+      page: ClientSettingsRoute.page, path: 'client', maintainState: false),
+  AutoRoute(
+      page: ProfileSettingsRoute.page, path: 'security', maintainState: false),
+  AutoRoute(
+      page: PlayerSettingsRoute.page, path: 'player', maintainState: false),
+  AutoRoute(page: ArrSettingsRoute.page, path: 'arr', maintainState: false),
   AutoRoute(page: AboutSettingsRoute.page, path: 'about'),
 ];
 
 final List<AutoRoute> _controlPanelRoutes = [
   AutoRoute(page: ControlPanelSelectionRoute.page, path: 'list'),
-  AutoRoute(page: ControlDashboardRoute.page, path: 'dashboard', maintainState: false),
-  AutoRoute(page: ControlActiveTasksRoute.page, path: 'active-tasks', maintainState: false),
-  AutoRoute(page: ControlServerRoute.page, path: 'server-settings', maintainState: false),
-  AutoRoute(page: ControlUsersRoute.page, path: 'user-management', maintainState: false),
-  AutoRoute(page: ControlUserEditRoute.page, path: 'edit-user', maintainState: false),
-  AutoRoute(page: ControlLibrariesRoute.page, path: 'library-management', maintainState: false),
-  AutoRoute(page: ControlLiveTvRoute.page, path: 'live-tv', maintainState: false),
+  AutoRoute(
+      page: ControlDashboardRoute.page,
+      path: 'dashboard',
+      maintainState: false),
+  AutoRoute(
+      page: ControlActiveTasksRoute.page,
+      path: 'active-tasks',
+      maintainState: false),
+  AutoRoute(
+      page: ControlServerRoute.page,
+      path: 'server-settings',
+      maintainState: false),
+  AutoRoute(
+      page: ControlUsersRoute.page,
+      path: 'user-management',
+      maintainState: false),
+  AutoRoute(
+      page: ControlUserEditRoute.page, path: 'edit-user', maintainState: false),
+  AutoRoute(
+      page: ControlLibrariesRoute.page,
+      path: 'library-management',
+      maintainState: false),
+  AutoRoute(
+      page: ControlLiveTvRoute.page, path: 'live-tv', maintainState: false),
 ];
 
 class LockScreenGuard extends AutoRouteGuard {
@@ -128,8 +150,10 @@ class LockScreenGuard extends AutoRouteGuard {
   const LockScreenGuard({required this.ref});
 
   @override
-  Future<void> onNavigation(NavigationResolver resolver, StackRouter router) async {
-    if (ref.read(lockScreenActiveProvider) && resolver.routeName != const LockRoute().routeName) {
+  Future<void> onNavigation(
+      NavigationResolver resolver, StackRouter router) async {
+    if (ref.read(lockScreenActiveProvider) &&
+        resolver.routeName != const LockRoute().routeName) {
       router.replace(const LockRoute());
       return;
     } else {
@@ -144,7 +168,8 @@ class AuthGuard extends AutoRouteGuard {
   const AuthGuard({required this.ref});
 
   @override
-  Future<void> onNavigation(NavigationResolver resolver, StackRouter router) async {
+  Future<void> onNavigation(
+      NavigationResolver resolver, StackRouter router) async {
     if (resolver.route == router.current.route) {
       return;
     }

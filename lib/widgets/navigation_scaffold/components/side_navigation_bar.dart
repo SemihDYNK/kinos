@@ -5,6 +5,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
+import 'package:fladder/arr/providers/arr_providers.dart';
 import 'package:fladder/models/account_model.dart';
 import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/models/library_filter_model.dart';
@@ -77,9 +78,11 @@ class SideNavigationRail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final textDirection = Directionality.of(context);
     final isRtl = textDirection == TextDirection.rtl;
-    final tooltipPosition = isRtl ? TooltipPosition.left : TooltipPosition.right;
+    final tooltipPosition =
+        isRtl ? TooltipPosition.left : TooltipPosition.right;
 
-    final persistedExpanded = ref.watch(clientSettingsProvider.select((value) => value.expandSideBar));
+    final persistedExpanded = ref
+        .watch(clientSettingsProvider.select((value) => value.expandSideBar));
     final forceCollapsed = ref.watch(sideBarForceCollapsedProvider);
     final expanded = persistedExpanded && !forceCollapsed;
 
@@ -94,23 +97,28 @@ class SideNavigationRail extends ConsumerWidget {
 
     // -0.1 : évite un liseré d'un pixel entre le contenu et la barre à
     // certaines échelles d'écran (arrondi de layout).
-    final width = (expanded ? _expandedWidth : _collapsedWidth) + startInset - 0.1;
+    final width =
+        (expanded ? _expandedWidth : _collapsedWidth) + startInset - 0.1;
 
-    final fullScreenChildRoute = fullScreenRoutes.contains(context.router.current.name);
+    final fullScreenChildRoute =
+        fullScreenRoutes.contains(context.router.current.name);
 
-    final isAdmin = ref.watch(userProvider.select((value) => value?.policy?.isAdministrator ?? false));
-    final seerrAvailable = ref.watch(userProvider.select((value) => value?.seerrCredentials?.isConfigured ?? false));
+    final seerrAvailable = ref.watch(userProvider
+        .select((value) => value?.seerrCredentials?.isConfigured ?? false));
+    final arrAvailable = ref.watch(arrModuleAvailableProvider);
     final user = ref.watch(userProvider);
 
     final destinations = _railDestinations(
       context: context,
-      isAdmin: isAdmin,
       seerrAvailable: seerrAvailable,
+      arrAvailable: arrAvailable,
     );
     // navBarNode doit toujours pouvoir reprendre le focus : rattaché à
     // l'item actif, ou au premier par défaut si aucun ne correspond à la
     // route courante (ex. réglages, panneau de contrôle hors "Gestion").
-    final navBarNodeIndex = destinations.indexWhere((d) => d.selected).clamp(0, destinations.length - 1);
+    final navBarNodeIndex = destinations
+        .indexWhere((d) => d.selected)
+        .clamp(0, destinations.length - 1);
 
     return Stack(
       children: [
@@ -135,18 +143,26 @@ class SideNavigationRail extends ConsumerWidget {
                     color: AppColors.background,
                     padding: EdgeInsetsDirectional.only(
                       start: startInset,
-                      top: directionalPadding.top > 0 ? directionalPadding.top : AppSpacing.xs,
+                      top: directionalPadding.top > 0
+                          ? directionalPadding.top
+                          : AppSpacing.xs,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.xs),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xs,
+                              vertical: AppSpacing.xs),
                           child: FocusRing(
                             borderRadius: AppRadii.controlBorder,
-                            onActivate: () => ref.read(clientSettingsProvider.notifier).toggleSideBar(),
+                            onActivate: () => ref
+                                .read(clientSettingsProvider.notifier)
+                                .toggleSideBar(),
                             child: _RailRow(
-                              icon: expanded ? IconsaxPlusLinear.sidebar_left : IconsaxPlusLinear.menu,
+                              icon: expanded
+                                  ? IconsaxPlusLinear.sidebar_left
+                                  : IconsaxPlusLinear.menu,
                               expanded: false,
                               label: '',
                               selected: false,
@@ -156,16 +172,23 @@ class SideNavigationRail extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.sm),
                         for (var i = 0; i < destinations.length; i++)
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xs, vertical: 2),
                             child: CustomTooltip(
                               position: tooltipPosition,
-                              tooltipContent: expanded ? null : _TooltipBubble(label: destinations[i].label),
+                              tooltipContent: expanded
+                                  ? null
+                                  : _TooltipBubble(
+                                      label: destinations[i].label),
                               child: FocusRing(
                                 borderRadius: AppRadii.controlBorder,
-                                focusNode: i == navBarNodeIndex ? navBarNode : null,
+                                focusNode:
+                                    i == navBarNodeIndex ? navBarNode : null,
                                 onActivate: destinations[i].onTap,
                                 child: _RailRow(
-                                  icon: destinations[i].selected ? destinations[i].selectedIcon : destinations[i].icon,
+                                  icon: destinations[i].selected
+                                      ? destinations[i].selectedIcon
+                                      : destinations[i].icon,
                                   label: destinations[i].label,
                                   selected: destinations[i].selected,
                                   expanded: expanded,
@@ -175,15 +198,19 @@ class SideNavigationRail extends ConsumerWidget {
                           ),
                         const Spacer(),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.xs, AppSpacing.sm, AppSpacing.xs, AppSpacing.sm),
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.xs,
+                              AppSpacing.sm, AppSpacing.xs, AppSpacing.sm),
                           child: CustomTooltip(
                             position: tooltipPosition,
-                            tooltipContent: expanded ? null : _TooltipBubble(label: context.localized.switchUser),
+                            tooltipContent: expanded
+                                ? null
+                                : _TooltipBubble(
+                                    label: context.localized.switchUser),
                             child: FocusRing(
                               borderRadius: AppRadii.controlBorder,
                               onActivate: () => _switchProfile(context, ref),
-                              child: _ProfileRow(user: user, expanded: expanded),
+                              child:
+                                  _ProfileRow(user: user, expanded: expanded),
                             ),
                           ),
                         ),
@@ -201,16 +228,20 @@ class SideNavigationRail extends ConsumerWidget {
 
   /// Accueil, Films, Séries, Recherche, Demandes, Gestion — dans cet ordre.
   /// Demandes et Gestion n'apparaissent que si utilisables (Jellyseerr
-  /// configuré / compte administrateur) : les montrer sans condition mène
-  /// vers un écran cassé.
+  /// configuré / au moins un service *Arr configuré) : les montrer sans
+  /// condition mène vers un écran cassé ou vide.
   List<_RailDestination> _railDestinations({
     required BuildContext context,
-    required bool isAdmin,
     required bool seerrAvailable,
+    required bool arrAvailable,
   }) {
     final args = context.router.current.args;
     final activeTypes = args is LibrarySearchRouteArgs
-        ? (args.types?.entries.where((e) => e.value).map((e) => e.key).toSet() ?? const <FladderItemType>{})
+        ? (args.types?.entries
+                .where((e) => e.value)
+                .map((e) => e.key)
+                .toSet() ??
+            const <FladderItemType>{})
         : const <FladderItemType>{};
     final isLibrarySearch = args is LibrarySearchRouteArgs;
     final currentRouteName = context.router.current.name;
@@ -233,7 +264,8 @@ class SideNavigationRail extends ConsumerWidget {
         selected: setEquals(activeTypes, const {FladderItemType.movie}),
         onTap: () => context.router.navigate(
           LibrarySearchRoute().withFilter(
-            const LibraryFilterModel(types: {FladderItemType.movie: true}, recursive: true),
+            const LibraryFilterModel(
+                types: {FladderItemType.movie: true}, recursive: true),
           ),
         ),
       ),
@@ -244,7 +276,8 @@ class SideNavigationRail extends ConsumerWidget {
         selected: setEquals(activeTypes, const {FladderItemType.series}),
         onTap: () => context.router.navigate(
           LibrarySearchRoute().withFilter(
-            const LibraryFilterModel(types: {FladderItemType.series: true}, recursive: true),
+            const LibraryFilterModel(
+                types: {FladderItemType.series: true}, recursive: true),
           ),
         ),
       ),
@@ -263,13 +296,13 @@ class SideNavigationRail extends ConsumerWidget {
           selected: currentRouteName == SeerrRoute.name,
           onTap: () => context.router.navigate(const SeerrRoute()),
         ),
-      if (isAdmin)
+      if (arrAvailable)
         _RailDestination(
           label: 'Gestion',
           icon: IconsaxPlusLinear.chart_3,
           selectedIcon: IconsaxPlusBold.chart_3,
-          selected: currentRouteName.startsWith('Control'),
-          onTap: () => context.router.push(const ControlDashboardRoute()),
+          selected: currentRouteName.startsWith('Arr'),
+          onTap: () => context.router.push(const ArrHomeRoute()),
         ),
     ];
   }
@@ -293,10 +326,14 @@ class _TooltipBubble extends StatelessWidget {
         border: Border.all(color: AppColors.border),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
         child: Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textPrimary),
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: AppColors.textPrimary),
         ),
       ),
     );
@@ -321,7 +358,8 @@ class _RailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? AppColors.textPrimary : AppColors.textSecondary;
+    final foreground =
+        selected ? AppColors.textPrimary : AppColors.textSecondary;
     return Container(
       height: 44,
       decoration: BoxDecoration(
@@ -350,7 +388,10 @@ class _RailRow extends StatelessWidget {
                         label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: foreground),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(color: foreground),
                       ),
                     ),
                   ],
@@ -383,7 +424,10 @@ class _ProfileRow extends StatelessWidget {
             user?.name ?? '',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: AppColors.textPrimary),
           ),
         ),
       ],
@@ -401,8 +445,10 @@ class _RailTraversalPolicy extends ReadingOrderTraversalPolicy {
   @override
   bool inDirection(FocusNode currentNode, TraversalDirection direction) {
     final isRtl = Directionality.of(currentNode.context!) == TextDirection.rtl;
-    final toMainDirection = isRtl ? TraversalDirection.left : TraversalDirection.right;
-    final awayFromMainDirection = isRtl ? TraversalDirection.right : TraversalDirection.left;
+    final toMainDirection =
+        isRtl ? TraversalDirection.left : TraversalDirection.right;
+    final awayFromMainDirection =
+        isRtl ? TraversalDirection.right : TraversalDirection.left;
 
     if (direction == awayFromMainDirection) {
       return false;
@@ -415,14 +461,18 @@ class _RailTraversalPolicy extends ReadingOrderTraversalPolicy {
         return super.inDirection(currentNode, direction);
       }
     }
-    if (direction == TraversalDirection.up || direction == TraversalDirection.down) {
+    if (direction == TraversalDirection.up ||
+        direction == TraversalDirection.down) {
       final scope = currentNode.enclosingScope;
       if (scope == null) {
         return false;
       }
 
       final candidates = scope.traversalDescendants
-          .where((n) => n.canRequestFocus && FocusTraversalGroup.maybeOfNode(n) == this && _isLaidOut(n))
+          .where((n) =>
+              n.canRequestFocus &&
+              FocusTraversalGroup.maybeOfNode(n) == this &&
+              _isLaidOut(n))
           .toList();
 
       if (candidates.isEmpty) return false;
@@ -434,7 +484,8 @@ class _RailTraversalPolicy extends ReadingOrderTraversalPolicy {
         index = direction == TraversalDirection.down ? -1 : sorted.length;
       }
 
-      final nextIndex = direction == TraversalDirection.down ? index + 1 : index - 1;
+      final nextIndex =
+          direction == TraversalDirection.down ? index + 1 : index - 1;
 
       if (nextIndex < 0 || nextIndex >= sorted.length) {
         return true;
