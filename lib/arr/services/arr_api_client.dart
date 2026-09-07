@@ -257,12 +257,68 @@ abstract class ArrApiClient {
   void close() => _client.close();
 }
 
-/// Correspondance simple, insensible à la casse, appliquée côté client :
-/// l'API ne propose pas de recherche texte sur `/movie` ou `/series`, qui
-/// renvoient toute la bibliothèque.
-bool _matchesQuery(String title, String query) =>
-    query.trim().isEmpty ||
-    title.toLowerCase().contains(query.trim().toLowerCase());
+/// Caractères accentués courants (français, mais aussi espagnol,
+/// allemand, portugais...) vers leur équivalent non accentué — pas de
+/// `dart:ui`/paquet de normalisation Unicode disponible ici, une table de
+/// correspondance directe suffit au cas d'usage (titres de films/séries).
+const _accentedChars =
+    'ÀÁÂÃÄÅàáâãäåÒÓÔÕÖØòóôõöøÈÉÊËèéêëÇçÌÍÎÏìíîïÙÚÛÜùúûüÑñŸÿýŽžŠšČčĆćĐđ';
+const _plainChars =
+    'AAAAAAaaaaaaOOOOOOooooooEEEEeeeeCcIIIIiiiiUUUUuuuuNnYyyZzSsCcCcDd';
+
+String _stripDiacritics(String value) {
+  final buffer = StringBuffer();
+  for (final rune in value.runes) {
+    final char = String.fromCharCode(rune);
+    final index = _accentedChars.indexOf(char);
+    buffer.write(index == -1 ? char : _plainChars[index]);
+  }
+  return buffer.toString();
+}
+
+/// Normalise pour une comparaison insensible à la casse ET aux accents —
+/// une recherche "transformers" doit retrouver "Trans4mers" comme
+/// "Astérix" doit retrouver "Asterix".
+String _normalizeForSearch(String value) =>
+    _stripDiacritics(value.toLowerCase());
+
+/// Titres candidats d'un film/série (bibliothèque Radarr/Sonarr) pour la
+/// correspondance de recherche : le titre principal, mais aussi le titre
+/// original (langue d'origine, souvent différent du titre localisé) et
+/// les titres alternatifs (`alternateTitles[].title`) — sans ces deux
+/// derniers, une recherche ne retrouve que les entrées dont le titre
+/// *affiché* correspond exactement, ratant tout le reste de la
+/// bibliothèque.
+Iterable<String> _titleCandidates(Map<String, dynamic> json) sync* {
+  final title = json['title'];
+  if (title is String && title.isNotEmpty) yield title;
+  final original = json['originalTitle'];
+  if (original is String && original.isNotEmpty) yield original;
+  final alternates = json['alternateTitles'];
+  if (alternates is List) {
+    for (final entry in alternates) {
+      if (entry is Map && entry['title'] is String) {
+        yield entry['title'] as String;
+      } else if (entry is String) {
+        yield entry;
+      }
+    }
+  }
+}
+
+/// Correspondance appliquée côté client sur la réponse brute (avant
+/// construction du modèle d'affichage) : l'API ne propose pas de
+/// recherche texte sur `/movie` ou `/series`, qui renvoient toute la
+/// bibliothèque — seuls les films/séries déjà ajoutés à Radarr/Sonarr
+/// peuvent donc apparaître ici, ce n'est pas une recherche TMDB/TVDB.
+/// Insensible à la casse et aux accents ; cherche aussi dans le titre
+/// original et les titres alternatifs, pas seulement le titre affiché.
+bool _matchesQuery(Map<String, dynamic> json, String query) {
+  final normalizedQuery = _normalizeForSearch(query.trim());
+  if (normalizedQuery.isEmpty) return true;
+  return _titleCandidates(json)
+      .any((title) => _normalizeForSearch(title).contains(normalizedQuery));
+}
 
 class RadarrApiClient extends ArrApiClient {
   RadarrApiClient(
@@ -278,9 +334,9 @@ class RadarrApiClient extends ArrApiClient {
     return switch (result) {
       ArrSuccess(:final data) when data is List => ArrSuccess(data
           .whereType<Map<String, dynamic>>()
+          .where((json) => _matchesQuery(json, query))
           .map((json) =>
               ArrMovie.fromJson(json, baseUrl: baseUrl, apiKey: apiKey))
-          .where((movie) => _matchesQuery(movie.title, query))
           .toList()),
       ArrSuccess() =>
         const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
@@ -306,9 +362,9 @@ class SonarrApiClient extends ArrApiClient {
     return switch (result) {
       ArrSuccess(:final data) when data is List => ArrSuccess(data
           .whereType<Map<String, dynamic>>()
+          .where((json) => _matchesQuery(json, query))
           .map((json) =>
               ArrSeries.fromJson(json, baseUrl: baseUrl, apiKey: apiKey))
-          .where((series) => _matchesQuery(series.title, query))
           .toList()),
       ArrSuccess() =>
         const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),

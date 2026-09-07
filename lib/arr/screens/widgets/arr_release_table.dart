@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:fladder/arr/models/arr_grab_status.dart';
 import 'package:fladder/arr/models/arr_release.dart';
+import 'package:fladder/arr/screens/widgets/arr_rejection_tooltip.dart';
 import 'package:fladder/screens/details_screens/components/media_info_formatters.dart';
 import 'package:fladder/theme/app_theme.dart';
 
@@ -22,10 +23,13 @@ enum _ArrReleaseColumn {
 /// téléchargement se déclenche uniquement via le bouton dédié en fin de
 /// ligne (cf. [onGrab]), jamais par un clic sur la ligne elle-même.
 ///
-/// Largeurs de colonnes fixes (hors Titre, seule colonne extensible) :
-/// une table de données n'a pas d'échelle d'espacement à suivre comme un
-/// padding ou un rayon, ces valeurs sont documentées ici plutôt que
-/// reprises d'un jeton [AppSpacing].
+/// Largeurs de colonnes fixes (hors Titre, extensible mais avec un
+/// plancher, [_minTitleWidth]) : une table de données n'a pas d'échelle
+/// d'espacement à suivre comme un padding ou un rayon, ces valeurs sont
+/// documentées ici plutôt que reprises d'un jeton [AppSpacing]. En
+/// dessous de la largeur totale minimale ([_minTableWidth]), le tableau
+/// défile horizontalement plutôt que de comprimer/chevaucher ses
+/// colonnes — cf. [_buildTable].
 class ArrReleaseTable extends StatefulWidget {
   final List<ArrRelease> releases;
   final Map<String, ArrGrabStatus> grabStatuses;
@@ -51,13 +55,45 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
 
   static const _rejectedWidth = 28.0;
   static const _ageWidth = 56.0;
+  static const _minTitleWidth = 220.0;
   static const _indexerWidth = 128.0;
   static const _sizeWidth = 84.0;
-  static const _seedsWidth = 96.0;
+  // Assez large pour "999 / 999" (le pire cas plausible de seeders/peers)
+  // sans jamais frôler la colonne suivante.
+  static const _seedsWidth = 108.0;
   static const _qualityWidth = 116.0;
   static const _languagesWidth = 116.0;
   static const _scoreWidth = 64.0;
   static const _actionWidth = 40.0;
+
+  /// Espace entre deux colonnes — fixe, pas [AppSpacing.xs] réutilisé par
+  /// coïncidence : c'est un espacement de tableau, pas un padding d'écran.
+  static const _columnGap = AppSpacing.xs;
+
+  /// Largeur totale minimale du tableau (toutes colonnes + espacements),
+  /// hors barre de filtres : en dessous, le tableau défile
+  /// horizontalement plutôt que de laisser deux colonnes se chevaucher
+  /// (cf. CLAUDE.md — pas de mode salon pour ce module, mais une fenêtre
+  /// desktop peut tout de même être redimensionnée très étroite).
+  static const _minTableWidth = _rejectedWidth +
+      _columnGap +
+      _ageWidth +
+      _columnGap +
+      _minTitleWidth +
+      _columnGap +
+      _indexerWidth +
+      _columnGap +
+      _sizeWidth +
+      _columnGap +
+      _seedsWidth +
+      _columnGap +
+      _qualityWidth +
+      _columnGap +
+      _languagesWidth +
+      _columnGap +
+      _scoreWidth +
+      _columnGap +
+      _actionWidth;
 
   int _compareNum(num? a, num? b) {
     if (a == null && b == null) return 0;
@@ -148,22 +184,10 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
     widget.onGrab(release);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final releases = _visible;
+  Widget _buildTable(BuildContext context, List<ArrRelease> releases) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _ArrReleaseFilterBar(
-          hideRejected: _hideRejected,
-          minSeeders: _minSeeders,
-          onHideRejectedChanged: (value) =>
-              setState(() => _hideRejected = value),
-          onMinSeedersChanged: (value) => setState(() => _minSeeders = value),
-          shownCount: releases.length,
-          totalCount: widget.releases.length,
-        ),
-        const SizedBox(height: AppSpacing.sm),
         _ArrReleaseHeaderRow(
           sortColumn: _sortColumn,
           ascending: _ascending,
@@ -206,6 +230,43 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
               scoreWidth: _scoreWidth,
               actionWidth: _actionWidth,
             ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final releases = _visible;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ArrReleaseFilterBar(
+          hideRejected: _hideRejected,
+          minSeeders: _minSeeders,
+          onHideRejectedChanged: (value) =>
+              setState(() => _hideRejected = value),
+          onMinSeedersChanged: (value) => setState(() => _minSeeders = value),
+          shownCount: releases.length,
+          totalCount: widget.releases.length,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // Le tableau ne rétrécit jamais ses colonnes sous leur largeur
+        // minimale : sur une fenêtre étroite, il défile horizontalement
+        // plutôt que de laisser deux colonnes se chevaucher.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth < _minTableWidth
+                ? _minTableWidth
+                : constraints.maxWidth;
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: width,
+                child: _buildTable(context, releases),
+              ),
+            );
+          },
+        ),
       ],
     );
   }
@@ -402,27 +463,36 @@ class _ArrReleaseHeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const gap = SizedBox(width: AppSpacing.xs);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       child: Row(
         children: [
           SizedBox(width: rejectedWidth),
+          gap,
           _header(context, 'Âge', ageWidth, _ArrReleaseColumn.age,
               align: TextAlign.end),
-          const SizedBox(width: AppSpacing.xs),
+          gap,
           Expanded(
               child: _header(context, 'Release', double.infinity,
                   _ArrReleaseColumn.title)),
+          gap,
           _header(context, 'Indexeur', indexerWidth, _ArrReleaseColumn.indexer),
+          gap,
           _header(context, 'Taille', sizeWidth, _ArrReleaseColumn.size,
               align: TextAlign.end),
+          gap,
           _header(context, 'Seeds/Peers', seedsWidth, _ArrReleaseColumn.seeds,
               align: TextAlign.end),
+          gap,
           _header(context, 'Qualité', qualityWidth, _ArrReleaseColumn.quality),
+          gap,
           _header(
               context, 'Langues', languagesWidth, _ArrReleaseColumn.languages),
+          gap,
           _header(context, 'Score', scoreWidth, _ArrReleaseColumn.score,
               align: TextAlign.end),
+          gap,
           SizedBox(width: actionWidth),
         ],
       ),
@@ -480,10 +550,8 @@ class _ArrReleaseRow extends StatelessWidget {
 
   Widget _rejectionIndicator(BuildContext context) {
     if (!release.rejected) return const SizedBox.shrink();
-    return Tooltip(
-      message: release.rejections.isEmpty
-          ? 'Rejetée'
-          : release.rejections.join('\n'),
+    return ArrRejectionTooltip(
+      reasons: release.rejections,
       child: const Icon(Icons.report_gmailerrorred_rounded,
           size: 16, color: AppColors.error),
     );
@@ -542,6 +610,8 @@ class _ArrReleaseRow extends StatelessWidget {
             ? AppColors.textDisabled
             : AppColors.textPrimary.withValues(alpha: 0.9));
 
+    const gap = SizedBox(width: AppSpacing.xs);
+
     return ColoredBox(
       color: striped ? AppColors.surface : Colors.transparent,
       child: Padding(
@@ -553,12 +623,16 @@ class _ArrReleaseRow extends StatelessWidget {
               width: rejectedWidth,
               child: _rejectionIndicator(context),
             ),
+            gap,
             SizedBox(
               width: ageWidth,
-              child:
-                  Text(_ageLabel, textAlign: TextAlign.end, style: baseStyle),
+              child: Text(_ageLabel,
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: baseStyle),
             ),
-            const SizedBox(width: AppSpacing.xs),
+            gap,
             Expanded(
               child: Tooltip(
                 message: release.title,
@@ -570,6 +644,7 @@ class _ArrReleaseRow extends StatelessWidget {
                 ),
               ),
             ),
+            gap,
             SizedBox(
               width: indexerWidth,
               child: Text(
@@ -579,22 +654,29 @@ class _ArrReleaseRow extends StatelessWidget {
                 style: baseStyle,
               ),
             ),
+            gap,
             SizedBox(
               width: sizeWidth,
               child: Text(
                 formatFileSize(release.size) ?? '—',
                 textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: baseStyle,
               ),
             ),
+            gap,
             SizedBox(
               width: seedsWidth,
               child: Text(
                 _seedsLabel,
                 textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: baseStyle,
               ),
             ),
+            gap,
             SizedBox(
               width: qualityWidth,
               child: Text(
@@ -604,6 +686,7 @@ class _ArrReleaseRow extends StatelessWidget {
                 style: baseStyle,
               ),
             ),
+            gap,
             SizedBox(
               width: languagesWidth,
               child: Text(
@@ -613,14 +696,18 @@ class _ArrReleaseRow extends StatelessWidget {
                 style: baseStyle,
               ),
             ),
+            gap,
             SizedBox(
               width: scoreWidth,
               child: Text(
                 release.customFormatScore.toString(),
                 textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: baseStyle,
               ),
             ),
+            gap,
             SizedBox(
               width: actionWidth,
               child: Align(

@@ -33,6 +33,60 @@ void main() {
       expect(movies.map((m) => m.title), ['Dune', 'Dune: Part Two']);
     });
 
+    test('searchMovies is insensitive to case and accents', () async {
+      final client = RadarrApiClient(
+        baseUrl: 'https://radarr.example.com',
+        apiKey: 'key',
+        httpClient: MockClient((request) async => http.Response(
+              jsonEncode([
+                {'id': 1, 'title': 'Amélie', 'year': 2001},
+                {'id': 2, 'title': 'Arrival', 'year': 2016},
+              ]),
+              200,
+            )),
+      );
+
+      // Ni casse ni accent ne devraient empêcher la correspondance.
+      final result = await client.searchMovies('AMELIE');
+
+      expect((result as ArrSuccess).data.map((m) => m.title), ['Amélie']);
+    });
+
+    test('searchMovies also matches the original title and alternate titles',
+        () async {
+      final client = RadarrApiClient(
+        baseUrl: 'https://radarr.example.com',
+        apiKey: 'key',
+        httpClient: MockClient((request) async => http.Response(
+              jsonEncode([
+                {
+                  'id': 1,
+                  'title': 'Le Voyage de Chihiro',
+                  'originalTitle': 'Sen to Chihiro no Kamikakushi',
+                  'year': 2001,
+                },
+                {
+                  'id': 2,
+                  'title': 'Transformers: The Last Knight',
+                  'originalTitle': 'Transformers: The Last Knight',
+                  'alternateTitles': [
+                    {'title': 'Transformers 5'},
+                  ],
+                  'year': 2017,
+                },
+                {'id': 3, 'title': 'Arrival', 'year': 2016},
+              ]),
+              200,
+            )),
+      );
+
+      final byOriginalTitle = await client.searchMovies('chihiro');
+      expect((byOriginalTitle as ArrSuccess).data.map((m) => m.id), [1]);
+
+      final byAlternateTitle = await client.searchMovies('transformers 5');
+      expect((byAlternateTitle as ArrSuccess).data.map((m) => m.id), [2]);
+    });
+
     test('searchMovies returns everything when the query is empty', () async {
       final client = RadarrApiClient(
         baseUrl: 'https://radarr.example.com',
