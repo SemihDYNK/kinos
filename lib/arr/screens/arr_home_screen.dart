@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fladder/arr/models/arr_service.dart';
 import 'package:fladder/arr/providers/arr_providers.dart';
+import 'package:fladder/arr/screens/arr_search_screen.dart';
 import 'package:fladder/arr/widgets/arr_desktop_scope.dart';
 import 'package:fladder/routes/auto_router.gr.dart';
 import 'package:fladder/theme/app_theme.dart';
@@ -12,10 +13,10 @@ import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 
 /// Accueil du module *Arr — toujours atteignable depuis "Gestion", même
 /// sans aucun service configuré (sans quoi la configuration elle-même
-/// serait inatteignable). Pour l'instant un simple état des lieux des
-/// deux services, avec un lien direct vers leur configuration (Partie 1 :
-/// fondations) — la recherche interactive (Partie 2) prendra la place de
-/// cet écran une fois au moins un service configuré.
+/// serait inatteignable) : invite alors à la configurer. Dès qu'au moins
+/// un service l'est, affiche directement la recherche interactive
+/// ([ArrSearchScreen]) — un raccourci vers les réglages reste accessible
+/// en haut à droite pour ajuster ou ajouter l'autre service.
 @RoutePage()
 class ArrHomeScreen extends ConsumerWidget {
   const ArrHomeScreen({super.key});
@@ -40,51 +41,87 @@ class ArrHomeScreen extends ConsumerWidget {
         color: AppColors.background,
         child: Padding(
           padding: EdgeInsetsDirectional.only(start: sideBarInset),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Gestion',
-                    style: Theme.of(context).textTheme.displaySmall),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  noneConfigured
-                      ? 'Configurez Radarr et/ou Sonarr pour activer la recherche interactive.'
-                      : 'Recherche interactive Radarr et Sonarr — bientôt disponible ici.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                const _ArrServiceStatusRow(service: ArrService.radarr),
-                const SizedBox(height: AppSpacing.sm),
-                const _ArrServiceStatusRow(service: ArrService.sonarr),
-                const SizedBox(height: AppSpacing.lg),
-                FocusRing(
-                  borderRadius: AppRadii.controlBorder,
-                  onActivate: () =>
+          child: noneConfigured ? const _ArrInvite() : const _ArrSearchHome(),
+        ),
+      ),
+    );
+  }
+}
+
+/// Recherche interactive, avec un raccourci réglages toujours atteignable
+/// au-dessus (Stack + PositionedDirectional, même mécanique que le bouton
+/// retour de MediaDetailScaffold).
+class _ArrSearchHome extends StatelessWidget {
+  const _ArrSearchHome();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        const SingleChildScrollView(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: ArrSearchScreen(),
+        ),
+        PositionedDirectional(
+          top: MediaQuery.paddingOf(context).top + AppSpacing.sm,
+          end: AppSpacing.sm,
+          child: FocusRing(
+            borderRadius: AppRadii.controlBorder,
+            onActivate: () => context.router.push(const ArrSettingsRoute()),
+            child: ExcludeFocus(
+              child: Tooltip(
+                message: 'Réglages Radarr / Sonarr',
+                child: IconButton(
+                  onPressed: () =>
                       context.router.push(const ArrSettingsRoute()),
-                  child: ExcludeFocus(
-                    child: noneConfigured
-                        ? FilledButton(
-                            onPressed: () =>
-                                context.router.push(const ArrSettingsRoute()),
-                            child: const Text('Configurer Radarr / Sonarr'),
-                          )
-                        : OutlinedButton(
-                            onPressed: () =>
-                                context.router.push(const ArrSettingsRoute()),
-                            child: const Text('Réglages Radarr / Sonarr'),
-                          ),
-                  ),
+                  icon: const Icon(Icons.settings_outlined),
+                  color: AppColors.textSecondary,
                 ),
-              ],
+              ),
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _ArrInvite extends StatelessWidget {
+  const _ArrInvite();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Gestion', style: Theme.of(context).textTheme.displaySmall),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Configurez Radarr et/ou Sonarr pour activer la recherche interactive.',
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          const _ArrServiceStatusRow(service: ArrService.radarr),
+          const SizedBox(height: AppSpacing.sm),
+          const _ArrServiceStatusRow(service: ArrService.sonarr),
+          const SizedBox(height: AppSpacing.lg),
+          FocusRing(
+            borderRadius: AppRadii.controlBorder,
+            onActivate: () => context.router.push(const ArrSettingsRoute()),
+            child: ExcludeFocus(
+              child: FilledButton(
+                onPressed: () => context.router.push(const ArrSettingsRoute()),
+                child: const Text('Configurer Radarr / Sonarr'),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

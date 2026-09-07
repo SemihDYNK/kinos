@@ -3,6 +3,9 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'package:fladder/arr/models/arr_library_item.dart';
+import 'package:fladder/arr/models/arr_release.dart';
+
 /// Catégories d'échec explicites, pour un message clair côté écran —
 /// jamais une exception brute affichée telle quelle.
 enum ArrApiError {
@@ -187,8 +190,61 @@ abstract class ArrApiClient {
     return ArrConnectionOk(version);
   }
 
+  /// `GET /api/v3/release`, un des deux jeux de paramètres attendus par
+  /// l'API : `{movieId}` (Radarr), `{episodeId}` ou
+  /// `{seriesId, seasonNumber}` (Sonarr) — cf. [RadarrApiClient.releasesForMovie],
+  /// [SonarrApiClient.releasesForEpisode], [SonarrApiClient.releasesForSeason].
+  /// Peut prendre jusqu'à 30s : l'indexeur est interrogé en direct, pas une
+  /// base locale.
+  Future<ArrResult<List<ArrRelease>>> searchReleases(
+      Map<String, String> query) async {
+    final result = await get('/api/v3/release', query: query);
+    return switch (result) {
+      ArrSuccess(:final data) => _parseReleases(data),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  ArrResult<List<ArrRelease>> _parseReleases(dynamic data) {
+    if (data is! List) {
+      return const ArrFailure(
+          ArrApiError.invalidResponse, 'Réponse inattendue');
+    }
+    try {
+      return ArrSuccess(data
+          .whereType<Map<String, dynamic>>()
+          .map(ArrRelease.fromJson)
+          .toList());
+    } catch (_) {
+      return const ArrFailure(ArrApiError.invalidResponse, 'Réponse illisible');
+    }
+  }
+
+  /// `POST /api/v3/release` — envoie la release au téléchargement. Mêmes
+  /// `guid`/`indexerId` que ceux affichés dans le tableau de résultats.
+  Future<ArrResult<void>> grabRelease({
+    required String guid,
+    required int indexerId,
+  }) async {
+    final result = await post('/api/v3/release', body: {
+      'guid': guid,
+      'indexerId': indexerId,
+    });
+    return switch (result) {
+      ArrSuccess() => const ArrSuccess(null),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
   void close() => _client.close();
 }
+
+/// Correspondance simple, insensible à la casse, appliquée côté client :
+/// l'API ne propose pas de recherche texte sur `/movie` ou `/series`, qui
+/// renvoient toute la bibliothèque.
+bool _matchesQuery(String title, String query) =>
+    query.trim().isEmpty ||
+    title.toLowerCase().contains(query.trim().toLowerCase());
 
 class RadarrApiClient extends ArrApiClient {
   RadarrApiClient(
@@ -196,6 +252,25 @@ class RadarrApiClient extends ArrApiClient {
 
   @override
   String get expectedAppName => 'Radarr';
+
+  /// `GET /api/v3/movie` — toute la bibliothèque, filtrée sur [query]
+  /// côté client (cf. [_matchesQuery]).
+  Future<ArrResult<List<ArrMovie>>> searchMovies(String query) async {
+    final result = await get('/api/v3/movie');
+    return switch (result) {
+      ArrSuccess(:final data) when data is List => ArrSuccess(data
+          .whereType<Map<String, dynamic>>()
+          .map(ArrMovie.fromJson)
+          .where((movie) => _matchesQuery(movie.title, query))
+          .toList()),
+      ArrSuccess() =>
+        const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  Future<ArrResult<List<ArrRelease>>> releasesForMovie(int movieId) =>
+      searchReleases({'movieId': movieId.toString()});
 }
 
 class SonarrApiClient extends ArrApiClient {
@@ -204,4 +279,46 @@ class SonarrApiClient extends ArrApiClient {
 
   @override
   String get expectedAppName => 'Sonarr';
+
+  /// `GET /api/v3/series` — toute la bibliothèque, filtrée sur [query]
+  /// côté client (cf. [_matchesQuery]).
+  Future<ArrResult<List<ArrSeries>>> searchSeries(String query) async {
+    final result = await get('/api/v3/series');
+    return switch (result) {
+      ArrSuccess(:final data) when data is List => ArrSuccess(data
+          .whereType<Map<String, dynamic>>()
+          .map(ArrSeries.fromJson)
+          .where((series) => _matchesQuery(series.title, query))
+          .toList()),
+      ArrSuccess() =>
+        const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// `GET /api/v3/episode?seriesId=` — tous les épisodes d'une série,
+  /// pour le sélecteur saison/épisode.
+  Future<ArrResult<List<ArrEpisode>>> episodesForSeries(int seriesId) async {
+    final result =
+        await get('/api/v3/episode', query: {'seriesId': seriesId.toString()});
+    return switch (result) {
+      ArrSuccess(:final data) when data is List => ArrSuccess(data
+          .whereType<Map<String, dynamic>>()
+          .map(ArrEpisode.fromJson)
+          .toList()),
+      ArrSuccess() =>
+        const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  Future<ArrResult<List<ArrRelease>>> releasesForEpisode(int episodeId) =>
+      searchReleases({'episodeId': episodeId.toString()});
+
+  Future<ArrResult<List<ArrRelease>>> releasesForSeason(
+          int seriesId, int seasonNumber) =>
+      searchReleases({
+        'seriesId': seriesId.toString(),
+        'seasonNumber': seasonNumber.toString(),
+      });
 }
