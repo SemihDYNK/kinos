@@ -47,16 +47,6 @@ class ArrCredentialsNotifier extends StateNotifier<AsyncValue<ArrCredentials>> {
   }
 }
 
-/// Vrai si au moins un des deux services est configuré (URL + clé) —
-/// conditionne la visibilité de l'entrée "Gestion" de la barre latérale.
-final arrModuleAvailableProvider = Provider<bool>((ref) {
-  final radarr =
-      ref.watch(arrCredentialsProvider(ArrService.radarr)).valueOrNull;
-  final sonarr =
-      ref.watch(arrCredentialsProvider(ArrService.sonarr)).valueOrNull;
-  return (radarr?.isConfigured ?? false) || (sonarr?.isConfigured ?? false);
-});
-
 /// Client prêt à l'emploi pour un service, ou `null` tant qu'il n'est pas
 /// configuré — reconstruit automatiquement si les identifiants changent.
 final arrApiClientProvider =

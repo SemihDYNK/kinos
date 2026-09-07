@@ -5,7 +5,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/arr/providers/arr_providers.dart';
 import 'package:fladder/models/account_model.dart';
 import 'package:fladder/models/item_base_model.dart';
 import 'package:fladder/models/library_filter_model.dart';
@@ -105,13 +104,11 @@ class SideNavigationRail extends ConsumerWidget {
 
     final seerrAvailable = ref.watch(userProvider
         .select((value) => value?.seerrCredentials?.isConfigured ?? false));
-    final arrAvailable = ref.watch(arrModuleAvailableProvider);
     final user = ref.watch(userProvider);
 
     final destinations = _railDestinations(
       context: context,
       seerrAvailable: seerrAvailable,
-      arrAvailable: arrAvailable,
     );
     // navBarNode doit toujours pouvoir reprendre le focus : rattaché à
     // l'item actif, ou au premier par défaut si aucun ne correspond à la
@@ -227,13 +224,13 @@ class SideNavigationRail extends ConsumerWidget {
   }
 
   /// Accueil, Films, Séries, Recherche, Demandes, Gestion — dans cet ordre.
-  /// Demandes et Gestion n'apparaissent que si utilisables (Jellyseerr
-  /// configuré / au moins un service *Arr configuré) : les montrer sans
-  /// condition mène vers un écran cassé ou vide.
+  /// Demandes n'apparaît que si utilisable (Jellyseerr configuré) : la
+  /// montrer sans condition mène vers un écran cassé. Gestion, elle, reste
+  /// toujours visible même sans aucun service *Arr configuré — c'est par
+  /// elle qu'on les configure, la masquer la rendrait inatteignable.
   List<_RailDestination> _railDestinations({
     required BuildContext context,
     required bool seerrAvailable,
-    required bool arrAvailable,
   }) {
     final args = context.router.current.args;
     final activeTypes = args is LibrarySearchRouteArgs
@@ -296,14 +293,13 @@ class SideNavigationRail extends ConsumerWidget {
           selected: currentRouteName == SeerrRoute.name,
           onTap: () => context.router.navigate(const SeerrRoute()),
         ),
-      if (arrAvailable)
-        _RailDestination(
-          label: 'Gestion',
-          icon: IconsaxPlusLinear.chart_3,
-          selectedIcon: IconsaxPlusBold.chart_3,
-          selected: currentRouteName.startsWith('Arr'),
-          onTap: () => context.router.push(const ArrHomeRoute()),
-        ),
+      _RailDestination(
+        label: 'Gestion',
+        icon: IconsaxPlusLinear.chart_3,
+        selectedIcon: IconsaxPlusBold.chart_3,
+        selected: currentRouteName.startsWith('Arr'),
+        onTap: () => context.router.push(const ArrHomeRoute()),
+      ),
     ];
   }
 

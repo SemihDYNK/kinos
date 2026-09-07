@@ -148,8 +148,9 @@ abstract class ArrApiClient {
             ArrApiError.invalidResponse, 'Réponse illisible');
       }
     }
-    if (status == 401 || status == 403)
+    if (status == 401 || status == 403) {
       return const ArrFailure(ArrApiError.unauthorized);
+    }
     if (status == 404) return const ArrFailure(ArrApiError.notFound);
     return ArrFailure(ArrApiError.serverError, 'HTTP $status');
   }
