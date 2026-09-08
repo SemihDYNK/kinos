@@ -12,13 +12,10 @@ import 'package:fladder/screens/shared/chips/filter_button.dart';
 import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
 import 'package:fladder/theme/app_theme.dart';
 
-enum _LibrarySort { title, year, status }
-
-enum _LibraryFilter { all, monitored, unmonitored, missing }
-
 /// Onglet "Bibliothèque" — grille virtualisée des jaquettes, un seul
-/// appel par session (cf. [arrLibraryProvider]). Tri/filtre en état
-/// local à cet écran : aucun provider partagé, ni avec l'onglet File
+/// appel par session (cf. [arrLibraryProvider]). Tri/filtre dans
+/// [arrLibraryViewProvider], en famille par instance comme le reste du
+/// module : jamais partagé entre Radarr et Sonarr, ni avec l'onglet File
 /// d'attente, ni avec Recherche/Films/Séries (cf. CLAUDE.md, le bug déjà
 /// rencontré avec un filtre partagé entre onglets).
 class ArrLibraryScreen extends ConsumerStatefulWidget {
@@ -31,24 +28,33 @@ class ArrLibraryScreen extends ConsumerStatefulWidget {
 }
 
 class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
-  _LibrarySort _sort = _LibrarySort.title;
-  _LibraryFilter _filter = _LibraryFilter.all;
+  int _compareBase(ArrLibrarySort sort, ArrLibraryEntry a, ArrLibraryEntry b) {
+    return switch (sort) {
+      // Absente : traitée comme la plus ancienne possible, pour finir en
+      // dernier une fois le tri inversé (le plus récent d'abord).
+      ArrLibrarySort.added =>
+        (a.added ?? DateTime(1970)).compareTo(b.added ?? DateTime(1970)),
+      ArrLibrarySort.title =>
+        a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      ArrLibrarySort.year => (a.year ?? 0).compareTo(b.year ?? 0),
+      ArrLibrarySort.status => a.statusLabel.compareTo(b.statusLabel),
+    };
+  }
 
-  List<ArrLibraryEntry> _apply(List<ArrLibraryEntry> entries) {
+  List<ArrLibraryEntry> _apply(
+      List<ArrLibraryEntry> entries, ArrLibraryViewState view) {
     final filtered = entries
-        .where((e) => switch (_filter) {
-              _LibraryFilter.all => true,
-              _LibraryFilter.monitored => e.monitored,
-              _LibraryFilter.unmonitored => !e.monitored,
-              _LibraryFilter.missing => !e.hasContent,
+        .where((e) => switch (view.filter) {
+              ArrLibraryFilter.all => true,
+              ArrLibraryFilter.monitored => e.monitored,
+              ArrLibraryFilter.unmonitored => !e.monitored,
+              ArrLibraryFilter.missing => !e.hasContent,
             })
         .toList();
-    filtered.sort((a, b) => switch (_sort) {
-          _LibrarySort.title =>
-            a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-          _LibrarySort.year => (b.year ?? 0).compareTo(a.year ?? 0),
-          _LibrarySort.status => a.statusLabel.compareTo(b.statusLabel),
-        });
+    filtered.sort((a, b) {
+      final cmp = _compareBase(view.sort, a, b);
+      return view.ascending ? cmp : -cmp;
+    });
     return filtered;
   }
 
@@ -231,7 +237,10 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
       return const SizedBox.shrink();
     }
 
-    final entries = _apply(state.entries);
+    final view = ref.watch(arrLibraryViewProvider(widget.service));
+    final viewNotifier =
+        ref.read(arrLibraryViewProvider(widget.service).notifier);
+    final entries = _apply(state.entries, view);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,27 +259,27 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
               spacing: AppSpacing.xxs,
               children: [
                 FilterButton(
-                  isSelected: _filter == _LibraryFilter.all,
+                  isSelected: view.filter == ArrLibraryFilter.all,
                   label: const Text('Tout'),
-                  onPressed: () => setState(() => _filter = _LibraryFilter.all),
+                  onPressed: () => viewNotifier.setFilter(ArrLibraryFilter.all),
                 ),
                 FilterButton(
-                  isSelected: _filter == _LibraryFilter.monitored,
+                  isSelected: view.filter == ArrLibraryFilter.monitored,
                   label: const Text('Surveillé'),
                   onPressed: () =>
-                      setState(() => _filter = _LibraryFilter.monitored),
+                      viewNotifier.setFilter(ArrLibraryFilter.monitored),
                 ),
                 FilterButton(
-                  isSelected: _filter == _LibraryFilter.unmonitored,
+                  isSelected: view.filter == ArrLibraryFilter.unmonitored,
                   label: const Text('Non surveillé'),
                   onPressed: () =>
-                      setState(() => _filter = _LibraryFilter.unmonitored),
+                      viewNotifier.setFilter(ArrLibraryFilter.unmonitored),
                 ),
                 FilterButton(
-                  isSelected: _filter == _LibraryFilter.missing,
+                  isSelected: view.filter == ArrLibraryFilter.missing,
                   label: const Text('Manquant'),
                   onPressed: () =>
-                      setState(() => _filter = _LibraryFilter.missing),
+                      viewNotifier.setFilter(ArrLibraryFilter.missing),
                 ),
               ],
             ),
@@ -278,22 +287,46 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
             FocusRing(
               borderRadius: AppRadii.controlBorder,
               child: ExcludeFocus(
-                child: PopupMenuButton<_LibrarySort>(
+                child: PopupMenuButton<ArrLibrarySort>(
                   tooltip: 'Trier',
                   color: AppColors.surfaceHigh,
                   shape: const RoundedRectangleBorder(
                       borderRadius: AppRadii.sheetBorder),
                   icon: const Icon(Icons.sort_rounded,
                       color: AppColors.textSecondary),
-                  onSelected: (value) => setState(() => _sort = value),
+                  onSelected: viewNotifier.setSort,
                   itemBuilder: (context) => const [
                     PopupMenuItem(
-                        value: _LibrarySort.title, child: Text('Titre')),
+                        value: ArrLibrarySort.added,
+                        child: Text('Date d\'ajout')),
                     PopupMenuItem(
-                        value: _LibrarySort.year, child: Text('Année')),
+                        value: ArrLibrarySort.title, child: Text('Titre')),
                     PopupMenuItem(
-                        value: _LibrarySort.status, child: Text('Statut')),
+                        value: ArrLibrarySort.year, child: Text('Année')),
+                    PopupMenuItem(
+                        value: ArrLibrarySort.status, child: Text('Statut')),
                   ],
+                ),
+              ),
+            ),
+            // Sens du tri : contrôle indépendant du critère, mémorisé par
+            // critère (cf. ArrLibraryViewState.ascendingByCriterion) — pas
+            // question qu'inverser "Date d'ajout" retourne aussi "Titre".
+            FocusRing(
+              borderRadius: AppRadii.controlBorder,
+              onActivate: viewNotifier.toggleDirection,
+              child: ExcludeFocus(
+                child: Tooltip(
+                  message: view.ascending ? 'Croissant' : 'Décroissant',
+                  child: IconButton(
+                    onPressed: viewNotifier.toggleDirection,
+                    icon: Icon(
+                      view.ascending
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -17,6 +17,7 @@ class ArrLibraryEntry {
   int get id => movie?.id ?? series!.id;
   String get title => movie?.title ?? series!.title;
   int? get year => movie?.year ?? series?.year;
+  DateTime? get added => movie?.added ?? series?.added;
   String? get posterUrl => movie?.posterUrl ?? series?.posterUrl;
   bool get monitored => movie?.monitored ?? series?.monitored ?? false;
 

@@ -9,6 +9,47 @@ import 'package:fladder/arr/models/arr_library_poster.dart';
 import 'package:fladder/arr/services/arr_api_client.dart';
 
 void main() {
+  group('added date parsing', () {
+    test('ArrMovie.fromJson parses a realistic "added" timestamp', () {
+      final movie = ArrMovie.fromJson(
+        {'id': 1, 'title': 'Dune', 'added': '2024-03-15T10:30:00Z'},
+        baseUrl: 'https://radarr.example.com',
+        apiKey: 'key',
+      );
+      expect(movie.added, DateTime.utc(2024, 3, 15, 10, 30));
+    });
+
+    test('ArrSeries.fromJson parses a realistic "added" timestamp', () {
+      final series = ArrSeries.fromJson(
+        {'id': 1, 'title': 'Severance', 'added': '2023-11-02T08:00:00Z'},
+        baseUrl: 'https://sonarr.example.com',
+        apiKey: 'key',
+      );
+      expect(series.added, DateTime.utc(2023, 11, 2, 8, 0));
+    });
+
+    test('a missing or malformed "added" field degrades to null', () {
+      expect(
+        ArrMovie.fromJson({'id': 1, 'title': 'X'},
+                baseUrl: 'https://radarr.example.com', apiKey: 'key')
+            .added,
+        isNull,
+      );
+      expect(
+        ArrMovie.fromJson({'id': 1, 'title': 'X', 'added': 'not a date'},
+                baseUrl: 'https://radarr.example.com', apiKey: 'key')
+            .added,
+        isNull,
+      );
+      expect(
+        ArrMovie.fromJson({'id': 1, 'title': 'X', 'added': 12345},
+                baseUrl: 'https://radarr.example.com', apiKey: 'key')
+            .added,
+        isNull,
+      );
+    });
+  });
+
   group('arrNativePosterUrl', () {
     test('builds the mediacover route, no trailing slash issue', () {
       expect(

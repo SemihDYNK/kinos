@@ -120,6 +120,7 @@ class ArrLibraryNotifier extends StateNotifier<ArrLibraryState> {
         monitored: monitored,
         hasFile: movie.hasFile,
         qualityName: movie.qualityName,
+        added: movie.added,
         raw: {...movie.raw, 'monitored': monitored},
       ));
     }
@@ -133,6 +134,7 @@ class ArrLibraryNotifier extends StateNotifier<ArrLibraryState> {
       seasonCount: series.seasonCount,
       episodeCount: series.episodeCount,
       episodeFileCount: series.episodeFileCount,
+      added: series.added,
       raw: {...series.raw, 'monitored': monitored},
     ));
   }
@@ -195,4 +197,85 @@ class ArrLibraryNotifier extends StateNotifier<ArrLibraryState> {
               Future.value(const ArrFailure(
                   ArrApiError.unreachable, 'Service non configuré')),
       };
+}
+
+/// Critère de tri de la bibliothèque — [added] (date d'ajout) est le
+/// critère par défaut : c'est la dernière chose ajoutée qu'on cherche le
+/// plus souvent en ouvrant cet onglet.
+enum ArrLibrarySort { added, title, year, status }
+
+enum ArrLibraryFilter { all, monitored, unmonitored, missing }
+
+/// Sens naturel de chaque critère la première fois qu'il est choisi :
+/// `true` = croissant (alphabétique pour un titre), `false` = décroissant
+/// (le plus récent d'abord pour une date). Un critère déjà choisi une
+/// fois garde ensuite le sens que l'utilisateur lui a donné, cf.
+/// [ArrLibraryViewState.ascendingFor].
+const _defaultAscending = <ArrLibrarySort, bool>{
+  ArrLibrarySort.added: false,
+  ArrLibrarySort.title: true,
+  ArrLibrarySort.year: false,
+  ArrLibrarySort.status: true,
+};
+
+/// Tri + filtre de la bibliothèque d'un service — en famille par
+/// instance comme [arrLibraryProvider] et [arrQueueProvider] : jamais
+/// partagé entre Radarr et Sonarr, ni avec l'onglet File d'attente ni
+/// les écrans Recherche/Films/Séries. État pur (pas d'appel réseau) :
+/// gardé en vie pour la session dès la construction, pour qu'un
+/// aller-retour entre les onglets de [ArrHomeScreen] ne réinitialise pas
+/// le tri/filtre choisi.
+final arrLibraryViewProvider = StateNotifierProvider.family
+    .autoDispose<ArrLibraryViewNotifier, ArrLibraryViewState, ArrService>(
+  (ref, service) {
+    ref.keepAlive();
+    return ArrLibraryViewNotifier();
+  },
+);
+
+class ArrLibraryViewState {
+  final ArrLibrarySort sort;
+  final ArrLibraryFilter filter;
+
+  /// Sens mémorisé par critère déjà choisi au moins une fois — un
+  /// critère absent de cette map suit encore [_defaultAscending].
+  final Map<ArrLibrarySort, bool> ascendingByCriterion;
+
+  const ArrLibraryViewState({
+    this.sort = ArrLibrarySort.added,
+    this.filter = ArrLibraryFilter.all,
+    this.ascendingByCriterion = const {},
+  });
+
+  bool get ascending => ascendingByCriterion[sort] ?? _defaultAscending[sort]!;
+
+  ArrLibraryViewState copyWith({
+    ArrLibrarySort? sort,
+    ArrLibraryFilter? filter,
+    Map<ArrLibrarySort, bool>? ascendingByCriterion,
+  }) {
+    return ArrLibraryViewState(
+      sort: sort ?? this.sort,
+      filter: filter ?? this.filter,
+      ascendingByCriterion: ascendingByCriterion ?? this.ascendingByCriterion,
+    );
+  }
+}
+
+class ArrLibraryViewNotifier extends StateNotifier<ArrLibraryViewState> {
+  ArrLibraryViewNotifier() : super(const ArrLibraryViewState());
+
+  void setSort(ArrLibrarySort sort) => state = state.copyWith(sort: sort);
+
+  void setFilter(ArrLibraryFilter filter) =>
+      state = state.copyWith(filter: filter);
+
+  /// Bascule croissant/décroissant du critère *courant* uniquement — le
+  /// sens des autres critères, mémorisé séparément, n'est pas affecté.
+  void toggleDirection() {
+    state = state.copyWith(ascendingByCriterion: {
+      ...state.ascendingByCriterion,
+      state.sort: !state.ascending,
+    });
+  }
 }

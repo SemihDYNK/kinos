@@ -31,6 +31,12 @@ String? resolveArrPosterUrl(
   return '$normalizedBase$relative${separator}apikey=$apiKey';
 }
 
+/// Date d'ajout à la bibliothèque (`added`, commun à `/movie` et
+/// `/series`) — `null` si absente ou d'un type inattendu plutôt que de
+/// lever, cohérent avec le reste du parsing *Arr.
+DateTime? _parseAdded(dynamic value) =>
+    value is String ? DateTime.tryParse(value) : null;
+
 /// Film de la bibliothèque Radarr (`GET /api/v3/movie`) — de quoi chercher,
 /// afficher un résultat parlant (jaquette, statut, qualité) et lancer une
 /// recherche interactive.
@@ -44,6 +50,9 @@ class ArrMovie {
 
   /// Qualité du fichier déjà présent — `null` si [hasFile] est faux.
   final String? qualityName;
+
+  /// Date d'ajout à Radarr — sert de critère de tri par défaut.
+  final DateTime? added;
 
   /// Corps JSON brut tel que reçu — Radarr exige le corps complet de la
   /// ressource sur `PUT /api/v3/movie/{id}` (pas un correctif partiel) :
@@ -60,6 +69,7 @@ class ArrMovie {
     required this.monitored,
     required this.hasFile,
     required this.qualityName,
+    required this.added,
     required this.raw,
   });
 
@@ -86,6 +96,7 @@ class ArrMovie {
       monitored: json['monitored'] as bool? ?? false,
       hasFile: json['hasFile'] as bool? ?? false,
       qualityName: qualityName,
+      added: _parseAdded(json['added']),
       raw: json,
     );
   }
@@ -102,6 +113,9 @@ class ArrSeries {
   final int episodeCount;
   final int episodeFileCount;
 
+  /// Date d'ajout à Sonarr — même raison que [ArrMovie.added].
+  final DateTime? added;
+
   /// Corps JSON brut tel que reçu — même raison que [ArrMovie.raw].
   final Map<String, dynamic> raw;
 
@@ -114,6 +128,7 @@ class ArrSeries {
     required this.seasonCount,
     required this.episodeCount,
     required this.episodeFileCount,
+    required this.added,
     required this.raw,
   });
 
@@ -140,6 +155,7 @@ class ArrSeries {
           statistics is Map ? (statistics['episodeCount'] as int? ?? 0) : 0,
       episodeFileCount:
           statistics is Map ? (statistics['episodeFileCount'] as int? ?? 0) : 0,
+      added: _parseAdded(json['added']),
       raw: json,
     );
   }
