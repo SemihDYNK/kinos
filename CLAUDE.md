@@ -1,6 +1,7 @@
 # Contexte projet
 
-Fork de Fladder (client Jellyfin Flutter, GPL-3.0-only).
+Kinos, fork de Fladder (client Jellyfin Flutter, GPL-3.0-only — cf.
+NOTICE pour l'attribution complète).
 Cible : Linux desktop uniquement — CachyOS / COSMIC / AMD RDNA2.
 
 ## Règles de fork

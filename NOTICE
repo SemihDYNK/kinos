@@ -1,0 +1,36 @@
+Kinos
+=====
+
+Kinos is a fork of Fladder <https://github.com/DonutWare/Fladder>,
+a cross-platform Jellyfin client originally created by DonutWare and
+contributors, licensed under the GNU General Public License v3.0 only
+(GPL-3.0-only). The full license text is in the LICENSE file at the
+root of this repository, unchanged from upstream.
+
+The GPL covers the code, not the project's name or branding — this fork
+is redistributed under a different name (Kinos) precisely because the
+license permits it, while every copyright notice from the upstream
+project is kept intact below. Nothing in this file removes or narrows
+the license under which the original and derived code is distributed.
+
+What changed in this fork, relative to upstream Fladder:
+  - Scope narrowed to movies and TV shows only (no music, Live TV,
+    e-books, photos, SyncPlay, or remote control features).
+  - Platform narrowed to Linux desktop only (Android, iOS, macOS,
+    Windows and web builds are not maintained or verified here).
+  - Added an integrated Sonarr/Radarr module (library, queue, calendar,
+    interactive search) for requesting and managing content directly
+    from the client.
+  - Renamed throughout (application identifier, package name, visible
+    strings) to Kinos.
+
+Upstream copyright
+-------------------
+Fladder — Copyright (C) DonutWare and contributors.
+Repository: https://github.com/DonutWare/Fladder
+License: GNU General Public License v3.0 only (GPL-3.0-only)
+
+Kinos fork
+----------
+Changes and additions in this fork are likewise licensed under
+GPL-3.0-only, consistent with the terms of the upstream license.

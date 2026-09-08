@@ -1,151 +1,69 @@
 
 <h1 align="center">
   <br>
-    <a href="https://github.com/DonutWare/Fladder"><img src="https://raw.githubusercontent.com/DonutWare/Fladder/refs/heads/develop/icons/production/fladder_macos_icon.png" alt="Fladder" width="200"></a>
-  <br>
-  Fladder
+  Kinos
   <br>
 </h1>
 
-<h4 align="center">A cross-platform Jellyfin Frontend built on top of <a href="https://flutter.dev/" target="_blank">Flutter</a>.</h4>
+<h4 align="center">A Jellyfin client for Linux desktop, with an integrated Sonarr/Radarr module.</h4>
 
 <p align="center">
+  <a href="#about-this-fork">About this fork</a> •
   <a href="#key-features">Key Features</a> •
-  <a href="#screenshots">Screenshots</a> •
-  <a href="#planned-features">Planned Features</a> •
-  <a href="#download">Download</a> •
-  <a href="#how-to-contribute">Contributing</a> •
-  <a href="#credits">Credits</a> •
+  <a href="#building--running">Building &amp; Running</a> •
   <a href="#license">License</a>
 </p>
 
-<div align="center">
-  
-  [![Build](https://github.com/DonutWare/Fladder/actions/workflows/build.yml/badge.svg?branch=develop)](https://github.com/DonutWare/Fladder/actions/workflows/build.yml)
-  [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/DonutWare/fladder/total)](https://github.com/DonutWare/Fladder/releases/latest)
-  [![GitHub Release](https://img.shields.io/github/v/release/DonutWare/fladder?display_name=tag)](https://github.com/DonutWare/Fladder/releases/latest)
-  [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
-  
-</div>
+## About this fork
 
+Kinos is a fork of [Fladder](https://github.com/DonutWare/Fladder), a
+cross-platform Jellyfin client built with Flutter. It keeps Fladder's
+playback engine and general design, narrowed to a single, opinionated
+target rather than trying to cover every platform:
 
+* **Linux desktop only.** Android, iOS, macOS, Windows and web builds
+  from upstream are not maintained or verified in this fork.
+* **Movies and TV shows only.** Music, Live TV, e-books, photos,
+  SyncPlay and remote control are out of scope here.
+* **Added:** an integrated Sonarr/Radarr module — library, download
+  queue, calendar, and interactive release search — for requesting and
+  managing content directly from the client, without switching to the
+  *arr web UIs.
+
+See [NOTICE](NOTICE) for the full attribution to the upstream project,
+and [LICENSE](LICENSE) for the license text (GPL-3.0-only, unchanged
+from upstream — the license covers the code, not the project name,
+which is exactly why this fork can be redistributed under its own
+identity).
+
+If you're looking for the full cross-platform experience (mobile, TV,
+music, Live TV, and more), use [Fladder](https://github.com/DonutWare/Fladder)
+directly — this fork intentionally does less.
 
 ## Key Features
 
-* Play media – Stream or sync content locally to your device
-* Manage your library – Refresh content and edit metadata
-* Multiple profiles – add multiple users or different servers easily switching between
-* Direct, Transcode and Offline playback
-* Media segments skipping (Intro/Credits etc.)
+* Direct, transcode and offline playback
+* Media segment skipping (intro/credits, etc.)
 * Trickplay support (timeline scrubbing)
-* Dark/Light mode and multiple color styles to pick
-* Simple comic book format reading support (.cbz, .cbr)
-* Sync items for all platforms
-* Download items and keep progress in sync
-* Keyboard shortcuts
-* Adaptive layout for all platforms
-* Next-up overview when watching a queue
-* Server management
+* Dark/light mode and multiple color themes
+* Keyboard-first navigation, with shortcuts visible in the interface
 * Seerr/Jellyseerr integration
-* Platforms
-  - Android + TV
-  - Web + Docker
-  - macOS
-  - Windows 
-  - iOS 
-  - Linux 
- 
-## Screenshots
-<details close>
-  <summary>Mobile</summary>
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Dashboard.png?raw=true" alt="Fladder" width="200">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Details.png?raw=true" alt="Fladder" width="200">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Details_2.png?raw=true" alt="Fladder" width="200">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Favourites.png?raw=true" alt="Fladder" width="200">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Library.png?raw=true" alt="Fladder" width="200">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Library_Search.png?raw=true" alt="Fladder" width="200">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Resume_Tab.png?raw=true" alt="Fladder" width="200">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Sync.png?raw=true" alt="Fladder" width="200">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Settings.png?raw=true" alt="Fladder" width="200">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Mobile/Player.png?raw=true" alt="Fladder" width="1280">  
-</details>
+* Sonarr/Radarr integration (library, queue, calendar, interactive search)
 
-<details close>
-  <summary>Tablet</summary>
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Dashboard.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Details.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Details_2.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Favourites.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Library.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Library_Search.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Resume_Tab.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Sync.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Settings.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Tablet/Player.png?raw=true" alt="Fladder" width="1280">   
-</details>
+## Building & Running
 
-<details close>
-  <summary>Television</summary>
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Television/Dashboard.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Television/Details.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Television/Favourites.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Television/Library.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Television/Library_Search.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Television/Sync.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Television/Settings.png?raw=true" alt="Fladder" width="1280">  
-   <img src="https://github.com/DonutWare/Fladder/blob/develop/assets/marketing/screenshots/Television/Player.png?raw=true" alt="Fladder" width="1280">   
-</details>
+This fork targets Linux desktop exclusively and is built with
+[Flutter](https://flutter.dev/) via [FVM](https://fvm.app/). See
+`CLAUDE.md` for the project's technical constraints and conventions.
 
-Web/Desktop [try out the web build!](https://DonutWare.github.io/Fladder)
-> [!NOTE]
-> The GitHub hosted web build only allows `https` connections. This is a limitation on GitHub's end, for self-hosted versions `http` works fine.
-
-## Planned Features
-
-* Chromecast support
-* Improved dPad navigation for non-tv devices
-* [And more???](https://github.com/DonutWare/Fladder/discussions/categories/ideas)
-
-## Download
-
-The latest executables for Windows, macOS, Linux, iOS, Android and Web can be found on the [releases page](https://github.com/DonutWare/Fladder/releases).
-
-You can pull the Docker version using the following tags: ```ghcr.io/donutware/fladder:latest```. or ```ghcr.io/donutware/fladder-rootless:latest```
-
-*Platform-specific installation and usage instructions can be found [here](https://github.com/DonutWare/Fladder/blob/develop/INSTALL.md).*
-
-<a href='https://play.google.com/store/apps/details?id=nl.jknaapen.fladder&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' width=250 align='middle'/></a>
-<a href='https://flathub.org/apps/nl.jknaapen.fladder'><img alt='Get it on Flathub' src='https://flathub.org/api/badge?locale=en' width=192 align='middle'/></a>
-
-> [!WARNING]
-> (Windows) Some flutter applications are marked as false positives by windows defender for more info see [this issue](https://github.com/DonutWare/Fladder/issues/197#issuecomment-2568906874).
-
-## How to Contribute
-Interested in contributing? Here are a couple of ways you can help:
-
-### 🐛 Reporting Bugs
-- Before reporting a bug, **please ensure** that the issue hasn't been reported already.
-- When submitting a bug report, provide detailed steps on how the bug can be reproduced. This will help us to understand and fix the issue faster.
-- Bug reports are appreciated and very helpful!
-
-### 🚀 Submitting Pull Requests
-- **Pull requests are always welcome!** 
-- For new features or large changes, please open a discussion or issue first to ensure that no one else is already working on it.
-- **Keep pull requests short and focused**: try to avoid fixing multiple issues in a single pull request. This helps make the review process smoother and quicker.
-
-### 🌐 Translations 
-<a href="https://hosted.weblate.org/engage/fladder/">
-<img src="https://hosted.weblate.org/widget/fladder/fladder/multi-auto.svg" alt="Translation status" />
-</a>
-
-Thank you for helping to make this project better! 🙌
-
-
-## Credits
-
-This software uses the following open source packages:
-- [Flutter](https://flutter.dev/)
+```sh
+fvm flutter pub get
+fvm flutter run -d linux
+```
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0. More information about the license can be found in [this file](https://github.com/DonutWare/Fladder/blob/develop/LICENSE).
+This project is licensed under the GNU General Public License v3.0
+only (GPL-3.0-only) — see [LICENSE](LICENSE) for the full text, and
+[NOTICE](NOTICE) for the attribution to the upstream Fladder project
+this is forked from.
