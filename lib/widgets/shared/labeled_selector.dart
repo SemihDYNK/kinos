@@ -12,7 +12,13 @@ import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
 class LabeledSelector extends StatelessWidget {
   final String label;
   final String value;
-  final List<({String label, bool selected, VoidCallback onSelect})> options;
+  final List<
+      ({
+        String label,
+        bool selected,
+        VoidCallback onSelect,
+        Widget? subtitle
+      })> options;
 
   const LabeledSelector({
     required this.label,
@@ -54,6 +60,7 @@ class LabeledSelector extends StatelessWidget {
                             ? AppColors.textPrimary
                             : AppColors.textSecondary),
                   ),
+                  subtitle: option.subtitle,
                   trailing: option.selected
                       ? const Icon(Icons.check_rounded,
                           color: AppColors.textPrimary)

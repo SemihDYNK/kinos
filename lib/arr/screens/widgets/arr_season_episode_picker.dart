@@ -59,6 +59,7 @@ class _ArrSeasonEpisodePickerState extends State<ArrSeasonEpisodePicker> {
                 .map((season) => (
                       label: _seasonLabel(season),
                       selected: season == selectedSeason,
+                      subtitle: null,
                       onSelect: () => setState(() => _selectedSeason = season),
                     ))
                 .toList(),

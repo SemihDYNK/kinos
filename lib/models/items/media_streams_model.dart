@@ -405,6 +405,15 @@ class SubStreamModel extends AudioAndSubStreamModel {
   String title;
   String? url;
   bool supportsExternalStream;
+
+  /// Piste "forcée" (ex. dialogues en langue étrangère uniquement) —
+  /// `MediaStream.IsForced` côté Jellyfin.
+  final bool isForced;
+
+  /// Sous-titres pour sourds et malentendants (SDH) —
+  /// `MediaStream.IsHearingImpaired` côté Jellyfin.
+  final bool isHearingImpaired;
+
   SubStreamModel({
     required super.name,
     required this.id,
@@ -417,6 +426,8 @@ class SubStreamModel extends AudioAndSubStreamModel {
     required super.isExternal,
     required super.index,
     this.supportsExternalStream = false,
+    this.isForced = false,
+    this.isHearingImpaired = false,
   });
 
   SubStreamModel.no({
@@ -431,6 +442,8 @@ class SubStreamModel extends AudioAndSubStreamModel {
     super.isExternal = false,
     super.index = -1,
     this.supportsExternalStream = false,
+    this.isForced = false,
+    this.isHearingImpaired = false,
   });
 
   String label(BuildContext context) {
@@ -477,6 +490,8 @@ class SubStreamModel extends AudioAndSubStreamModel {
       url: subStreamUrl,
       isExternal: stream.isExternal ?? false,
       index: stream.index ?? -1,
+      isForced: stream.isForced ?? false,
+      isHearingImpaired: stream.isHearingImpaired ?? false,
     );
   }
 
@@ -492,6 +507,8 @@ class SubStreamModel extends AudioAndSubStreamModel {
     bool? isExternal,
     int? index,
     bool? supportsExternalStream,
+    bool? isForced,
+    bool? isHearingImpaired,
   }) {
     return SubStreamModel(
       name: name ?? this.name,
@@ -506,6 +523,8 @@ class SubStreamModel extends AudioAndSubStreamModel {
       isDefault: isDefault ?? this.isDefault,
       isExternal: isExternal ?? this.isExternal,
       index: index ?? this.index,
+      isForced: isForced ?? this.isForced,
+      isHearingImpaired: isHearingImpaired ?? this.isHearingImpaired,
     );
   }
 
@@ -522,6 +541,8 @@ class SubStreamModel extends AudioAndSubStreamModel {
       'isExternal': isExternal,
       'isDefault': isDefault,
       'index': index,
+      'isForced': isForced,
+      'isHearingImpaired': isHearingImpaired,
     };
   }
 
@@ -537,6 +558,8 @@ class SubStreamModel extends AudioAndSubStreamModel {
       codec: map['codec'] ?? '',
       isDefault: map['isDefault'] ?? false,
       isExternal: map['isExternal'] ?? false,
+      isForced: map['isForced'] ?? false,
+      isHearingImpaired: map['isHearingImpaired'] ?? false,
       index: map['index'] ?? -1,
     );
   }

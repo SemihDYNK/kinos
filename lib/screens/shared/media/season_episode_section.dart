@@ -95,6 +95,7 @@ class _SeasonEpisodeSectionState extends ConsumerState<SeasonEpisodeSection> {
                         .map((season) => (
                               label: _seasonLabel(context, season),
                               selected: season.id == selected.id,
+                              subtitle: null,
                               onSelect: () =>
                                   setState(() => _selectedSeasonId = season.id),
                             ))
