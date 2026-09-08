@@ -20,7 +20,8 @@ import 'package:fladder/widgets/navigation_scaffold/components/music_player_bar_
 import 'package:fladder/widgets/navigation_scaffold/components/video_player_bar_content.dart';
 import 'package:fladder/widgets/shared/item_actions.dart';
 
-double floatingPlayerHeight(BuildContext context) => switch (AdaptiveLayout.viewSizeOf(context)) {
+double floatingPlayerHeight(BuildContext context) =>
+    switch (AdaptiveLayout.viewSizeOf(context)) {
       ViewSize.phone => 75,
       ViewSize.tablet => 85,
       ViewSize.desktop => 95,
@@ -31,7 +32,8 @@ class FloatingPlayerBar extends ConsumerStatefulWidget {
   const FloatingPlayerBar({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _CurrentlyPlayingBarState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _CurrentlyPlayingBarState();
 }
 
 class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
@@ -39,7 +41,9 @@ class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
 
   Future<void> openFullScreenPlayer() async {
     setState(() => showExpandButton = false);
-    ref.read(mediaPlaybackProvider.notifier).update((state) => state.copyWith(state: VideoPlayerState.fullScreen));
+    ref
+        .read(mediaPlaybackProvider.notifier)
+        .update((state) => state.copyWith(state: VideoPlayerState.fullScreen));
     final item = ref.read(playBackModel.select((value) => value?.item));
     if (item is AudioModel) {
       if (context.mounted) {
@@ -77,50 +81,67 @@ class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
     final isFavourite = item?.userData.isFavourite == true;
     final isDesktop = AdaptiveLayout.of(context).isDesktop;
 
-    final itemActions = [
-      if (item is! AudioModel)
-        ItemActionButton(
-            label: Text(context.localized.audio(1)),
-            icon: Consumer(
-              builder: (context, ref, child) {
-                final playerVolume = ref.watch(videoPlayerSettingsProvider.select((value) => value.volume));
-                return Icon(playerVolume == 0 ? IconsaxPlusBold.volume_cross : IconsaxPlusBold.volume_high);
-              },
-            ),
-            action: () {
-              final player = ref.read(videoPlayerProvider);
-              final playerVolume = ref.read(videoPlayerSettingsProvider.select((value) => value.volume));
-              final volume = playerVolume == 0 ? 100.0 : 0.0;
-              player.setVolume(volume);
-            }),
-      ItemActionButton(
-        label: Text(isFavourite ? context.localized.removeAsFavorite : context.localized.addAsFavorite),
-        icon: Icon(
-          color: isFavourite ? Colors.red : null,
-          isFavourite ? IconsaxPlusBold.heart : IconsaxPlusLinear.heart,
+    final volumeAction = ItemActionButton(
+        label: Text(context.localized.audio(1)),
+        icon: Consumer(
+          builder: (context, ref, child) {
+            final playerVolume = ref.watch(
+                videoPlayerSettingsProvider.select((value) => value.volume));
+            return Icon(playerVolume == 0
+                ? IconsaxPlusBold.volume_cross
+                : IconsaxPlusBold.volume_high);
+          },
         ),
-        action: () async {
-          final result = (await ref.read(userProvider.notifier).setAsFavorite(
-                    !isFavourite,
-                    item?.id ?? "",
-                  ))
-              ?.body;
+        action: () {
+          final player = ref.read(videoPlayerProvider);
+          final playerVolume = ref.read(
+              videoPlayerSettingsProvider.select((value) => value.volume));
+          final volume = playerVolume == 0 ? 100.0 : 0.0;
+          player.setVolume(volume);
+        });
+    final favouriteAction = ItemActionButton(
+      label: Text(isFavourite
+          ? context.localized.removeAsFavorite
+          : context.localized.addAsFavorite),
+      icon: Icon(
+        color: isFavourite ? Colors.red : null,
+        isFavourite ? IconsaxPlusBold.heart : IconsaxPlusLinear.heart,
+      ),
+      action: () async {
+        final result = (await ref.read(userProvider.notifier).setAsFavorite(
+                  !isFavourite,
+                  item?.id ?? "",
+                ))
+            ?.body;
 
-          if (result != null) {
-            ref.read(playBackModel.notifier).update((state) => state?.updateUserData(result));
-          }
-        },
-      ),
-      ItemActionButton(
-        label: Text(context.localized.stop),
-        action: () async => ref.read(videoPlayerProvider).stop(),
-        icon: const Icon(IconsaxPlusBold.stop),
-      ),
-    ];
+        if (result != null) {
+          ref
+              .read(playBackModel.notifier)
+              .update((state) => state?.updateUserData(result));
+        }
+      },
+    );
+    final stopAction = ItemActionButton(
+      label: Text(context.localized.stop),
+      action: () async => ref.read(videoPlayerProvider).stop(),
+      icon: const Icon(IconsaxPlusBold.stop),
+    );
+
+    // Musique : inchangé (favori compris). Vidéo : pas de cœur ici —
+    // c'est une action de catalogue, déjà sur la fiche juste au-dessus.
+    final itemActions = [volumeAction, favouriteAction, stopAction];
+    final videoItemActions = [volumeAction, stopAction];
+
+    // La barre latérale est un calque semi-transparent posé par-dessus un
+    // contenu plein cadre (cf. CLAUDE.md) : ce bandeau doit s'arrêter
+    // avant sa largeur, sinon il passe dessous — même débordement déjà
+    // rencontré une fois sur le bandeau teinté du tableau de bord.
+    final sideBarInset =
+        isDesktop ? AdaptiveLayout.of(context).sideBarWidth : 0.0;
 
     return Padding(
       padding: MediaQuery.paddingOf(context).copyWith(
-        left: isDesktop ? 0 : 8,
+        left: isDesktop ? sideBarInset : 8,
         right: isDesktop ? 0 : 8,
         top: 0,
         bottom: isDesktop ? 0 : MediaQuery.paddingOf(context).bottom,
@@ -137,12 +158,20 @@ class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
         },
         direction: DismissDirection.vertical,
         child: InkWell(
-          onLongPress: () => FladderSnack.show("Swipe up/down to open/close the player", context: context),
+          onLongPress: () => FladderSnack.show(
+              "Swipe up/down to open/close the player",
+              context: context),
           child: Container(
             height: floatingPlayerHeight(context),
             clipBehavior: Clip.hardEdge,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              // Musique : inchangée (aplat surfaceContainerLow, hors
+              // périmètre de cette refonte). Vidéo : sa propre décoration
+              // (voile AppColors.scrim), posée par
+              // VideoFloatingPlayerBarContent lui-même.
+              color: item is AudioModel
+                  ? Theme.of(context).colorScheme.surfaceContainerLow
+                  : null,
               borderRadius: FladderTheme.defaultShape.borderRadius,
             ),
             child: LayoutBuilder(builder: (context, constraints) {
@@ -158,7 +187,7 @@ class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
                 _ => VideoFloatingPlayerBarContent(
                     constraints: constraints,
                     item: item,
-                    itemActions: itemActions,
+                    itemActions: videoItemActions,
                     showExpandButton: showExpandButton,
                     onShowExpandButton: _setShowExpandButton,
                     openFullScreenPlayer: openFullScreenPlayer,

@@ -6,6 +6,7 @@ import 'package:overflow_view/overflow_view.dart';
 import 'package:fladder/models/media_playback_model.dart';
 import 'package:fladder/providers/video_player_provider.dart';
 import 'package:fladder/screens/shared/flat_button.dart';
+import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/duration_extensions.dart';
 import 'package:fladder/widgets/shared/fladder_slider.dart';
@@ -54,7 +55,7 @@ class FloatingPlayerBarPreview extends StatelessWidget {
                     opacity: showExpandButton ? 1 : 0,
                     duration: const Duration(milliseconds: 125),
                     child: Container(
-                      color: Colors.black.withValues(alpha: 0.6),
+                      color: AppColors.scrim.withValues(alpha: 0.6),
                       child: FlatButton(
                         onTap: openFullScreenPlayer,
                         child: const Icon(Icons.keyboard_arrow_up_rounded),
@@ -104,7 +105,10 @@ class FloatingPlayerBarTitle extends StatelessWidget {
                 subtitle,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.65),
                     ),
                 maxLines: 1,
               ),
@@ -138,21 +142,27 @@ class FloatingPlayerBarActionsRow extends StatelessWidget {
       children: [
         if (constraints.maxWidth > 500)
           Flexible(
-            child: Text("${lastPosition.readAbleDuration} / ${playbackInfo.duration.readAbleDuration}"),
+            child: Text(
+                "${lastPosition.readAbleDuration} / ${playbackInfo.duration.readAbleDuration}"),
           ),
         Flexible(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: IconButton.filledTonal(
               onPressed: onPlayPause,
-              icon: playbackInfo.playing ? const Icon(Icons.pause_rounded) : const Icon(Icons.play_arrow_rounded),
+              icon: playbackInfo.playing
+                  ? const Icon(Icons.pause_rounded)
+                  : const Icon(Icons.play_arrow_rounded),
             ),
           ),
         ),
         Flexible(
           child: OverflowView.flexible(
             builder: (context, remainingItemCount) => PopupMenuButton(
-              iconColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+              iconColor: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.45),
               padding: EdgeInsets.zero,
               itemBuilder: (context) => itemActions
                   .sublist(itemActions.length - remainingItemCount)
@@ -171,15 +181,34 @@ class FloatingPlayerBarProgress extends ConsumerStatefulWidget {
   const FloatingPlayerBarProgress({
     super.key,
     required this.onSeek,
+    this.height = 8,
+    this.activeColor,
+    this.inactiveColor,
   });
 
   final Future<void> Function(Duration) onSeek;
 
+  /// Hauteur de la barre — 8 par défaut (lecteur musique, inchangé) ;
+  /// le lecteur vidéo réduit en passe une plus fine explicitement (cf.
+  /// VideoFloatingPlayerBarContent), c'est l'information principale de
+  /// ce bandeau, pas un détail secondaire, mais elle ne doit pas
+  /// rivaliser avec le contenu de la ligne du dessous.
+  final double height;
+
+  /// `null` conserve l'apparence historique (couleur primaire du thème
+  /// ambiant) — seul le lecteur vidéo réduit passe les jetons du projet
+  /// explicitement, pour ne rien changer côté musique (hors périmètre
+  /// de cette réécriture).
+  final Color? activeColor;
+  final Color? inactiveColor;
+
   @override
-  ConsumerState<FloatingPlayerBarProgress> createState() => _FloatingPlayerBarProgressState();
+  ConsumerState<FloatingPlayerBarProgress> createState() =>
+      _FloatingPlayerBarProgressState();
 }
 
-class _FloatingPlayerBarProgressState extends ConsumerState<FloatingPlayerBarProgress> {
+class _FloatingPlayerBarProgressState
+    extends ConsumerState<FloatingPlayerBarProgress> {
   Duration? _dragPosition;
 
   @override
@@ -189,17 +218,25 @@ class _FloatingPlayerBarProgressState extends ConsumerState<FloatingPlayerBarPro
           duration: s.duration,
         )));
     final position = _dragPosition ?? playback.position;
+    final activeColor =
+        widget.activeColor ?? Theme.of(context).colorScheme.primary;
+    final inactiveColor =
+        widget.inactiveColor ?? Colors.black.withValues(alpha: 0.25);
 
     return AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer
         ? SizedBox(
-            height: 8,
+            height: widget.height,
             child: FladderSlider(
               value: position.inMilliseconds.toDouble(),
               min: 0.0,
               max: playback.duration.inMilliseconds.toDouble(),
-              thumbWidth: 8,
-              onChangeStart: (value) => setState(() => _dragPosition = Duration(milliseconds: value.toInt())),
-              onChanged: (value) => setState(() => _dragPosition = Duration(milliseconds: value.toInt())),
+              thumbWidth: widget.height,
+              activeTrackColor: activeColor,
+              inactiveTrackColor: inactiveColor,
+              onChangeStart: (value) => setState(
+                  () => _dragPosition = Duration(milliseconds: value.toInt())),
+              onChanged: (value) => setState(
+                  () => _dragPosition = Duration(milliseconds: value.toInt())),
               onChangeEnd: (value) async {
                 final seekPos = Duration(milliseconds: value.toInt());
                 setState(() => _dragPosition = seekPos);
@@ -209,11 +246,12 @@ class _FloatingPlayerBarProgressState extends ConsumerState<FloatingPlayerBarPro
             ),
           )
         : LinearProgressIndicator(
-            minHeight: 8,
-            backgroundColor: Colors.black.withValues(alpha: 0.25),
-            color: Theme.of(context).colorScheme.primary,
+            minHeight: widget.height,
+            backgroundColor: inactiveColor,
+            color: activeColor,
             value: playback.duration.inMilliseconds > 0
-                ? (position.inMilliseconds / playback.duration.inMilliseconds).clamp(0, 1)
+                ? (position.inMilliseconds / playback.duration.inMilliseconds)
+                    .clamp(0, 1)
                 : 0,
           );
   }
