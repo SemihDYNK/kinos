@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:fladder/arr/models/arr_grab_status.dart';
 import 'package:fladder/arr/models/arr_release.dart';
 import 'package:fladder/arr/screens/widgets/arr_rejection_tooltip.dart';
 import 'package:fladder/screens/details_screens/components/media_info_formatters.dart';
+import 'package:fladder/screens/shared/media/external_urls.dart';
 import 'package:fladder/theme/app_theme.dart';
 
 enum _ArrReleaseColumn {
@@ -548,6 +550,25 @@ class _ArrReleaseRow extends StatelessWidget {
     return '$seeders / $leechers';
   }
 
+  void _showContextMenu(BuildContext context, Offset globalPosition) {
+    final position = RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy,
+        globalPosition.dx, globalPosition.dy);
+    final hasInfoUrl = release.infoUrl?.isNotEmpty ?? false;
+    showMenu<void>(
+      context: context,
+      position: position,
+      items: [
+        PopupMenuItem(
+          enabled: hasInfoUrl,
+          onTap: hasInfoUrl ? () => launchUrl(context, release.infoUrl!) : null,
+          child: const _MenuLabel(
+              icon: Icons.open_in_new_rounded,
+              label: 'Ouvrir la page de l\'indexeur'),
+        ),
+      ],
+    );
+  }
+
   Widget _rejectionIndicator(BuildContext context) {
     if (!release.rejected) return const SizedBox.shrink();
     return ArrRejectionTooltip(
@@ -612,112 +633,209 @@ class _ArrReleaseRow extends StatelessWidget {
 
     const gap = SizedBox(width: AppSpacing.xs);
 
-    return ColoredBox(
-      color: striped ? AppColors.surface : Colors.transparent,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xs, vertical: AppSpacing.sm),
-        child: Row(
-          children: [
-            SizedBox(
-              width: rejectedWidth,
-              child: _rejectionIndicator(context),
-            ),
-            gap,
-            SizedBox(
-              width: ageWidth,
-              child: Text(_ageLabel,
-                  textAlign: TextAlign.end,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: baseStyle),
-            ),
-            gap,
-            Expanded(
-              child: Tooltip(
-                message: release.title,
-                child: Text(
-                  release.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: baseStyle,
+    return Focus(
+      // Pas de tour de piste dédié (contrairement à la grille Bibliothèque
+      // ou à la file d'attente) : un simple arrêt Tab par ligne suffit ici
+      // pour rendre son menu contextuel atteignable au clavier (touche
+      // Menu / Maj+F10) — pas de navigation flèches à réimplémenter.
+      canRequestFocus: true,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        final isContextMenuKey =
+            event.logicalKey == LogicalKeyboardKey.contextMenu ||
+                (event.logicalKey == LogicalKeyboardKey.f10 &&
+                    HardwareKeyboard.instance.isShiftPressed);
+        if (!isContextMenuKey) return KeyEventResult.ignored;
+        final box = context.findRenderObject() as RenderBox?;
+        if (box == null || !box.attached) return KeyEventResult.ignored;
+        final center = box.localToGlobal(box.size.center(Offset.zero));
+        _showContextMenu(context, center);
+        return KeyEventResult.handled;
+      },
+      child: GestureDetector(
+        onSecondaryTapDown: (details) =>
+            _showContextMenu(context, details.globalPosition),
+        child: ColoredBox(
+          color: striped ? AppColors.surface : Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs, vertical: AppSpacing.sm),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: rejectedWidth,
+                  child: _rejectionIndicator(context),
                 ),
-              ),
+                gap,
+                SizedBox(
+                  width: ageWidth,
+                  child: Text(_ageLabel,
+                      textAlign: TextAlign.end,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: baseStyle),
+                ),
+                gap,
+                Expanded(
+                  child: _ReleaseTitleCell(release: release, style: baseStyle),
+                ),
+                gap,
+                SizedBox(
+                  width: indexerWidth,
+                  child: Text(
+                    release.indexer,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: baseStyle,
+                  ),
+                ),
+                gap,
+                SizedBox(
+                  width: sizeWidth,
+                  child: Text(
+                    formatFileSize(release.size) ?? '—',
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: baseStyle,
+                  ),
+                ),
+                gap,
+                SizedBox(
+                  width: seedsWidth,
+                  child: Text(
+                    _seedsLabel,
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: baseStyle,
+                  ),
+                ),
+                gap,
+                SizedBox(
+                  width: qualityWidth,
+                  child: Text(
+                    release.qualityName ?? '—',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: baseStyle,
+                  ),
+                ),
+                gap,
+                SizedBox(
+                  width: languagesWidth,
+                  child: Text(
+                    release.languages.isEmpty
+                        ? '—'
+                        : release.languages.join(', '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: baseStyle,
+                  ),
+                ),
+                gap,
+                SizedBox(
+                  width: scoreWidth,
+                  child: Text(
+                    release.customFormatScore.toString(),
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: baseStyle,
+                  ),
+                ),
+                gap,
+                SizedBox(
+                  width: actionWidth,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _actionButton(context),
+                  ),
+                ),
+              ],
             ),
-            gap,
-            SizedBox(
-              width: indexerWidth,
-              child: Text(
-                release.indexer,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: baseStyle,
-              ),
-            ),
-            gap,
-            SizedBox(
-              width: sizeWidth,
-              child: Text(
-                formatFileSize(release.size) ?? '—',
-                textAlign: TextAlign.end,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: baseStyle,
-              ),
-            ),
-            gap,
-            SizedBox(
-              width: seedsWidth,
-              child: Text(
-                _seedsLabel,
-                textAlign: TextAlign.end,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: baseStyle,
-              ),
-            ),
-            gap,
-            SizedBox(
-              width: qualityWidth,
-              child: Text(
-                release.qualityName ?? '—',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: baseStyle,
-              ),
-            ),
-            gap,
-            SizedBox(
-              width: languagesWidth,
-              child: Text(
-                release.languages.isEmpty ? '—' : release.languages.join(', '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: baseStyle,
-              ),
-            ),
-            gap,
-            SizedBox(
-              width: scoreWidth,
-              child: Text(
-                release.customFormatScore.toString(),
-                textAlign: TextAlign.end,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: baseStyle,
-              ),
-            ),
-            gap,
-            SizedBox(
-              width: actionWidth,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: _actionButton(context),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Titre de la ligne — reste du texte simple si [ArrRelease.infoUrl] est
+/// absent (pas de lien mort). Présent : souligné + curseur main au survol
+/// uniquement, ouvre la page de l'indexeur au clic — jamais [ArrRelease.guid]
+/// (identifiant, parfois un lien direct vers un fichier .torrent) ni une URL
+/// de téléchargement. Seul le titre réagit : le reste de la ligne garde son
+/// comportement (le bouton dédié envoie au client de téléchargement), pour
+/// que les deux actions restent sans ambiguïté.
+class _ReleaseTitleCell extends StatefulWidget {
+  final ArrRelease release;
+  final TextStyle? style;
+
+  const _ReleaseTitleCell({required this.release, required this.style});
+
+  @override
+  State<_ReleaseTitleCell> createState() => _ReleaseTitleCellState();
+}
+
+class _ReleaseTitleCellState extends State<_ReleaseTitleCell> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final infoUrl = widget.release.infoUrl;
+    final hasInfoUrl = infoUrl != null && infoUrl.isNotEmpty;
+    final text = Text(
+      widget.release.title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: hasInfoUrl && _hovering
+          ? widget.style?.copyWith(decoration: TextDecoration.underline)
+          : widget.style,
+    );
+
+    if (!hasInfoUrl) {
+      return Tooltip(message: widget.release.title, child: text);
+    }
+
+    final host = Uri.tryParse(infoUrl)?.host;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: Tooltip(
+        message: host == null || host.isEmpty
+            ? widget.release.title
+            : 'Ouvrir sur $host',
+        child: GestureDetector(
+          onTap: () => launchUrl(context, infoUrl),
+          child: text,
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuLabel extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _MenuLabel({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: AppColors.textSecondary),
+        const SizedBox(width: AppSpacing.xs),
+        // Flexible + ellipsis : ce libellé ("Ouvrir la page de l'indexeur")
+        // est plus long que les entrées habituelles de ce menu — sans quoi
+        // il déborderait plutôt que de respecter la largeur calculée par
+        // `showMenu` selon la position du clic.
+        Flexible(
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+      ],
     );
   }
 }

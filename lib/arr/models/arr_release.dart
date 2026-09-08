@@ -1,3 +1,6 @@
+String? _nullIfEmpty(String? value) =>
+    value == null || value.isEmpty ? null : value;
+
 /// Protocole de la release — détermine si "seeders/leechers" ou un simple
 /// libellé protocole s'affiche dans le tableau de résultats.
 enum ArrReleaseProtocol {
@@ -31,6 +34,12 @@ class ArrRelease {
   final String indexer;
   final String title;
 
+  /// Page de la release chez l'indexeur — pour ouvrir dans le navigateur,
+  /// jamais [guid] (un identifiant, parfois un lien direct vers un
+  /// fichier .torrent plutôt qu'une page) ni une URL de téléchargement.
+  /// Facultatif : absent chez certains indexeurs/protocoles.
+  final String? infoUrl;
+
   /// Taille en octets — `null` si absente de la réponse (rare, mais pas
   /// garanti par l'API).
   final int? size;
@@ -61,6 +70,7 @@ class ArrRelease {
     required this.indexerId,
     required this.indexer,
     required this.title,
+    this.infoUrl,
     required this.size,
     required this.ageDays,
     required this.seeders,
@@ -116,6 +126,7 @@ class ArrRelease {
       indexerId: json['indexerId'] as int? ?? 0,
       indexer: json['indexer'] as String? ?? '',
       title: json['title'] as String? ?? '',
+      infoUrl: _nullIfEmpty(json['infoUrl'] as String?),
       size: json['size'] as int?,
       ageDays: ageDays,
       seeders: json['seeders'] as int?,

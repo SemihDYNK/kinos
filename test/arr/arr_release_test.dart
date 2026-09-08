@@ -158,6 +158,7 @@ void main() {
 
       expect(release.guid, '');
       expect(release.title, '');
+      expect(release.infoUrl, isNull);
       expect(release.size, isNull);
       expect(release.ageDays, isNull);
       expect(release.protocol, ArrReleaseProtocol.unknown);
@@ -178,6 +179,30 @@ void main() {
       });
 
       expect(release.languages, ['German']);
+    });
+
+    test('captures infoUrl when present', () {
+      final release = ArrRelease.fromJson({
+        'guid': 'g',
+        'indexerId': 1,
+        'indexer': 'X',
+        'title': 'X',
+        'infoUrl': 'https://indexer.example/details/123',
+      });
+
+      expect(release.infoUrl, 'https://indexer.example/details/123');
+    });
+
+    test('treats an empty infoUrl as absent, not a dead link', () {
+      final release = ArrRelease.fromJson({
+        'guid': 'g',
+        'indexerId': 1,
+        'indexer': 'X',
+        'title': 'X',
+        'infoUrl': '',
+      });
+
+      expect(release.infoUrl, isNull);
     });
   });
 }
