@@ -9,6 +9,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:kinos/bootstrap/legacy_migration.dart';
 import 'package:kinos/models/settings/arguments_model.dart';
 import 'package:kinos/providers/crash_log_provider.dart';
 import 'package:kinos/src/video_player_helper.g.dart';
@@ -43,6 +44,14 @@ class AppBootstrapResult {
 }
 
 Future<AppBootstrapResult> bootstrapApplication(List<String> args) async {
+  // En tout premier, avant tout accès à SharedPreferences ou à la base
+  // Drift (juste en dessous, et dans database_item.dart) : les deux
+  // vivent sous getApplicationSupportDirectory(), dérivée de
+  // APPLICATION_ID côté natif (cf. legacy_migration.dart) — trop tard
+  // une fois l'un des deux déjà ouvert sous la nouvelle identité.
+  await migrateLegacyDataDirectory();
+  await migrateLegacySecureStorage();
+
   final crashProvider = CrashLogNotifier();
 
   if (kIsWeb) {
