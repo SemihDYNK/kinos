@@ -15,7 +15,8 @@ class VideoVolumeSlider extends ConsumerStatefulWidget {
   const VideoVolumeSlider({this.width, this.onChanged, super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _VideoVolumeSliderState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _VideoVolumeSliderState();
 }
 
 class _VideoVolumeSliderState extends ConsumerState<VideoVolumeSlider> {
@@ -33,7 +34,8 @@ class _VideoVolumeSliderState extends ConsumerState<VideoVolumeSlider> {
   }
 
   void updateVolume(double value) {
-    if (!{TargetPlatform.android, TargetPlatform.iOS}.contains(defaultTargetPlatform)) {
+    if (!{TargetPlatform.android, TargetPlatform.iOS}
+        .contains(defaultTargetPlatform)) {
       ref.read(videoPlayerSettingsProvider.notifier).setVolume(value);
     }
     widget.onChanged?.call();
@@ -41,7 +43,8 @@ class _VideoVolumeSliderState extends ConsumerState<VideoVolumeSlider> {
 
   @override
   Widget build(BuildContext context) {
-    final volume = ref.watch(videoPlayerSettingsProvider.select((value) => value.volume));
+    final volume =
+        ref.watch(videoPlayerSettingsProvider.select((value) => value.volume));
     return Listener(
       onPointerSignal: (pointerSignal) {
         if (pointerSignal is PointerScrollEvent) onPointerScroll(pointerSignal);
@@ -73,7 +76,10 @@ class _VideoVolumeSliderState extends ConsumerState<VideoVolumeSlider> {
               duration: const Duration(milliseconds: 250),
               child: SizedBox(
                 height: 30,
-                width: 75,
+                // `widget.width` existait déjà mais n'était jamais lu ici
+                // — corrigé au passage (aucun appelant existant ne le
+                // passait, donc sans effet sur eux).
+                width: widget.width ?? 75,
                 child: FladderSlider(
                   min: 0,
                   max: 100,

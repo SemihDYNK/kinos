@@ -35,16 +35,18 @@ import 'package:fladder/screens/video_player/components/video_player_speed_indic
 import 'package:fladder/screens/video_player/components/video_player_volume_indicator.dart';
 import 'package:fladder/screens/video_player/components/video_progress_bar.dart';
 import 'package:fladder/screens/video_player/components/video_quality_badge.dart';
-import 'package:fladder/screens/video_player/components/video_side_panel.dart';
 import 'package:fladder/screens/video_player/components/video_volume_slider.dart';
 import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
+import 'package:fladder/util/bitrate_helper.dart';
 import 'package:fladder/util/duration_extensions.dart';
 import 'package:fladder/util/input_handler.dart';
 import 'package:fladder/util/list_padding.dart';
 import 'package:fladder/util/localization_helper.dart';
 import 'package:fladder/util/string_extensions.dart';
 import 'package:fladder/widgets/full_screen_helpers/full_screen_wrapper.dart';
+import 'package:fladder/widgets/shared/anchored_popover.dart';
+import 'package:fladder/widgets/shared/track_label.dart';
 import 'package:fladder/wrappers/pip_manager.dart';
 
 class DesktopControls extends ConsumerStatefulWidget {
@@ -66,11 +68,26 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
     () => mounted ? toggleOverlay(value: false) : null,
   );
 
-  // Panneau unique (audio/sous-titres/image/vitesse/qualité) — desktop
-  // uniquement. `_panelReturnFocus` retient le contrôle actif avant
-  // l'ouverture, pour lui rendre le focus à la fermeture (Échap).
-  VideoPanelSection? _openPanelSection;
-  FocusNode? _panelReturnFocus;
+  // Un popover ancré par section (audio/sous-titres/image/vitesse/
+  // qualité) — desktop uniquement. AnchoredPopover gère lui-même le
+  // positionnement, la fermeture (clic extérieur/Échap) et le retour du
+  // focus au déclencheur ; ces contrôleurs ne servent qu'à ouvrir le bon
+  // popover depuis un raccourci clavier (S, A) plutôt que depuis le clic
+  // sur le bouton lui-même.
+  final _audioPopover = AnchoredPopoverController();
+  final _subtitlesPopover = AnchoredPopoverController();
+  final _imagePopover = AnchoredPopoverController();
+  final _speedPopover = AnchoredPopoverController();
+  final _qualityPopover = AnchoredPopoverController();
+  bool _qualityExpanded = false;
+
+  // Barre de progression desktop — ~3px au repos, ~5px au survol/focus ;
+  // poignée invisible au repos, visible seulement au survol/glissement/
+  // focus. La zone cliquable (SizedBox englobant, ci-dessous) reste
+  // large : c'est l'apparence qui s'affine, pas la cible.
+  bool _progressHovering = false;
+  bool _progressFocused = false;
+  final _progressFocusNode = FocusNode(debugLabel: 'VideoProgressBar');
 
   double? previousVolume;
 
@@ -105,6 +122,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
   @override
   void dispose() {
     _deactivateSpeedBoost();
+    _progressFocusNode.dispose();
     super.dispose();
   }
 
@@ -276,23 +294,6 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                     );
                   },
                 ),
-                // Panneau unique — glisse par-dessus la vidéo sans la
-                // recentrer, jamais affiché hors desktop (pas de place
-                // pour un panneau latéral fixe en dessous de cette taille
-                // d'écran, et aucun bouton n'y ouvre).
-                if (isDesktop)
-                  AnimatedPositioned(
-                    duration: fadeDuration,
-                    top: 0,
-                    bottom: 0,
-                    right: _openPanelSection != null ? 0 : -videoSidePanelWidth,
-                    child: _openPanelSection == null
-                        ? const SizedBox.shrink()
-                        : VideoSidePanel(
-                            initialSection: _openPanelSection!,
-                            onClose: _closePanel,
-                          ),
-                  ),
               ],
             ),
           ),
@@ -559,18 +560,59 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                height: 25,
-                child: VideoProgressBar(
-                  wasPlayingChanged: (value) => wasPlaying = value,
-                  wasPlaying: wasPlaying,
-                  duration: mediaPlayback.duration,
-                  position: mediaPlayback.position,
-                  buffer: mediaPlayback.buffer,
-                  buffering: mediaPlayback.buffering,
-                  timerReset: () => timer.reset(),
-                  onPositionChanged: (position) =>
-                      ref.read(videoPlayerProvider).seek(position),
+              MouseRegion(
+                onEnter: (_) => setState(() => _progressHovering = true),
+                onExit: (_) => setState(() => _progressHovering = false),
+                child: Listener(
+                  // `Listener`, pas `GestureDetector` : la barre elle-même
+                  // reconnaît déjà tap/glissement en interne — un second
+                  // détecteur de geste au-dessus lui disputerait l'arène
+                  // gestuelle. `Listener` reçoit l'évènement brut sans
+                  // entrer en concurrence.
+                  onPointerDown: (_) => _progressFocusNode.requestFocus(),
+                  child: Focus(
+                    focusNode: _progressFocusNode,
+                    onFocusChange: (focused) =>
+                        setState(() => _progressFocused = focused),
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      switch (event.logicalKey) {
+                        case LogicalKeyboardKey.arrowLeft:
+                          seekBack(ref, seconds: 5);
+                          return KeyEventResult.handled;
+                        case LogicalKeyboardKey.arrowRight:
+                          seekForward(ref, seconds: 5);
+                          return KeyEventResult.handled;
+                        default:
+                          return KeyEventResult.ignored;
+                      }
+                    },
+                    // La zone cliquable (SizedBox) reste large — c'est le
+                    // SliderTheme ci-dessous qui affine l'apparence du
+                    // trait peint, pas la cible.
+                    child: SliderTheme(
+                      data: SliderThemeData(
+                        trackHeight:
+                            _progressHovering || _progressFocused ? 5 : 3,
+                      ),
+                      child: SizedBox(
+                        height: 20,
+                        child: VideoProgressBar(
+                          wasPlayingChanged: (value) => wasPlaying = value,
+                          wasPlaying: wasPlaying,
+                          duration: mediaPlayback.duration,
+                          position: mediaPlayback.position,
+                          buffer: mediaPlayback.buffer,
+                          buffering: mediaPlayback.buffering,
+                          timerReset: () => timer.reset(),
+                          handleVisible: _progressHovering || _progressFocused,
+                          hideHandleAtRest: true,
+                          onPositionChanged: (position) =>
+                              ref.read(videoPlayerProvider).seek(position),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.xxs),
@@ -615,22 +657,37 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                         ),
                         nextVideoButton,
                         const SizedBox(width: AppSpacing.md),
-                        _desktopPanelButton(
+                        _desktopPopoverButton(
                           icon: IconsaxPlusLinear.subtitle,
                           tooltip: _tooltipFor(
                               'Sous-titres', VideoHotKeys.toggleSubtitles),
-                          section: VideoPanelSection.subtitles,
+                          controller: _subtitlesPopover,
+                          optionsBuilder: _subtitleOptions,
                         ),
-                        _desktopPanelButton(
+                        _desktopPopoverButton(
                           icon: IconsaxPlusLinear.audio_square,
                           tooltip:
                               _tooltipFor('Audio', VideoHotKeys.openAudioPanel),
-                          section: VideoPanelSection.audio,
+                          controller: _audioPopover,
+                          optionsBuilder: _audioOptions,
                         ),
-                        _desktopPanelButton(
-                          icon: Icons.tune_rounded,
-                          tooltip: 'Réglages (image, vitesse, qualité)',
-                          section: VideoPanelSection.quality,
+                        _desktopPopoverButton(
+                          icon: Icons.aspect_ratio_rounded,
+                          tooltip: 'Image',
+                          controller: _imagePopover,
+                          optionsBuilder: _imageOptions,
+                        ),
+                        _desktopPopoverButton(
+                          icon: Icons.speed_rounded,
+                          tooltip: 'Vitesse',
+                          controller: _speedPopover,
+                          optionsBuilder: _speedOptions,
+                        ),
+                        _desktopPopoverButton(
+                          icon: IconsaxPlusLinear.speedometer,
+                          tooltip: 'Qualité',
+                          controller: _qualityPopover,
+                          optionsBuilder: _qualityOptions,
                         ),
                       ],
                     ),
@@ -638,7 +695,18 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      VideoVolumeSlider(onChanged: () => resetTimer()),
+                      // Plus discret que le groupe de transport : curseur
+                      // fin (SliderTheme local, ne change rien pour les
+                      // autres lecteurs qui utilisent ce même composant)
+                      // et court (`width`, jusque-là un paramètre mort —
+                      // corrigé au passage dans video_volume_slider.dart).
+                      SliderTheme(
+                        data: const SliderThemeData(trackHeight: 3),
+                        child: VideoVolumeSlider(
+                          width: 50,
+                          onChanged: () => resetTimer(),
+                        ),
+                      ),
                       FocusRing(
                         borderRadius: AppRadii.controlBorder,
                         onActivate: () =>
@@ -655,8 +723,6 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xs),
-              _shortcutsHintRow(context),
             ],
           ),
         ),
@@ -714,67 +780,206 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
     );
   }
 
-  Widget _desktopPanelButton({
+  /// Bouton de barre ouvrant un [AnchoredPopover] ancré sur lui — Audio,
+  /// Sous-titres, Image, Vitesse, Qualité sont chacun ce motif, jamais
+  /// le panneau latéral qu'ils remplacent.
+  Widget _desktopPopoverButton({
     required IconData icon,
     required String tooltip,
-    required VideoPanelSection section,
+    required AnchoredPopoverController controller,
+    required List<PopoverOption> Function() optionsBuilder,
   }) {
-    final isOpen = _openPanelSection == section;
-    return FocusRing(
-      borderRadius: AppRadii.controlBorder,
-      onActivate: () => isOpen ? _closePanel() : _openPanel(section),
-      child: ExcludeFocus(
-        child: Tooltip(
-          message: tooltip,
-          child: IconButton(
-            isSelected: isOpen,
-            onPressed: () => isOpen ? _closePanel() : _openPanel(section),
-            icon: Icon(icon,
-                color:
-                    isOpen ? AppColors.textPrimary : AppColors.textSecondary),
+    return AnchoredPopover(
+      controller: controller,
+      // Le popover est un OverlayPortal posé au-dessus de tout, y
+      // compris le voile — sans ça, il resterait affiché flottant, sans
+      // plus rien pour l'ancrer visuellement, une fois le voile
+      // estompé par inactivité.
+      onOpenChanged: (open) => open ? toggleOverlay(value: true) : resetTimer(),
+      popoverBuilder: (context, close) => PopoverOptionList(
+        options: optionsBuilder(),
+        onSelected: close,
+      ),
+      child: FocusRing(
+        borderRadius: AppRadii.controlBorder,
+        onActivate: controller.toggle,
+        child: ExcludeFocus(
+          child: Tooltip(
+            message: tooltip,
+            child: IconButton(
+              onPressed: controller.toggle,
+              icon: Icon(icon, color: AppColors.textSecondary),
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// Raccourcis affichés en clair, pas seulement dans les infobulles —
-  /// règle explicite de cette refonte.
-  Widget _shortcutsHintRow(BuildContext context) {
-    const hints = [
-      ('Espace', 'Lecture/pause'),
-      ('←/→', '±10 s'),
-      ('Maj+←/→', '±60 s'),
-      ('↑/↓', 'Volume'),
-      ('M', 'Muet'),
-      ('S', 'Sous-titres'),
-      ('A', 'Audio'),
-      ('F', 'Plein écran'),
-      ('Échap', 'Quitter'),
-    ];
-    return Wrap(
-      spacing: AppSpacing.md,
-      runSpacing: AppSpacing.xxs,
-      children: [
-        for (final (key, action) in hints)
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '$key ',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textPrimary.withValues(alpha: 0.75)),
-                ),
-                TextSpan(
-                  text: action,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textPrimary.withValues(alpha: 0.5)),
-                ),
-              ],
-            ),
-          ),
-      ],
+  Future<void> _selectAudio(AudioStreamModel stream) async {
+    final playbackModel = ref.read(playBackModel);
+    if (playbackModel == null) return;
+    final player = ref.read(videoPlayerProvider);
+    final newModel = await playbackModel.setAudio(stream, player);
+    ref.read(playBackModel.notifier).update((state) => newModel);
+    if (newModel != null) {
+      await ref.read(playbackModelHelper).shouldReload(newModel);
+    }
+  }
+
+  Future<void> _selectSubtitle(SubStreamModel stream) async {
+    final playbackModel = ref.read(playBackModel);
+    if (playbackModel == null) return;
+    final player = ref.read(videoPlayerProvider);
+    final newModel = await playbackModel.setSubtitle(stream, player);
+    ref.read(playBackModel.notifier).update((state) => newModel);
+    if (newModel != null) {
+      await ref.read(playbackModelHelper).shouldReload(newModel);
+    }
+  }
+
+  Future<void> _selectQuality(
+      Map<Bitrate, bool> options, Bitrate chosen) async {
+    final playbackModel = ref.read(playBackModel);
+    final newModel = await playbackModel?.setQualityOption(
+      options.map((key, value) => MapEntry(key, key == chosen)),
     );
+    ref.read(playBackModel.notifier).update((state) => newModel);
+    if (newModel != null) {
+      await ref.read(playbackModelHelper).shouldReload(newModel);
+    }
+  }
+
+  List<PopoverOption> _audioOptions() {
+    // watch, pas read : la liste doit se rafraîchir si elle change
+    // pendant que le popover est ouvert (ex. piste par défaut arrivée
+    // après coup) — sûr ici, appelé uniquement pendant la construction
+    // (popoverBuilder n'est invoqué que popover ouvert).
+    final playbackModel = ref.watch(playBackModel);
+    final currentIndex = playbackModel?.mediaStreams?.defaultAudioStreamIndex;
+    final streams = playbackModel?.audioStreams ?? const [];
+    return streams
+        .map((stream) => PopoverOption(
+              content: TrackLabelText(
+                info: formatAudioTrackLabel(context, stream),
+                selected: stream.index == currentIndex,
+              ),
+              selected: stream.index == currentIndex,
+              onSelect: () => _selectAudio(stream),
+            ))
+        .toList();
+  }
+
+  List<PopoverOption> _subtitleOptions() {
+    final playbackModel = ref.watch(playBackModel);
+    final currentIndex = playbackModel?.mediaStreams?.defaultSubStreamIndex;
+    final streams = [SubStreamModel.no(), ...?playbackModel?.subStreams];
+    return streams
+        .map((stream) => PopoverOption(
+              content: TrackLabelText(
+                info: formatSubtitleTrackLabel(context, stream),
+                selected: stream.index == (currentIndex ?? -1),
+              ),
+              selected: stream.index == (currentIndex ?? -1),
+              onSelect: () => _selectSubtitle(stream),
+            ))
+        .toList();
+  }
+
+  List<PopoverOption> _imageOptions() {
+    final settings = ref.watch(videoPlayerSettingsProvider);
+    final fitIndex = BoxFit.values.indexOf(settings.videoFit);
+    return [
+      PopoverOption(
+        content: _PopoverSettingRow(
+          label: context.localized.scale,
+          value: settings.videoFit.name.toUpperCaseSplit(),
+        ),
+        onSelect: () => ref
+            .read(videoPlayerSettingsProvider.notifier)
+            .setFitType(BoxFit.values[(fitIndex + 1) % BoxFit.values.length]),
+      ),
+      PopoverOption(
+        content: _PopoverSettingRow(
+          label: context.localized.playerSettingsAmbientBlurTitle,
+          // Coûteux en 4K sur RDNA2 (BackdropFilter par image) —
+          // désactivé par défaut, cf. CLAUDE.md.
+          value: settings.ambientBlur ? 'Activé' : 'Désactivé',
+        ),
+        selected: settings.ambientBlur,
+        onSelect: () => ref
+            .read(videoPlayerSettingsProvider.notifier)
+            .setAmbientBlur(!settings.ambientBlur),
+      ),
+    ];
+  }
+
+  List<PopoverOption> _speedOptions() {
+    final current = ref.watch(playbackRateProvider);
+    return _speedPresets
+        .map((speed) => PopoverOption(
+              content: Text('x${speed.toStringAsFixed(2)}'),
+              selected: (current - speed).abs() < 0.001,
+              onSelect: () {
+                ref.read(playbackRateProvider.notifier).state = speed;
+                ref.read(videoPlayerProvider).setSpeed(speed);
+              },
+            ))
+        .toList();
+  }
+
+  List<PopoverOption> _qualityOptions() {
+    final options =
+        ref.watch(playBackModel.select((value) => value?.bitRateOptions)) ?? {};
+    final visible = <MapEntry<Bitrate, bool>>[];
+    final collapsed = <MapEntry<Bitrate, bool>>[];
+    for (final entry in options.entries) {
+      if (entry.key == Bitrate.original || entry.key == Bitrate.auto) {
+        visible.add(entry);
+      } else {
+        collapsed.add(entry);
+      }
+    }
+    final result = visible
+        .map((entry) => PopoverOption(
+              content: Text(entry.key.label(context)),
+              selected: entry.value,
+              onSelect: () => _selectQuality(options, entry.key),
+            ))
+        .toList();
+    if (collapsed.isNotEmpty) {
+      result.add(PopoverOption(
+        content: Row(
+          children: [
+            Expanded(
+                child: Text('Débit limité',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textSecondary))),
+            Icon(
+              _qualityExpanded
+                  ? Icons.expand_less_rounded
+                  : Icons.expand_more_rounded,
+              size: 18,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
+        onSelect: () => setState(() => _qualityExpanded = !_qualityExpanded),
+      ));
+      if (_qualityExpanded) {
+        result.addAll(collapsed.map((entry) => PopoverOption(
+              content: Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.md),
+                child: Text(entry.key.label(context)),
+              ),
+              selected: entry.value,
+              onSelect: () => _selectQuality(options, entry.key),
+            )));
+      }
+    }
+    return result;
   }
 
   Widget bottomButtons(BuildContext context) {
@@ -1239,13 +1444,20 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
     _seekController.seekForward();
   }
 
-  // Reste affiché tant que la lecture est en pause, et tant que le
-  // panneau est ouvert — dans ces deux cas, il n'y a rien à masquer, et
-  // masquer quand même laisserait le panneau ou les contrôles inatteignables.
+  bool get _anyPopoverOpen =>
+      _audioPopover.isOpen ||
+      _subtitlesPopover.isOpen ||
+      _imagePopover.isOpen ||
+      _speedPopover.isOpen ||
+      _qualityPopover.isOpen;
+
+  // Reste affiché tant que la lecture est en pause, et tant qu'un
+  // popover est ouvert — dans ces deux cas, il n'y a rien à masquer, et
+  // masquer quand même laisserait le popover ou les contrôles inatteignables.
   void toggleOverlay({bool? value}) {
     final requested = value ?? !showOverlay;
     final playing = ref.read(mediaPlaybackProvider.select((v) => v.playing));
-    final mustStayVisible = !playing || _openPanelSection != null;
+    final mustStayVisible = !playing || _anyPopoverOpen;
     final desired = mustStayVisible || requested;
 
     if (showOverlay != desired) {
@@ -1275,26 +1487,6 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
     } else {
       resetTimer();
     }
-  }
-
-  /// Ouvre le panneau sur [section] — retient le contrôle qui avait le
-  /// focus (une seule fois, `??=` : plusieurs changements de section
-  /// pendant que le panneau est ouvert ne doivent pas écraser le point de
-  /// retour d'origine) pour le lui rendre à la fermeture.
-  void _openPanel(VideoPanelSection section) {
-    _panelReturnFocus ??= FocusManager.instance.primaryFocus;
-    setState(() => _openPanelSection = section);
-    toggleOverlay(value: true);
-  }
-
-  void _closePanel() {
-    setState(() => _openPanelSection = null);
-    final returnFocus = _panelReturnFocus;
-    _panelReturnFocus = null;
-    if (returnFocus != null && returnFocus.canRequestFocus) {
-      returnFocus.requestFocus();
-    }
-    resetTimer();
   }
 
   void minimizePlayer(BuildContext context) {
@@ -1615,19 +1807,18 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
         ref.read(videoPlayerSettingsProvider.notifier).prevChapter();
         return true;
       case VideoHotKeys.toggleSubtitles:
-        // Desktop : ouvre le panneau sur Sous-titres, comme le bouton de
-        // la barre — cohérent avec "tout passe par le même panneau".
-        // Ailleurs (le panneau n'existe pas hors desktop) : bascule
+        // Desktop : ouvre le popover Sous-titres, comme le bouton de la
+        // barre. Ailleurs (pas de popover hors desktop) : bascule
         // rapide sans UI, comportement déjà en place.
         if (AdaptiveLayout.of(context).isDesktop || kIsWeb) {
-          _openPanel(VideoPanelSection.subtitles);
+          _subtitlesPopover.toggle();
         } else {
           _toggleSubtitles();
         }
         return true;
       case VideoHotKeys.openAudioPanel:
         if (AdaptiveLayout.of(context).isDesktop || kIsWeb) {
-          _openPanel(VideoPanelSection.audio);
+          _audioPopover.toggle();
           return true;
         }
         return false;
@@ -1656,5 +1847,33 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
       default:
         return false;
     }
+  }
+}
+
+const _speedPresets = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+
+class _PopoverSettingRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _PopoverSettingRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(label,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.textPrimary)),
+        ),
+        Text(value,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppColors.textSecondary)),
+      ],
+    );
   }
 }

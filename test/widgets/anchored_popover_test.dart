@@ -8,6 +8,7 @@ Widget _harness({
   required Widget Function(BuildContext, VoidCallback close) popoverBuilder,
   AnchoredPopoverController? controller,
   FocusNode? triggerFocusNode,
+  ValueChanged<bool>? onOpenChanged,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -16,6 +17,7 @@ Widget _harness({
           AnchoredPopover(
             controller: controller,
             popoverBuilder: popoverBuilder,
+            onOpenChanged: onOpenChanged,
             child: TextButton(
               key: const Key('trigger'),
               focusNode: triggerFocusNode,
@@ -80,6 +82,26 @@ void main() {
 
       expect(find.text('Contenu popover'), findsNothing);
       expect(triggerFocusNode.hasFocus, isTrue);
+    });
+
+    testWidgets('onOpenChanged fires true on open and false on close',
+        (tester) async {
+      final controller = AnchoredPopoverController();
+      final events = <bool>[];
+      await tester.pumpWidget(_harness(
+        controller: controller,
+        onOpenChanged: events.add,
+        popoverBuilder: (context, close) => const Text('Contenu popover'),
+      ));
+
+      expect(events, isEmpty);
+      controller.show();
+      await tester.pumpAndSettle();
+      expect(events, [true]);
+
+      controller.hide();
+      await tester.pumpAndSettle();
+      expect(events, [true, false]);
     });
 
     testWidgets('close() passed to the builder closes the popover',

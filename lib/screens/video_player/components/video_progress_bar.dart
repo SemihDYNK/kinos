@@ -23,6 +23,19 @@ class VideoProgressBar extends ConsumerStatefulWidget {
   final bool buffering;
   final Duration buffer;
   final Function(Duration duration) onPositionChanged;
+
+  /// Signal externe (survol/focus du conteneur, ex. un clavier Tab) qui
+  /// s'ajoute au survol/glissement suivis en interne — `false` par
+  /// défaut, sans effet : seul le lecteur desktop en a besoin (poignée
+  /// visible au focus, pas seulement à la souris).
+  final bool handleVisible;
+
+  /// `false` par défaut (comportement historique, poignée toujours
+  /// peinte, juste plus petite au repos) — `true` : la poignée
+  /// disparaît complètement au repos, n'apparaît qu'au survol/glissement/
+  /// focus ([handleVisible]).
+  final bool hideHandleAtRest;
+
   const VideoProgressBar({
     required this.wasPlayingChanged,
     required this.wasPlaying,
@@ -32,11 +45,14 @@ class VideoProgressBar extends ConsumerStatefulWidget {
     required this.position,
     required this.buffering,
     required this.buffer,
+    this.handleVisible = false,
+    this.hideHandleAtRest = false,
     super.key,
   });
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ChapterProgressSliderState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _ChapterProgressSliderState();
 }
 
 class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
@@ -49,17 +65,22 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Chapter> chapters = ref.read(playBackModel.select((value) => value?.chapters ?? []));
-    final isVisible = (onDragStart ? true : onHoverStart);
+    final List<Chapter> chapters =
+        ref.read(playBackModel.select((value) => value?.chapters ?? []));
+    final isVisible = onDragStart || onHoverStart || widget.handleVisible;
     final player = ref.watch(videoPlayerProvider);
     final position = onDragStart ? currentDuration : widget.position;
-    final MediaSegmentsModel? mediaSegments = ref.read(playBackModel.select((value) => value?.mediaSegments));
-    final relativeFraction = position.inMilliseconds / widget.duration.inMilliseconds;
+    final MediaSegmentsModel? mediaSegments =
+        ref.read(playBackModel.select((value) => value?.mediaSegments));
+    final relativeFraction =
+        position.inMilliseconds / widget.duration.inMilliseconds;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final sliderHeight = SliderTheme.of(context).trackHeight ?? (constraints.maxHeight / 3);
+        final sliderHeight =
+            SliderTheme.of(context).trackHeight ?? (constraints.maxHeight / 3);
         final bufferWidth = calculateFractionWidth(constraints, widget.buffer);
-        final bufferFraction = relativeFraction / (bufferWidth / constraints.maxWidth);
+        final bufferFraction =
+            relativeFraction / (bufferWidth / constraints.maxWidth);
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -70,7 +91,8 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                 onHover: (event) {
                   setState(() {
                     onHoverStart = true;
-                    _updateSliderPosition(event.localPosition.dx, constraints.maxWidth);
+                    _updateSliderPosition(
+                        event.localPosition.dx, constraints.maxWidth);
                   });
                 },
                 onExit: (event) {
@@ -82,11 +104,13 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                   onPointerDown: (event) {
                     setState(() {
                       onDragStart = true;
-                      _updateSliderPosition(event.localPosition.dx, constraints.maxWidth);
+                      _updateSliderPosition(
+                          event.localPosition.dx, constraints.maxWidth);
                     });
                   },
                   onPointerMove: (event) {
-                    _updateSliderPosition(event.localPosition.dx, constraints.maxWidth);
+                    _updateSliderPosition(
+                        event.localPosition.dx, constraints.maxWidth);
                   },
                   onPointerUp: (_) {
                     setState(() {
@@ -107,7 +131,8 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                           ),
                       onChangeEnd: (e) async {
                         currentDuration = Duration(milliseconds: e.toInt());
-                        widget.onPositionChanged.call(Duration(milliseconds: e.toInt()));
+                        widget.onPositionChanged
+                            .call(Duration(milliseconds: e.toInt()));
                         await Future.delayed(const Duration(milliseconds: 250));
                         if (widget.wasPlaying) {
                           player.play();
@@ -121,7 +146,8 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                         setState(() {
                           onHoverStart = true;
                         });
-                        widget.wasPlayingChanged.call(player.lastState?.playing ?? false);
+                        widget.wasPlayingChanged
+                            .call(player.lastState?.playing ?? false);
                         player.pause();
                       },
                       onChanged: (e) {
@@ -158,12 +184,20 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                     Positioned(
                       left: 0,
                       child: SizedBox(
-                        width: (constraints.maxWidth / (widget.duration.inMilliseconds / widget.buffer.inMilliseconds))
+                        width: (constraints.maxWidth /
+                                (widget.duration.inMilliseconds /
+                                    widget.buffer.inMilliseconds))
                             .clamp(1, constraints.maxWidth),
                         height: sliderHeight,
                         child: GappedContainerShape(
-                          activeColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-                          inActiveColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                          activeColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.5),
+                          inActiveColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.5),
                           thumbPosition: bufferFraction,
                         ),
                       ),
@@ -183,9 +217,11 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                     ...chapters.map(
                       (chapter) {
                         final offset = constraints.maxWidth /
-                            (widget.duration.inMilliseconds / chapter.startPosition.inMilliseconds)
+                            (widget.duration.inMilliseconds /
+                                    chapter.startPosition.inMilliseconds)
                                 .clamp(1, constraints.maxWidth);
-                        final activePosition = chapter.startPosition < widget.position;
+                        final activePosition =
+                            chapter.startPosition < widget.position;
                         if (chapter.startPosition.inSeconds == 0) return null;
                         return Positioned(
                           left: offset,
@@ -195,7 +231,10 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                                 shape: BoxShape.circle,
                                 color: activePosition
                                     ? Theme.of(context).colorScheme.onPrimary
-                                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.5),
                               ),
                               height: constraints.maxHeight,
                               width: sliderHeight - (activePosition ? 2 : 4),
@@ -211,7 +250,9 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
             if (!widget.buffering) ...[
               chapterCard(context, position, isVisible),
               Positioned(
-                left: (constraints.maxWidth / (widget.duration.inMilliseconds / position.inMilliseconds))
+                left: (constraints.maxWidth /
+                        (widget.duration.inMilliseconds /
+                            position.inMilliseconds))
                     .clamp(1, constraints.maxWidth),
                 child: Transform.translate(
                   offset: Offset(-(constraints.maxHeight / 2), 0),
@@ -220,16 +261,25 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                       height: constraints.maxHeight,
                       width: constraints.maxHeight,
                       child: Center(
-                        child: AnimatedContainer(
+                        child: AnimatedOpacity(
                           duration: const Duration(milliseconds: 125),
-                          height: isVisible ? sliderHeight * 3.5 : sliderHeight,
-                          width: sliderHeight,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isVisible
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(context).colorScheme.primary,
-                            borderRadius: BorderRadius.circular(8),
+                          // hideHandleAtRest : la poignée n'existe qu'au
+                          // survol/glissement/focus, pas juste en plus
+                          // petit comme le comportement historique.
+                          opacity:
+                              widget.hideHandleAtRest && !isVisible ? 0 : 1,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 125),
+                            height:
+                                isVisible ? sliderHeight * 3.5 : sliderHeight,
+                            width: sliderHeight,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: isVisible
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(context).colorScheme.primary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                         ),
                       ),
@@ -245,15 +295,20 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
   }
 
   double calculateFractionWidth(BoxConstraints constraints, Duration incoming) {
-    return (constraints.maxWidth * (incoming.inSeconds / widget.duration.inSeconds)).clamp(0, constraints.maxWidth);
+    return (constraints.maxWidth *
+            (incoming.inSeconds / widget.duration.inSeconds))
+        .clamp(0, constraints.maxWidth);
   }
 
   double calculateStartOffset(BoxConstraints constraints, Duration start) {
-    return (constraints.maxWidth * (start.inSeconds / widget.duration.inSeconds)).clamp(0, constraints.maxWidth);
+    return (constraints.maxWidth *
+            (start.inSeconds / widget.duration.inSeconds))
+        .clamp(0, constraints.maxWidth);
   }
 
   double calculateEndOffset(BoxConstraints constraints, Duration end) {
-    return (constraints.maxWidth * (end.inSeconds / widget.duration.inSeconds)).clamp(0, constraints.maxWidth);
+    return (constraints.maxWidth * (end.inSeconds / widget.duration.inSeconds))
+        .clamp(0, constraints.maxWidth);
   }
 
   double calculateRightOffset(BoxConstraints constraints, Duration end) {
@@ -264,19 +319,22 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
   Widget chapterCard(BuildContext context, Duration duration, bool visible) {
     const double height = 350;
     final currentStream = ref.watch(playBackModel.select((value) => value));
-    final chapter = (currentStream?.chapters ?? []).getChapterFromDuration(currentDuration);
+    final chapter =
+        (currentStream?.chapters ?? []).getChapterFromDuration(currentDuration);
     final trickPlay = currentStream?.trickPlay;
     final screenWidth = MediaQuery.of(context).size.width;
     final calculatedPosition = _chapterPosition;
     final offsetDifference = _chapterPosition - calculatedPosition;
     return Positioned(
-      left: calculatedPosition.clamp(-10, screenWidth - (chapterCardWidth + 45)),
+      left:
+          calculatedPosition.clamp(-10, screenWidth - (chapterCardWidth + 45)),
       child: IgnorePointer(
         child: AnimatedOpacity(
           opacity: visible ? 1 : 0,
           duration: const Duration(milliseconds: 250),
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: height, maxWidth: chapterCardWidth),
+            constraints:
+                BoxConstraints(maxHeight: height, maxWidth: chapterCardWidth),
             child: Transform.translate(
               offset: const Offset(0, -height - 10),
               child: Align(
@@ -295,8 +353,10 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxHeight: 250),
                             child: ClipRRect(
-                              borderRadius: const BorderRadius.all(Radius.circular(8)),
-                              child: trickPlay == null || trickPlay.images.isEmpty
+                              borderRadius:
+                                  const BorderRadius.all(Radius.circular(8)),
+                              child: trickPlay == null ||
+                                      trickPlay.images.isEmpty
                                   ? chapter != null
                                       ? Image(
                                           image: chapter.imageProvider,
@@ -304,7 +364,8 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                                         )
                                       : const SizedBox.shrink()
                                   : AspectRatio(
-                                      aspectRatio: trickPlay.width.toDouble() / trickPlay.height.toDouble(),
+                                      aspectRatio: trickPlay.width.toDouble() /
+                                          trickPlay.height.toDouble(),
                                       child: TrickPlayImage(
                                         trickPlay,
                                         position: currentDuration,
@@ -324,7 +385,8 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                                   height: 30,
                                   width: 30,
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surface,
+                                    color:
+                                        Theme.of(context).colorScheme.surface,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
@@ -339,7 +401,8 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                                 padding: const EdgeInsets.all(8.0),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.max,
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     if (chapter?.name.isNotEmpty ?? false)
                                       Flexible(
@@ -348,14 +411,18 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                                           style: Theme.of(context)
                                               .textTheme
                                               .titleSmall
-                                              ?.copyWith(fontWeight: FontWeight.bold),
+                                              ?.copyWith(
+                                                  fontWeight: FontWeight.bold),
                                         ),
                                       ),
                                     Text(
                                       currentDuration.readAbleDuration,
                                       textAlign: TextAlign.center,
-                                      style:
-                                          Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.bold),
                                     )
                                   ],
                                 ),
@@ -380,7 +447,8 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
     setState(() {
       _chapterPosition = xPosition - chapterCardWidth / 2;
       final value = ((maxWidth - xPosition) / maxWidth - 1).abs();
-      currentDuration = Duration(milliseconds: (widget.duration.inMilliseconds * value).toInt());
+      currentDuration = Duration(
+          milliseconds: (widget.duration.inMilliseconds * value).toInt());
     });
   }
 }

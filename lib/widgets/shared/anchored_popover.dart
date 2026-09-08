@@ -25,11 +25,20 @@ class AnchoredPopover extends StatefulWidget {
   /// bas d'écran) ; bascule de l'autre côté tout seul si la place manque.
   final AxisDirection preferredDirection;
 
+  /// Appelé à l'ouverture et à la fermeture — le popover est un
+  /// `OverlayPortal` (posé au-dessus de tout, y compris un voile qui
+  /// s'estompe) : un appelant dont le déclencheur peut disparaître
+  /// (fondu d'inactivité...) doit pouvoir s'en garder informé, plutôt
+  /// que de laisser un popover flotter sans plus rien qui l'ancre
+  /// visuellement.
+  final ValueChanged<bool>? onOpenChanged;
+
   const AnchoredPopover({
     required this.child,
     required this.popoverBuilder,
     this.controller,
     this.preferredDirection = AxisDirection.up,
+    this.onOpenChanged,
     super.key,
   });
 
@@ -83,6 +92,7 @@ class _AnchoredPopoverState extends State<AnchoredPopover> {
     if (_overlayController.isShowing) return;
     _returnFocus = FocusManager.instance.primaryFocus;
     _overlayController.show();
+    widget.onOpenChanged?.call(true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // Ne prend le focus que si rien à l'intérieur ne l'a déjà réclamé
@@ -99,6 +109,7 @@ class _AnchoredPopoverState extends State<AnchoredPopover> {
   void _hide() {
     if (!_overlayController.isShowing) return;
     _overlayController.hide();
+    widget.onOpenChanged?.call(false);
     final returnFocus = _returnFocus;
     _returnFocus = null;
     if (returnFocus != null && returnFocus.canRequestFocus) {
