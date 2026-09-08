@@ -55,6 +55,7 @@ class AutoRouter extends RootStackRouter {
           children: _controlPanelRoutes,
         ),
         AutoRoute(page: ArrHomeRoute.page, path: 'arr'),
+        AutoRoute(page: ArrSearchRoute.page, path: 'arr/search'),
       ],
     ),
     AutoRoute(page: LockRoute.page, path: '/locked'),

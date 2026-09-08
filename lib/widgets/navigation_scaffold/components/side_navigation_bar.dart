@@ -265,11 +265,11 @@ class SideNavigationRail extends ConsumerWidget {
     }
   }
 
-  /// Accueil, Films, Séries, Recherche, Découverte, Demandes, Gestion —
-  /// dans cet ordre. Découverte et Demandes n'apparaissent que si
-  /// utilisables (Jellyseerr configuré) : les montrer sans condition mène
-  /// vers un écran cassé. Gestion, elle, reste toujours visible même sans
-  /// aucun service *Arr configuré — c'est par elle qu'on les configure, la
+  /// Accueil, Films, Séries, Recherche, Découverte, Demandes, Arr — dans
+  /// cet ordre. Découverte et Demandes n'apparaissent que si utilisables
+  /// (Jellyseerr configuré) : les montrer sans condition mène vers un
+  /// écran cassé. Arr, elle, reste toujours visible même sans aucun
+  /// service *Arr configuré — c'est par elle qu'on les configure, la
   /// masquer la rendrait inatteignable.
   List<_RailDestination> _railDestinations({
     required BuildContext context,
@@ -346,7 +346,7 @@ class SideNavigationRail extends ConsumerWidget {
           onTap: () => context.router.navigate(const SeerrRoute()),
         ),
       _RailDestination(
-        label: 'Gestion',
+        label: 'Arr',
         icon: IconsaxPlusLinear.chart_3,
         selectedIcon: IconsaxPlusBold.chart_3,
         selected: currentRouteName.startsWith('Arr'),

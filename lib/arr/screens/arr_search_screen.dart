@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,14 +14,24 @@ import 'package:fladder/arr/providers/arr_search_providers.dart';
 import 'package:fladder/arr/screens/widgets/arr_release_table.dart';
 import 'package:fladder/arr/screens/widgets/arr_season_episode_picker.dart';
 import 'package:fladder/arr/services/arr_api_client.dart';
+import 'package:fladder/arr/widgets/arr_desktop_scope.dart';
+import 'package:fladder/routes/auto_router.gr.dart';
 import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
 import 'package:fladder/theme/app_theme.dart';
+import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
+import 'package:fladder/util/router_extension.dart';
 
 /// Recherche interactive — bibliothèque Radarr/Sonarr existante, choix
 /// d'un film ou d'une série (puis saison ou épisode), résultats des
 /// indexeurs, envoi au téléchargement. Cf. CLAUDE.md § notes Arr (aucun
 /// mode salon, aucune navigation télécommande — tableau à colonnes,
 /// illisible en 10-foot).
+///
+/// Route à part entière (poussée depuis [ArrHomeScreen], raccourci
+/// "Recherche" de sa barre du haut) — porte donc elle-même son cadre
+/// d'écran (fond, retrait sous la barre latérale, bouton retour), plutôt
+/// que de dépendre d'un appelant qui les fournirait.
+@RoutePage()
 class ArrSearchScreen extends ConsumerStatefulWidget {
   const ArrSearchScreen({super.key});
 
@@ -258,21 +269,76 @@ class _ArrSearchScreenState extends ConsumerState<ArrSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('Recherche interactive',
-            style: Theme.of(context).textTheme.displaySmall),
-        const SizedBox(height: AppSpacing.md),
-        _ArrSearchField(
-            controller: _queryController, onChanged: _onQueryChanged),
-        const SizedBox(height: AppSpacing.lg),
-        if (_selected == null)
-          _buildLibrarySection(context)
-        else
-          _buildSelectionSection(context),
-      ],
+    final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
+    return ArrDesktopScope(
+      child: ColoredBox(
+        color: AppColors.background,
+        child: Padding(
+          padding: EdgeInsetsDirectional.only(start: sideBarInset),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Recherche interactive',
+                        style: Theme.of(context).textTheme.displaySmall),
+                    const SizedBox(height: AppSpacing.md),
+                    _ArrSearchField(
+                        controller: _queryController,
+                        onChanged: _onQueryChanged),
+                    const SizedBox(height: AppSpacing.lg),
+                    if (_selected == null)
+                      _buildLibrarySection(context)
+                    else
+                      _buildSelectionSection(context),
+                  ],
+                ),
+              ),
+              PositionedDirectional(
+                top: MediaQuery.paddingOf(context).top + AppSpacing.sm,
+                start: AppSpacing.sm,
+                child: FocusRing(
+                  borderRadius: AppRadii.controlBorder,
+                  onActivate: () => context.router.popBack(),
+                  child: ExcludeFocus(
+                    child: IconButton.filledTonal(
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.scrim.withValues(alpha: 0.4),
+                        foregroundColor: AppColors.textPrimary,
+                      ),
+                      onPressed: () => context.router.popBack(),
+                      icon: const BackButtonIcon(),
+                    ),
+                  ),
+                ),
+              ),
+              PositionedDirectional(
+                top: MediaQuery.paddingOf(context).top + AppSpacing.sm,
+                end: AppSpacing.sm,
+                child: FocusRing(
+                  borderRadius: AppRadii.controlBorder,
+                  onActivate: () =>
+                      context.router.push(const ArrSettingsRoute()),
+                  child: ExcludeFocus(
+                    child: Tooltip(
+                      message: 'Réglages Radarr / Sonarr',
+                      child: IconButton(
+                        onPressed: () =>
+                            context.router.push(const ArrSettingsRoute()),
+                        icon: const Icon(Icons.settings_outlined),
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
