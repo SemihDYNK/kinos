@@ -30,7 +30,7 @@ class AuthService {
               context.localized.authenticateWithBiometrics("(${user.name} - ${user.credentials.serverName})"),
           authMessages: <AuthMessages>[
             AndroidAuthMessages(
-              signInTitle: 'Fladder',
+              signInTitle: 'Kinos',
               biometricHint: context.localized.scanBiometricHint,
             ),
             IOSAuthMessages(

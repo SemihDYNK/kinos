@@ -199,7 +199,7 @@ class KinosTheme {
   }
 
   static ColorScheme defaultScheme(Brightness brightness) {
-    return ColorScheme.fromSeed(seedColor: ColorThemes.fladder.color, brightness: brightness);
+    return ColorScheme.fromSeed(seedColor: ColorThemes.kinos.color, brightness: brightness);
   }
 
   /// Apply Chinese system font to a light theme (for Windows, macOS, Android, iOS)

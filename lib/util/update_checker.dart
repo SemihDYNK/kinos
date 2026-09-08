@@ -68,8 +68,14 @@ extension DownloadLabelFormatter on String {
 }
 
 class UpdateChecker {
-  final String owner = 'DonutWare';
-  final String repo = 'Fladder';
+  // TODO (hors dépôt) : remplacer par le propriétaire/dépôt GitHub réels
+  // de Kinos une fois publié — laisser "DonutWare"/"Fladder" afficherait
+  // les versions de Fladder comme des mises à jour de Kinos, ce qui
+  // induirait en erreur. Tant que ce n'est pas renseigné, l'appel
+  // renvoie 404 et fetchRecentReleases() retourne simplement une liste
+  // vide (aucune mise à jour affichée, sans planter).
+  final String owner = 'YOUR_GITHUB_OWNER';
+  final String repo = 'Kinos';
 
   Future<List<ReleaseInfo>> fetchRecentReleases({int count = 5}) async {
     final info = await PackageInfo.fromPlatform();

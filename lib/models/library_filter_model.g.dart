@@ -38,7 +38,7 @@ _LibraryFilterModel _$LibraryFilterModelFromJson(Map<String, dynamic> json) =>
           const {},
       types: (json['types'] as Map<String, dynamic>?)?.map(
             (k, e) =>
-                MapEntry($enumDecode(_$FladderItemTypeEnumMap, k), e as bool),
+                MapEntry($enumDecode(_$KinosItemTypeEnumMap, k), e as bool),
           ) ??
           const {
             KinosItemType.audio: false,
@@ -80,8 +80,8 @@ Map<String, dynamic> _$LibraryFilterModelToJson(_LibraryFilterModel instance) =>
       'tags': instance.tags,
       'years': instance.years.map((k, e) => MapEntry(k.toString(), e)),
       'officialRatings': instance.officialRatings,
-      'types': instance.types
-          .map((k, e) => MapEntry(_$FladderItemTypeEnumMap[k]!, e)),
+      'types':
+          instance.types.map((k, e) => MapEntry(_$KinosItemTypeEnumMap[k]!, e)),
       'sortingOption': _$SortingOptionsEnumMap[instance.sortingOption]!,
       'sortOrder': _$SortingOrderEnumMap[instance.sortOrder]!,
       'favourites': instance.favourites,
@@ -104,7 +104,7 @@ const _$ItemFilterEnumMap = {
   ItemFilter.isfavoriteorlikes: 'IsFavoriteOrLikes',
 };
 
-const _$FladderItemTypeEnumMap = {
+const _$KinosItemTypeEnumMap = {
   KinosItemType.baseType: 'baseType',
   KinosItemType.audio: 'audio',
   KinosItemType.musicAlbum: 'musicAlbum',

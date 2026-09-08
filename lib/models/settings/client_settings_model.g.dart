@@ -119,7 +119,7 @@ const _$ThemeModeEnumMap = {
 };
 
 const _$ColorThemesEnumMap = {
-  ColorThemes.fladder: 'fladder',
+  ColorThemes.kinos: 'kinos',
   ColorThemes.deepOrange: 'deepOrange',
   ColorThemes.amber: 'amber',
   ColorThemes.green: 'green',

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 /// Type de source d'une rangée configurable de l'accueil. Toutes reposent
 /// sur des requêtes `/Items` (ou `/Persons`, `/Items/{id}/Similar`) déjà
-/// exposées par [fladder.JellyService] — aucun plugin serveur requis.
+/// exposées par [JellyService] — aucun plugin serveur requis.
 enum HomeRowType {
   genre,
   topRated,

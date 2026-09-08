@@ -34,7 +34,15 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/util/jellyfin_extension.dart';
 
 const _userSettings = "usersettings";
-const _client = "fladder";
+// Espace de noms des préférences d'affichage stockées côté serveur
+// Jellyfin (DisplayPreferences) — pas le nom de client envoyé à
+// l'authentification (celui-là vient de ApplicationInfo.name, dérivé de
+// pubspec.yaml). Renommé avec le reste du client : des préférences
+// éventuellement déjà enregistrées côté serveur sous l'ancien espace de
+// noms "fladder" ne seront pas retrouvées ici (repli sur les valeurs par
+// défaut, rien ne plante) — pas de migration côté serveur possible
+// depuis ce dépôt.
+const _client = "kinos";
 
 class ServerQueryResult {
   final List<ItemBaseModel> items;

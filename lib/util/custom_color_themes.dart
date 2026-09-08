@@ -2,8 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 enum ColorThemes {
-  fladder(
-    name: 'Fladder',
+  // Renommé depuis `fladder` — un préréglage de couleur de marque garde
+  // le nom du projet actuel, pas celui d'avant le fork. Un utilisateur
+  // ayant déjà ce thème enregistré (chaîne persistée "fladder") retombe
+  // sur le thème par défaut au lieu de planter (ColorThemes? est
+  // nullable, $enumDecodeNullable généré ne lève pas sur une valeur
+  // inconnue) — impact mineur, une préférence de couleur, pas une perte
+  // de données.
+  kinos(
+    name: 'Kinos',
     color: kDebugMode ? Colors.purpleAccent : Colors.orange,
   ),
   deepOrange(

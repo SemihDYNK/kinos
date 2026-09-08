@@ -187,7 +187,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             SettingsListTile(
               label: Text(context.localized.about),
-              subLabel: Text("Fladder, ${context.localized.latestReleases}"),
+              subLabel: Text("Kinos, ${context.localized.latestReleases}"),
               selected: containsRoute(const AboutSettingsRoute()),
               leading: Opacity(
                 opacity: 1,
@@ -211,13 +211,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             if (ref.watch(
                 argumentsStateProvider.select((value) => value.htpcMode)))
               SettingsListTile(
-                label: Text(context.localized.exitFladderTitle),
+                label: Text(context.localized.exitKinosTitle),
                 icon: IconsaxPlusLinear.close_square,
                 onTap: () async {
                   showDefaultAlertDialog(
                     context,
-                    context.localized.exitFladderTitle,
-                    context.localized.exitFladderDesc,
+                    context.localized.exitKinosTitle,
+                    context.localized.exitKinosDesc,
                     (context) async {
                       if (AdaptiveLayout.of(context).isDesktop) {
                         await quitApplication(context);

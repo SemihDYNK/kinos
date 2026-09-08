@@ -16,9 +16,9 @@ import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/services/notification_service.dart';
 import 'package:kinos/util/notification_helpers.dart';
 
-const String updateTaskName = 'nl.jknaapen.fladder.update_notifications_check';
-const String updateTaskNameDebug = 'nl.jknaapen.fladder.update_notifications_check_debug';
-const String updateWorkerPortName = 'fladder_notification_update_worker_port';
+const String updateTaskName = 'app.kinos.update_notifications_check';
+const String updateTaskNameDebug = 'app.kinos.update_notifications_check_debug';
+const String updateWorkerPortName = 'kinos_notification_update_worker_port';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {

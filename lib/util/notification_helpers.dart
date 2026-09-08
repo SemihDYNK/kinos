@@ -10,8 +10,8 @@ import 'package:kinos/seerr/seerr_chopper_service.dart';
 import 'package:kinos/seerr/seerr_json_converter.dart';
 import 'package:kinos/seerr/seerr_models.dart';
 
-const String updateTaskName = 'nl.jknaapen.fladder.update_notifications_check';
-const String updateTaskNameDebug = 'nl.jknaapen.fladder.update_notifications_check_debug';
+const String updateTaskName = 'app.kinos.update_notifications_check';
+const String updateTaskNameDebug = 'app.kinos.update_notifications_check_debug';
 
 class NotificationHelpers {
   static String buildDetailsDeepLink(String id) => 'kinos:///details?id=${Uri.encodeComponent(id)}';
