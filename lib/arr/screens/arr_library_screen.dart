@@ -247,14 +247,25 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
       children: [
         Row(
           children: [
-            Text(
-              '↑↓←→ naviguer · Entrée détail · clic droit ou touche Menu : actions',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppColors.textDisabled),
+            // Expanded + ellipsis, pas Spacer : ce texte est le seul élément
+            // de cette ligne sans largeur naturelle bornée — sans ça, la
+            // rangée de contrôles à droite (4 filtres + tri + sens) peut se
+            // faire pousser hors champ par une fenêtre étroite, avec un
+            // débordement de Row qui rend le dernier bouton (le sens du
+            // tri) instable au clic : la cible visuelle et la cible de
+            // geste réelle ne coïncident plus forcément.
+            Expanded(
+              child: Text(
+                '↑↓←→ naviguer · Entrée détail · clic droit ou touche Menu : actions',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.textDisabled),
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: AppSpacing.sm),
             Row(
               spacing: AppSpacing.xxs,
               children: [
