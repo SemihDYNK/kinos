@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>app.kinos</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Kinos</name>
+  <summary>A Jellyfin client for Linux desktop, fork of Fladder</summary>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#5B364D</color>
+    <color type="primary" scheme_preference="dark">#3A2101</color>
+  </branding>
+
+  <description>
+    <p>
+      Kinos is a Jellyfin client for Linux desktop — a fork of Fladder, narrowed
+      to movies and TV shows, with an integrated Sonarr/Radarr module for
+      requesting and managing content directly from the client.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Stream movies and TV shows from your Jellyfin server</li>
+      <li>Hardware-accelerated video playback</li>
+      <li>Support for multiple profiles</li>
+      <li>Sonarr/Radarr integration — library, queue, calendar, interactive search</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">app.kinos.desktop</launchable>
+
+  <!-- TODO (hors dépôt) : remplacer par l'URL réelle du dépôt Kinos une
+       fois publié — ces trois champs pointent encore vers le dépôt
+       upstream Fladder, faute de connaître la destination de ce fork. -->
+  <url type="homepage">https://github.com/DonutWare/Fladder</url>
+  <url type="bugtracker">https://github.com/DonutWare/Fladder/issues</url>
+  <url type="vcs-browser">https://github.com/DonutWare/Fladder</url>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-info">mild</content_attribute>
+  </content_rating>
+
+  <requires>
+    <internet>always</internet>
+  </requires>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Player</category>
+  </categories>
+
+  <keywords>
+    <keyword>jellyfin</keyword>
+    <keyword>media</keyword>
+    <keyword>streaming</keyword>
+    <keyword>video</keyword>
+    <keyword>sonarr</keyword>
+    <keyword>radarr</keyword>
+  </keywords>
+</component>

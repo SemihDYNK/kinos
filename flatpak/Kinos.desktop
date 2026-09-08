@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Kinos
+StartupWMClass=app.kinos
+Comment=A Jellyfin client for Linux desktop, fork of Fladder.
+Exec=kinos
+Icon=app.kinos
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;Player;
