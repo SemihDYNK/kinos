@@ -41,10 +41,24 @@ abstract final class AppColors {
   static const error = Color(0xFFE05252);
   static const success = Color(0xFF4CAF7D);
 
+  /// État intermédiaire — ni l'échec net d'[error], ni la réussite
+  /// franche de [success] : un import bloqué en attente d'action, un
+  /// téléchargement en retard... Introduit pour le module Arr (file
+  /// d'attente Radarr/Sonarr), aucun état de ce type ailleurs jusqu'ici.
+  static const warning = Color(0xFFE0A852);
+
   /// Piste des barres de progression posées sur une image (vignettes de
   /// reprise). Distincte de [border] : plus claire, pensée pour rester
   /// visible sur une jaquette sombre comme sur une jaquette claire.
   static const progressTrack = Color(0xFF333333);
+
+  /// Statuts calendrier Radarr/Sonarr (film/épisode annoncé, déjà
+  /// téléchargé, ou en retard sur bibliothèque) — distincts d'
+  /// [error]/[success]/[warning] : ce ne sont pas des résultats
+  /// d'action, mais l'état d'une sortie dans le temps.
+  static const calendarAnnounced = Color(0xFF6B8AB8);
+  static const calendarDownloaded = success;
+  static const calendarMissing = Color(0xFFB86B6B);
 }
 
 // ---------------------------------------------------------------------------
