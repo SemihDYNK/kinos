@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/models/items/images_models.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 
 class MediaHeader extends ConsumerWidget {
   final String name;
@@ -43,7 +43,7 @@ class MediaHeader extends ConsumerWidget {
       child: Stack(
         children: [
           logo != null
-              ? FladderImage(
+              ? KinosImage(
                   image: logo,
                   disableBlur: true,
                   alignment: alignment,

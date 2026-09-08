@@ -11,7 +11,7 @@ import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:kinos/models/account_model.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/deep_link_helper.dart';
@@ -263,7 +263,7 @@ class _AuthLinkDialogState extends State<AuthLinkDialog> {
     );
     if (qrImageBytes == null) {
       if (context.mounted) {
-        FladderSnack.show(
+        KinosSnack.show(
           context.localized.invalidAuthLink,
         );
       }
@@ -287,7 +287,7 @@ class _AuthLinkDialogState extends State<AuthLinkDialog> {
   Future<void> _copyLink() async {
     await Clipboard.setData(ClipboardData(text: linkUrl));
     if (context.mounted) {
-      FladderSnack.show(
+      KinosSnack.show(
         context.localized.copiedToClipboard,
       );
     }

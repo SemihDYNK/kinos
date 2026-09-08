@@ -8,7 +8,7 @@ import 'package:kinos/providers/arguments_provider.dart';
 import 'package:kinos/providers/shared_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
-import 'package:kinos/screens/shared/fladder_logo.dart';
+import 'package:kinos/screens/shared/kinos_logo.dart';
 import 'package:kinos/screens/shared/route_wrapper.dart';
 import 'package:kinos/services/local_network_permission.dart';
 
@@ -74,7 +74,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         body: Center(
           child: FractionallySizedBox(
             heightFactor: 0.4,
-            child: FladderLogo(),
+            child: KinosLogo(),
           ),
         ),
       ),

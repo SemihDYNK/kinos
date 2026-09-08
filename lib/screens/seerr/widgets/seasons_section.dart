@@ -9,7 +9,7 @@ import 'package:kinos/screens/seerr/widgets/season_download_progress_widget.dart
 import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/theme/app_theme.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/ensure_visible.dart';
@@ -130,12 +130,12 @@ class SeerrSeasonsSection extends ConsumerWidget {
                       ),
                       if (season.posterUrl != null)
                         ClipRRect(
-                          borderRadius: FladderTheme.smallShape.borderRadius,
+                          borderRadius: KinosTheme.smallShape.borderRadius,
                           child: SizedBox(
                             height: 100,
                             child: AspectRatio(
                               aspectRatio: 0.67,
-                              child: FladderImage(
+                              child: KinosImage(
                                 image: season.posterUrl == null
                                     ? null
                                     : ImageData(path: season.posterUrl!, key: 'id${season.id}_season$seasonNumber'),

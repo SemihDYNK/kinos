@@ -11,7 +11,7 @@ import 'package:kinos/arr/screens/widgets/arr_library_grid.dart';
 import 'package:kinos/arr/services/arr_api_client.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/shared/chips/filter_button.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/widgets/shared/anchored_popover.dart';
 
@@ -78,7 +78,7 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
     if (!mounted) return;
     if (result case ArrFailure(:final detail)) {
       final parts = [failureContext, detail].nonNulls.toList();
-      FladderSnack.show(
+      KinosSnack.show(
         parts.isEmpty ? 'Échec de l\'action.' : parts.join(' — '),
         context: context,
       );

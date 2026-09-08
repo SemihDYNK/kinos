@@ -14,12 +14,12 @@ import 'package:kinos/providers/settings/book_viewer_settings_provider.dart';
 import 'package:kinos/screens/book_viewer/book_viewer_chapters.dart';
 import 'package:kinos/screens/book_viewer/book_viewer_settings.dart';
 import 'package:kinos/screens/shared/default_title_bar.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/input_handler.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/throttler.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 
 class BookViewController {
   bool controlsVisible = true;
@@ -316,7 +316,7 @@ class _BookViewerControlsState extends ConsumerState<BookViewerControls> {
                                                 },
                                               );
                                             }
-                                          : () => FladderSnack.show("No other chapters", context: context),
+                                          : () => KinosSnack.show("No other chapters", context: context),
                                       icon: const Icon(IconsaxPlusLinear.bookmark_2),
                                     )
                                   ],
@@ -388,7 +388,7 @@ class _BookViewerControlsState extends ConsumerState<BookViewerControls> {
             flipX: bookViewerSettings.readDirection == ReadDirection.rightToLeft,
             child: SizedBox(
               height: 40,
-              child: FladderSlider(
+              child: KinosSlider(
                 value: clampedCurrentPage.toDouble(),
                 divisions: details.pages.length - 1,
                 min: 1,

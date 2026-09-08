@@ -11,7 +11,7 @@ import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
 import 'package:kinos/screens/shared/input_fields.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 
 List<Widget> buildClientSettingsVisual(
@@ -179,7 +179,7 @@ List<Widget> buildClientSettingsVisual(
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: FladderSlider(
+            child: KinosSlider(
               min: 0.5,
               max: 1.5,
               value: clientSettings.posterSize,

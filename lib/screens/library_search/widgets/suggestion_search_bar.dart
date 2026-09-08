@@ -10,7 +10,7 @@ import 'package:kinos/providers/library_search_provider.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/debouncer.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/localization_helper.dart';
 
 class SuggestionSearchBar extends ConsumerStatefulWidget {
@@ -81,7 +81,7 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
         decorationBuilder: (context, child) => DecoratedBox(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.secondaryContainer,
-            borderRadius: FladderTheme.smallShape.borderRadius,
+            borderRadius: KinosTheme.smallShape.borderRadius,
           ),
           child: child,
         ),
@@ -158,7 +158,7 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
                       child: AspectRatio(
                         aspectRatio: 0.8,
-                        child: FladderImage(
+                        child: KinosImage(
                           image: suggestion.images?.primary,
                           fit: BoxFit.cover,
                         ),

@@ -9,8 +9,8 @@ import 'package:kinos/models/funding_model.dart' as funding;
 import 'package:kinos/screens/crash_screen/crash_screen.dart';
 import 'package:kinos/screens/settings/settings_scaffold.dart';
 import 'package:kinos/screens/settings/widgets/settings_update_information.dart';
-import 'package:kinos/screens/shared/fladder_icon.dart';
-import 'package:kinos/screens/shared/fladder_logo.dart';
+import 'package:kinos/screens/shared/kinos_icon.dart';
+import 'package:kinos/screens/shared/kinos_logo.dart';
 import 'package:kinos/screens/shared/media/external_urls.dart';
 import 'package:kinos/util/application_info.dart';
 import 'package:kinos/util/list_padding.dart';
@@ -48,7 +48,7 @@ class AboutSettingsPage extends ConsumerWidget {
     return SettingsScaffold(
       label: "",
       items: [
-        const FladderLogo(),
+        const KinosLogo(),
         Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -73,7 +73,7 @@ class AboutSettingsPage extends ConsumerWidget {
             FilledButton.tonal(
               onPressed: () => showLicensePage(
                 context: context,
-                applicationIcon: const FladderIcon(size: 55),
+                applicationIcon: const KinosIcon(size: 55),
                 applicationVersion: applicationInfo.versionPlatformBuild,
                 applicationLegalese: "DonutWare",
                 useRootNavigator: true,

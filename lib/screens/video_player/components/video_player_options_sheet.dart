@@ -30,7 +30,7 @@ import 'package:kinos/util/map_bool_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
 import 'package:kinos/util/string_extensions.dart';
 import 'package:kinos/widgets/shared/enum_selection.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 import 'package:kinos/widgets/shared/spaced_list_tile.dart';
@@ -291,7 +291,7 @@ class _VideoOptionsMobileState extends ConsumerState<VideoOptions> {
       children: [
         navTitle(currentItem?.title, currentItem?.subTextShort(context.localized)),
         if (currentItem != null) ...{
-          if (currentItem.type == FladderItemType.episode)
+          if (currentItem.type == KinosItemType.episode)
             ListTile(
               onTap: () {
                 Navigator.of(context).pop();
@@ -308,7 +308,7 @@ class _VideoOptionsMobileState extends ConsumerState<VideoOptions> {
             },
             title: Text(context.localized.showDetails),
           ),
-          if (currentItem.type != FladderItemType.boxset)
+          if (currentItem.type != KinosItemType.boxset)
             ListTile(
               onTap: () async {
                 await addItemToCollection(context, [currentItem]);
@@ -318,7 +318,7 @@ class _VideoOptionsMobileState extends ConsumerState<VideoOptions> {
               },
               title: Text(context.localized.addToCollection),
             ),
-          if (currentItem.type != FladderItemType.playlist)
+          if (currentItem.type != KinosItemType.playlist)
             ListTile(
               onTap: () async {
                 await addItemToPlaylist(context, [currentItem]);
@@ -510,7 +510,7 @@ Future<void> showPlaybackSpeed(BuildContext context) {
                       Flexible(
                         child: SizedBox(
                           width: 250,
-                          child: FladderSlider(
+                          child: KinosSlider(
                             min: 0.25,
                             max: 3,
                             value: lastSpeed,

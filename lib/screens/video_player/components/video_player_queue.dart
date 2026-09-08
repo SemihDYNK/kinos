@@ -8,7 +8,7 @@ import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/media_playback_model.dart';
 import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/wrappers/media_control_wrapper.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/models/playback/playback_queue_state.dart';
@@ -361,7 +361,7 @@ class _QueueTile extends StatelessWidget {
           child: SizedBox(
             width: 40,
             height: 40,
-            child: FladderImage(
+            child: KinosImage(
               image: item.images?.primary,
               fit: BoxFit.cover,
               placeHolder: const Center(child: Icon(Icons.music_note_rounded, size: 20)),

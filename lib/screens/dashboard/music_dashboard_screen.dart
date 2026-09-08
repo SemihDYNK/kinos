@@ -17,7 +17,7 @@ import 'package:kinos/providers/views_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/dashboard/music_playlist_row.dart';
 import 'package:kinos/screens/home_screen.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/media/poster_row.dart';
 import 'package:kinos/screens/shared/media/track_list.dart';
 import 'package:kinos/screens/shared/nested_scaffold.dart';
@@ -176,7 +176,7 @@ class _MusicDashboardScreenState extends ConsumerState<MusicDashboardScreen> {
                                         aspectRatio: 1.0,
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            borderRadius: FladderTheme.defaultPosterDecoration.borderRadius,
+                                            borderRadius: KinosTheme.defaultPosterDecoration.borderRadius,
                                             color: Theme.of(context).colorScheme.surface,
                                           ),
                                           child: Column(
@@ -206,7 +206,7 @@ class _MusicDashboardScreenState extends ConsumerState<MusicDashboardScreen> {
                     playlists:
                         musicDashboard.playlists.map((playlist) => playlist.copyWith(canDownload: true)).toList(),
                     contentPadding: padding,
-                    label: FladderItemType.playlist.label(context.localized, count: musicDashboard.playlists.length),
+                    label: KinosItemType.playlist.label(context.localized, count: musicDashboard.playlists.length),
                     onPlaylistPlayTap: (playlist) => playlist.play(context, ref),
                   ),
                 if (musicDashboard.recentlyAddedAlbums.isNotEmpty)
@@ -214,11 +214,11 @@ class _MusicDashboardScreenState extends ConsumerState<MusicDashboardScreen> {
                     tvMode: useTVExpandedLayout,
                     contentPadding: padding,
                     label: context.localized.dashboardRecentlyAddedItems(
-                      FladderItemType.musicAlbum
+                      KinosItemType.musicAlbum
                           .label(context.localized, count: musicDashboard.recentlyAddedAlbums.length)
                           .toLowerCase(),
                     ),
-                    collectionAspectRatio: FladderItemType.musicAlbum.aspectRatio,
+                    collectionAspectRatio: KinosItemType.musicAlbum.aspectRatio,
                     posters: musicDashboard.recentlyAddedAlbums,
                   ),
                 if (activeRecentTrackSection != null)
@@ -270,11 +270,11 @@ class _MusicDashboardScreenState extends ConsumerState<MusicDashboardScreen> {
                     tvMode: useTVExpandedLayout,
                     contentPadding: padding,
                     label: context.localized.dashboardRecentlyAddedItems(
-                      FladderItemType.musicArtist
+                      KinosItemType.musicArtist
                           .label(context.localized, count: musicDashboard.recentlyAddedArtists.length)
                           .toLowerCase(),
                     ),
-                    collectionAspectRatio: FladderItemType.musicAlbum.aspectRatio,
+                    collectionAspectRatio: KinosItemType.musicAlbum.aspectRatio,
                     posters: musicDashboard.recentlyAddedArtists,
                   ),
                 if (musicDashboard.mostPlayed.isNotEmpty)
@@ -282,7 +282,7 @@ class _MusicDashboardScreenState extends ConsumerState<MusicDashboardScreen> {
                     tvMode: useTVExpandedLayout,
                     contentPadding: padding,
                     label: context.localized.mostPlayed,
-                    collectionAspectRatio: FladderItemType.musicAlbum.aspectRatio,
+                    collectionAspectRatio: KinosItemType.musicAlbum.aspectRatio,
                     posters: musicDashboard.mostPlayed,
                   ),
               ]
@@ -328,7 +328,7 @@ class _MusicDashboardScreenState extends ConsumerState<MusicDashboardScreen> {
 
     if (model == null) {
       if (mounted) {
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }

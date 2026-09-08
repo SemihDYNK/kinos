@@ -2,7 +2,7 @@ import 'package:kinos/models/book_model.dart';
 import 'package:kinos/providers/book_viewer_provider.dart';
 import 'package:kinos/providers/items/book_details_provider.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/widgets/shared/modal_side_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,7 +75,7 @@ class BookViewerChapters extends ConsumerWidget {
                             leading: AspectRatio(
                               aspectRatio: 1,
                               child: Card(
-                                child: FladderImage(
+                                child: KinosImage(
                                   image: book.getPosters?.primary,
                                 ),
                               ),

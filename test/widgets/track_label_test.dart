@@ -56,7 +56,7 @@ void main() {
     Future<void> withContext(
         WidgetTester tester, void Function(BuildContext context) body) async {
       await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: FladderLocalizations.localizationsDelegates,
+        localizationsDelegates: KinosLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(builder: (context) {
           body(context);

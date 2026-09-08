@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/theme/app_theme.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 
 /// Vignette 16:9 avec repli : [thumbnail] (Thumb ou Backdrop, déjà en
 /// 16:9) en cover si disponible, sinon [fallback] (typiquement Primary,
@@ -19,7 +19,7 @@ class MediaThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (thumbnail != null) {
-      return FladderImage(image: thumbnail, fit: BoxFit.cover);
+      return KinosImage(image: thumbnail, fit: BoxFit.cover);
     }
     if (fallback == null) {
       return const ColoredBox(color: AppColors.surface);
@@ -29,7 +29,7 @@ class MediaThumbnail extends StatelessWidget {
       child: Center(
         child: AspectRatio(
           aspectRatio: 2 / 3,
-          child: FladderImage(image: fallback, fit: BoxFit.cover),
+          child: KinosImage(image: fallback, fit: BoxFit.cover),
         ),
       ),
     );

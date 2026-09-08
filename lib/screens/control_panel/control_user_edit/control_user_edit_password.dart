@@ -6,7 +6,7 @@ import 'package:kinos/providers/control_panel/control_users_provider.dart';
 import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
 import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
@@ -72,12 +72,12 @@ class _ControlUserEditPasswordState extends ConsumerState<ControlUserEditPasswor
                   onPressed: () async {
                     final success = await ref.read(controlUsersProvider.notifier).resetUserPassword();
                     if (success) {
-                      FladderSnack.show(
+                      KinosSnack.show(
                         context.localized.passwordResetSuccess,
                         context: context,
                       );
                     } else {
-                      FladderSnack.show(
+                      KinosSnack.show(
                         context.localized.passwordResetFailed,
                         context: context,
                       );
@@ -89,7 +89,7 @@ class _ControlUserEditPasswordState extends ConsumerState<ControlUserEditPasswor
                 FilledButtonAwait(
                   onPressed: () async {
                     if (newPasswordController.text != confirmPasswordController.text) {
-                      FladderSnack.show(
+                      KinosSnack.show(
                         context.localized.passwordMismatch,
                         context: context,
                       );
@@ -102,7 +102,7 @@ class _ControlUserEditPasswordState extends ConsumerState<ControlUserEditPasswor
                           confirmPassword: confirmPasswordController.text,
                         );
                     if (responseMessage == null) {
-                      FladderSnack.show(
+                      KinosSnack.show(
                         context.localized.passwordChangeSuccess,
                         context: context,
                       );
@@ -110,7 +110,7 @@ class _ControlUserEditPasswordState extends ConsumerState<ControlUserEditPasswor
                       newPasswordController.clear();
                       confirmPasswordController.clear();
                     } else {
-                      FladderSnack.show(
+                      KinosSnack.show(
                         responseMessage,
                         context: context,
                       );

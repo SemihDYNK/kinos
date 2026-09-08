@@ -86,7 +86,7 @@ extension PlaylistModelPlayback on PlaylistModel? {
 
     if (op.isCanceled || result == null) {
       if (!op.isCanceled && context.mounted) {
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -112,7 +112,7 @@ extension PlaylistModelPlayback on PlaylistModel? {
     }
 
     if (result.model == null || result.queue.isEmpty) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       return;
     }
 
@@ -129,7 +129,7 @@ extension PlaylistModelPlayback on PlaylistModel? {
       final actualStartPosition = startPosition ?? await model.startDuration() ?? Duration.zero;
       final loadedCorrectly = await ref.read(videoPlayerProvider.notifier).loadPlaybackItem(model, actualStartPosition);
       if (!loadedCorrectly) {
-        if (context.mounted) FladderSnack.show(context.localized.errorOpeningMedia, context: context);
+        if (context.mounted) KinosSnack.show(context.localized.errorOpeningMedia, context: context);
         return;
       }
       await ref.read(videoPlayerProvider.notifier).openPlayer(context);
@@ -178,7 +178,7 @@ Future<void> _playPlaylistMusic(BuildContext context, WidgetRef ref, String play
 
   if (op.isCanceled || result == null) {
     if (!op.isCanceled && context.mounted) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
     }
     return;
   }
@@ -217,7 +217,7 @@ Future<void> _playPlaylistVideos(BuildContext context, WidgetRef ref, String pla
 
   if (op.isCanceled || result == null) {
     if (!op.isCanceled && context.mounted) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
     }
     return;
   }
@@ -226,7 +226,7 @@ Future<void> _playPlaylistVideos(BuildContext context, WidgetRef ref, String pla
   final actualStartPosition = await model.startDuration() ?? Duration.zero;
   final loadedCorrectly = await ref.read(videoPlayerProvider.notifier).loadPlaybackItem(model, actualStartPosition);
   if (!loadedCorrectly) {
-    if (context.mounted) FladderSnack.show(context.localized.errorOpeningMedia, context: context);
+    if (context.mounted) KinosSnack.show(context.localized.errorOpeningMedia, context: context);
     return;
   }
   await ref.read(videoPlayerProvider.notifier).openPlayer(context);
@@ -254,7 +254,7 @@ Future<void> _playPlaylistGallery(BuildContext context, WidgetRef ref, String pl
 
   if (op.isCanceled || photos == null || photos.isEmpty) {
     if (!op.isCanceled && context.mounted) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
     }
     return;
   }
@@ -284,8 +284,8 @@ class _PlaylistClassification {
 
 _PlaylistClassification _classifyPlaylistItems(List<ItemBaseModel> items) {
   return _PlaylistClassification(
-    playable: items.where((item) => FladderItemType.playable.contains(item.type)).toList(),
-    music: items.where((item) => FladderItemType.musicPlayable.contains(item.type)).toList(),
+    playable: items.where((item) => KinosItemType.playable.contains(item.type)).toList(),
+    music: items.where((item) => KinosItemType.musicPlayable.contains(item.type)).toList(),
     gallery: items.whereType<PhotoModel>().toList(),
   );
 }

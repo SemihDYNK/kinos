@@ -9,17 +9,17 @@ import 'package:intl/intl.dart' as intl;
 
 import 'package:kinos/l10n/generated/app_localizations.dart';
 
-class FladderLocalizations {
+class KinosLocalizations {
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     AppLocalizations.delegate,
-    FladderMaterialLocalizationsDelegate(),
-    FladderCupertinoLocalizationsDelegate(),
-    FladderWidgetsLocalizationsDelegate(),
+    KinosMaterialLocalizationsDelegate(),
+    KinosCupertinoLocalizationsDelegate(),
+    KinosWidgetsLocalizationsDelegate(),
   ];
 }
 
-class FladderMaterialLocalizationsDelegate extends LocalizationsDelegate<MaterialLocalizations> {
-  const FladderMaterialLocalizationsDelegate();
+class KinosMaterialLocalizationsDelegate extends LocalizationsDelegate<MaterialLocalizations> {
+  const KinosMaterialLocalizationsDelegate();
 
   @override
   bool isSupported(Locale locale) => true;
@@ -108,14 +108,14 @@ class FladderMaterialLocalizationsDelegate extends LocalizationsDelegate<Materia
   }
 
   @override
-  bool shouldReload(FladderMaterialLocalizationsDelegate old) => false;
+  bool shouldReload(KinosMaterialLocalizationsDelegate old) => false;
 
   @override
   String toString() => 'GlobalMaterialLocalizations.delegate(${kMaterialSupportedLanguages.length} locales)';
 }
 
-class FladderWidgetsLocalizationsDelegate extends LocalizationsDelegate<WidgetsLocalizations> {
-  const FladderWidgetsLocalizationsDelegate();
+class KinosWidgetsLocalizationsDelegate extends LocalizationsDelegate<WidgetsLocalizations> {
+  const KinosWidgetsLocalizationsDelegate();
 
   @override
   bool isSupported(Locale locale) => true;
@@ -138,8 +138,8 @@ class FladderWidgetsLocalizationsDelegate extends LocalizationsDelegate<WidgetsL
   bool shouldReload(covariant LocalizationsDelegate<WidgetsLocalizations> old) => false;
 }
 
-class FladderCupertinoLocalizationsDelegate extends LocalizationsDelegate<CupertinoLocalizations> {
-  const FladderCupertinoLocalizationsDelegate();
+class KinosCupertinoLocalizationsDelegate extends LocalizationsDelegate<CupertinoLocalizations> {
+  const KinosCupertinoLocalizationsDelegate();
 
   @override
   bool isSupported(Locale locale) => true;
@@ -214,7 +214,7 @@ class FladderCupertinoLocalizationsDelegate extends LocalizationsDelegate<Cupert
   }
 
   @override
-  bool shouldReload(FladderCupertinoLocalizationsDelegate old) => false;
+  bool shouldReload(KinosCupertinoLocalizationsDelegate old) => false;
 
   @override
   String toString() => 'GlobalCupertinoLocalizations.delegate(${kCupertinoSupportedLanguages.length} locales)';

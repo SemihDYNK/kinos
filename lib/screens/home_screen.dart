@@ -11,7 +11,7 @@ import 'package:kinos/providers/sync_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/window_title_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/global_hotkeys.dart';
 import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/util/localization_helper.dart';

@@ -294,20 +294,20 @@ class ItemBaseModel with ItemBaseModelMappable {
     );
   }
 
-  FladderItemType get type => switch (this) {
-        MovieModel _ => FladderItemType.movie,
-        SeriesModel _ => FladderItemType.series,
-        SeasonModel _ => FladderItemType.season,
-        PhotoAlbumModel _ => FladderItemType.photoAlbum,
+  KinosItemType get type => switch (this) {
+        MovieModel _ => KinosItemType.movie,
+        SeriesModel _ => KinosItemType.series,
+        SeasonModel _ => KinosItemType.season,
+        PhotoAlbumModel _ => KinosItemType.photoAlbum,
         PhotoModel model => model.internalType,
-        EpisodeModel _ => FladderItemType.episode,
-        BookModel _ => FladderItemType.book,
-        PlaylistModel _ => FladderItemType.playlist,
-        FolderModel _ => FladderItemType.folder,
-        AlbumModel _ => FladderItemType.musicAlbum,
-        ArtistModel _ => FladderItemType.musicArtist,
-        AudioModel _ => FladderItemType.audio,
-        ItemBaseModel _ => FladderItemType.baseType,
+        EpisodeModel _ => KinosItemType.episode,
+        BookModel _ => KinosItemType.book,
+        PlaylistModel _ => KinosItemType.playlist,
+        FolderModel _ => KinosItemType.folder,
+        AlbumModel _ => KinosItemType.musicAlbum,
+        ArtistModel _ => KinosItemType.musicArtist,
+        AudioModel _ => KinosItemType.audio,
+        ItemBaseModel _ => KinosItemType.baseType,
       };
 
   @override
@@ -323,7 +323,7 @@ class ItemBaseModel with ItemBaseModelMappable {
 }
 
 // Currently supported types
-enum FladderItemType {
+enum KinosItemType {
   baseType(
     icon: IconsaxPlusLinear.folder_2,
     selectedicon: IconsaxPlusBold.folder_2,
@@ -401,86 +401,86 @@ enum FladderItemType {
     selectedicon: IconsaxPlusBold.slider_horizontal,
   );
 
-  const FladderItemType({required this.icon, required this.selectedicon});
+  const KinosItemType({required this.icon, required this.selectedicon});
 
   double get aspectRatio => switch (this) {
-        FladderItemType.video => 0.8,
-        FladderItemType.photo => 0.8,
-        FladderItemType.photoAlbum => 0.8,
-        FladderItemType.folder => 0.8,
-        FladderItemType.musicAlbum => 0.8,
-        FladderItemType.musicArtist => 0.8,
-        FladderItemType.audio => 0.8,
-        FladderItemType.baseType => 0.8,
-        FladderItemType.tvchannel => 0.8,
+        KinosItemType.video => 0.8,
+        KinosItemType.photo => 0.8,
+        KinosItemType.photoAlbum => 0.8,
+        KinosItemType.folder => 0.8,
+        KinosItemType.musicAlbum => 0.8,
+        KinosItemType.musicArtist => 0.8,
+        KinosItemType.audio => 0.8,
+        KinosItemType.baseType => 0.8,
+        KinosItemType.tvchannel => 0.8,
         _ => 0.55,
       };
 
-  static Set<FladderItemType> get playable => {
-        FladderItemType.series,
-        FladderItemType.episode,
-        FladderItemType.season,
-        FladderItemType.movie,
-        FladderItemType.musicVideo,
-        FladderItemType.tvchannel,
+  static Set<KinosItemType> get playable => {
+        KinosItemType.series,
+        KinosItemType.episode,
+        KinosItemType.season,
+        KinosItemType.movie,
+        KinosItemType.musicVideo,
+        KinosItemType.tvchannel,
       };
 
-  static Set<FladderItemType> get musicPlayable => {
-        FladderItemType.audio,
-        FladderItemType.musicAlbum,
-        FladderItemType.musicArtist,
+  static Set<KinosItemType> get musicPlayable => {
+        KinosItemType.audio,
+        KinosItemType.musicAlbum,
+        KinosItemType.musicArtist,
       };
 
-  static Set<FladderItemType> get galleryItem => {
-        FladderItemType.photo,
-        FladderItemType.video,
+  static Set<KinosItemType> get galleryItem => {
+        KinosItemType.photo,
+        KinosItemType.video,
       };
 
   String label(AppLocalizations l10n, {int count = 1}) => switch (this) {
-        FladderItemType.baseType => l10n.mediaTypeBase,
-        FladderItemType.audio => l10n.audio(count),
-        FladderItemType.collectionFolder => l10n.collectionFolder(count),
-        FladderItemType.musicAlbum => l10n.musicAlbum(count),
-        FladderItemType.musicArtist => l10n.mediaTypeArtists(count),
-        FladderItemType.musicVideo => l10n.mediaTypeMusicVideo(count),
-        FladderItemType.video => l10n.video(count),
-        FladderItemType.movie => l10n.mediaTypeMovie(count),
-        FladderItemType.series => l10n.mediaTypeSeries(count),
-        FladderItemType.season => l10n.mediaTypeSeason(count),
-        FladderItemType.episode => l10n.mediaTypeEpisode(count),
-        FladderItemType.photo => l10n.mediaTypePhoto(count),
-        FladderItemType.person => l10n.mediaTypePerson(count),
-        FladderItemType.photoAlbum => l10n.mediaTypePhotoAlbum(count),
-        FladderItemType.folder => l10n.mediaTypeFolder(count),
-        FladderItemType.boxset => l10n.mediaTypeBoxset(count),
-        FladderItemType.playlist => l10n.mediaTypePlaylist(count),
-        FladderItemType.book => l10n.mediaTypeBook(count),
-        FladderItemType.tvchannel => l10n.mediaTypeTV(count),
+        KinosItemType.baseType => l10n.mediaTypeBase,
+        KinosItemType.audio => l10n.audio(count),
+        KinosItemType.collectionFolder => l10n.collectionFolder(count),
+        KinosItemType.musicAlbum => l10n.musicAlbum(count),
+        KinosItemType.musicArtist => l10n.mediaTypeArtists(count),
+        KinosItemType.musicVideo => l10n.mediaTypeMusicVideo(count),
+        KinosItemType.video => l10n.video(count),
+        KinosItemType.movie => l10n.mediaTypeMovie(count),
+        KinosItemType.series => l10n.mediaTypeSeries(count),
+        KinosItemType.season => l10n.mediaTypeSeason(count),
+        KinosItemType.episode => l10n.mediaTypeEpisode(count),
+        KinosItemType.photo => l10n.mediaTypePhoto(count),
+        KinosItemType.person => l10n.mediaTypePerson(count),
+        KinosItemType.photoAlbum => l10n.mediaTypePhotoAlbum(count),
+        KinosItemType.folder => l10n.mediaTypeFolder(count),
+        KinosItemType.boxset => l10n.mediaTypeBoxset(count),
+        KinosItemType.playlist => l10n.mediaTypePlaylist(count),
+        KinosItemType.book => l10n.mediaTypeBook(count),
+        KinosItemType.tvchannel => l10n.mediaTypeTV(count),
       };
 
   Set<BaseItemKind> get dtoKind => switch (this) {
-        FladderItemType.baseType => {BaseItemKind.userrootfolder},
-        FladderItemType.audio => {BaseItemKind.audio},
-        FladderItemType.collectionFolder => {BaseItemKind.collectionfolder},
-        FladderItemType.musicAlbum => {BaseItemKind.musicalbum},
-        FladderItemType.musicArtist => {BaseItemKind.musicartist},
-        FladderItemType.musicVideo => {BaseItemKind.musicvideo},
-        FladderItemType.video => {BaseItemKind.video},
-        FladderItemType.movie => {BaseItemKind.movie},
-        FladderItemType.series => {BaseItemKind.series},
-        FladderItemType.season => {BaseItemKind.season},
-        FladderItemType.episode => {BaseItemKind.episode},
-        FladderItemType.photo => {BaseItemKind.photo},
-        FladderItemType.person => {
+        KinosItemType.baseType => {BaseItemKind.userrootfolder},
+        KinosItemType.audio => {BaseItemKind.audio},
+        KinosItemType.collectionFolder => {BaseItemKind.collectionfolder},
+        KinosItemType.musicAlbum => {BaseItemKind.musicalbum},
+        KinosItemType.musicArtist => {BaseItemKind.musicartist},
+        KinosItemType.musicVideo => {BaseItemKind.musicvideo},
+        KinosItemType.video => {BaseItemKind.video},
+        KinosItemType.movie => {BaseItemKind.movie},
+        KinosItemType.series => {BaseItemKind.series},
+        KinosItemType.season => {BaseItemKind.season},
+        KinosItemType.episode => {BaseItemKind.episode},
+        KinosItemType.photo => {BaseItemKind.photo},
+        KinosItemType.person => {
             BaseItemKind.person,
             BaseItemKind.musicartist,
           },
-        FladderItemType.photoAlbum => {BaseItemKind.photoalbum},
-        FladderItemType.folder => {BaseItemKind.folder},
-        FladderItemType.boxset => {BaseItemKind.boxset},
-        FladderItemType.playlist => {BaseItemKind.playlist},
-        FladderItemType.book => {BaseItemKind.book},
-        FladderItemType.tvchannel => {BaseItemKind.tvchannel},
+        KinosItemType.photoAlbum => {BaseItemKind.photoalbum},
+        KinosItemType.folder => {BaseItemKind.folder},
+        KinosItemType.boxset => {BaseItemKind.boxset},
+        KinosItemType.playlist => {BaseItemKind.playlist},
+        KinosItemType.book => {BaseItemKind.book},
+        KinosItemType.tvchannel => {BaseItemKind.tvchannel},
       };
 
   final IconData icon;

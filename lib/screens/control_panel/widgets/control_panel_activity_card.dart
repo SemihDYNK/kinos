@@ -6,7 +6,7 @@ import 'package:kinos/providers/control_panel/control_activity_provider.dart';
 import 'package:kinos/screens/shared/user_icon.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/humanize_duration.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -60,7 +60,7 @@ class _ControlPanelActivityCardState extends State<ControlPanelActivityCard> {
         duration: const Duration(milliseconds: 125),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: FladderTheme.defaultPosterDecoration.borderRadius,
+          borderRadius: KinosTheme.defaultPosterDecoration.borderRadius,
         ),
         clipBehavior: Clip.hardEdge,
         child: AnimatedSize(
@@ -75,7 +75,7 @@ class _ControlPanelActivityCardState extends State<ControlPanelActivityCard> {
                     if (nowPlayingItem != null)
                       Positioned.fill(
                         child: trickPlayModel == null
-                            ? FladderImage(
+                            ? KinosImage(
                                 image: nowPlayingItem.images?.primary,
                               )
                             : TrickPlayImage(
@@ -268,9 +268,9 @@ class _ControlPanelActivityCardState extends State<ControlPanelActivityCard> {
                           child: FocusButton(
                             onTap: () => nowPlayingItem.navigateTo(context),
                             child: Container(
-                              decoration: FladderTheme.defaultPosterDecoration,
+                              decoration: KinosTheme.defaultPosterDecoration,
                               clipBehavior: Clip.hardEdge,
-                              child: FladderImage(image: nowPlayingItem.getPosters?.primary),
+                              child: KinosImage(image: nowPlayingItem.getPosters?.primary),
                             ),
                           ),
                         ),

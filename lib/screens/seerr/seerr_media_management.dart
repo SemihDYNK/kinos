@@ -7,7 +7,7 @@ import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
 import 'package:kinos/providers/seerr_api_provider.dart';
 import 'package:kinos/providers/seerr_user_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/media/external_urls.dart';
 import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
@@ -205,7 +205,7 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
     try {
       await action();
       if (mounted) {
-        FladderSnack.show(successMessage);
+        KinosSnack.show(successMessage);
         Navigator.of(context).pop();
         widget.onActionComplete();
       }

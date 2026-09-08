@@ -15,8 +15,8 @@ import 'package:kinos/providers/settings/video_player_settings_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/duration_extensions.dart';
-import 'package:kinos/util/fladder_image.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/util/kinos_image.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/wrappers/players/base_player.dart';
 import 'package:kinos/wrappers/players/lib_mdk.dart'
     if (dart.library.html) 'package:kinos/stubs/web/lib_mdk_web.dart';
@@ -142,7 +142,7 @@ class _SimpleVideoPlayerState extends ConsumerState<SimpleVideoPlayer> with Wind
         alignment: Alignment.center,
         children: [
           Positioned.fill(
-            child: FladderImage(
+            child: KinosImage(
               image: widget.video.thumbnail?.primary,
               disableBlur: true,
               fit: BoxFit.contain,
@@ -180,7 +180,7 @@ class _SimpleVideoPlayerState extends ConsumerState<SimpleVideoPlayer> with Wind
                                 children: [
                                   SizedBox(
                                     height: 40,
-                                    child: FladderSlider(
+                                    child: KinosSlider(
                                       min: 0.0,
                                       max: duration.inMilliseconds.toDouble(),
                                       value: position.inMilliseconds.toDouble().clamp(

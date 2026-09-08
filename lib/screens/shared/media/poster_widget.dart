@@ -178,7 +178,7 @@ class PosterPlaceHolder extends StatelessWidget {
           onTap: onTap,
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: FladderTheme.defaultShape.borderRadius,
+              borderRadius: KinosTheme.defaultShape.borderRadius,
               color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
             ),
             child: Center(

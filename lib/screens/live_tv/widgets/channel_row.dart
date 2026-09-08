@@ -9,7 +9,7 @@ import 'package:kinos/models/items/channel_program.dart';
 import 'package:kinos/providers/live_tv_provider.dart';
 import 'package:kinos/screens/live_tv/widgets/guide_constants.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 
@@ -179,7 +179,7 @@ class ChannelRowState extends ConsumerState<ChannelRow> {
                                     Container(
                                       child: AspectRatio(
                                         aspectRatio: 0.7,
-                                        child: FladderImage(
+                                        child: KinosImage(
                                           image: program.images?.primary?.copyWith(
                                             key: 'program-${program.id}-${program.name}}',
                                           ),

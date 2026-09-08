@@ -8,13 +8,13 @@ import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/screens/shared/media/banner_play_button.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/themes_data.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 
@@ -205,7 +205,7 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
                                 height: double.infinity,
                                 child: Padding(
                                   padding: const EdgeInsets.all(1),
-                                  child: FladderImage(
+                                  child: KinosImage(
                                     fit: BoxFit.cover,
                                     image: currentItem.bannerImage,
                                   ),
@@ -322,7 +322,7 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
           if (widget.items.length > 1)
             FractionallySizedBox(
               widthFactor: 0.35,
-              child: FladderSlider(
+              child: KinosSlider(
                 value: currentPage.toDouble(),
                 min: 0,
                 animation: const Duration(milliseconds: 250),

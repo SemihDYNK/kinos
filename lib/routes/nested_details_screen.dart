@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/providers/items/item_details_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 
 @RoutePage()
 class DetailsScreen extends ConsumerStatefulWidget {
@@ -79,7 +79,7 @@ class _DetailsScreenState extends ConsumerState<DetailsScreen> {
             ),
             //Small offset to match detailscaffold
             child: Transform.translate(
-                offset: const Offset(0, -5), child: FladderImage(image: widget.item?.getPosters?.primary)),
+                offset: const Offset(0, -5), child: KinosImage(image: widget.item?.getPosters?.primary)),
           ),
         ),
         AnimatedSwitcher(

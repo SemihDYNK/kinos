@@ -29,12 +29,12 @@ import 'package:kinos/screens/video_player/components/video_volume_slider.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/duration_extensions.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/clickable_text.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 import 'package:kinos/widgets/shared/theme_overwrite.dart';
@@ -295,7 +295,7 @@ class _AudioPlayerFullScreenState extends ConsumerState<AudioPlayerFullScreen> {
                   child: SizedBox(
                     width: 56,
                     height: 56,
-                    child: FladderImage(
+                    child: KinosImage(
                       image: artwork,
                       fit: BoxFit.cover,
                       placeHolder: const Center(child: Icon(Icons.music_note_rounded, size: 20)),
@@ -434,11 +434,11 @@ class _AudioPlayerFullScreenState extends ConsumerState<AudioPlayerFullScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                borderRadius: FladderTheme.smallShape.borderRadius,
+                borderRadius: KinosTheme.smallShape.borderRadius,
                 color: Theme.of(context).colorScheme.surfaceContainer,
               ),
               clipBehavior: Clip.hardEdge,
-              child: FladderImage(
+              child: KinosImage(
                 image: item.images?.primary,
                 fit: BoxFit.cover,
                 placeHolder: const Center(child: Icon(Icons.music_note_rounded, size: 20)),
@@ -579,7 +579,7 @@ class _AudioPlayerFullScreenState extends ConsumerState<AudioPlayerFullScreen> {
     }
 
     Widget albumArt(BuildContext context, {double size = 512}) {
-      final audioType = FladderItemType.audio;
+      final audioType = KinosItemType.audio;
       final itemActions = currentItem.generateActions(
         context,
         ref,
@@ -648,7 +648,7 @@ class _AudioPlayerFullScreenState extends ConsumerState<AudioPlayerFullScreen> {
                       maxHeight: 512,
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: FladderImage(
+                    child: KinosImage(
                       image: artwork,
                       fit: BoxFit.cover,
                       placeHolder: Center(child: Icon(audioType.selectedicon, size: 56)),
@@ -979,7 +979,7 @@ class _AudioPlayerControlsState extends ConsumerState<_AudioPlayerControls> {
               )
             ],
           ),
-          child: FladderSlider(
+          child: KinosSlider(
             thumbWidth: 12,
             value: _sliderPosition.inMilliseconds.toDouble().clamp(0, playback.duration.inMilliseconds.toDouble()),
             min: 0,

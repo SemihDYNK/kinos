@@ -522,7 +522,7 @@ class _StudioSearchDialogState extends State<_StudioSearchDialog> {
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  borderRadius: FladderTheme.smallShape.borderRadius,
+                                  borderRadius: KinosTheme.smallShape.borderRadius,
                                 ),
                                 child: CachedNetworkImage(
                                   imageUrl: studio.logoUrl!,

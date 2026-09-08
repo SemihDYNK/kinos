@@ -30,7 +30,7 @@ import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/item_base_model/play_item_helpers.dart';
 import 'package:kinos/util/list_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -253,9 +253,9 @@ class LibrarySearchNotifier extends StateNotifier<LibrarySearchModel> {
     loadedFilters = true;
 
     final disabledYearTypes = {
-      FladderItemType.photo,
-      FladderItemType.photoAlbum,
-      FladderItemType.video,
+      KinosItemType.photo,
+      KinosItemType.photoAlbum,
+      KinosItemType.video,
     };
 
     final itemIds = state.currentIds;
@@ -433,7 +433,7 @@ class LibrarySearchNotifier extends StateNotifier<LibrarySearchModel> {
   void setFavourites(bool? value) => state = state.copyWith(filters: state.filters.copyWith(favourites: value));
   void toggleRecursive() =>
       state = state.copyWith(filters: state.filters.copyWith(recursive: state.filters.recursive == false));
-  void toggleType(FladderItemType type) =>
+  void toggleType(KinosItemType type) =>
       state = state.copyWith(filters: state.filters.copyWith(types: state.filters.types.toggleKey(type)));
   void toggleView(ViewModel view) => state = state.copyWith(views: state.views.toggleKey(view));
   void toggleGenre(String genre) =>
@@ -458,7 +458,7 @@ class LibrarySearchNotifier extends StateNotifier<LibrarySearchModel> {
   void setStudios(Map<Studio, bool> studios) =>
       state = state.copyWith(filters: state.filters.copyWith(studios: studios));
   void setTags(Map<String, bool> tags) => state = state.copyWith(filters: state.filters.copyWith(tags: tags));
-  void setTypes(Map<FladderItemType, bool> types) =>
+  void setTypes(Map<KinosItemType, bool> types) =>
       state = state.copyWith(filters: state.filters.copyWith(types: types));
   void setRatings(Map<String, bool> officialRatings) =>
       state = state.copyWith(filters: state.filters.copyWith(officialRatings: officialRatings));
@@ -666,12 +666,12 @@ class LibrarySearchNotifier extends StateNotifier<LibrarySearchModel> {
     }
 
     //Only try to load video items
-    itemsToPlay = itemsToPlay.where((element) => FladderItemType.playable.contains(element.type)).toList();
+    itemsToPlay = itemsToPlay.where((element) => KinosItemType.playable.contains(element.type)).toList();
 
     if (itemsToPlay.isNotEmpty) {
       await itemsToPlay.playLibraryItems(context, ref, shuffle: shuffle);
     } else {
-      FladderSnack.show(context.localized.libraryFetchNoItemsFound, context: context);
+      KinosSnack.show(context.localized.libraryFetchNoItemsFound, context: context);
     }
   }
 
@@ -683,7 +683,7 @@ class LibrarySearchNotifier extends StateNotifier<LibrarySearchModel> {
         if (started) {
           return;
         } else {
-          FladderSnack.show(context.localized.libraryFetchNoItemsFound, context: context);
+          KinosSnack.show(context.localized.libraryFetchNoItemsFound, context: context);
         }
       }
     } else {
@@ -695,12 +695,12 @@ class LibrarySearchNotifier extends StateNotifier<LibrarySearchModel> {
         itemsToPlay = await showLoadingOverlay(context, callBack: _loadAllItems(shuffle: shuffle));
       }
 
-      itemsToPlay = itemsToPlay.where((element) => FladderItemType.musicPlayable.contains(element.type)).toList();
+      itemsToPlay = itemsToPlay.where((element) => KinosItemType.musicPlayable.contains(element.type)).toList();
 
       if (itemsToPlay.isNotEmpty) {
         await itemsToPlay.playMusicItems(context, ref, shuffle: shuffle);
       } else {
-        FladderSnack.show(context.localized.libraryFetchNoItemsFound, context: context);
+        KinosSnack.show(context.localized.libraryFetchNoItemsFound, context: context);
       }
     }
   }
@@ -856,7 +856,7 @@ class LibrarySearchNotifier extends StateNotifier<LibrarySearchModel> {
 
       List<PhotoModel> albumItems = [];
 
-      if (!state.filters.types.included.containsAny([FladderItemType.video, FladderItemType.photo]) &&
+      if (!state.filters.types.included.containsAny([KinosItemType.video, KinosItemType.photo]) &&
           state.filters.recursive == true) {
         for (var album in itemsToPlay.where(
           (element) => element is PhotoAlbumModel || element is FolderModel,
@@ -917,7 +917,7 @@ class LibrarySearchNotifier extends StateNotifier<LibrarySearchModel> {
         ),
       );
     } else {
-      FladderSnack.show(context.localized.libraryFetchNoItemsFound, context: context);
+      KinosSnack.show(context.localized.libraryFetchNoItemsFound, context: context);
     }
   }
 

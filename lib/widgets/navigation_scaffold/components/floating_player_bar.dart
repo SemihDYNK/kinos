@@ -10,7 +10,7 @@ import 'package:kinos/models/media_playback_model.dart';
 import 'package:kinos/providers/settings/video_player_settings_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/video_player_provider.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/video_player/video_player.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
@@ -158,7 +158,7 @@ class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
         },
         direction: DismissDirection.vertical,
         child: InkWell(
-          onLongPress: () => FladderSnack.show(
+          onLongPress: () => KinosSnack.show(
               "Swipe up/down to open/close the player",
               context: context),
           child: Container(
@@ -172,7 +172,7 @@ class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
               color: item is AudioModel
                   ? Theme.of(context).colorScheme.surfaceContainerLow
                   : null,
-              borderRadius: FladderTheme.defaultShape.borderRadius,
+              borderRadius: KinosTheme.defaultShape.borderRadius,
             ),
             child: LayoutBuilder(builder: (context, constraints) {
               return switch (item) {

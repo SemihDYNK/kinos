@@ -58,7 +58,7 @@ class VideoFloatingPlayerBarContent extends ConsumerWidget {
         children: [
           // Information principale de ce bandeau — pleine largeur, en
           // tête, avant même le titre. Cliquable et manipulable au
-          // clavier une fois focalisée (FladderSlider, cf. player_bar_
+          // clavier une fois focalisée (KinosSlider, cf. player_bar_
           // shared.dart).
           FloatingPlayerBarProgress(
             height: 3,

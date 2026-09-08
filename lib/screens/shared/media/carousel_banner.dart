@@ -8,7 +8,7 @@ import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/screens/shared/media/banner_play_button.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/list_padding.dart';
@@ -130,7 +130,7 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
                                         },
                               child: Stack(
                                 children: [
-                                  FladderImage(image: item.bannerImage),
+                                  KinosImage(image: item.bannerImage),
                                   Container(
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(

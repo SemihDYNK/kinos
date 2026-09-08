@@ -12,12 +12,12 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/screens/details_screens/tracks_detail_screen.dart';
 import 'package:kinos/screens/shared/detail_scaffold.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/media/poster_row.dart';
 import 'package:kinos/screens/shared/media/track_list.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/color_extensions.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/item_base_model/play_item_helpers.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -84,7 +84,7 @@ class _ArtistDetailScreenState extends ConsumerState<ArtistDetailScreen> {
                   height: 200,
                   width: double.infinity,
                   alignment: Alignment.center,
-                  child: FladderImage(
+                  child: KinosImage(
                     image: artist?.getPosters?.logo,
                     placeHolder: placeHolder,
                     disableBlur: true,
@@ -174,7 +174,7 @@ class _ArtistDetailScreenState extends ConsumerState<ArtistDetailScreen> {
                                 onAddToQueueSelected: (selected) async {
                                   await ref.read(videoPlayerProvider.notifier).addToTemporaryQueue(selected);
                                   if (detailsContext.mounted) {
-                                    FladderSnack.show(
+                                    KinosSnack.show(
                                       detailsContext.localized.addedToQueue(selected.length),
                                       context: detailsContext,
                                     );

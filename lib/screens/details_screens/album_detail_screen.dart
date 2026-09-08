@@ -14,7 +14,7 @@ import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/details_screens/tracks_detail_screen.dart';
 import 'package:kinos/screens/shared/detail_scaffold.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/media/components/poster_placeholder.dart';
 import 'package:kinos/screens/shared/media/components/small_detail_widgets.dart';
 import 'package:kinos/screens/shared/media/poster_row.dart';
@@ -23,7 +23,7 @@ import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/color_extensions.dart';
 import 'package:kinos/util/duration_extensions.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/item_base_model/play_item_helpers.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -89,7 +89,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
       if (durationText != null) durationText,
     ].join(' • ');
 
-    final radius = FladderTheme.smallShape.borderRadius;
+    final radius = KinosTheme.smallShape.borderRadius;
 
     final smallScreen = AdaptiveLayout.viewSizeOf(context) <= ViewSize.phone;
 
@@ -186,7 +186,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                                     border: Border.all(width: 1, color: Colors.white.withAlpha(45)),
                                   ),
                                   clipBehavior: Clip.hardEdge,
-                                  child: FladderImage(
+                                  child: KinosImage(
                                     image: albumPoster,
                                     fit: BoxFit.cover,
                                     placeHolder: PosterPlaceholder(item: current),
@@ -327,7 +327,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                       onAddToQueueSelected: (selected) async {
                         await ref.read(videoPlayerProvider.notifier).addToTemporaryQueue(selected);
                         if (detailsContext.mounted) {
-                          FladderSnack.show(
+                          KinosSnack.show(
                             detailsContext.localized.addedToQueue(selected.length),
                             context: detailsContext,
                           );

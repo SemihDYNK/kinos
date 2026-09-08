@@ -12,11 +12,11 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/settings/widgets/settings_message_box.dart';
 import 'package:kinos/screens/shared/adaptive_dialog.dart';
 import 'package:kinos/screens/shared/animated_fade_size.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/focused_outlined_text_field.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/seerr/seerr_models.dart';
-import 'package:kinos/util/fladder_config.dart';
+import 'package:kinos/util/kinos_config.dart';
 import 'package:kinos/util/localization_helper.dart';
 
 final _stackTracePattern = RegExp(r'\n#\d');
@@ -69,14 +69,14 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
   String? error;
   String? warning;
 
-  bool get _hasPresetSeerrBaseUrl => FladderConfig.seerrBaseUrl?.isNotEmpty == true;
+  bool get _hasPresetSeerrBaseUrl => KinosConfig.seerrBaseUrl?.isNotEmpty == true;
 
   @override
   void initState() {
     super.initState();
     final creds = ref.read(userProvider)?.seerrCredentials;
     apiKeyController = TextEditingController(text: creds?.apiKey ?? '');
-    serverController = TextEditingController(text: FladderConfig.seerrBaseUrl ?? creds?.serverUrl ?? '');
+    serverController = TextEditingController(text: KinosConfig.seerrBaseUrl ?? creds?.serverUrl ?? '');
     localEmailController = TextEditingController();
     localPasswordController = TextEditingController();
     jfUsernameController = TextEditingController();
@@ -122,8 +122,8 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
   }
 
   Future<void> _refreshSession() async {
-    final serverUrl = (FladderConfig.seerrBaseUrl?.trim().isNotEmpty == true)
-        ? FladderConfig.seerrBaseUrl?.trim()
+    final serverUrl = (KinosConfig.seerrBaseUrl?.trim().isNotEmpty == true)
+        ? KinosConfig.seerrBaseUrl?.trim()
         : (serverController.text.trim().isNotEmpty
             ? serverController.text.trim()
             : ref.read(userProvider)?.seerrCredentials?.serverUrl.trim());
@@ -225,7 +225,7 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
     await _refreshSession();
 
     if (mounted) {
-      FladderSnack.show(context.localized.seerrApiKeySaved, context: context);
+      KinosSnack.show(context.localized.seerrApiKeySaved, context: context);
     }
 
     if (mounted) {
@@ -249,13 +249,13 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
       ref.read(userProvider.notifier).setSeerrApiKey('');
       await _refreshSession();
       if (mounted) {
-        FladderSnack.show(context.localized.seerrLoggedIn, context: context);
+        KinosSnack.show(context.localized.seerrLoggedIn, context: context);
       }
     } catch (e) {
       if (mounted) {
         final message = _sanitizeErrorMessage(e);
         error = message;
-        FladderSnack.show(message, context: context);
+        KinosSnack.show(message, context: context);
       }
     } finally {
       if (mounted) {
@@ -280,13 +280,13 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
       ref.read(userProvider.notifier).setSeerrApiKey('');
       await _refreshSession();
       if (mounted) {
-        FladderSnack.show(context.localized.seerrLoggedIn, context: context);
+        KinosSnack.show(context.localized.seerrLoggedIn, context: context);
       }
     } catch (e) {
       if (mounted) {
         final message = _sanitizeErrorMessage(e);
         error = message;
-        FladderSnack.show(message, context: context);
+        KinosSnack.show(message, context: context);
       }
     } finally {
       if (mounted) {
@@ -315,7 +315,7 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
       if (mounted) {
         final message = _sanitizeErrorMessage(e);
         error = message;
-        FladderSnack.show(message, context: context);
+        KinosSnack.show(message, context: context);
       }
     } finally {
       ref.read(userProvider.notifier).logoutSeerr();
@@ -395,7 +395,7 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
           children: [
             seerrUser?.avatar != null && seerrUser!.avatar!.isNotEmpty
                 ? CircleAvatar(backgroundImage: NetworkImage(seerrUser!.avatar!))
-                : CircleAvatar(child: Icon(FladderItemType.person.icon)),
+                : CircleAvatar(child: Icon(KinosItemType.person.icon)),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

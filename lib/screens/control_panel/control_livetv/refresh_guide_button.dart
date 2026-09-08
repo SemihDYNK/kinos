@@ -7,7 +7,7 @@ import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/providers/control_panel/control_active_tasks_provider.dart';
 import 'package:kinos/providers/control_panel/control_livetv_provider.dart';
 import 'package:kinos/screens/control_panel/control_livetv/listing_provider_edit_dialog.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
 
@@ -42,7 +42,7 @@ class RefreshGuideButton extends ConsumerWidget {
                   builder: (context) => ListingProviderEditDialog(availableTuners: tunerHosts),
                 );
                 if (result != null && context.mounted) {
-                  final response = await FladderSnack.showResponse<ListingsProviderInfo>(
+                  final response = await KinosSnack.showResponse<ListingsProviderInfo>(
                     ref.read(controlLiveTvProvider.notifier).addListingProvider(result),
                     successTitle: context.localized.epgProviderAddedSuccessfully,
                     errorTitle: (err) => context.localized.failedToAddEpgProvider(err),

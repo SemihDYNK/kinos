@@ -26,7 +26,7 @@ import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/themes_data.dart';
-import 'package:kinos/widgets/navigation_scaffold/components/fladder_app_bar.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/kinos_app_bar.dart';
 import 'package:kinos/widgets/shared/animated_icon.dart';
 import 'package:kinos/widgets/shared/elevated_icon.dart';
 import 'package:kinos/widgets/shared/hover_widget.dart';
@@ -159,7 +159,7 @@ class _PhotoViewerScreenState extends ConsumerState<PhotoViewerScreen> with Widg
           onExit: (event) => setState(() => _showOverlay(show: false)),
           child: Scaffold(
             appBar: photos.isEmpty
-                ? FladderAppBar(
+                ? KinosAppBar(
                     automaticallyImplyLeading: true,
                     isDesktop: AdaptiveLayout.of(context).isDesktop,
                   )
@@ -261,7 +261,7 @@ class _PhotoViewerScreenState extends ConsumerState<PhotoViewerScreen> with Widg
                             child: CircularProgressIndicator(strokeCap: StrokeCap.round),
                           ),
                         LoadState.completed => switch (photo.internalType) {
-                            FladderItemType.video => SimpleVideoPlayer(
+                            KinosItemType.video => SimpleVideoPlayer(
                                 onTapped: _showOverlay,
                                 showOverlay: showInterface,
                                 video: photos[index],

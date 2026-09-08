@@ -12,12 +12,12 @@ import 'package:kinos/screens/seerr/widgets/request_configuration_section.dart';
 import 'package:kinos/screens/seerr/widgets/request_popup_widgets.dart';
 import 'package:kinos/screens/seerr/widgets/seasons_section.dart';
 import 'package:kinos/screens/shared/adaptive_dialog.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/media/external_urls.dart';
 import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
@@ -139,7 +139,7 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                               child: SizedBox(
                                 width: 100,
                                 height: 150,
-                                child: FladderImage(
+                                child: KinosImage(
                                   image: model.images.primary,
                                   placeHolder: ColoredBox(
                                     color: AppColors.surfaceHigh,
@@ -247,7 +247,7 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
             FilledButtonAwait(
               onPressed: requestState.canSubmitRequest
                   ? () async {
-                      await FladderSnack.showResponse(
+                      await KinosSnack.showResponse(
                         notifier.submitRequest(),
                         successTitle: context.localized.requestedSuccessForItem(model.title),
                       );

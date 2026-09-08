@@ -13,7 +13,7 @@ import 'package:kinos/screens/syncing/sync_widgets.dart';
 import 'package:kinos/screens/syncing/widgets/sync_options_button.dart';
 import 'package:kinos/screens/syncing/widgets/sync_progress_builder.dart';
 import 'package:kinos/screens/syncing/widgets/synced_episode_item.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/size_formatting.dart';
 
@@ -57,7 +57,7 @@ class _SyncedSeasonPosterState extends ConsumerState<SyncedSeasonPoster> {
                         return context.maybePop();
                       },
                       child: Card(
-                        child: FladderImage(
+                        child: KinosImage(
                           image: season.getPosters?.primary ??
                               season.parentImages?.backDrop?.firstOrNull ??
                               season.parentImages?.primary,

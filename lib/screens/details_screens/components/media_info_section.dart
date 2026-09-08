@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kinos/models/items/item_shared_models.dart';
 import 'package:kinos/screens/details_screens/person_detail_screen.dart';
 import 'package:kinos/theme/app_theme.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/string_extensions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
@@ -113,7 +113,7 @@ class _CastGrid extends StatelessWidget {
                   borderRadius: AppRadii.controlBorder,
                   child: SizedBox.square(
                     dimension: 40,
-                    child: FladderImage(image: person.image, fit: BoxFit.cover),
+                    child: KinosImage(image: person.image, fit: BoxFit.cover),
                   ),
                 ),
                 title: Text(person.name,
@@ -231,7 +231,7 @@ class _CastTile extends StatelessWidget {
               borderRadius: AppRadii.controlBorder,
               child: AspectRatio(
                 aspectRatio: 1,
-                child: FladderImage(
+                child: KinosImage(
                   image: person.image,
                   fit: BoxFit.cover,
                   placeHolder: ColoredBox(

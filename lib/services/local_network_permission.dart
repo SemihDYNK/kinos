@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/src/local_network_permission_pigeon.g.dart';
 import 'package:kinos/util/localization_helper.dart';
 
@@ -65,7 +65,7 @@ Future<LocalNetworkPermissionStatus> checkLocalNetworkPermission() async {
 
 void showLocalNetworkPermissionDenied(BuildContext? context) {
   final localized = context?.localized;
-  FladderSnack.show(
+  KinosSnack.show(
     localized?.localNetworkPermissionDenied ?? 'Local network access is required. Enable it in system settings.',
     context: context,
     actionLabel: localized?.openSettings ?? 'Open Settings',

@@ -15,7 +15,7 @@ import 'package:kinos/screens/shared/flat_button.dart';
 import 'package:kinos/screens/syncing/sync_widgets.dart';
 import 'package:kinos/screens/syncing/widgets/sync_file_button.dart';
 import 'package:kinos/screens/syncing/widgets/sync_item_poster.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/size_formatting.dart';
@@ -102,7 +102,7 @@ class _SyncedAudioItemState extends ConsumerState<SyncedAudioItem> {
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: Card(
-                      child: FladderImage(
+                      child: KinosImage(
                         image: coverImage,
                         fit: BoxFit.cover,
                       ),

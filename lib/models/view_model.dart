@@ -14,7 +14,7 @@ import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/models/library_filter_model.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/theme.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/navigation_button.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 
@@ -162,12 +162,12 @@ class ViewModel {
   }) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: rounded ? FladderTheme.smallShape.borderRadius : BorderRadius.zero,
+        borderRadius: rounded ? KinosTheme.smallShape.borderRadius : BorderRadius.zero,
       ),
       clipBehavior: Clip.hardEdge,
       child: SizedBox.square(
         dimension: 45,
-        child: FladderImage(
+        child: KinosImage(
           image: imageData?.primary,
           placeHolder: Card(
             child: Icon(

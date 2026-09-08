@@ -137,7 +137,7 @@ class SideNavigationButtons extends ConsumerWidget {
                       ? null
                       : Container(
                           decoration: BoxDecoration(
-                            borderRadius: FladderTheme.smallShape.borderRadius,
+                            borderRadius: KinosTheme.smallShape.borderRadius,
                             color: Theme.of(context).colorScheme.surface,
                           ),
                           child: Padding(
@@ -161,7 +161,7 @@ class SideNavigationButtons extends ConsumerWidget {
                         expanded: shouldExpand,
                         customIcon: usePostersForLibrary
                             ? ClipRRect(
-                                borderRadius: FladderTheme.smallShape.borderRadius,
+                                borderRadius: KinosTheme.smallShape.borderRadius,
                                 child: const SizedBox.square(
                                   dimension: 50,
                                   child: Card(

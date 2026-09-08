@@ -85,8 +85,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final seen = <String>{};
     final candidates = <ItemBaseModel>[];
     for (final item in recentlyAdded) {
-      if (item.type != FladderItemType.movie &&
-          item.type != FladderItemType.series) {
+      if (item.type != KinosItemType.movie &&
+          item.type != KinosItemType.series) {
         continue;
       }
       if (!item.unWatched) continue;

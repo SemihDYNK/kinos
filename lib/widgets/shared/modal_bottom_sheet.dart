@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 
 Future<void> showItemContextMenu(
@@ -45,7 +45,7 @@ Future<void> showBottomSheetPill({
           padding: const EdgeInsets.symmetric(horizontal: 8).add(MediaQuery.paddingOf(context)),
           child: Card(
             shape: RoundedRectangleBorder(
-              borderRadius: FladderTheme.largeShape.borderRadius,
+              borderRadius: KinosTheme.largeShape.borderRadius,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -58,7 +58,7 @@ Future<void> showBottomSheetPill({
                       width: 35,
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.onSurface,
-                        borderRadius: FladderTheme.largeShape.borderRadius,
+                        borderRadius: KinosTheme.largeShape.borderRadius,
                       ),
                     ),
                   )
@@ -105,7 +105,7 @@ class ItemBottomSheetPreview extends ConsumerWidget {
                 height: 90,
                 child: AspectRatio(
                   aspectRatio: 1,
-                  child: FladderImage(
+                  child: KinosImage(
                     image: item.images?.primary,
                     fit: BoxFit.contain,
                   ),

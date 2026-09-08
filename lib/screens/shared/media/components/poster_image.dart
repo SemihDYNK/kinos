@@ -16,7 +16,7 @@ import 'package:kinos/screens/syncing/sync_button.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/color_extensions.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -81,7 +81,7 @@ class PosterImage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final radius = FladderTheme.smallShape.borderRadius;
+    final radius = KinosTheme.smallShape.borderRadius;
     final padding = const EdgeInsets.all(5);
     final myKey = key ?? UniqueKey();
 
@@ -117,7 +117,7 @@ class PosterImage extends ConsumerWidget {
             borderRadius: radius,
             border: Border.all(width: 1, color: Colors.white.withAlpha(45)),
           ),
-          child: FladderImage(
+          child: KinosImage(
             image: _resolveImage(),
             placeHolder: PosterPlaceholder(item: poster),
           ),

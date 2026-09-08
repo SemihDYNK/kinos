@@ -9,7 +9,7 @@ import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/models/items/item_shared_models.dart';
 import 'package:kinos/models/items/overview_model.dart';
 import 'package:kinos/theme.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 
 part 'playlist_model.mapper.dart';
 
@@ -63,19 +63,19 @@ class PlaylistModel extends ItemBaseModel with PlaylistModelMappable {
         dimension: 45,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: FladderTheme.smallShape.borderRadius,
+            borderRadius: KinosTheme.smallShape.borderRadius,
             color: backgroundColor,
           ),
           clipBehavior: Clip.hardEdge,
           padding: const EdgeInsets.all(2),
           child: ClipRRect(
-            borderRadius: FladderTheme.smallShape.borderRadius,
-            child: FladderImage(
+            borderRadius: KinosTheme.smallShape.borderRadius,
+            child: KinosImage(
               image: images?.primary,
               placeHolder: Container(
                 color: backgroundColor,
                 child: Icon(
-                  FladderItemType.playlist.icon,
+                  KinosItemType.playlist.icon,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -86,7 +86,7 @@ class PlaylistModel extends ItemBaseModel with PlaylistModelMappable {
       );
     } else {
       return Icon(
-        FladderItemType.playlist.icon,
+        KinosItemType.playlist.icon,
         color: Theme.of(context).colorScheme.onSurface,
       );
     }

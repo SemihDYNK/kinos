@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/jellyfin/enum_models.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/settings/settings_list_tile.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/enum_selection.dart';
@@ -115,7 +115,7 @@ class _RefreshPopupDialogState extends ConsumerState<RefreshPopupDialog> {
                     children: [
                       FilledButton(
                           onPressed: () async {
-                            await FladderSnack.showResponse(
+                            await KinosSnack.showResponse(
                               ref.read(userProvider.notifier).refreshMetaData(
                                     widget.itemId,
                                     metadataRefreshMode: refreshMode,

@@ -12,7 +12,7 @@ import 'package:kinos/screens/control_panel/control_user_edit/control_user_edit_
 import 'package:kinos/screens/control_panel/control_user_edit/control_user_edit_parental_control.dart';
 import 'package:kinos/screens/control_panel/control_user_edit/control_user_edit_password.dart';
 import 'package:kinos/screens/settings/settings_scaffold.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/user_icon.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/filled_button_await.dart';
@@ -66,9 +66,9 @@ class _ControlUserEditPageState extends ConsumerState<ControlUserEditPage> {
                   onPressed: () async {
                     final response = await provider.saveUserPolicy();
                     if (response == null) {
-                      FladderSnack.show(context.localized.saved, context: context);
+                      KinosSnack.show(context.localized.saved, context: context);
                     } else {
-                      FladderSnack.show(response, context: context);
+                      KinosSnack.show(response, context: context);
                     }
                   },
                   child: Text(context.localized.save),

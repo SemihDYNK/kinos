@@ -7,7 +7,7 @@ import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/playlist_model.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/sticky_header_text.dart';
@@ -114,7 +114,7 @@ class MusicPlaylistRow extends ConsumerWidget {
                   },
                   onLongPress: () => showBottomSheet(context, ref, playlist),
                   onSecondaryTapDown: (globalPos) => showContextMenu(context, ref, globalPos.localPosition, playlist),
-                  borderRadius: FladderTheme.smallShape.borderRadius,
+                  borderRadius: KinosTheme.smallShape.borderRadius,
                   overlays: [
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -130,7 +130,7 @@ class MusicPlaylistRow extends ConsumerWidget {
                                   context.ensureVisible();
                                 }
                               },
-                              borderRadius: FladderTheme.smallShape.borderRadius,
+                              borderRadius: KinosTheme.smallShape.borderRadius,
                               focusedOverlays: [
                                 Align(
                                   alignment: Alignment.center,
@@ -144,8 +144,8 @@ class MusicPlaylistRow extends ConsumerWidget {
                                 ),
                               ],
                               child: ClipRRect(
-                                borderRadius: FladderTheme.smallShape.borderRadius,
-                                child: FladderImage(
+                                borderRadius: KinosTheme.smallShape.borderRadius,
+                                child: KinosImage(
                                   image: playlist.images?.primary,
                                   fit: BoxFit.cover,
                                 ),
@@ -179,7 +179,7 @@ class MusicPlaylistRow extends ConsumerWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius: FladderTheme.smallShape.borderRadius,
+                      borderRadius: KinosTheme.smallShape.borderRadius,
                     ),
                     padding: const EdgeInsets.all(8),
                   ),

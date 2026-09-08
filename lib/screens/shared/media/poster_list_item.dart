@@ -8,7 +8,7 @@ import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/item_shared_models.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -132,7 +132,7 @@ class PosterListItem extends ConsumerWidget {
                               tag: poster.id,
                               child: Card(
                                 margin: EdgeInsets.zero,
-                                child: FladderImage(
+                                child: KinosImage(
                                   image: poster.getPosters?.primary ?? poster.getPosters?.backDrop?.lastOrNull,
                                 ),
                               ),
@@ -171,7 +171,7 @@ class PosterListItem extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      if (poster.type == FladderItemType.book)
+                      if (poster.type == KinosItemType.book)
                         if (poster.userData.progress > 0)
                           Card(
                             color: Theme.of(context).colorScheme.primary,

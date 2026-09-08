@@ -7,7 +7,7 @@ import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/screens/details_screens/components/overview_header.dart';
 import 'package:kinos/screens/shared/media/poster_row.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/custom_shader_mask.dart';
@@ -49,7 +49,7 @@ class _DetailedBannerState extends ConsumerState<DetailedBanner> {
                     child: CustomShaderMask(
                       child: ValueListenableBuilder(
                         valueListenable: selectedPoster,
-                        builder: (context, value, child) => FladderImage(
+                        builder: (context, value, child) => KinosImage(
                           image: value.images?.primary,
                         ),
                       ),

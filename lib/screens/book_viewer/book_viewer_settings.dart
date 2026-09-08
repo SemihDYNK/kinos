@@ -6,7 +6,7 @@ import 'package:kinos/providers/settings/book_viewer_settings_provider.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/string_extensions.dart';
 import 'package:kinos/widgets/shared/enum_selection.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_side_sheet.dart';
 
@@ -52,7 +52,7 @@ class BookViewerSettingsScreen extends ConsumerWidget {
                 Flexible(
                   child: Opacity(
                     opacity: settings.screenBrightness == null ? 0.5 : 1,
-                    child: FladderSlider(
+                    child: KinosSlider(
                       value: settings.screenBrightness ?? 1.0,
                       min: 0,
                       max: 1,

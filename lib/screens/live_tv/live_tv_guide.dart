@@ -10,7 +10,7 @@ import 'package:kinos/providers/live_tv_provider.dart';
 import 'package:kinos/screens/live_tv/widgets/channel_row.dart';
 import 'package:kinos/screens/live_tv/widgets/guide_constants.dart';
 import 'package:kinos/screens/live_tv/widgets/timeline_header.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 
 class LiveTvGuide extends ConsumerStatefulWidget {
   final ChannelModel? currentChannel;
@@ -217,7 +217,7 @@ class _LiveTvGuideState extends ConsumerState<LiveTvGuide> {
                                       child: channel.images != null
                                           ? AspectRatio(
                                               aspectRatio: 1,
-                                              child: FladderImage(
+                                              child: KinosImage(
                                                 image: channel.images?.primary,
                                                 fit: BoxFit.contain,
                                               ),

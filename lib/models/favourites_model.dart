@@ -2,7 +2,7 @@ import 'package:kinos/models/item_base_model.dart';
 
 class FavouritesModel {
   final bool loading;
-  final Map<FladderItemType, List<ItemBaseModel>> favourites;
+  final Map<KinosItemType, List<ItemBaseModel>> favourites;
   final List<ItemBaseModel> people;
 
   FavouritesModel({
@@ -14,7 +14,7 @@ class FavouritesModel {
   FavouritesModel copyWith({
     bool? loading,
     String? searchQuery,
-    Map<FladderItemType, List<ItemBaseModel>>? favourites,
+    Map<KinosItemType, List<ItemBaseModel>>? favourites,
     List<ItemBaseModel>? people,
   }) {
     return FavouritesModel(

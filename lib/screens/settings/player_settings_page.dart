@@ -26,7 +26,7 @@ import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/bitrate_helper.dart';
 import 'package:kinos/util/box_fit_extension.dart';
 import 'package:kinos/util/localization_helper.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/wrappers/pip_manager.dart';
 
@@ -292,7 +292,7 @@ class _PlayerSettingsPageState extends ConsumerState<PlayerSettingsPage> {
                     Row(
                       children: [
                         Expanded(
-                          child: FladderSlider(
+                          child: KinosSlider(
                             min: 0.25,
                             max: 3.0,
                             value: videoSettings.speedBoostRate,
@@ -551,7 +551,7 @@ class _PlayerSettingsPageState extends ConsumerState<PlayerSettingsPage> {
                       Row(
                         children: [
                           Expanded(
-                            child: FladderSlider(
+                            child: KinosSlider(
                               min: 200,
                               max: 3000,
                               value: videoSettings.crossfadeDurationMs.toDouble(),

@@ -9,7 +9,7 @@ import 'package:kinos/models/settings/client_settings_model.dart';
 import 'package:kinos/util/string_extensions.dart';
 
 extension WindowHelperSetup on WindowManager {
-  Future<void> setupFladderWindowChrome(
+  Future<void> setupKinosWindowChrome(
     ArgumentsModel startupArguments,
     ClientSettingsModel clientSettings,
     PackageInfo packageInfo,

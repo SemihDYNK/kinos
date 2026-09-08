@@ -13,7 +13,7 @@ import 'package:kinos/models/items/media_streams_model.dart';
 import 'package:kinos/models/items/trick_play_model.dart';
 import 'package:kinos/models/syncing/sync_item.dart';
 import 'package:kinos/providers/sync_provider.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/string_extensions.dart';
 
 extension SyncMediaHelpers on SyncNotifier {
@@ -128,7 +128,7 @@ extension SyncMediaHelpers on SyncNotifier {
           imageUrl: path.joinAll([SyncedItem.chaptersPath, fileName]),
         );
       } catch (e, stackTrace) {
-        FladderSnack.showException(e, stackTrace: stackTrace);
+        KinosSnack.showException(e, stackTrace: stackTrace);
         return event;
       }
     }).toList();

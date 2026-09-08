@@ -21,7 +21,7 @@ import 'package:kinos/theme.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/theme/palette_service.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
 import 'package:kinos/util/router_extension.dart';
@@ -225,7 +225,7 @@ class _DetailScaffoldState extends ConsumerState<DetailScaffold> {
                   SizedBox(
                     height: maxHeight,
                     width: size.width,
-                    child: FladderImage(
+                    child: KinosImage(
                       image: backgroundImage,
                       blurOnly: !widget.posterFillsContent,
                     ),
@@ -347,7 +347,7 @@ class _DetailScaffoldState extends ConsumerState<DetailScaffold> {
                           decoration: BoxDecoration(
                               color: backGroundColor,
                               borderRadius:
-                                  FladderTheme.defaultShape.borderRadius),
+                                  KinosTheme.defaultShape.borderRadius),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [

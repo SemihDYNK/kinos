@@ -52,7 +52,7 @@ class Main extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return PlatformAppWrapper(
       builder: (context, autoRouter) {
-        return _FladderApp(
+        return _KinosApp(
           autoRouter: autoRouter,
         );
       },
@@ -60,8 +60,8 @@ class Main extends ConsumerWidget {
   }
 }
 
-class _FladderApp extends ConsumerWidget {
-  const _FladderApp({
+class _KinosApp extends ConsumerWidget {
+  const _KinosApp({
     required this.autoRouter,
   });
 
@@ -90,7 +90,7 @@ class _FladderApp extends ConsumerWidget {
             mouseDrag ? PointerDeviceKind.mouse : null,
           }.nonNulls.toSet(),
         ),
-        localizationsDelegates: FladderLocalizations.localizationsDelegates,
+        localizationsDelegates: KinosLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: language,
         localeResolutionCallback: (locale, supportedLocales) {

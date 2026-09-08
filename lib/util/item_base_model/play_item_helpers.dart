@@ -30,10 +30,10 @@ import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/book_viewer/book_viewer_screen.dart';
 import 'package:kinos/screens/library_search/widgets/library_play_options_.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/list_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
@@ -50,7 +50,7 @@ extension BookBaseModelExtension on BookModel? {
     BuildContext? parentContext,
   }) async {
     if (kIsWeb) {
-      FladderSnack.show(context.localized.unableToPlayBooksOnWeb, context: context);
+      KinosSnack.show(context.localized.unableToPlayBooksOnWeb, context: context);
       return;
     }
     if (this == null) {
@@ -90,7 +90,7 @@ extension PhotoAlbumExtension on PhotoAlbumModel? {
     final api = ref.read(jellyApiProvider);
     final op = CancelableOperation.fromFuture(api.itemsGet(
         parentId: albumModel.id,
-        includeItemTypes: FladderItemType.galleryItem.map((e) => e.dtoKind).expand((e) => e).toList(),
+        includeItemTypes: KinosItemType.galleryItem.map((e) => e.dtoKind).expand((e) => e).toList(),
         recursive: true));
 
     _showLoadingIndicator(context, albumModel, op);
@@ -103,7 +103,7 @@ extension PhotoAlbumExtension on PhotoAlbumModel? {
         } catch (e) {
           log('Error closing loading dialog: $e');
         }
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -160,7 +160,7 @@ extension ChannelModelExtension on ChannelModel? {
         } catch (e) {
           log('Error closing loading dialog: $e');
         }
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -193,7 +193,7 @@ extension AudioModelAudioPlayback on AudioModel? {
 
     final queue = await _fetchAudioTrackQueue(audio, ref);
     if (queue.isEmpty) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       return;
     }
 
@@ -209,7 +209,7 @@ extension AudioModelAudioPlayback on AudioModel? {
     final model = await op.valueOrCancellation(null);
     if (op.isCanceled || model == null) {
       if (!op.isCanceled && !showPlaybackOption) {
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -237,7 +237,7 @@ extension PlayQueueSource on PlaybackQueueSource? {
 
     final queue = await queueSource.fetchQueue(ref.read);
     if (queue.isEmpty) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       return;
     }
 
@@ -253,7 +253,7 @@ extension PlayQueueSource on PlaybackQueueSource? {
     final model = await op.valueOrCancellation(null);
     if (op.isCanceled || model == null) {
       if (!op.isCanceled && !showPlaybackOption) {
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -290,7 +290,7 @@ extension ArtistModelLatestTracksPlayback on ArtistModel? {
     final queue = await queueSource.fetchQueue(ref.read);
 
     if (queue.isEmpty) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       return;
     }
 
@@ -313,7 +313,7 @@ extension ArtistModelLatestTracksPlayback on ArtistModel? {
     final model = await op.valueOrCancellation(null);
     if (op.isCanceled || model == null) {
       if (!op.isCanceled && !showPlaybackOption) {
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -351,7 +351,7 @@ extension AudioModelListPlayback on List<AudioModel> {
     final model = await op.valueOrCancellation(null);
     if (op.isCanceled || model == null) {
       if (!op.isCanceled && !showPlaybackOption) {
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -379,7 +379,7 @@ extension AlbumModelInstantMixPlayback on AlbumModel? {
 
     final queue = await _fetchAlbumQueue(album, ref);
     if (queue.isEmpty) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       return;
     }
 
@@ -394,7 +394,7 @@ extension AlbumModelInstantMixPlayback on AlbumModel? {
     final model = await op.valueOrCancellation(null);
     if (op.isCanceled || model == null) {
       if (!op.isCanceled && !showPlaybackOption) {
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -434,13 +434,13 @@ extension AlbumModelInstantMixPlayback on AlbumModel? {
 
     final queue = await _fetchAlbumQueue(album, ref);
     if (queue.isEmpty) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       return;
     }
 
     await ref.read(videoPlayerProvider.notifier).addToTemporaryQueue(queue);
     if (context.mounted) {
-      FladderSnack.show(context.localized.addedToQueue(queue.length), context: context);
+      KinosSnack.show(context.localized.addedToQueue(queue.length), context: context);
     }
   }
 }
@@ -491,7 +491,7 @@ extension AudioModelAddToQueue on AudioModel? {
     if (audio == null) return;
 
     await ref.read(videoPlayerProvider.notifier).addToTemporaryQueue([audio]);
-    FladderSnack.show(context.localized.addedToQueue(1), context: context);
+    KinosSnack.show(context.localized.addedToQueue(1), context: context);
   }
 }
 
@@ -504,13 +504,13 @@ extension ArtistModelAddToQueue on ArtistModel? {
     final queue = await queueSource.fetchQueue(ref.read);
 
     if (queue.isEmpty) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       return;
     }
 
     await ref.read(videoPlayerProvider.notifier).addToTemporaryQueue(queue);
     if (context.mounted) {
-      FladderSnack.show(context.localized.addedToQueue(queue.length), context: context);
+      KinosSnack.show(context.localized.addedToQueue(queue.length), context: context);
     }
   }
 }
@@ -567,7 +567,7 @@ Future<void> _playInstantMix(
 }) async {
   final queue = await queueSource.fetchQueue(ref.read);
   if (queue.isEmpty) {
-    FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+    KinosSnack.show(context.localized.unableToPlayMedia, context: context);
     return;
   }
 
@@ -583,7 +583,7 @@ Future<void> _playInstantMix(
   final model = await op.valueOrCancellation(null);
   if (op.isCanceled || model == null) {
     if (!op.isCanceled && !showPlaybackOption) {
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
     }
     return;
   }
@@ -649,7 +649,7 @@ extension ItemBaseModelExtensions on ItemBaseModel? {
           log('Error closing loading dialog: $e');
         }
         if (!showPlaybackOption) {
-          FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+          KinosSnack.show(context.localized.unableToPlayMedia, context: context);
         }
       }
       return;
@@ -668,7 +668,7 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
     final op = CancelableOperation.fromFuture(Future(() async {
       List<List<ItemBaseModel>> newList = await Future.wait(map((element) async {
         switch (element.type) {
-          case FladderItemType.series:
+          case KinosItemType.series:
             return await ref.read(jellyApiProvider).fetchEpisodeFromShow(seriesId: element.id);
           default:
             return [element];
@@ -703,7 +703,7 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
         } catch (e) {
           log('Error closing loading dialog: $e');
         }
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -764,7 +764,7 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
         } catch (e) {
           log('Error closing loading dialog: $e');
         }
-        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+        KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
@@ -778,7 +778,7 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
       } catch (e) {
         log('Error closing loading dialog: $e');
       }
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
       return;
     }
 
@@ -840,7 +840,7 @@ class _LoadIndicatorCancelable extends StatelessWidget {
                   if (item != null)
                     Flexible(
                       child: Container(
-                        decoration: FladderTheme.defaultPosterDecoration,
+                        decoration: KinosTheme.defaultPosterDecoration,
                         clipBehavior: Clip.hardEdge,
                         height: 175,
                         child: AspectRatio(
@@ -861,7 +861,7 @@ class _LoadIndicatorCancelable extends StatelessWidget {
                                   border: Border.all(width: 1, color: Colors.white.withAlpha(45)),
                                 ),
                                 clipBehavior: Clip.hardEdge,
-                                child: FladderImage(
+                                child: KinosImage(
                                   image: item!.getPosters?.primary,
                                   fit: BoxFit.cover,
                                 ),
@@ -932,7 +932,7 @@ Future<void> _playVideo(
       } catch (e) {
         log('Error closing loading dialog: $e');
       }
-      FladderSnack.show(context.localized.unableToPlayMedia, context: context);
+      KinosSnack.show(context.localized.unableToPlayMedia, context: context);
     }
     return;
   }
@@ -953,7 +953,7 @@ Future<void> _playVideo(
       } catch (e) {
         log('Error closing loading dialog: $e');
       }
-      FladderSnack.show(context.localized.errorOpeningMedia, context: context);
+      KinosSnack.show(context.localized.errorOpeningMedia, context: context);
     }
     return;
   }

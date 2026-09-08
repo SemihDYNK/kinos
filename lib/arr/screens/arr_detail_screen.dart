@@ -18,7 +18,7 @@ import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
 import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/details_screens/components/media_info_formatters.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/router_extension.dart';
@@ -60,11 +60,11 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
     switch (result) {
       case ArrSuccess():
         if (successMessage != null) {
-          FladderSnack.show(successMessage, context: context);
+          KinosSnack.show(successMessage, context: context);
         }
       case ArrFailure(:final detail):
         final parts = [failureContext, detail].nonNulls.toList();
-        FladderSnack.show(
+        KinosSnack.show(
           parts.isEmpty ? 'Échec de l\'action.' : parts.join(' — '),
           context: context,
         );

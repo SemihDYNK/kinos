@@ -9,7 +9,7 @@ import 'package:kinos/screens/shared/flat_button.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/duration_extensions.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 
 const videoPlayerHeroTag = "HeroPlayer";
@@ -226,7 +226,7 @@ class _FloatingPlayerBarProgressState
     return AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer
         ? SizedBox(
             height: widget.height,
-            child: FladderSlider(
+            child: KinosSlider(
               value: position.inMilliseconds.toDouble(),
               min: 0.0,
               max: playback.duration.inMilliseconds.toDouble(),

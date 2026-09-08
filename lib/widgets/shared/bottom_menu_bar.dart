@@ -47,7 +47,7 @@ class BottomMenuBar extends ConsumerWidget {
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
                 elevation: 0,
-                shape: FladderTheme.largeShape,
+                shape: KinosTheme.largeShape,
               ),
             ),
             child: fabAction!,
@@ -74,7 +74,7 @@ class BottomMenuBar extends ConsumerWidget {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: sticky ? theme.colorScheme.primaryContainer : theme.colorScheme.surface,
-                    borderRadius: FladderTheme.largeShape.borderRadius,
+                    borderRadius: KinosTheme.largeShape.borderRadius,
                     border: Border.all(
                       color: theme.colorScheme.primary.withAlpha(sticky ? 255 : 0),
                       width: 2,

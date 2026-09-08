@@ -7,7 +7,7 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/providers/settings/video_player_settings_provider.dart';
 import 'package:kinos/util/list_padding.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 
 class VideoVolumeSlider extends ConsumerStatefulWidget {
   final double? width;
@@ -80,7 +80,7 @@ class _VideoVolumeSliderState extends ConsumerState<VideoVolumeSlider> {
                 // — corrigé au passage (aucun appelant existant ne le
                 // passait, donc sans effet sur eux).
                 width: widget.width ?? 75,
-                child: FladderSlider(
+                child: KinosSlider(
                   min: 0,
                   max: 100,
                   value: volume,

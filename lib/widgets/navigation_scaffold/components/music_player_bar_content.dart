@@ -12,7 +12,7 @@ import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/screens/video_player/components/video_volume_slider.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/duration_extensions.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/shared/player_bar_shared.dart';
 import 'package:kinos/widgets/shared/clickable_text.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
@@ -82,7 +82,7 @@ class MusicFloatingPlayerBarContent extends ConsumerWidget {
                                 showExpandButton: showExpandButton,
                                 onShowExpandButton: onShowExpandButton,
                                 openFullScreenPlayer: openFullScreenPlayer,
-                                child: FladderImage(
+                                child: KinosImage(
                                   image: item.images?.primary,
                                   fit: BoxFit.cover,
                                 ),

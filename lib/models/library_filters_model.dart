@@ -81,7 +81,7 @@ abstract class LibraryFiltersModel with _$LibraryFiltersModel {
     return usePostersForLibrary
         ? Container(
             decoration: BoxDecoration(
-              borderRadius: FladderTheme.smallShape.borderRadius,
+              borderRadius: KinosTheme.smallShape.borderRadius,
             ),
             clipBehavior: Clip.hardEdge,
             child: SizedBox.square(

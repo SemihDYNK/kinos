@@ -7,7 +7,7 @@ import 'package:kinos/arr/providers/arr_queue_providers.dart';
 import 'package:kinos/arr/providers/qbittorrent_providers.dart';
 import 'package:kinos/arr/screens/widgets/arr_queue_table.dart';
 import 'package:kinos/arr/services/arr_api_client.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme/app_theme.dart';
 
 /// Onglet "File d'attente" — relie [arrQueueProvider] (polling 5s,
@@ -28,7 +28,7 @@ class ArrQueueScreen extends ConsumerWidget {
     if (!context.mounted) return;
     if (result case ArrFailure(:final detail)) {
       final parts = [failureContext, detail].nonNulls.toList();
-      FladderSnack.show(
+      KinosSnack.show(
         parts.isEmpty ? 'Échec de l\'action.' : parts.join(' — '),
         context: context,
       );

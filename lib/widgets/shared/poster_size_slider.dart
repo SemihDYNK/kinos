@@ -1,5 +1,5 @@
 import 'package:kinos/providers/settings/client_settings_provider.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,7 +25,7 @@ class PosterSizeWidget extends ConsumerWidget {
           ),
           SizedBox(
             width: width,
-            child: FladderSlider(
+            child: KinosSlider(
               value: ref.watch(clientSettingsProvider.select((value) => value.posterSize)),
               min: 0.5,
               divisions: 12,

@@ -173,7 +173,7 @@ class VideoDurationOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (poster.overview.runTime == null) return const SizedBox.shrink();
-    if (!(poster is PhotoModel && (poster as PhotoModel).internalType == FladderItemType.video)) {
+    if (!(poster is PhotoModel && (poster as PhotoModel).internalType == KinosItemType.video)) {
       return const SizedBox.shrink();
     }
 
@@ -184,7 +184,7 @@ class VideoDurationOverlay extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: FladderTheme.smallShape.borderRadius,
+            borderRadius: KinosTheme.smallShape.borderRadius,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -241,7 +241,7 @@ class BottomOverlaysContainer extends StatelessWidget {
   final bool showProgress;
   final double progress;
   final double progressHeight;
-  final FladderItemType itemType;
+  final KinosItemType itemType;
   final EdgeInsets progressPadding;
 
   const BottomOverlaysContainer({
@@ -262,7 +262,7 @@ class BottomOverlaysContainer extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (showFavourite) const FavouriteOverlay(),
-          if (showProgress && (progress > 0 && progress < 100) && itemType != FladderItemType.book)
+          if (showProgress && (progress > 0 && progress < 100) && itemType != KinosItemType.book)
             ProgressOverlay(
               progress: progress,
               height: progressHeight,

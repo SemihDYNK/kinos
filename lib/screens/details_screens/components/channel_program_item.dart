@@ -9,7 +9,7 @@ import 'package:kinos/models/items/channel_program.dart';
 import 'package:kinos/screens/details_screens/components/overview_header.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/ensure_visible.dart';
@@ -113,9 +113,9 @@ class _ChannelProgramItemState extends State<ChannelProgramItem> with SingleTick
                             child: Container(
                               decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.primaryContainer.withAlpha(175),
-                                borderRadius: FladderTheme.defaultPosterDecoration.borderRadius,
+                                borderRadius: KinosTheme.defaultPosterDecoration.borderRadius,
                               ),
-                              foregroundDecoration: FladderTheme.defaultPosterDecoration,
+                              foregroundDecoration: KinosTheme.defaultPosterDecoration,
                             ),
                           ),
                         ),
@@ -164,11 +164,11 @@ class _ChannelProgramItemState extends State<ChannelProgramItem> with SingleTick
                                 SizedBox(
                                   width: 100,
                                   child: Container(
-                                    decoration: FladderTheme.defaultPosterDecoration,
+                                    decoration: KinosTheme.defaultPosterDecoration,
                                     clipBehavior: Clip.hardEdge,
                                     child: AspectRatio(
                                       aspectRatio: 0.75,
-                                      child: FladderImage(
+                                      child: KinosImage(
                                         image: program.images?.primary,
                                         fit: BoxFit.cover,
                                       ),

@@ -10,7 +10,7 @@ import 'package:kinos/screens/metadata/edit_screens/edit_fields.dart';
 import 'package:kinos/screens/metadata/edit_screens/edit_image_content.dart';
 import 'package:kinos/screens/shared/adaptive_dialog.dart';
 import 'package:kinos/screens/shared/animated_fade_size.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
@@ -175,7 +175,7 @@ class _EditDialogSwitcherState extends ConsumerState<EditDialogSwitcher> with Ti
                 onPressed: saving
                     ? null
                     : () async {
-                        final response = await FladderSnack.showResponse(
+                        final response = await KinosSnack.showResponse(
                           ref.read(editItemProvider.notifier).saveInformation(widgets.keys.toSet()),
                           successTitle: context.localized.metaDataSavedFor(
                             currentItem?.detailedName(context.localized) ?? currentItem?.name ?? "",

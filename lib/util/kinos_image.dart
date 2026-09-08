@@ -8,7 +8,7 @@ import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/providers/arguments_provider.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 
-class FladderImage extends ConsumerWidget {
+class KinosImage extends ConsumerWidget {
   final ImageData? image;
   final Widget Function(BuildContext context, Widget child, int? frame, bool wasSynchronouslyLoaded)? frameBuilder;
   final Widget Function(BuildContext context, Object object, StackTrace? stack)? imageErrorBuilder;
@@ -21,7 +21,7 @@ class FladderImage extends ConsumerWidget {
   final bool blurOnly;
   final int decodeHeight;
   final bool cachedImage;
-  const FladderImage({
+  const KinosImage({
     required this.image,
     this.frameBuilder,
     this.imageErrorBuilder,

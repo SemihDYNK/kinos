@@ -157,7 +157,7 @@ class _AlphaNumericKeyboardState extends ConsumerState<AlphaNumericKeyboard> {
                       (e) => FilledButton.tonal(
                         onPressed: () => widget.onCharacter(e),
                         style: FilledButton.styleFrom(
-                          shape: FladderTheme.smallShape,
+                          shape: KinosTheme.smallShape,
                         ),
                         child: Text(
                           e,
@@ -182,7 +182,7 @@ class _AlphaNumericKeyboardState extends ConsumerState<AlphaNumericKeyboard> {
                     (action) => FittedBox(
                       child: FilledButton.tonal(
                         style: FilledButton.styleFrom(
-                          shape: FladderTheme.smallShape,
+                          shape: KinosTheme.smallShape,
                           backgroundColor: switch (action) {
                             KeyboardActions.shift => shift ? Theme.of(context).colorScheme.primary : null,
                             _ => null,

@@ -7,7 +7,7 @@ import 'package:kinos/models/items/item_shared_models.dart';
 import 'package:kinos/screens/details_screens/person_detail_screen.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/string_extensions.dart';
@@ -34,7 +34,7 @@ class PeopleRow extends ConsumerWidget {
           width: 75,
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: FladderTheme.smallShape.borderRadius,
+              borderRadius: KinosTheme.smallShape.borderRadius,
               color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.50),
             ),
             child: Center(
@@ -64,10 +64,10 @@ class PeopleRow extends ConsumerWidget {
               Flexible(
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: FladderTheme.smallShape.borderRadius,
+                    borderRadius: KinosTheme.smallShape.borderRadius,
                     color: Theme.of(context).colorScheme.surfaceContainer,
                   ),
-                  foregroundDecoration: FladderTheme.defaultPosterDecoration,
+                  foregroundDecoration: KinosTheme.defaultPosterDecoration,
                   child: FocusButton(
                     onTap: onTap ??
                         () => Navigator.of(context).push(
@@ -77,7 +77,7 @@ class PeopleRow extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                    child: FladderImage(
+                    child: KinosImage(
                       image: person.image,
                       placeHolder: placeHolder(person.name),
                       fit: BoxFit.cover,

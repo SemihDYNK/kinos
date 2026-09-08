@@ -14,7 +14,7 @@ import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/clickable_text.dart';
@@ -35,7 +35,7 @@ class SeerrPosterCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final radius = FladderTheme.smallShape.borderRadius;
+    final radius = KinosTheme.smallShape.borderRadius;
 
     ImageData? image = poster.images.primary;
     image ??= poster.images.backDrop?.lastOrNull;
@@ -101,7 +101,7 @@ class SeerrPosterCard extends ConsumerWidget {
                 border: Border.all(width: 1, color: Colors.white.withAlpha(45)),
               ),
               clipBehavior: Clip.hardEdge,
-              child: FladderImage(
+              child: KinosImage(
                 image: image,
                 placeHolder: _SeerrPosterFallback(poster: poster),
               ),

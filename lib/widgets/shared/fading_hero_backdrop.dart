@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/theme/app_theme.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 
 /// Image de fond pleine largeur qui continue derrière le contenu qui la
 /// suit et se dissout sous un voile dégradé, plutôt que de s'arrêter net à
@@ -105,7 +105,7 @@ class FadingHeroBackdrop extends StatelessWidget {
               // changement réel d'image.
               AnimatedSwitcher(
                 duration: AppDurations.heroTint,
-                child: FladderImage(
+                child: KinosImage(
                   key: ValueKey(image?.key),
                   image: image,
                   fit: BoxFit.cover,

@@ -21,9 +21,9 @@ import 'package:kinos/providers/shared_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/views_provider.dart';
 import 'package:kinos/screens/login/lock_screen.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/services/local_network_permission.dart';
-import 'package:kinos/util/fladder_config.dart';
+import 'package:kinos/util/kinos_config.dart';
 import 'package:kinos/util/list_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
 
@@ -44,8 +44,8 @@ class AuthNotifier extends StateNotifier<LoginScreenModel> {
     ref.read(userProvider.notifier).clear();
     final currentAccounts = await ref.read(authProvider.notifier).getSavedAccounts();
     ref.read(lockScreenActiveProvider.notifier).update((state) => true);
-    if (FladderConfig.baseUrl != null) {
-      final url = FladderConfig.baseUrl;
+    if (KinosConfig.baseUrl != null) {
+      final url = KinosConfig.baseUrl;
       state = state.copyWith(
         hasBaseUrl: true,
       );
@@ -94,7 +94,7 @@ class AuthNotifier extends StateNotifier<LoginScreenModel> {
         errorMessage: localContext?.localized.invalidUrl,
         loading: false,
       );
-      FladderSnack.show(localContext?.localized.unableToConnectHost ?? "");
+      KinosSnack.show(localContext?.localized.unableToConnectHost ?? "");
     }
   }
 
@@ -192,8 +192,8 @@ class AuthNotifier extends StateNotifier<LoginScreenModel> {
 
   Future<void> setServer(String server) async {
     if (state.hasBaseUrl) {
-      if (!await _hasLocalNetworkPermission(FladderConfig.baseUrl!)) return;
-      await _fetchServerInfo(FladderConfig.baseUrl!);
+      if (!await _hasLocalNetworkPermission(KinosConfig.baseUrl!)) return;
+      await _fetchServerInfo(KinosConfig.baseUrl!);
       return;
     }
     final trimmed = server.trim();
@@ -233,8 +233,8 @@ class AuthNotifier extends StateNotifier<LoginScreenModel> {
   }
 
   String? _findSeerrUrlForServer(String? serverId) {
-    if (FladderConfig.seerrBaseUrl?.isNotEmpty == true) {
-      return FladderConfig.seerrBaseUrl;
+    if (KinosConfig.seerrBaseUrl?.isNotEmpty == true) {
+      return KinosConfig.seerrBaseUrl;
     }
     if (serverId == null || serverId.isEmpty) return null;
     final matches = state.accounts.where(

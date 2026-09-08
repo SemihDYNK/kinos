@@ -42,7 +42,7 @@ class AuthLinkData {
       );
 
   static AuthLinkData? parse(String encoded) {
-    String removeUrlPrefix = encoded.replaceFirst(RegExp(r'^fladder:\/\/\/login\?authLink='), '');
+    String removeUrlPrefix = encoded.replaceFirst(RegExp(r'^kinos:\/\/\/login\?authLink='), '');
     try {
       final pad = removeUrlPrefix.length % 4;
       if (pad != 0) {
@@ -74,7 +74,7 @@ String encodeAuthLink(AuthLinkData data) {
 
 String buildAuthUrl(AuthLinkData data) {
   final payload = encodeAuthLink(data);
-  return 'fladder:///login?authLink=$payload';
+  return 'kinos:///login?authLink=$payload';
 }
 
 PageRouteInfo? payloadToRoute(Uri? payload) {

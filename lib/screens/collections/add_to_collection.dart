@@ -8,7 +8,7 @@ import 'package:kinos/models/boxset_model.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/providers/collections_provider.dart';
 import 'package:kinos/screens/shared/adaptive_dialog.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -159,7 +159,7 @@ class _AddToCollectionState extends ConsumerState<AddToCollection> {
     if (value == true) {
       final response = await ref.read(provider.notifier).addToCollection(boxSet: boxSet, add: false);
       if (context.mounted) {
-        FladderSnack.show(
+        KinosSnack.show(
             response.isSuccessful
                 ? context.localized.removedFromCollection(boxSet.name)
                 : '${context.localized.somethingWentWrong} - (${response.statusCode}) - ${response.base.reasonPhrase}',
@@ -168,7 +168,7 @@ class _AddToCollectionState extends ConsumerState<AddToCollection> {
     } else {
       final response = await ref.read(provider.notifier).addToCollection(boxSet: boxSet, add: true);
       if (context.mounted) {
-        FladderSnack.show(
+        KinosSnack.show(
             response.isSuccessful
                 ? context.localized.addedToCollection(boxSet.name)
                 : '${context.localized.somethingWentWrong} - (${response.statusCode}) - ${response.base.reasonPhrase}',

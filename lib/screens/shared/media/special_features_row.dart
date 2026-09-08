@@ -8,7 +8,7 @@ import 'package:kinos/providers/sync/sync_provider_helpers.dart';
 import 'package:kinos/screens/syncing/sync_button.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/item_base_model/play_item_helpers.dart';
@@ -128,11 +128,11 @@ class SpecialFeaturePoster extends ConsumerWidget {
                 tag: heroTag ?? UniqueKey(),
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: FladderTheme.smallShape.borderRadius,
+                    borderRadius: KinosTheme.smallShape.borderRadius,
                     color: Theme.of(context).colorScheme.surfaceContainer,
                   ),
-                  foregroundDecoration: FladderTheme.defaultPosterDecoration,
-                  child: FladderImage(
+                  foregroundDecoration: KinosTheme.defaultPosterDecoration,
+                  child: KinosImage(
                     image: specialFeature.images?.primary,
                     placeHolder: placeHolder,
                     blurOnly: false,

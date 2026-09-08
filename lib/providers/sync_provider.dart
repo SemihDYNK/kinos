@@ -45,7 +45,7 @@ import 'package:kinos/providers/sync/background_download_provider.dart';
 import 'package:kinos/providers/sync/sync_provider_media.dart';
 import 'package:kinos/providers/sync/sync_provider_overlay.dart';
 import 'package:kinos/providers/user_provider.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/duration_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/string_extensions.dart';
@@ -261,7 +261,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
 
   Future<List<SyncedItem>> getNestedChildren(SyncedItem? item) async {
     if (item == null) return [];
-    if (item.itemModel?.type == FladderItemType.playlist) {
+    if (item.itemModel?.type == KinosItemType.playlist) {
       return _getPlaylistChildrenFromOverlay(item);
     }
     return _db.getNestedChildren(item);
@@ -270,7 +270,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
   Future<List<SyncedItem>> getChildren(String parentId) async => await _db.getChildren(parentId).get();
 
   Future<List<SyncedItem>> getChildrenForItem(SyncedItem item) async {
-    if (item.itemModel?.type == FladderItemType.playlist) {
+    if (item.itemModel?.type == KinosItemType.playlist) {
       return _getPlaylistChildrenFromOverlay(item);
     }
     return getChildren(item.id);
@@ -349,14 +349,14 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
         String? selectedDirectory =
             await FilePicker.platform.getDirectoryPath(dialogTitle: context.localized.syncSelectDownloadsFolder);
         if (selectedDirectory?.isEmpty == true && context.mounted) {
-          FladderSnack.show(context.localized.syncNoFolderSetup, context: context);
+          KinosSnack.show(context.localized.syncNoFolderSetup, context: context);
           return;
         }
         ref.read(clientSettingsProvider.notifier).setSyncPath(selectedDirectory);
       }
 
       if (context.mounted) {
-        FladderSnack.show(context.localized.syncAddItemForSyncing(item.detailedName(context.localized) ?? "Unknown"),
+        KinosSnack.show(context.localized.syncAddItemForSyncing(item.detailedName(context.localized) ?? "Unknown"),
             context: context);
       }
       final newSync = switch (item) {
@@ -371,7 +371,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
         _ => null
       };
       if (context.mounted) {
-        FladderSnack.show(
+        KinosSnack.show(
             newSync != null
                 ? context.localized.startedSyncingItem(item.detailedName(context.localized) ?? "Unknown")
                 : context.localized.unableToSyncItem(item.detailedName(context.localized) ?? "Unknown"),
@@ -382,7 +382,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
     } catch (e) {
       log('Error adding sync item: ${e.toString()}');
       if (context?.mounted == true) {
-        FladderSnack.show(context!.localized.somethingWentWrong, context: context);
+        KinosSnack.show(context!.localized.somethingWentWrong, context: context);
       }
     }
   }
@@ -423,7 +423,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
     } catch (e) {
       log('Error deleting synced item ${e.toString()}');
       state = state.copyWith(items: state.items.map((e) => e.copyWith(markedForDelete: false)).toList());
-      FladderSnack.show(context.localized.syncRemoveUnableToDeleteItem, context: context);
+      KinosSnack.show(context.localized.syncRemoveUnableToDeleteItem, context: context);
       return false;
     }
   }
@@ -460,7 +460,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
     } catch (e) {
       log('Error deleting synced playlist ${e.toString()}');
       state = state.copyWith(items: state.items.map((e) => e.copyWith(markedForDelete: false)).toList());
-      FladderSnack.show(context.localized.syncRemoveUnableToDeleteItem, context: context);
+      KinosSnack.show(context.localized.syncRemoveUnableToDeleteItem, context: context);
       return false;
     }
   }
@@ -497,13 +497,13 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
       if (parent == null) continue;
 
       switch (parent.itemModel?.type) {
-        case FladderItemType.musicAlbum:
+        case KinosItemType.musicAlbum:
           candidateAlbumIds.add(parent.id);
           if (parent.parentId != null) {
             candidateArtistIds.add(parent.parentId!);
           }
           break;
-        case FladderItemType.musicArtist:
+        case KinosItemType.musicArtist:
           candidateArtistIds.add(parent.id);
           break;
         default:
@@ -513,7 +513,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
 
     for (final albumId in candidateAlbumIds) {
       final album = await getSyncedItem(albumId);
-      if (album == null || album.itemModel?.type != FladderItemType.musicAlbum) continue;
+      if (album == null || album.itemModel?.type != KinosItemType.musicAlbum) continue;
 
       final hasTracks = await _hasSyncedAudioDescendants(album.id);
       if (hasTracks) continue;
@@ -527,7 +527,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
 
     for (final artistId in candidateArtistIds) {
       final artist = await getSyncedItem(artistId);
-      if (artist == null || artist.itemModel?.type != FladderItemType.musicArtist) continue;
+      if (artist == null || artist.itemModel?.type != KinosItemType.musicArtist) continue;
 
       final hasTracks = await _hasSyncedAudioDescendants(artist.id);
       if (hasTracks) continue;
@@ -579,7 +579,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
   Future<SyncedItem> deleteFullSyncFiles(SyncedItem syncedItem, DownloadTask? task) async {
     final itemType = syncedItem.itemModel?.type;
 
-    if (itemType == FladderItemType.audio) {
+    if (itemType == KinosItemType.audio) {
       await _deleteSyncedItemAndFiles(syncedItem);
       ref.read(downloadTasksProvider(syncedItem.id).notifier).update((state) => DownloadStream.empty());
       await _cleanupOrphanedMusicParents([syncedItem]);
@@ -588,7 +588,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
       return syncedItem;
     }
 
-    if (itemType == FladderItemType.musicAlbum) {
+    if (itemType == KinosItemType.musicAlbum) {
       final nestedChildren = await getNestedChildren(syncedItem);
       final removedTracks = nestedChildren.where((element) => element.itemModel is AudioModel).toList();
 
@@ -663,7 +663,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
             : ref.read(videoProfileProvider))
         : (effectiveTranscodeModel.enabled ? effectiveTranscodeModel.deviceProfile : ref.read(videoProfileProvider));
 
-    final playbackResponse = await FladderSnack.showResponse(
+    final playbackResponse = await KinosSnack.showResponse(
       api
           .itemsItemIdPlaybackInfoPost(
             itemId: syncItem.id,
@@ -842,7 +842,7 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
       SyncedItem updatedItem = item.copyWith(userData: updatedUserData, unSyncedData: !responseSuccessful);
 
       List<SyncedItem> children = [];
-      final shouldUpdateChildren = {FladderItemType.series, FladderItemType.season}.contains(item.itemModel?.type);
+      final shouldUpdateChildren = {KinosItemType.series, KinosItemType.season}.contains(item.itemModel?.type);
       if (shouldUpdateChildren) {
         // Update child items with the same played status, jellyfin server does this was well
         // when marking a series or season as played

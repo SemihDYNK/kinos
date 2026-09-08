@@ -9,7 +9,7 @@ import 'package:kinos/providers/seerr_service_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/seerr/seerr_chopper_service.dart';
 import 'package:kinos/seerr/seerr_json_converter.dart';
-import 'package:kinos/util/fladder_config.dart';
+import 'package:kinos/util/kinos_config.dart';
 import 'package:kinos/util/seerr_http_client.dart'
     if (dart.library.html) 'package:kinos/util/seerr_http_client_web.dart';
 
@@ -46,7 +46,7 @@ class SeerrRequest implements Interceptor {
   @override
   FutureOr<Response<BodyType>> intercept<BodyType>(Chain<BodyType> chain) async {
     final creds = ref.read(userProvider)?.seerrCredentials;
-    final serverUrl = (FladderConfig.seerrBaseUrl ?? creds?.serverUrl)?.trim();
+    final serverUrl = (KinosConfig.seerrBaseUrl ?? creds?.serverUrl)?.trim();
 
     if (serverUrl == null || serverUrl.isEmpty) {
       throw const HttpException('Seerr server not configured');

@@ -39,7 +39,7 @@ import 'package:kinos/util/refresh_state.dart';
 import 'package:kinos/util/router_extension.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/background_image.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/settings_user_icon.dart';
-import 'package:kinos/widgets/shared/fladder_scrollbar.dart';
+import 'package:kinos/widgets/shared/kinos_scrollbar.dart';
 import 'package:kinos/widgets/shared/hide_on_scroll.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
@@ -55,7 +55,7 @@ class LibrarySearchScreen extends ConsumerStatefulWidget {
   final bool? favourites;
   final SortingOrder? sortOrder;
   final SortingOptions? sortingOptions;
-  final Map<FladderItemType, bool>? types;
+  final Map<KinosItemType, bool>? types;
   final Map<String, bool>? genres;
   final Map<Studio, bool>? studios;
   final Map<ItemFilter, bool>? itemFilters;
@@ -597,7 +597,7 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
             // (LibraryAppBar.quickActions), plus jamais dupliqués ici.
             body: PinchPosterZoom(
               scaleDifference: (difference) => ref.read(clientSettingsProvider.notifier).addPosterSize(difference),
-              child: FladderScrollbar(
+              child: KinosScrollbar(
                 visible: AdaptiveLayout.inputDeviceOf(context) != InputDevice.pointer,
                 controller: scrollController,
                 child: PullToRefresh(

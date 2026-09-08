@@ -16,7 +16,7 @@ import 'package:kinos/arr/screens/widgets/arr_season_episode_picker.dart';
 import 'package:kinos/arr/services/arr_api_client.dart';
 import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/router_extension.dart';
@@ -253,7 +253,7 @@ class _ArrSearchScreenState extends ConsumerState<ArrSearchScreen> {
       ArrFailure(:final detail) =>
         'Échec de l\'envoi${detail != null ? ' — $detail' : ''}',
     };
-    FladderSnack.show(message, context: context);
+    KinosSnack.show(message, context: context);
   }
 
   String _errorMessage(ArrApiError error, String? detail) {

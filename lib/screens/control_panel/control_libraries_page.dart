@@ -21,7 +21,7 @@ import 'package:kinos/screens/library/library_screen.dart';
 import 'package:kinos/screens/metadata/edit_item.dart';
 import 'package:kinos/screens/settings/settings_scaffold.dart';
 import 'package:kinos/screens/shared/default_alert_dialog.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
@@ -87,9 +87,9 @@ class ControlLibrariesPage extends ConsumerWidget {
                           currentOptions,
                         );
                         if (responseMessage != null) {
-                          FladderSnack.show(responseMessage, context: context);
+                          KinosSnack.show(responseMessage, context: context);
                         } else {
-                          FladderSnack.show(context.localized.saved, context: context);
+                          KinosSnack.show(context.localized.saved, context: context);
                         }
                       }
                     : null,

@@ -11,7 +11,7 @@ import 'package:kinos/util/duration_extensions.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/string_extensions.dart';
 import 'package:kinos/widgets/gapped_container_shape.dart';
-import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/trick_play_image.dart';
 
 class VideoProgressBar extends ConsumerStatefulWidget {
@@ -119,7 +119,7 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                   },
                   child: Opacity(
                     opacity: widget.buffering ? 0 : 1.0,
-                    child: FladderSlider(
+                    child: KinosSlider(
                       min: 0.0,
                       max: widget.duration.inMilliseconds.toDouble(),
                       animation: Duration.zero,

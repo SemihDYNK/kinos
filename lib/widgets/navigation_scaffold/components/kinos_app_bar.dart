@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 
 import 'package:kinos/screens/shared/default_title_bar.dart';
 
-class FladderAppBar extends StatelessWidget implements PreferredSize {
+class KinosAppBar extends StatelessWidget implements PreferredSize {
   final double height;
   final String? label;
   final bool automaticallyImplyLeading;
   final bool isDesktop;
-  const FladderAppBar({
+  const KinosAppBar({
     this.height = 35,
     this.automaticallyImplyLeading = false,
     this.label,

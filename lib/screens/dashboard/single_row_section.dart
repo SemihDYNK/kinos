@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/theme/app_theme.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/widgets/shared/grid_focus_traveler.dart';
 
 /// Grille "Ajouts récents" à une ligne, réutilisée par toutes les sections
@@ -113,7 +113,7 @@ class _Tile extends StatelessWidget {
         borderRadius: AppRadii.cardBorder,
         child: ColoredBox(
           color: AppColors.surface,
-          child: FladderImage(
+          child: KinosImage(
             image: image ?? fallback,
             fit: image != null ? BoxFit.cover : BoxFit.contain,
           ),

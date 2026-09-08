@@ -14,7 +14,7 @@ import 'package:kinos/models/settings/arguments_model.dart';
 import 'package:kinos/providers/crash_log_provider.dart';
 import 'package:kinos/src/video_player_helper.g.dart';
 import 'package:kinos/util/application_info.dart';
-import 'package:kinos/util/fladder_config.dart';
+import 'package:kinos/util/kinos_config.dart';
 import 'package:kinos/util/string_extensions.dart';
 import 'package:kinos/util/svg_utils.dart';
 
@@ -56,7 +56,7 @@ Future<AppBootstrapResult> bootstrapApplication(List<String> args) async {
 
   if (kIsWeb) {
     final configString = await rootBundle.loadString('config/config.json');
-    FladderConfig.fromJson(jsonDecode(configString) as Map<String, dynamic>);
+    KinosConfig.fromJson(jsonDecode(configString) as Map<String, dynamic>);
   }
 
   await SvgUtils.preCacheSVGs();

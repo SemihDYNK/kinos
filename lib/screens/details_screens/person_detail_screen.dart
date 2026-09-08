@@ -12,7 +12,7 @@ import 'package:kinos/screens/shared/detail_scaffold.dart';
 import 'package:kinos/screens/shared/media/external_urls.dart';
 import 'package:kinos/screens/shared/media/poster_row.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/list_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/string_extensions.dart';
@@ -63,7 +63,7 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
                       : MediaQuery.of(context).size.width / 3.5,
                   child: AspectRatio(
                     aspectRatio: 0.70,
-                    child: FladderImage(
+                    child: KinosImage(
                       fit: BoxFit.cover,
                       placeHolder: placeHolder(details?.name ?? ""),
                       image: details?.images?.primary,

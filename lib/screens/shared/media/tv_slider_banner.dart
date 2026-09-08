@@ -13,7 +13,7 @@ import 'package:kinos/screens/shared/media/components/small_detail_widgets.dart'
 import 'package:kinos/theme.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/item_base_model/play_item_helpers.dart';
@@ -112,7 +112,7 @@ class _FocusedFullBannerState extends ConsumerState<TVSliderBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final radius = FladderTheme.largeShape.borderRadius;
+    final radius = KinosTheme.largeShape.borderRadius;
 
     final isDpad = AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad;
 
@@ -169,7 +169,7 @@ class _FocusedFullBannerState extends ConsumerState<TVSliderBanner> {
                   ),
                 );
               },
-              child: FladderImage(
+              child: KinosImage(
                 key: ValueKey(_currentItem.id),
                 image: _currentItem.tvPosterLarge,
                 fit: BoxFit.cover,

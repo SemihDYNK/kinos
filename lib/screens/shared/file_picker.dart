@@ -11,11 +11,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class FladderFile {
+class KinosFile {
   final String name;
   final String? path;
   final Uint8List? data;
-  FladderFile({
+  KinosFile({
     required this.name,
     this.path,
     this.data,
@@ -30,11 +30,11 @@ class FladderFile {
   };
 
   @override
-  String toString() => 'FladderFile(name: $name, path: $path, data: ${data?.length})';
+  String toString() => 'KinosFile(name: $name, path: $path, data: ${data?.length})';
 }
 
 class FilePickerBar extends ConsumerStatefulWidget {
-  final Function(List<FladderFile> file)? onFilesPicked;
+  final Function(List<KinosFile> file)? onFilesPicked;
   final Function(String url)? urlPicked;
   final Set<String> extensions;
   final bool multipleFiles;
@@ -67,11 +67,11 @@ class _FilePickerBarState extends ConsumerState<FilePickerBar> {
       onDragEntered: (details) => setState(() => dragStart = true),
       onDragDone: (details) async {
         if (widget.multipleFiles) {
-          List<FladderFile> newFiles = [];
+          List<KinosFile> newFiles = [];
           await Future.forEach(details.files, (element) async {
             if (widget.extensions.contains(p.extension(element.path).substring(1))) {
               newFiles.add(
-                FladderFile(
+                KinosFile(
                   name: element.name,
                   path: element.path,
                   data: await element.readAsBytes(),
@@ -84,7 +84,7 @@ class _FilePickerBarState extends ConsumerState<FilePickerBar> {
           final file = details.files.lastOrNull;
           if (file != null) {
             widget.onFilesPicked?.call([
-              FladderFile(
+              KinosFile(
                 name: file.name,
                 path: file.path,
                 data: await file.readAsBytes(),
@@ -155,10 +155,10 @@ class _FilePickerBarState extends ConsumerState<FilePickerBar> {
                                 withData: true,
                               );
                               if (result != null && result.count != 0) {
-                                List<FladderFile> newFiles = [];
+                                List<KinosFile> newFiles = [];
                                 await Future.forEach(result.files, (element) async {
                                   newFiles.add(
-                                    FladderFile(
+                                    KinosFile(
                                       name: element.name,
                                       path: element.path,
                                       data: element.bytes,

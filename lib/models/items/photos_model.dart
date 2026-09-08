@@ -12,7 +12,7 @@ import 'package:kinos/models/items/item_shared_models.dart';
 import 'package:kinos/models/items/overview_model.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
 
@@ -69,7 +69,7 @@ class PhotoModel extends ItemBaseModel with PhotoModelMappable {
   final String? albumId;
   final DateTime? dateTaken;
   final ImagesData? thumbnail;
-  final FladderItemType internalType;
+  final KinosItemType internalType;
 
   const PhotoModel({
     required this.albumId,
@@ -109,8 +109,8 @@ class PhotoModel extends ItemBaseModel with PhotoModelMappable {
 
   @override
   bool get galleryItem => switch (internalType) {
-        FladderItemType.photo => albumId?.isNotEmpty == true,
-        FladderItemType.video => parentId?.isNotEmpty == true,
+        KinosItemType.photo => albumId?.isNotEmpty == true,
+        KinosItemType.video => parentId?.isNotEmpty == true,
         _ => false,
       };
 
@@ -134,8 +134,8 @@ class PhotoModel extends ItemBaseModel with PhotoModelMappable {
       canDelete: item.canDelete,
       canDownload: item.canDownload,
       internalType: switch (item.type) {
-        BaseItemKind.video => FladderItemType.video,
-        _ => FladderItemType.photo,
+        BaseItemKind.video => KinosItemType.video,
+        _ => KinosItemType.photo,
       },
     );
   }
@@ -153,7 +153,7 @@ class PhotoModel extends ItemBaseModel with PhotoModelMappable {
 
   Future<void> navigateToAlbum(BuildContext context) async {
     if ((albumId ?? parentId) == null) {
-      FladderSnack.show(context.localized.notPartOfAlbum, context: context);
+      KinosSnack.show(context.localized.notPartOfAlbum, context: context);
       return;
     }
     await parentBaseModel.navigateTo(context);

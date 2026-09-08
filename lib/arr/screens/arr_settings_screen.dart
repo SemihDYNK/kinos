@@ -11,7 +11,7 @@ import 'package:kinos/arr/providers/qbittorrent_providers.dart';
 import 'package:kinos/arr/services/arr_api_client.dart';
 import 'package:kinos/arr/services/qbittorrent_api_client.dart';
 import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme/app_theme.dart';
 
 /// Réglages Radarr et Sonarr — URL, clé API, test de connexion, pour
@@ -152,7 +152,7 @@ class _ArrServiceSettingsCardState
         .save(credentials);
     if (!mounted) return;
     setState(() => _saving = false);
-    FladderSnack.show('${widget.service.label} enregistré', context: context);
+    KinosSnack.show('${widget.service.label} enregistré', context: context);
   }
 
   @override
@@ -297,7 +297,7 @@ class _QBittorrentSettingsCardState
     await ref.read(qbittorrentCredentialsProvider.notifier).save(credentials);
     if (!mounted) return;
     setState(() => _saving = false);
-    FladderSnack.show('qBittorrent enregistré', context: context);
+    KinosSnack.show('qBittorrent enregistré', context: context);
   }
 
   @override

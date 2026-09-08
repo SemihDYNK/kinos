@@ -58,8 +58,8 @@ class MusicLibraryItem {
       MusicLibraryItem(
         label: context.localized.musicAlbum(2),
         pathKey: "albums",
-        selectedIcon: Icon(FladderItemType.musicAlbum.selectedicon),
-        icon: Icon(FladderItemType.musicAlbum.icon),
+        selectedIcon: Icon(KinosItemType.musicAlbum.selectedicon),
+        icon: Icon(KinosItemType.musicAlbum.icon),
         onTap: () {
           ref.read(libraryViewTypeProvider.notifier).state = LibraryViewTypes.grid;
           context.pushRoute(
@@ -69,7 +69,7 @@ class MusicLibraryItem {
             ).withFilter(
               const LibraryFilterModel(
                 types: {
-                  FladderItemType.musicAlbum: true,
+                  KinosItemType.musicAlbum: true,
                 },
                 recursive: true,
               ),
@@ -80,8 +80,8 @@ class MusicLibraryItem {
       MusicLibraryItem(
         label: context.localized.track(2),
         pathKey: "tracks",
-        selectedIcon: Icon(FladderItemType.audio.selectedicon),
-        icon: Icon(FladderItemType.audio.icon),
+        selectedIcon: Icon(KinosItemType.audio.selectedicon),
+        icon: Icon(KinosItemType.audio.icon),
         onTap: () {
           ref.read(libraryViewTypeProvider.notifier).state = LibraryViewTypes.list;
           context.pushRoute(
@@ -91,7 +91,7 @@ class MusicLibraryItem {
             ).withFilter(
               const LibraryFilterModel(
                 types: {
-                  FladderItemType.audio: true,
+                  KinosItemType.audio: true,
                 },
                 recursive: true,
               ),
@@ -102,8 +102,8 @@ class MusicLibraryItem {
       MusicLibraryItem(
         label: context.localized.mediaTypeArtists(2),
         pathKey: "artists",
-        selectedIcon: Icon(FladderItemType.person.selectedicon),
-        icon: Icon(FladderItemType.person.icon),
+        selectedIcon: Icon(KinosItemType.person.selectedicon),
+        icon: Icon(KinosItemType.person.icon),
         onTap: () {
           ref.read(libraryViewTypeProvider.notifier).state = LibraryViewTypes.grid;
           context.pushRoute(
@@ -113,7 +113,7 @@ class MusicLibraryItem {
             ).withFilter(
               const LibraryFilterModel(
                 types: {
-                  FladderItemType.person: true,
+                  KinosItemType.person: true,
                 },
               ),
             ),
@@ -124,8 +124,8 @@ class MusicLibraryItem {
         MusicLibraryItem(
           label: context.localized.mediaTypeCollection(2),
           pathKey: "collections",
-          selectedIcon: Icon(FladderItemType.boxset.selectedicon),
-          icon: Icon(FladderItemType.boxset.icon),
+          selectedIcon: Icon(KinosItemType.boxset.selectedicon),
+          icon: Icon(KinosItemType.boxset.icon),
           onTap: () {
             ref.read(libraryViewTypeProvider.notifier).state = LibraryViewTypes.grid;
             context.pushRoute(
@@ -180,8 +180,8 @@ List<Widget> buildMusicDashboardNavItems(
           usePostersForLibrary: usePostersForLibrary,
           shouldExpand: expanded,
           pathKey: entry.key.id,
-          selectedIcon: Icon(FladderItemType.playlist.selectedicon),
-          icon: Icon(FladderItemType.playlist.icon),
+          selectedIcon: Icon(KinosItemType.playlist.selectedicon),
+          icon: Icon(KinosItemType.playlist.icon),
           customIcon: usePostersForLibrary
               ? entry.key.iconWidget(
                   context,
@@ -230,7 +230,7 @@ class CombinedViewNavigationItem extends ConsumerWidget {
           ? null
           : Container(
               decoration: BoxDecoration(
-                borderRadius: FladderTheme.smallShape.borderRadius,
+                borderRadius: KinosTheme.smallShape.borderRadius,
                 color: Theme.of(context).colorScheme.surface,
               ),
               child: Padding(
@@ -293,7 +293,7 @@ class FilterNavigationItem extends ConsumerWidget {
     return CustomTooltip(
       tooltipContent: Container(
         decoration: BoxDecoration(
-          borderRadius: FladderTheme.smallShape.borderRadius,
+          borderRadius: KinosTheme.smallShape.borderRadius,
           color: Theme.of(context).colorScheme.surface,
         ),
         child: Padding(
@@ -381,7 +381,7 @@ class ViewNavigationItem extends ConsumerWidget {
           ? null
           : Container(
               decoration: BoxDecoration(
-                borderRadius: FladderTheme.smallShape.borderRadius,
+                borderRadius: KinosTheme.smallShape.borderRadius,
                 color: Theme.of(context).colorScheme.surface,
               ),
               child: Padding(

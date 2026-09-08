@@ -16,7 +16,7 @@ import 'package:kinos/screens/shared/media/components/poster_overlays.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -192,7 +192,7 @@ class _TVPosterItem extends ConsumerWidget {
         .surfaceContainer
         .harmonizeWith(AppColors.background);
 
-    final radius = FladderTheme.defaultShape.borderRadius;
+    final radius = KinosTheme.defaultShape.borderRadius;
 
     return FocusButton(
       onTap: onTap,
@@ -218,7 +218,7 @@ class _TVPosterItem extends ConsumerWidget {
           clipBehavior: Clip.hardEdge,
           child: Stack(
             children: [
-              FladderImage(
+              KinosImage(
                 key:
                     ValueKey(poster.tvPosterLarge?.key ?? "${poster.id}_large"),
                 image: poster.tvPosterLarge,
@@ -227,7 +227,7 @@ class _TVPosterItem extends ConsumerWidget {
               AnimatedOpacity(
                 duration: _kAnimationDuration,
                 opacity: focused ? 0 : 1,
-                child: FladderImage(
+                child: KinosImage(
                   key: ValueKey(
                       poster.tvPosterSmall?.key ?? "${poster.id}_small"),
                   image: poster.tvPosterSmall,

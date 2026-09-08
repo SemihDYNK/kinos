@@ -128,7 +128,7 @@ class _ToolbarHarness extends ConsumerWidget {
 }
 
 void main() {
-  // 900px et plus : plage réaliste pour une fenêtre Fladder (bureau
+  // 900px et plus : plage réaliste pour une fenêtre Kinos (bureau
   // uniquement, cf. CLAUDE.md) — en-deçà, un toolbar aussi dense que
   // celui-ci déborderait dans n'importe quelle app, ce n'est pas ce que
   // ce test cherche à couvrir.

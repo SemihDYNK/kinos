@@ -30,7 +30,7 @@ import 'package:kinos/screens/metadata/identifty_screen.dart';
 import 'package:kinos/screens/metadata/info_screen.dart';
 import 'package:kinos/screens/metadata/refresh_metadata.dart';
 import 'package:kinos/screens/playlists/add_to_playlists.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/syncing/sync_button.dart';
 import 'package:kinos/screens/syncing/sync_item_details.dart';
 import 'package:kinos/seerr/seerr_models.dart';
@@ -45,10 +45,10 @@ import 'package:kinos/widgets/pop_up/delete_file.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 
 extension ItemBaseModelsBooleans on List<ItemBaseModel> {
-  Map<FladderItemType, List<ItemBaseModel>> get groupedItems {
-    Map<FladderItemType, List<ItemBaseModel>> groupedItems = {};
+  Map<KinosItemType, List<ItemBaseModel>> get groupedItems {
+    Map<KinosItemType, List<ItemBaseModel>> groupedItems = {};
     for (int i = 0; i < length; i++) {
-      FladderItemType type = this[i].type;
+      KinosItemType type = this[i].type;
       if (!groupedItems.containsKey(type)) {
         groupedItems[type] = [this[i]];
       } else {
@@ -58,9 +58,9 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
     return groupedItems;
   }
 
-  FladderItemType get getMostCommonType {
-    if (isEmpty) return FladderItemType.movie;
-    final Map<FladderItemType, int> counts = {};
+  KinosItemType get getMostCommonType {
+    if (isEmpty) return KinosItemType.movie;
+    final Map<KinosItemType, int> counts = {};
 
     for (final item in this) {
       final type = item.type;
@@ -154,21 +154,21 @@ extension ItemBaseModelExtensions on ItemBaseModel {
     final ItemAction? parentAction = switch (this) {
       EpisodeModel _ => !exclude.contains(ItemActions.openShow)
           ? ItemActionButton(
-              icon: Icon(FladderItemType.series.icon),
+              icon: Icon(KinosItemType.series.icon),
               action: () => parentBaseModel.navigateTo(context),
               label: Text(context.localized.openShow),
             )
           : null,
       AudioModel _ => !exclude.contains(ItemActions.openParent)
           ? ItemActionButton(
-              icon: Icon(FladderItemType.musicAlbum.icon),
+              icon: Icon(KinosItemType.musicAlbum.icon),
               action: () => parentBaseModel.navigateTo(context),
               label: Text(context.localized.showAlbum),
             )
           : null,
       AlbumModel album => !exclude.contains(ItemActions.openParent)
           ? ItemActionButton(
-              icon: Icon(FladderItemType.musicArtist.icon),
+              icon: Icon(KinosItemType.musicArtist.icon),
               action: () => album.parentBaseModel.navigateTo(context),
               label: Text(context.localized.showArtist),
             )
@@ -176,7 +176,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
       SeriesModel _ => null,
       _ => !exclude.contains(ItemActions.openParent) && !galleryItem
           ? ItemActionButton(
-              icon: Icon(FladderItemType.folder.icon),
+              icon: Icon(KinosItemType.folder.icon),
               action: () => parentBaseModel.navigateTo(context),
               label: Text(context.localized.openParent),
             )
@@ -237,7 +237,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
         )
       else if (!exclude.contains(ItemActions.showAlbum) && galleryItem)
         ItemActionButton(
-          icon: Icon(FladderItemType.photoAlbum.icon),
+          icon: Icon(KinosItemType.photoAlbum.icon),
           action: () => parentBaseModel.navigateTo(context),
           label: Text(context.localized.showAlbum),
         ),
@@ -268,7 +268,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
           ),
       ItemActionDivider(),
       if (!exclude.contains(ItemActions.addCollection) && isAdmin)
-        if (type != FladderItemType.boxset)
+        if (type != KinosItemType.boxset)
           ItemActionButton(
             icon: const Icon(IconsaxPlusLinear.archive_add),
             action: () async {
@@ -280,7 +280,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
             label: Text(context.localized.addToCollection),
           ),
       if (!exclude.contains(ItemActions.addPlaylist))
-        if (type != FladderItemType.playlist)
+        if (type != KinosItemType.playlist)
           ItemActionButton(
             icon: const Icon(IconsaxPlusLinear.archive_add),
             action: () async {
@@ -424,7 +424,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
             ),
           ),
           action: () async {
-            final response = await FladderSnack.showResponse(
+            final response = await KinosSnack.showResponse(
               showDeleteDialog(context, this, ref),
               successTitle: context.localized.deletedItem(name),
             );

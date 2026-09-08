@@ -10,7 +10,7 @@ import 'package:kinos/providers/sync/sync_provider_helpers.dart';
 import 'package:kinos/screens/syncing/sync_button.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/duration_extensions.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -434,7 +434,7 @@ class _TrackListItemState extends ConsumerState<_TrackListItem> {
     final durationText = widget.track.overview.runTime?.readAbleDuration;
     final playCountText = widget.track.userData.playCount > 0 ? 'x${widget.track.userData.playCount}' : '-';
 
-    final radius = FladderTheme.smallShape.borderRadius;
+    final radius = KinosTheme.smallShape.borderRadius;
 
     return LayoutBuilder(builder: (context, constraints) {
       final compactLayout = constraints.maxWidth < 550;
@@ -521,7 +521,7 @@ class _TrackListItemState extends ConsumerState<_TrackListItem> {
                                       border: Border.all(width: 1, color: Colors.white.withAlpha(45)),
                                     ),
                                     clipBehavior: Clip.hardEdge,
-                                    child: FladderImage(
+                                    child: KinosImage(
                                       image: widget.track.images?.primary,
                                       fit: BoxFit.cover,
                                     ),

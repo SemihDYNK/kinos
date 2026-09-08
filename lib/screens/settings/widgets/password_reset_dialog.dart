@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/providers/control_panel/control_users_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/filled_button_await.dart';
@@ -102,7 +102,7 @@ class _PasswordResetDialogState extends ConsumerState<PasswordResetDialog> {
                   FilledButtonAwait(
                     onPressed: () async {
                       if (newPasswordController.text != confirmPasswordController.text) {
-                        FladderSnack.show(
+                        KinosSnack.show(
                           context.localized.passwordMismatch,
                           context: context,
                         );
@@ -115,13 +115,13 @@ class _PasswordResetDialogState extends ConsumerState<PasswordResetDialog> {
                         confirmPassword: confirmPasswordController.text,
                       );
                       if (responseMessage == null) {
-                        FladderSnack.show(
+                        KinosSnack.show(
                           context.localized.passwordChangeSuccess,
                           context: context,
                         );
                         Navigator.of(context).pop();
                       } else {
-                        FladderSnack.show(
+                        KinosSnack.show(
                           responseMessage,
                           context: context,
                         );

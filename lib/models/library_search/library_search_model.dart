@@ -71,12 +71,12 @@ extension LibrarySearchModelX on LibrarySearchModel {
     if (selectedPosters.isNotEmpty) {
       return selectedPosters.none(
         (element) => !{
-          FladderItemType.folder,
-          FladderItemType.photoAlbum,
-          FladderItemType.musicAlbum,
-          FladderItemType.musicArtist,
-          FladderItemType.series,
-          FladderItemType.season,
+          KinosItemType.folder,
+          KinosItemType.photoAlbum,
+          KinosItemType.musicAlbum,
+          KinosItemType.musicArtist,
+          KinosItemType.series,
+          KinosItemType.season,
         }.contains(element.type),
       );
     }
@@ -87,12 +87,12 @@ extension LibrarySearchModelX on LibrarySearchModel {
     if (totalItemCount == 0) return false;
     if (activePosters.isNotEmpty) {
       return activePosters.any(
-        (element) => {...FladderItemType.playable, FladderItemType.folder}.contains(element.type),
+        (element) => {...KinosItemType.playable, KinosItemType.folder}.contains(element.type),
       );
     }
     return filters.types.included.isEmpty ||
         filters.types.included.containsAny(
-          {...FladderItemType.playable, FladderItemType.folder},
+          {...KinosItemType.playable, KinosItemType.folder},
         );
   }
 
@@ -101,12 +101,12 @@ extension LibrarySearchModelX on LibrarySearchModel {
     if (activePosters.isNotEmpty) {
       return activePosters.any(
         (element) =>
-            {...FladderItemType.galleryItem, FladderItemType.photoAlbum, FladderItemType.folder}.contains(element.type),
+            {...KinosItemType.galleryItem, KinosItemType.photoAlbum, KinosItemType.folder}.contains(element.type),
       );
     }
     return filters.types.included.isEmpty ||
         filters.types.included.containsAny(
-          {...FladderItemType.galleryItem, FladderItemType.photoAlbum, FladderItemType.folder},
+          {...KinosItemType.galleryItem, KinosItemType.photoAlbum, KinosItemType.folder},
         );
   }
 
@@ -114,12 +114,12 @@ extension LibrarySearchModelX on LibrarySearchModel {
     if (totalItemCount == 0) return false;
     if (activePosters.isNotEmpty) {
       return activePosters.any(
-        (element) => {...FladderItemType.musicPlayable, FladderItemType.folder}.contains(element.type),
+        (element) => {...KinosItemType.musicPlayable, KinosItemType.folder}.contains(element.type),
       );
     }
     return filters.types.included.isEmpty ||
         filters.types.included.containsAny(
-          {...FladderItemType.musicPlayable, FladderItemType.folder},
+          {...KinosItemType.musicPlayable, KinosItemType.folder},
         );
   }
 

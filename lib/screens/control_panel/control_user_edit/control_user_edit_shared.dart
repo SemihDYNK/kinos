@@ -4,7 +4,7 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/extensions/day_of_week_extensions.dart';
@@ -141,7 +141,7 @@ class AccessSchedulesEditor extends StatelessWidget {
                               );
                               if (startTime.hour > endTime.hour ||
                                   (startTime.hour == endTime.hour && startTime.minute >= endTime.minute)) {
-                                FladderSnack.show(context.localized.endTimeMustBeAfter, context: context);
+                                KinosSnack.show(context.localized.endTimeMustBeAfter, context: context);
                                 return;
                               }
                               onAddSchedule?.call(schedule);

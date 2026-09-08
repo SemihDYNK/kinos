@@ -7,7 +7,7 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:kinos/models/settings/key_combinations.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/settings/video_player_settings_provider.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/ensure_visible.dart';
@@ -162,7 +162,7 @@ class KeyListenerWidgetState extends ConsumerState<KeyListenerWidget> {
               _stopListening();
             } else {
               if (context.mounted) {
-                FladderSnack.show(context.localized.shortCutAlreadyAssigned(currentHotKey.label), context: context);
+                KinosSnack.show(context.localized.shortCutAlreadyAssigned(currentHotKey.label), context: context);
               }
               _stopListening();
             }
@@ -209,7 +209,7 @@ class KeyListenerWidgetState extends ConsumerState<KeyListenerWidget> {
         onEnter: (event) => showClearButton(true),
         onExit: (event) => showClearButton(false),
         child: ClipRRect(
-          borderRadius: FladderTheme.smallShape.borderRadius,
+          borderRadius: KinosTheme.smallShape.borderRadius,
           child: InkWell(
             focusNode: buttonFocus,
             canRequestFocus: false,
@@ -223,7 +223,7 @@ class KeyListenerWidgetState extends ConsumerState<KeyListenerWidget> {
             child: Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: FladderTheme.smallShape.borderRadius,
+                borderRadius: KinosTheme.smallShape.borderRadius,
                 border: BoxBorder.all(
                   width: 2.0,
                   strokeAlign: BorderSide.strokeAlignInside,

@@ -22,7 +22,7 @@ mixin _$LibraryFilterModel implements DiagnosticableTreeMixin {
   Map<String, bool> get tags;
   Map<int, bool> get years;
   Map<String, bool> get officialRatings;
-  Map<FladderItemType, bool> get types;
+  Map<KinosItemType, bool> get types;
   SortingOptions get sortingOption;
   SortingOrder get sortOrder;
   bool? get favourites;
@@ -83,7 +83,7 @@ abstract mixin class $LibraryFilterModelCopyWith<$Res> {
       Map<String, bool> tags,
       Map<int, bool> years,
       Map<String, bool> officialRatings,
-      Map<FladderItemType, bool> types,
+      Map<KinosItemType, bool> types,
       SortingOptions sortingOption,
       SortingOrder sortOrder,
       bool? favourites,
@@ -154,7 +154,7 @@ class _$LibraryFilterModelCopyWithImpl<$Res>
       types: null == types
           ? _self.types
           : types // ignore: cast_nullable_to_non_nullable
-              as Map<FladderItemType, bool>,
+              as Map<KinosItemType, bool>,
       sortingOption: null == sortingOption
           ? _self.sortingOption
           : sortingOption // ignore: cast_nullable_to_non_nullable
@@ -288,7 +288,7 @@ extension LibraryFilterModelPatterns on LibraryFilterModel {
             Map<String, bool> tags,
             Map<int, bool> years,
             Map<String, bool> officialRatings,
-            Map<FladderItemType, bool> types,
+            Map<KinosItemType, bool> types,
             SortingOptions sortingOption,
             SortingOrder sortOrder,
             bool? favourites,
@@ -346,7 +346,7 @@ extension LibraryFilterModelPatterns on LibraryFilterModel {
             Map<String, bool> tags,
             Map<int, bool> years,
             Map<String, bool> officialRatings,
-            Map<FladderItemType, bool> types,
+            Map<KinosItemType, bool> types,
             SortingOptions sortingOption,
             SortingOrder sortOrder,
             bool? favourites,
@@ -402,7 +402,7 @@ extension LibraryFilterModelPatterns on LibraryFilterModel {
             Map<String, bool> tags,
             Map<int, bool> years,
             Map<String, bool> officialRatings,
-            Map<FladderItemType, bool> types,
+            Map<KinosItemType, bool> types,
             SortingOptions sortingOption,
             SortingOrder sortOrder,
             bool? favourites,
@@ -453,21 +453,21 @@ class _LibraryFilterModel extends LibraryFilterModel
       final Map<String, bool> tags = const {},
       final Map<int, bool> years = const {},
       final Map<String, bool> officialRatings = const {},
-      final Map<FladderItemType, bool> types = const {
-        FladderItemType.audio: false,
-        FladderItemType.boxset: false,
-        FladderItemType.book: false,
-        FladderItemType.collectionFolder: false,
-        FladderItemType.episode: false,
-        FladderItemType.folder: false,
-        FladderItemType.movie: false,
-        FladderItemType.musicAlbum: false,
-        FladderItemType.musicVideo: false,
-        FladderItemType.photo: false,
-        FladderItemType.person: false,
-        FladderItemType.photoAlbum: false,
-        FladderItemType.series: false,
-        FladderItemType.video: false
+      final Map<KinosItemType, bool> types = const {
+        KinosItemType.audio: false,
+        KinosItemType.boxset: false,
+        KinosItemType.book: false,
+        KinosItemType.collectionFolder: false,
+        KinosItemType.episode: false,
+        KinosItemType.folder: false,
+        KinosItemType.movie: false,
+        KinosItemType.musicAlbum: false,
+        KinosItemType.musicVideo: false,
+        KinosItemType.photo: false,
+        KinosItemType.person: false,
+        KinosItemType.photoAlbum: false,
+        KinosItemType.series: false,
+        KinosItemType.video: false
       },
       this.sortingOption = SortingOptions.sortName,
       this.sortOrder = SortingOrder.ascending,
@@ -545,10 +545,10 @@ class _LibraryFilterModel extends LibraryFilterModel
     return EqualUnmodifiableMapView(_officialRatings);
   }
 
-  final Map<FladderItemType, bool> _types;
+  final Map<KinosItemType, bool> _types;
   @override
   @JsonKey()
-  Map<FladderItemType, bool> get types {
+  Map<KinosItemType, bool> get types {
     if (_types is EqualUnmodifiableMapView) return _types;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableMapView(_types);
@@ -633,7 +633,7 @@ abstract mixin class _$LibraryFilterModelCopyWith<$Res>
       Map<String, bool> tags,
       Map<int, bool> years,
       Map<String, bool> officialRatings,
-      Map<FladderItemType, bool> types,
+      Map<KinosItemType, bool> types,
       SortingOptions sortingOption,
       SortingOrder sortOrder,
       bool? favourites,
@@ -704,7 +704,7 @@ class __$LibraryFilterModelCopyWithImpl<$Res>
       types: null == types
           ? _self._types
           : types // ignore: cast_nullable_to_non_nullable
-              as Map<FladderItemType, bool>,
+              as Map<KinosItemType, bool>,
       sortingOption: null == sortingOption
           ? _self.sortingOption
           : sortingOption // ignore: cast_nullable_to_non_nullable

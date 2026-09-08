@@ -69,7 +69,7 @@ class _LibraryFilterChipsState extends ConsumerState<LibraryFilterChips> {
           onCancel: () => libraryProvider.setFolderOverwrite(librarySearchResults.folderOverwrite),
           onClear: () => libraryProvider.setFolderOverwrite(librarySearchResults.folderOverwrite.setAll(false)),
         ),
-      CategoryChip<FladderItemType>(
+      CategoryChip<KinosItemType>(
         label: Text(context.localized.type(librarySearchResults.filters.types.length)),
         items: librarySearchResults.filters.types.sortByKey((value) => value.label(context.localized)),
         activeIcon: IconsaxPlusBold.filter_tick,
@@ -174,7 +174,7 @@ class _LibraryFilterChipsState extends ConsumerState<LibraryFilterChips> {
         onSave: (value) => libraryProvider.setFilters(value),
         onClear: () => libraryProvider.setFilters(librarySearchResults.filters.itemFilters.setAll(false)),
       ),
-      if (librarySearchResults.filters.types[FladderItemType.series] == true)
+      if (librarySearchResults.filters.types[KinosItemType.series] == true)
         FilterButton(
           isSelected: !hideEmpty,
           icon: !hideEmpty ? IconsaxPlusBold.ghost : null,

@@ -7,7 +7,7 @@ import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/screens/shared/detail_scaffold.dart';
 import 'package:kinos/screens/shared/media/components/poster_placeholder.dart';
 import 'package:kinos/theme.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/router_extension.dart';
@@ -56,9 +56,9 @@ class EmptyItem extends ConsumerWidget {
                         width: 1.0,
                         color: Colors.white.withValues(alpha: 0.10),
                       ),
-                      borderRadius: FladderTheme.defaultShape.borderRadius,
+                      borderRadius: KinosTheme.defaultShape.borderRadius,
                     ),
-                    child: FladderImage(
+                    child: KinosImage(
                       image: item.getPosters?.primary ?? item.getPosters?.backDrop?.lastOrNull,
                       placeHolder: PosterPlaceholder(item: item),
                     ),

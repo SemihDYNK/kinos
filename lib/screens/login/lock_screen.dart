@@ -9,7 +9,7 @@ import 'package:kinos/models/account_model.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/login/widgets/login_icon.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/passcode_input.dart';
 import 'package:kinos/screens/shared/route_wrapper.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
@@ -85,7 +85,7 @@ class _LockScreenState extends ConsumerState<LockScreen> with WidgetsBindingObse
             if (newPin == user.localPin) {
               handleLogin(user);
             } else {
-              FladderSnack.show(context.localized.incorrectPinTryAgain, context: context);
+              KinosSnack.show(context.localized.incorrectPinTryAgain, context: context);
             }
           });
         }

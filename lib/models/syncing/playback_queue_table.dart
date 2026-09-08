@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 
 /// The kind of session event a queued [PlaybackQueue] row represents.
 ///
-/// Mirrors the three Jellyfin session endpoints Fladder reports to
+/// Mirrors the three Jellyfin session endpoints Kinos reports to
 /// (`Sessions/Playing`, `Sessions/Playing/Progress`, `Sessions/Playing/Stopped`).
 enum PlaybackQueueEventType { start, progress, stop }
 

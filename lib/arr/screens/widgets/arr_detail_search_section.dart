@@ -10,7 +10,7 @@ import 'package:kinos/arr/providers/arr_search_providers.dart';
 import 'package:kinos/arr/screens/widgets/arr_release_table.dart';
 import 'package:kinos/arr/screens/widgets/arr_season_episode_picker.dart';
 import 'package:kinos/arr/services/arr_api_client.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme/app_theme.dart';
 
 enum _SeriesScope { whole, seasonOrEpisode }
@@ -180,7 +180,7 @@ class _ArrDetailSearchSectionState
       ArrFailure(:final detail) =>
         'Échec de l\'envoi${detail != null ? ' — $detail' : ''}',
     };
-    FladderSnack.show(message, context: context);
+    KinosSnack.show(message, context: context);
   }
 
   Future<void> _searchWholeSeries() async {
@@ -196,7 +196,7 @@ class _ArrDetailSearchSectionState
         'Échec du lancement${detail != null ? ' — $detail' : ''}',
       null => 'Service non configuré.',
     };
-    if (mounted) FladderSnack.show(message, context: context);
+    if (mounted) KinosSnack.show(message, context: context);
   }
 
   String _errorMessage(ArrApiError error, String? detail) {

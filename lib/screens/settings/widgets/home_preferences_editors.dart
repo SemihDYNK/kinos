@@ -8,7 +8,7 @@ import 'package:kinos/providers/views_provider.dart';
 import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
 import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/filled_button_await.dart';
@@ -30,7 +30,7 @@ class LibraryOrderEditor extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLowest,
-        borderRadius: FladderTheme.largeShape.borderRadius,
+        borderRadius: KinosTheme.largeShape.borderRadius,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,7 +107,7 @@ class LibraryOrderEditor extends ConsumerWidget {
                     FilledButtonAwait(
                       onPressed: hasChanges
                           ? () async {
-                              await FladderSnack.showResponse(
+                              await KinosSnack.showResponse(
                                 ref.read(homePreferencesProvider.notifier).save(),
                                 successTitle: context.localized.saved,
                               );

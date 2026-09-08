@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:kinos/models/item_base_model.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 
 class ItemLogo extends StatelessWidget {
   final ItemBaseModel item;
@@ -35,7 +35,7 @@ class ItemLogo extends StatelessWidget {
     return logo != null
         ? ConstrainedBox(
             constraints: BoxConstraints(maxWidth: size.width * 0.25, maxHeight: maxHeight),
-            child: FladderImage(
+            child: KinosImage(
               image: logo,
               disableBlur: true,
               stackFit: StackFit.passthrough,

@@ -11,14 +11,14 @@ import 'package:kinos/screens/login/login_edit_user.dart';
 import 'package:kinos/screens/login/login_screen_credentials.dart';
 import 'package:kinos/screens/login/login_user_grid.dart';
 import 'package:kinos/screens/shared/animated_fade_size.dart';
-import 'package:kinos/screens/shared/fladder_logo.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_logo.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/route_wrapper.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/deep_link_helper.dart';
 import 'package:kinos/widgets/keyboard/slide_in_keyboard.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/adaptive_fab.dart';
-import 'package:kinos/widgets/navigation_scaffold/components/fladder_app_bar.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/kinos_app_bar.dart';
 
 @RoutePage()
 class LoginScreen extends ConsumerStatefulWidget {
@@ -52,7 +52,7 @@ class _LoginPageState extends ConsumerState<LoginScreen> {
         if (data != null) {
           initLink(data);
         } else {
-          FladderSnack.show("Invalid auth link");
+          KinosSnack.show("Invalid auth link");
         }
       }
     });
@@ -70,7 +70,7 @@ class _LoginPageState extends ConsumerState<LoginScreen> {
     return RouteWrapper(
       child: CustomKeyboardWrapper(
         child: Scaffold(
-          appBar: FladderAppBar(
+          appBar: KinosAppBar(
             isDesktop: AdaptiveLayout.of(context).isDesktop,
           ),
           extendBody: true,
@@ -111,7 +111,7 @@ class _LoginPageState extends ConsumerState<LoginScreen> {
                       shrinkWrap: true,
                       padding: MediaQuery.paddingOf(context).add(const EdgeInsetsGeometry.all(16)),
                       children: [
-                        const FladderLogo(),
+                        const KinosLogo(),
                         const SizedBox(height: 24),
                         AnimatedFadeSize(
                           child: switch (screen) {

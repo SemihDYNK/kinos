@@ -8,7 +8,7 @@ import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/providers/items/identify_provider.dart';
 import 'package:kinos/screens/shared/adaptive_dialog.dart';
 import 'package:kinos/screens/shared/animated_fade_size.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/focused_outlined_text_field.dart';
 import 'package:kinos/util/custom_cache_manager.dart';
 import 'package:kinos/util/list_padding.dart';
@@ -279,7 +279,7 @@ class _IdentifyScreenState extends ConsumerState<IdentifyScreen> {
                             child: IconButton(
                               onPressed: !processing
                                   ? () async {
-                                      await FladderSnack.showResponse(
+                                      await KinosSnack.showResponse(
                                         ref.read(provider.notifier).setIdentity(result),
                                         successTitle: context.localized.setIdentityTo(result.name ?? ""),
                                       );

@@ -21,13 +21,13 @@ import 'package:kinos/screens/login/widgets/advanced_login_options_dialog.dart';
 import 'package:kinos/screens/login/widgets/connect_link_dialog.dart';
 import 'package:kinos/screens/login/widgets/discover_servers_widget.dart';
 import 'package:kinos/screens/shared/animated_fade_size.dart';
-import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/screens/shared/passcode_input.dart';
 import 'package:kinos/services/local_network_permission.dart';
 import 'package:kinos/util/auth_service.dart';
 import 'package:kinos/util/deep_link_helper.dart';
-import 'package:kinos/util/fladder_config.dart';
+import 'package:kinos/util/kinos_config.dart';
 import 'package:kinos/util/localization_helper.dart';
 
 class LoginScreenCredentials extends ConsumerStatefulWidget {
@@ -76,7 +76,7 @@ class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials>
       }
     } catch (e) {
       log("Error during auto-login with auth link: $e");
-      FladderSnack.show(context.localized.error);
+      KinosSnack.show(context.localized.error);
     } finally {
       setState(() {
         loggingIn = false;
@@ -276,7 +276,7 @@ class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials>
                                 ),
                         ),
                       ),
-                      if (FladderConfig.seerrBaseUrl?.isNotEmpty != true)
+                      if (KinosConfig.seerrBaseUrl?.isNotEmpty != true)
                         IconButton.filledTonal(
                           onPressed: () async {
                             final tempSeerrUrl = ref.read(authProvider.select((value) => value.tempSeerrUrl));
@@ -308,7 +308,7 @@ class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials>
                             },
                           );
                         } else {
-                          FladderSnack.show(context.localized.quickConnectPostFailed, context: context);
+                          KinosSnack.show(context.localized.quickConnectPostFailed, context: context);
                         }
                       },
                       child: Row(
@@ -350,7 +350,7 @@ class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials>
         );
 
     if (response?.isSuccessful == false) {
-      FladderSnack.show(
+      KinosSnack.show(
           "(${response?.base.statusCode}) ${response?.base.reasonPhrase ?? context.localized.somethingWentWrongPasswordCheck}",
           context: context);
       setState(() {
@@ -381,7 +381,7 @@ class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials>
       final username = usernameController.text.trim();
       final password = passwordController.text;
 
-      final effectiveSeerrUrl = FladderConfig.seerrBaseUrl ?? seerrUrl;
+      final effectiveSeerrUrl = KinosConfig.seerrBaseUrl ?? seerrUrl;
       ref.read(userProvider.notifier).setSeerrServerUrl(effectiveSeerrUrl);
 
       final tempCookie = ref.read(authProvider.select((value) => value.tempSeerrSessionCookie));
@@ -396,11 +396,11 @@ class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials>
       ref.read(authProvider.notifier).setTempSeerrSessionCookie(null);
 
       if (context.mounted) {
-        FladderSnack.show(context.localized.seerrLoggedIn, context: context);
+        KinosSnack.show(context.localized.seerrLoggedIn, context: context);
       }
     } catch (e) {
       if (context.mounted) {
-        FladderSnack.show(
+        KinosSnack.show(
           "${context.localized.seerrAuthenticateLocal}: ${e.toString()}",
           context: context,
         );
@@ -412,7 +412,7 @@ class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials>
     setState(() {
       loggingIn = true;
     });
-    final response = await FladderSnack.showResponse(
+    final response = await KinosSnack.showResponse(
       ref.read(authProvider.notifier).authenticateUsingSecret(secret),
     );
     if (response.isSuccess && context.mounted) {
@@ -466,7 +466,7 @@ void tapLoggedInAccount(BuildContext context, AccountModel user, WidgetRef ref) 
           if (newPin == user.localPin) {
             loginFunction();
           } else {
-            FladderSnack.show(context.localized.incorrectPinTryAgain, context: context);
+            KinosSnack.show(context.localized.incorrectPinTryAgain, context: context);
           }
         });
       }

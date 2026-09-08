@@ -91,7 +91,7 @@ class Sheet extends StatelessWidget {
         elevation: 1,
         color: colorScheme.surface,
         surfaceTintColor: colorScheme.onSurface,
-        borderRadius: FladderTheme.largeShape.borderRadius,
+        borderRadius: KinosTheme.largeShape.borderRadius,
         child: Padding(
           padding: resolvedPadding,
           child: Container(

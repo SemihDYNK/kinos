@@ -21,7 +21,7 @@ import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
@@ -352,7 +352,7 @@ class _SeasonCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: FladderTheme.smallShape.borderRadius,
+        borderRadius: KinosTheme.smallShape.borderRadius,
       ),
       child: Column(
         children: [
@@ -530,15 +530,15 @@ class _EpisodeCard extends StatelessWidget {
             if (posterImage != null)
               Container(
                 decoration: BoxDecoration(
-                  borderRadius: FladderTheme.defaultPosterDecoration.borderRadius,
+                  borderRadius: KinosTheme.defaultPosterDecoration.borderRadius,
                 ),
-                foregroundDecoration: FladderTheme.defaultPosterDecoration,
+                foregroundDecoration: KinosTheme.defaultPosterDecoration,
                 clipBehavior: Clip.hardEdge,
                 child: SizedBox(
                   width: 175,
                   child: AspectRatio(
                     aspectRatio: 16 / 9,
-                    child: FladderImage(
+                    child: KinosImage(
                       image: posterImage,
                       fit: BoxFit.cover,
                       placeHolder: Container(

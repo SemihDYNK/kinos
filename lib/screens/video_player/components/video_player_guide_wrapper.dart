@@ -11,7 +11,7 @@ import 'package:kinos/screens/live_tv/live_tv_guide.dart';
 import 'package:kinos/screens/shared/default_alert_dialog.dart';
 import 'package:kinos/screens/video_player/tv_player_controls.dart';
 import 'package:kinos/theme.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 
@@ -137,7 +137,7 @@ class _GuideOverviewState extends ConsumerState<_GuideOverview> {
                   children: [
                     SizedBox(
                       height: 125,
-                      child: FladderImage(
+                      child: KinosImage(
                         image: currentChanel?.images?.primary,
                         fit: BoxFit.contain,
                       ),
@@ -160,11 +160,11 @@ class _GuideOverviewState extends ConsumerState<_GuideOverview> {
                                 aspectRatio: 0.75,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    borderRadius: FladderTheme.defaultPosterDecoration.borderRadius,
+                                    borderRadius: KinosTheme.defaultPosterDecoration.borderRadius,
                                   ),
-                                  foregroundDecoration: FladderTheme.defaultPosterDecoration,
+                                  foregroundDecoration: KinosTheme.defaultPosterDecoration,
                                   clipBehavior: Clip.hardEdge,
-                                  child: FladderImage(
+                                  child: KinosImage(
                                     image: currentProgram?.images?.primary,
                                     fit: BoxFit.fill,
                                   ),

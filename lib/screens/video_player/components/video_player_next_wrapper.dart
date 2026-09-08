@@ -17,7 +17,7 @@ import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/screens/shared/animated_fade_size.dart';
 import 'package:kinos/screens/shared/default_title_bar.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/full_screen_helpers/full_screen_wrapper.dart';
@@ -365,7 +365,7 @@ class _NextUpInformation extends StatelessWidget {
                     child: AspectRatio(
                       aspectRatio: 0.67,
                       child: Card(
-                        child: FladderImage(
+                        child: KinosImage(
                           image: item.images?.primary,
                         ),
                       ),
@@ -414,7 +414,7 @@ class _NextUpInformation extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 2.1,
                 child: Card(
-                  child: FladderImage(
+                  child: KinosImage(
                     image: item.images?.primary,
                   ),
                 ),

@@ -281,8 +281,8 @@ class SideNavigationRail extends ConsumerWidget {
                 .where((e) => e.value)
                 .map((e) => e.key)
                 .toSet() ??
-            const <FladderItemType>{})
-        : const <FladderItemType>{};
+            const <KinosItemType>{})
+        : const <KinosItemType>{};
     final isLibrarySearch = args is LibrarySearchRouteArgs;
     final currentRouteName = context.router.current.name;
 
@@ -301,11 +301,11 @@ class SideNavigationRail extends ConsumerWidget {
         // écran de télévision.
         icon: IconsaxPlusLinear.video_play,
         selectedIcon: IconsaxPlusBold.video_play,
-        selected: setEquals(activeTypes, const {FladderItemType.movie}),
+        selected: setEquals(activeTypes, const {KinosItemType.movie}),
         onTap: () => context.router.navigate(
           LibrarySearchRoute().withFilter(
             const LibraryFilterModel(
-                types: {FladderItemType.movie: true}, recursive: true),
+                types: {KinosItemType.movie: true}, recursive: true),
           ),
         ),
       ),
@@ -313,11 +313,11 @@ class SideNavigationRail extends ConsumerWidget {
         label: context.localized.mediaTypeSeries(2),
         icon: IconsaxPlusLinear.monitor,
         selectedIcon: IconsaxPlusBold.monitor,
-        selected: setEquals(activeTypes, const {FladderItemType.series}),
+        selected: setEquals(activeTypes, const {KinosItemType.series}),
         onTap: () => context.router.navigate(
           LibrarySearchRoute().withFilter(
             const LibraryFilterModel(
-                types: {FladderItemType.series: true}, recursive: true),
+                types: {KinosItemType.series: true}, recursive: true),
           ),
         ),
       ),

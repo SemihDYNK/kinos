@@ -8,7 +8,7 @@ import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/models/settings/client_settings_model.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
-import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/kinos_image.dart';
 
 final _backgroundImageProvider = StateProvider<ImageData?>((ref) => null);
 
@@ -50,8 +50,8 @@ class _BackgroundImageState extends ConsumerState<BackgroundImage> {
       } else if (widget.items.isNotEmpty) {
         final randomItem = widget.items.shuffled().firstOrNull;
         final itemId = switch (randomItem?.type) {
-          FladderItemType.folder => randomItem?.id,
-          FladderItemType.series => randomItem?.parentId ?? randomItem?.id,
+          KinosItemType.folder => randomItem?.id,
+          KinosItemType.series => randomItem?.parentId ?? randomItem?.id,
           _ => randomItem?.id,
         };
 
@@ -88,7 +88,7 @@ class _BackgroundImageState extends ConsumerState<BackgroundImage> {
           foregroundDecoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: backgroundOpacity),
           ),
-          child: FladderImage(
+          child: KinosImage(
             image: image,
             fit: BoxFit.cover,
             decodeHeight: 64,
