@@ -79,12 +79,21 @@ class _LabeledSelectorState extends State<LabeledSelector> {
                         .bodyMedium
                         ?.copyWith(color: AppColors.textSecondary),
                   ),
-                  Text(
-                    widget.value,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: AppColors.textPrimary),
+                  // Flexible + ellipsis : sans borne, une valeur longue (un
+                  // chemin de dossier racine...) déborde du Row plutôt que
+                  // de respecter la largeur réellement disponible — ce
+                  // déclencheur vit parfois dans un conteneur étroit (une
+                  // boîte de dialogue d'édition, par exemple).
+                  Flexible(
+                    child: Text(
+                      widget.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: AppColors.textPrimary),
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.xxs),
                   const Icon(Icons.keyboard_arrow_down_rounded,

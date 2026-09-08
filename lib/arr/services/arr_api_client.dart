@@ -5,6 +5,7 @@ import 'dart:developer';
 import 'package:http/http.dart' as http;
 
 import 'package:fladder/arr/models/arr_library_item.dart';
+import 'package:fladder/arr/models/arr_media_detail.dart';
 import 'package:fladder/arr/models/arr_queue_item.dart';
 import 'package:fladder/arr/models/arr_release.dart';
 
@@ -423,6 +424,36 @@ abstract class ArrApiClient {
   // chemin) — l'API *Arr n'expose pas cette action, elle appartient au
   // client de téléchargement lui-même. Cf. QBittorrentApiClient.
 
+  /// `GET /api/v3/qualityprofile` — même ressource pour Radarr et Sonarr,
+  /// sert au sélecteur de profil de la fiche détail (édition).
+  Future<ArrResult<List<ArrQualityProfile>>> fetchQualityProfiles() async {
+    final result = await get('/api/v3/qualityprofile');
+    return switch (result) {
+      ArrSuccess(:final data) when data is List => ArrSuccess(data
+          .whereType<Map<String, dynamic>>()
+          .map(ArrQualityProfile.fromJson)
+          .toList()),
+      ArrSuccess() =>
+        const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// `GET /api/v3/rootfolder` — même ressource pour Radarr et Sonarr, sert
+  /// au sélecteur de dossier racine de la fiche détail (édition).
+  Future<ArrResult<List<ArrRootFolder>>> fetchRootFolders() async {
+    final result = await get('/api/v3/rootfolder');
+    return switch (result) {
+      ArrSuccess(:final data) when data is List => ArrSuccess(data
+          .whereType<Map<String, dynamic>>()
+          .map(ArrRootFolder.fromJson)
+          .toList()),
+      ArrSuccess() =>
+        const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
   void close() => _client.close();
 }
 
@@ -516,6 +547,57 @@ class RadarrApiClient extends ArrApiClient {
   Future<ArrResult<List<ArrRelease>>> releasesForMovie(int movieId) =>
       searchReleases({'movieId': movieId.toString()});
 
+  /// `GET /api/v3/movie/{id}` — fiche complète (résumé, genres, note,
+  /// dossier, taille, fichier présent...), pour la fiche détail. Distinct
+  /// de [searchMovies] (qui alimente la grille bibliothèque avec des
+  /// champs plus légers).
+  Future<ArrResult<ArrMovieDetail>> fetchMovieDetail(int id) async {
+    final result = await get('/api/v3/movie/$id');
+    return switch (result) {
+      ArrSuccess(:final data) when data is Map => ArrSuccess(
+          ArrMovieDetail.fromJson(Map<String, dynamic>.from(data),
+              baseUrl: baseUrl, apiKey: apiKey)),
+      ArrSuccess() =>
+        const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// `PUT /api/v3/movie/{id}` — repart de [ArrMovieDetail.raw] (corps
+  /// complet exigé par Radarr) avec surveillance/profil/dossier racine
+  /// mis à jour. Si le dossier racine change, recalcule [ArrMovieDetail
+  /// .path] en gardant le même nom de dossier (ex.
+  /// `/movies/Inception (2010)` -> `/nouveau-dossier/Inception (2010)`)
+  /// et ajoute `moveFiles=true` pour que Radarr déplace le fichier déjà
+  /// présent — comportement non vérifié contre un serveur réel : Radarr
+  /// recalcule normalement lui-même ce chemin depuis son propre format de
+  /// nommage, que ce client ne connaît pas ; cette reconstruction n'est
+  /// donc qu'un raisonnable best-effort qui garde le nom de dossier
+  /// existant plutôt que d'en inventer un.
+  Future<ArrResult<void>> updateMovie(
+    ArrMovieDetail detail, {
+    required bool monitored,
+    required int qualityProfileId,
+    required String rootFolderPath,
+  }) {
+    final rootFolderChanged = detail.rootFolderPath != null &&
+        detail.rootFolderPath != rootFolderPath &&
+        rootFolderPath.isNotEmpty;
+    final newPath =
+        rootFolderChanged ? _relocatePath(detail.path, rootFolderPath) : null;
+    final body = {
+      ...detail.raw,
+      'monitored': monitored,
+      'qualityProfileId': qualityProfileId,
+      'rootFolderPath': rootFolderPath,
+      if (newPath != null) 'path': newPath,
+    };
+    final path = rootFolderChanged
+        ? '/api/v3/movie/${detail.id}?moveFiles=true'
+        : '/api/v3/movie/${detail.id}';
+    return _asVoid(() => put(path, body: body));
+  }
+
   /// `PUT /api/v3/movie/{id}` — repart de [ArrMovie.raw] (Radarr exige le
   /// corps complet de la ressource, pas un correctif partiel) avec
   /// uniquement `monitored` changé.
@@ -589,6 +671,47 @@ class SonarrApiClient extends ArrApiClient {
         'seasonNumber': seasonNumber.toString(),
       });
 
+  /// `GET /api/v3/series/{id}` — fiche complète, dont la liste des
+  /// saisons. Distinct de [searchSeries] — cf. [RadarrApiClient
+  /// .fetchMovieDetail].
+  Future<ArrResult<ArrSeriesDetail>> fetchSeriesDetail(int id) async {
+    final result = await get('/api/v3/series/$id');
+    return switch (result) {
+      ArrSuccess(:final data) when data is Map => ArrSuccess(
+          ArrSeriesDetail.fromJson(Map<String, dynamic>.from(data),
+              baseUrl: baseUrl, apiKey: apiKey)),
+      ArrSuccess() =>
+        const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// `PUT /api/v3/series/{id}` — même principe que [RadarrApiClient
+  /// .updateMovie], y compris la mise en garde sur le recalcul de chemin.
+  Future<ArrResult<void>> updateSeries(
+    ArrSeriesDetail detail, {
+    required bool monitored,
+    required int qualityProfileId,
+    required String rootFolderPath,
+  }) {
+    final rootFolderChanged = detail.rootFolderPath != null &&
+        detail.rootFolderPath != rootFolderPath &&
+        rootFolderPath.isNotEmpty;
+    final newPath =
+        rootFolderChanged ? _relocatePath(detail.path, rootFolderPath) : null;
+    final body = {
+      ...detail.raw,
+      'monitored': monitored,
+      'qualityProfileId': qualityProfileId,
+      'rootFolderPath': rootFolderPath,
+      if (newPath != null) 'path': newPath,
+    };
+    final path = rootFolderChanged
+        ? '/api/v3/series/${detail.id}?moveFiles=true'
+        : '/api/v3/series/${detail.id}';
+    return _asVoid(() => put(path, body: body));
+  }
+
   /// `PUT /api/v3/series/{id}` — même principe que
   /// [RadarrApiClient.setMovieMonitored].
   Future<ArrResult<void>> setSeriesMonitored(
@@ -605,6 +728,20 @@ class SonarrApiClient extends ArrApiClient {
   /// recherche automatique de tous les épisodes manquants surveillés.
   Future<ArrResult<void>> triggerSeriesSearch(int id) => _asVoid(() =>
       post('/api/v3/command', body: {'name': 'SeriesSearch', 'seriesId': id}));
+}
+
+/// Reconstruit un chemin sous un nouveau dossier racine en gardant le nom
+/// de dossier existant (dernier segment de [currentPath]) — cf. la mise
+/// en garde sur [RadarrApiClient.updateMovie]. `null` si [currentPath] est
+/// absent (rien à recalculer).
+String? _relocatePath(String? currentPath, String newRootFolder) {
+  if (currentPath == null || currentPath.isEmpty) return null;
+  final normalizedRoot = newRootFolder.endsWith('/')
+      ? newRootFolder.substring(0, newRootFolder.length - 1)
+      : newRootFolder;
+  final segments = currentPath.split('/').where((s) => s.isNotEmpty);
+  if (segments.isEmpty) return null;
+  return '$normalizedRoot/${segments.last}';
 }
 
 /// Réduit un résultat de faible intérêt (le corps de la réponse

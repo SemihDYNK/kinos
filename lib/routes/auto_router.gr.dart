@@ -11,6 +11,8 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:auto_route/auto_route.dart' as _i35;
 import 'package:collection/collection.dart' as _i42;
+import 'package:fladder/arr/models/arr_service.dart' as _i100;
+import 'package:fladder/arr/screens/arr_detail_screen.dart' as _i101;
 import 'package:fladder/arr/screens/arr_home_screen.dart' as _i2;
 import 'package:fladder/arr/screens/arr_search_screen.dart' as _i3;
 import 'package:fladder/arr/screens/arr_settings_screen.dart' as _i4;
@@ -80,6 +82,60 @@ class AboutSettingsRoute extends _i35.PageRouteInfo<void> {
       return const _i1.AboutSettingsPage();
     },
   );
+}
+
+/// generated route for
+/// [_i101.ArrDetailScreen]
+class ArrDetailRoute extends _i35.PageRouteInfo<ArrDetailRouteArgs> {
+  ArrDetailRoute({
+    required _i100.ArrService service,
+    required int id,
+    _i38.Key? key,
+    List<_i35.PageRouteInfo>? children,
+  }) : super(
+          ArrDetailRoute.name,
+          args: ArrDetailRouteArgs(service: service, id: id, key: key),
+          initialChildren: children,
+        );
+
+  static const String name = 'ArrDetailRoute';
+
+  static _i35.PageInfo page = _i35.PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<ArrDetailRouteArgs>();
+      return _i101.ArrDetailScreen(
+        service: args.service,
+        id: args.id,
+        key: args.key,
+      );
+    },
+  );
+}
+
+class ArrDetailRouteArgs {
+  const ArrDetailRouteArgs({required this.service, required this.id, this.key});
+
+  final _i100.ArrService service;
+
+  final int id;
+
+  final _i38.Key? key;
+
+  @override
+  String toString() {
+    return 'ArrDetailRouteArgs{service: $service, id: $id, key: $key}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! ArrDetailRouteArgs) return false;
+    return service == other.service && id == other.id && key == other.key;
+  }
+
+  @override
+  int get hashCode => service.hashCode ^ id.hashCode ^ key.hashCode;
 }
 
 /// generated route for

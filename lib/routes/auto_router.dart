@@ -56,6 +56,7 @@ class AutoRouter extends RootStackRouter {
         ),
         AutoRoute(page: ArrHomeRoute.page, path: 'arr'),
         AutoRoute(page: ArrSearchRoute.page, path: 'arr/search'),
+        AutoRoute(page: ArrDetailRoute.page, path: 'arr/detail'),
       ],
     ),
     AutoRoute(page: LockRoute.page, path: '/locked'),

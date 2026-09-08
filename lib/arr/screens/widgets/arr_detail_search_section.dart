@@ -1,0 +1,467 @@
+import 'package:flutter/material.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:fladder/arr/models/arr_grab_status.dart';
+import 'package:fladder/arr/models/arr_library_item.dart';
+import 'package:fladder/arr/models/arr_media_detail.dart';
+import 'package:fladder/arr/models/arr_release.dart';
+import 'package:fladder/arr/providers/arr_search_providers.dart';
+import 'package:fladder/arr/screens/widgets/arr_release_table.dart';
+import 'package:fladder/arr/screens/widgets/arr_season_episode_picker.dart';
+import 'package:fladder/arr/services/arr_api_client.dart';
+import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
+import 'package:fladder/theme/app_theme.dart';
+
+enum _SeriesScope { whole, seasonOrEpisode }
+
+/// Recherche interactive intégrée à la fiche détail — repliée par
+/// défaut, un bouton "Recherche interactive" la déplie. Sur la page, pas
+/// dans une modale : réutilise [ArrReleaseTable] telle quelle (titres
+/// cliquables, envoi au téléchargement, menu contextuel), pas de copie.
+///
+/// Pour une série, la portée avant la recherche : série entière
+/// (recherche automatique — `POST /command SeriesSearch`, seule forme que
+/// l'API *Arr propose à cette échelle, pas de recherche interactive
+/// "toute la série") ou saison/épisode (recherche interactive via
+/// [ArrSeasonEpisodePicker], qui propose déjà les deux dans une seule
+/// vue).
+class ArrDetailSearchSection extends ConsumerStatefulWidget {
+  final ArrDetailEntry entry;
+
+  const ArrDetailSearchSection({required this.entry, super.key});
+
+  @override
+  ConsumerState<ArrDetailSearchSection> createState() =>
+      _ArrDetailSearchSectionState();
+}
+
+class _ArrDetailSearchSectionState
+    extends ConsumerState<ArrDetailSearchSection> {
+  bool _expanded = false;
+  _SeriesScope? _scope;
+
+  bool _episodesLoading = false;
+  List<ArrEpisode> _episodes = const [];
+
+  bool _releaseSearched = false;
+  bool _releasesLoading = false;
+  ArrApiError? _releasesError;
+  String? _releasesErrorDetail;
+  List<ArrRelease> _releases = const [];
+  String? _releaseSearchLabel;
+  final Map<String, ArrGrabStatus> _grabStatuses = {};
+
+  bool _wholeSeriesSearching = false;
+
+  void _expand() {
+    setState(() => _expanded = true);
+    if (widget.entry.isMovie) _searchMovieReleases();
+  }
+
+  Future<void> _searchMovieReleases() {
+    final movie = widget.entry.movie!;
+    return _searchReleases(
+      label:
+          movie.year != null ? '${movie.title} (${movie.year})' : movie.title,
+      run: () => ref.read(radarrClientProvider)!.releasesForMovie(movie.id),
+    );
+  }
+
+  void _selectScope(_SeriesScope scope) {
+    setState(() {
+      _scope = scope;
+      _releaseSearched = false;
+      _releases = const [];
+      _releasesError = null;
+      _grabStatuses.clear();
+    });
+    if (scope == _SeriesScope.seasonOrEpisode &&
+        _episodes.isEmpty &&
+        !_episodesLoading) {
+      _loadEpisodes();
+    }
+  }
+
+  void _backToScope() {
+    setState(() {
+      _scope = null;
+      _releaseSearched = false;
+      _releases = const [];
+      _releasesError = null;
+      _grabStatuses.clear();
+    });
+  }
+
+  void _backToPicker() {
+    setState(() {
+      _releaseSearched = false;
+      _releases = const [];
+      _releasesError = null;
+      _grabStatuses.clear();
+    });
+  }
+
+  Future<void> _loadEpisodes() async {
+    setState(() => _episodesLoading = true);
+    final sonarr = ref.read(sonarrClientProvider);
+    final result = sonarr == null
+        ? const ArrFailure<List<ArrEpisode>>(ArrApiError.unreachable)
+        : await sonarr.episodesForSeries(widget.entry.id);
+    if (!mounted) return;
+    setState(() {
+      _episodesLoading = false;
+      _episodes = switch (result) {
+        ArrSuccess(:final data) => data,
+        ArrFailure() => const [],
+      };
+    });
+  }
+
+  void _searchSeason(int seasonNumber) {
+    final series = widget.entry.series!;
+    _searchReleases(
+      label: '${series.title} — Saison $seasonNumber',
+      run: () => ref
+          .read(sonarrClientProvider)!
+          .releasesForSeason(series.id, seasonNumber),
+    );
+  }
+
+  void _searchEpisode(ArrEpisode episode) {
+    final series = widget.entry.series!;
+    _searchReleases(
+      label:
+          '${series.title} — S${episode.seasonNumber}E${episode.episodeNumber}',
+      run: () => ref.read(sonarrClientProvider)!.releasesForEpisode(episode.id),
+    );
+  }
+
+  Future<void> _searchReleases({
+    required String label,
+    required Future<ArrResult<List<ArrRelease>>> Function() run,
+  }) async {
+    setState(() {
+      _releaseSearched = true;
+      _releasesLoading = true;
+      _releasesError = null;
+      _releases = const [];
+      _releaseSearchLabel = label;
+      _grabStatuses.clear();
+    });
+    final result = await run();
+    if (!mounted) return;
+    setState(() {
+      _releasesLoading = false;
+      switch (result) {
+        case ArrSuccess(:final data):
+          _releases = data;
+        case ArrFailure(:final error, :final detail):
+          _releasesError = error;
+          _releasesErrorDetail = detail;
+      }
+    });
+  }
+
+  Future<void> _grab(ArrRelease release) async {
+    final client = widget.entry.isMovie
+        ? ref.read(radarrClientProvider)
+        : ref.read(sonarrClientProvider);
+    if (client == null) return;
+    setState(() => _grabStatuses[release.guid] = ArrGrabStatus.sending);
+    final result = await client.grabRelease(
+        guid: release.guid, indexerId: release.indexerId);
+    if (!mounted) return;
+    final succeeded = result is ArrSuccess;
+    setState(() => _grabStatuses[release.guid] =
+        succeeded ? ArrGrabStatus.success : ArrGrabStatus.failed);
+    final message = switch (result) {
+      ArrSuccess() => 'Envoyé au téléchargement : ${release.title}',
+      ArrFailure(:final detail) =>
+        'Échec de l\'envoi${detail != null ? ' — $detail' : ''}',
+    };
+    FladderSnack.show(message, context: context);
+  }
+
+  Future<void> _searchWholeSeries() async {
+    setState(() => _wholeSeriesSearching = true);
+    final result = await ref
+        .read(sonarrClientProvider)
+        ?.triggerSeriesSearch(widget.entry.id);
+    if (!mounted) return;
+    setState(() => _wholeSeriesSearching = false);
+    final message = switch (result) {
+      ArrSuccess() => 'Recherche automatique lancée pour toute la série.',
+      ArrFailure(:final detail) =>
+        'Échec du lancement${detail != null ? ' — $detail' : ''}',
+      null => 'Service non configuré.',
+    };
+    if (mounted) FladderSnack.show(message, context: context);
+  }
+
+  String _errorMessage(ArrApiError error, String? detail) {
+    final base = switch (error) {
+      ArrApiError.unreachable => 'Serveur injoignable.',
+      ArrApiError.unauthorized => 'Clé API invalide.',
+      ArrApiError.notFound => 'Route introuvable.',
+      ArrApiError.serverError => "Erreur de l'indexeur ou du serveur.",
+      ArrApiError.invalidResponse => 'Réponse inattendue.',
+    };
+    return detail == null ? base : '$base $detail';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_expanded) {
+      return FocusRing(
+        borderRadius: AppRadii.controlBorder,
+        onActivate: _expand,
+        child: ExcludeFocus(
+          child: OutlinedButton.icon(
+            onPressed: _expand,
+            icon: const Icon(Icons.search_rounded),
+            label: const Text('Recherche interactive'),
+          ),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('Recherche interactive',
+            style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: AppSpacing.sm),
+        if (widget.entry.isMovie)
+          _buildReleaseSection(context)
+        else
+          _buildSeriesSection(context),
+      ],
+    );
+  }
+
+  Widget _buildSeriesSection(BuildContext context) {
+    if (_scope == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        spacing: AppSpacing.xs,
+        children: [
+          Text('Portée de la recherche',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppColors.textSecondary)),
+          FocusRing(
+            borderRadius: AppRadii.controlBorder,
+            onActivate: () => _selectScope(_SeriesScope.whole),
+            child: ExcludeFocus(
+              child: OutlinedButton(
+                onPressed: () => _selectScope(_SeriesScope.whole),
+                child: const Text('Série entière (recherche automatique)'),
+              ),
+            ),
+          ),
+          FocusRing(
+            borderRadius: AppRadii.controlBorder,
+            onActivate: () => _selectScope(_SeriesScope.seasonOrEpisode),
+            child: ExcludeFocus(
+              child: OutlinedButton(
+                onPressed: () => _selectScope(_SeriesScope.seasonOrEpisode),
+                child: const Text('Une saison ou un épisode'),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    if (_scope == _SeriesScope.whole) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _BackRow(onBack: _backToScope),
+          const SizedBox(height: AppSpacing.sm),
+          FocusRing(
+            borderRadius: AppRadii.controlBorder,
+            onActivate: _wholeSeriesSearching ? null : _searchWholeSeries,
+            child: ExcludeFocus(
+              child: FilledButton.icon(
+                onPressed: _wholeSeriesSearching ? null : _searchWholeSeries,
+                icon: _wholeSeriesSearching
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search_rounded),
+                label: const Text('Lancer la recherche automatique'),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    // _SeriesScope.seasonOrEpisode
+    if (_releaseSearched) return _buildReleaseSection(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _BackRow(onBack: _backToScope),
+        const SizedBox(height: AppSpacing.sm),
+        if (_episodesLoading)
+          const _LoadingState(label: 'Chargement des épisodes…')
+        else if (_episodes.isEmpty)
+          const _HintState(label: 'Aucun épisode trouvé pour cette série.')
+        else
+          ArrSeasonEpisodePicker(
+            episodes: _episodes,
+            onSearchSeason: _searchSeason,
+            onSearchEpisode: _searchEpisode,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildReleaseSection(BuildContext context) {
+    final showBack = !widget.entry.isMovie;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (showBack)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: _BackRow(
+              onBack: _backToPicker,
+              label: _releaseSearchLabel,
+            ),
+          ),
+        if (_releasesLoading)
+          const _LoadingState(
+              label: 'Recherche auprès des indexeurs (jusqu\'à 30 secondes)…')
+        else if (_releasesError != null)
+          _ErrorState(
+              message: _errorMessage(_releasesError!, _releasesErrorDetail))
+        else if (_releases.isEmpty)
+          const _HintState(label: 'Aucun résultat.')
+        else
+          ArrReleaseTable(
+            releases: _releases,
+            grabStatuses: _grabStatuses,
+            onGrab: _grab,
+          ),
+      ],
+    );
+  }
+}
+
+class _BackRow extends StatelessWidget {
+  final VoidCallback onBack;
+  final String? label;
+  const _BackRow({required this.onBack, this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        FocusRing(
+          borderRadius: AppRadii.controlBorder,
+          onActivate: onBack,
+          child: ExcludeFocus(
+            child: Tooltip(
+              message: 'Changer de portée',
+              child: IconButton(
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back_rounded),
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+        if (label != null) ...[
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              label!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  final String label;
+  const _LoadingState({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(label,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+class _HintState extends StatelessWidget {
+  final String label;
+  const _HintState({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Text(label,
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: AppColors.textSecondary)),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String message;
+  const _ErrorState({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded,
+              size: 18, color: AppColors.error),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(message,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+}

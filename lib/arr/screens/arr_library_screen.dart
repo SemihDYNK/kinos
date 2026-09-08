@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fladder/arr/models/arr_library_entry.dart';
@@ -8,6 +9,7 @@ import 'package:fladder/arr/providers/arr_library_providers.dart';
 import 'package:fladder/arr/providers/arr_providers.dart';
 import 'package:fladder/arr/screens/widgets/arr_library_grid.dart';
 import 'package:fladder/arr/services/arr_api_client.dart';
+import 'package:fladder/routes/auto_router.gr.dart';
 import 'package:fladder/screens/shared/chips/filter_button.dart';
 import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
 import 'package:fladder/theme/app_theme.dart';
@@ -83,41 +85,16 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
     }
   }
 
-  Future<void> _showDetail(BuildContext context, ArrLibraryEntry entry) {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder),
-        title: Text(entry.title,
-            style: Theme.of(context).textTheme.headlineMedium),
-        content: SizedBox(
-          width: 380,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _DetailRow(label: 'Année', value: entry.year?.toString() ?? '—'),
-              _DetailRow(label: 'Statut', value: entry.statusLabel),
-              _DetailRow(
-                  label: 'Surveillé', value: entry.monitored ? 'Oui' : 'Non'),
-              if (entry.isMovie)
-                _DetailRow(label: 'Qualité', value: entry.qualityName ?? '—'),
-              if (!entry.isMovie)
-                _DetailRow(
-                    label: 'Saisons',
-                    value: (entry.seasonCount ?? 0).toString()),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
-    );
+  /// Pousse la fiche détail Arr — `await` puis rien d'autre : Flutter
+  /// restaure de lui-même le focus sur le nœud de la grille (déjà
+  /// re-demandé par `ArrLibraryGrid` juste avant cet appel, cf.
+  /// `onOpenDetail`) une fois la route dépilée, comme tout retour de
+  /// route standard — pas besoin de le redemander ici.
+  Future<void> _openDetail(BuildContext context, ArrLibraryEntry entry) {
+    return context.router.push(ArrDetailRoute(
+      service: widget.service,
+      id: entry.id,
+    ));
   }
 
   Future<void> _confirmRemove(
@@ -361,7 +338,7 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
             entries: entries,
             baseUrl: credentials.baseUrl,
             apiKey: credentials.apiKey,
-            onOpenDetail: (entry) => _showDetail(context, entry),
+            onOpenDetail: (entry) => _openDetail(context, entry),
             onSearch: (entry) => _runAction(
               () => ref
                   .read(arrLibraryProvider(widget.service).notifier)
@@ -391,37 +368,5 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
       ArrApiError.invalidResponse => 'Réponse inattendue.',
     };
     return detail == null ? base : '$base $detail';
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _DetailRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(label,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.textSecondary)),
-          ),
-          Expanded(
-            child: Text(value,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.textPrimary)),
-          ),
-        ],
-      ),
-    );
   }
 }

@@ -1,27 +1,31 @@
-/// Jaquette Primary ("poster") d'un film/série — préfère l'URL distante
-/// (hébergée par le fournisseur de métadonnées, aucune authentification
-/// requise) ; à défaut, reconstruit l'URL locale servie par Radarr/Sonarr
-/// lui-même, avec la clé API en paramètre (`/mediacover/...` accepte
-/// `apikey` en query, pas seulement l'en-tête `X-Api-Key`).
-String? resolveArrPosterUrl(
+/// Image d'un film/série pour un `coverType` donné ("poster", "fanart"...)
+/// — préfère l'URL distante (hébergée par le fournisseur de métadonnées,
+/// aucune authentification requise) ; à défaut, reconstruit l'URL locale
+/// servie par Radarr/Sonarr lui-même, avec la clé API en paramètre
+/// (`/mediacover/...` accepte `apikey` en query, pas seulement l'en-tête
+/// `X-Api-Key`). Partagée par [resolveArrPosterUrl] (jaquette,
+/// `coverType: 'poster'`) et `resolveArrFanartUrl` (bandeau de la fiche
+/// détail, `coverType: 'fanart'`).
+String? resolveArrImageUrl(
   dynamic images, {
+  required String coverType,
   required String baseUrl,
   required String apiKey,
 }) {
   if (images is! List) return null;
-  Map? poster;
+  Map? match;
   for (final entry in images) {
-    if (entry is Map && entry['coverType'] == 'poster') {
-      poster = entry;
+    if (entry is Map && entry['coverType'] == coverType) {
+      match = entry;
       break;
     }
   }
-  if (poster == null) return null;
+  if (match == null) return null;
 
-  final remote = poster['remoteUrl'] as String?;
+  final remote = match['remoteUrl'] as String?;
   if (remote != null && remote.isNotEmpty) return remote;
 
-  final relative = poster['url'] as String?;
+  final relative = match['url'] as String?;
   if (relative == null || relative.isEmpty) return null;
   final trimmedBase = baseUrl.trim();
   final normalizedBase = trimmedBase.endsWith('/')
@@ -30,6 +34,15 @@ String? resolveArrPosterUrl(
   final separator = relative.contains('?') ? '&' : '?';
   return '$normalizedBase$relative${separator}apikey=$apiKey';
 }
+
+/// Jaquette Primary — cf. [resolveArrImageUrl].
+String? resolveArrPosterUrl(
+  dynamic images, {
+  required String baseUrl,
+  required String apiKey,
+}) =>
+    resolveArrImageUrl(images,
+        coverType: 'poster', baseUrl: baseUrl, apiKey: apiKey);
 
 /// Date d'ajout à la bibliothèque (`added`, commun à `/movie` et
 /// `/series`) — `null` si absente ou d'un type inattendu plutôt que de
