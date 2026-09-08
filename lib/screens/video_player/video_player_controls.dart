@@ -956,7 +956,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: AppColors.textSecondary))),
+                        ?.copyWith(color: AppColors.textPrimary))),
             Icon(
               _qualityExpanded
                   ? Icons.expand_less_rounded

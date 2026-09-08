@@ -11,6 +11,7 @@ import 'package:fladder/arr/services/arr_api_client.dart';
 import 'package:fladder/screens/shared/chips/filter_button.dart';
 import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
 import 'package:fladder/theme/app_theme.dart';
+import 'package:fladder/widgets/shared/anchored_popover.dart';
 
 /// Onglet "Bibliothèque" — grille virtualisée des jaquettes, un seul
 /// appel par session (cf. [arrLibraryProvider]). Tri/filtre dans
@@ -27,7 +28,16 @@ class ArrLibraryScreen extends ConsumerStatefulWidget {
   ConsumerState<ArrLibraryScreen> createState() => _ArrLibraryScreenState();
 }
 
+const _sortLabels = {
+  ArrLibrarySort.added: 'Date d\'ajout',
+  ArrLibrarySort.title: 'Titre',
+  ArrLibrarySort.year: 'Année',
+  ArrLibrarySort.status: 'Statut',
+};
+
 class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
+  final _sortPopover = AnchoredPopoverController();
+
   int _compareBase(ArrLibrarySort sort, ArrLibraryEntry a, ArrLibraryEntry b) {
     return switch (sort) {
       // Absente : traitée comme la plus ancienne possible, pour finir en
@@ -295,28 +305,30 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
               ],
             ),
             const SizedBox(width: AppSpacing.sm),
-            FocusRing(
-              borderRadius: AppRadii.controlBorder,
-              child: ExcludeFocus(
-                child: PopupMenuButton<ArrLibrarySort>(
-                  tooltip: 'Trier',
-                  color: AppColors.surfaceHigh,
-                  shape: const RoundedRectangleBorder(
-                      borderRadius: AppRadii.sheetBorder),
-                  icon: const Icon(Icons.sort_rounded,
-                      color: AppColors.textSecondary),
-                  onSelected: viewNotifier.setSort,
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                        value: ArrLibrarySort.added,
-                        child: Text('Date d\'ajout')),
-                    PopupMenuItem(
-                        value: ArrLibrarySort.title, child: Text('Titre')),
-                    PopupMenuItem(
-                        value: ArrLibrarySort.year, child: Text('Année')),
-                    PopupMenuItem(
-                        value: ArrLibrarySort.status, child: Text('Statut')),
-                  ],
+            AnchoredPopover(
+              controller: _sortPopover,
+              popoverBuilder: (context, close) => PopoverOptionList(
+                onSelected: close,
+                options: ArrLibrarySort.values
+                    .map((sort) => PopoverOption(
+                          content: Text(_sortLabels[sort]!),
+                          selected: view.sort == sort,
+                          onSelect: () => viewNotifier.setSort(sort),
+                        ))
+                    .toList(),
+              ),
+              child: FocusRing(
+                borderRadius: AppRadii.controlBorder,
+                onActivate: _sortPopover.toggle,
+                child: ExcludeFocus(
+                  child: Tooltip(
+                    message: 'Trier',
+                    child: IconButton(
+                      onPressed: _sortPopover.toggle,
+                      icon: const Icon(Icons.sort_rounded,
+                          color: AppColors.textSecondary),
+                    ),
+                  ),
                 ),
               ),
             ),

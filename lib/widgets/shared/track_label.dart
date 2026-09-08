@@ -183,10 +183,11 @@ String? _languageName(String rawLanguage) {
   return code.length <= 3 ? code.toUpperCase() : code;
 }
 
-/// Rendu à deux lignes de [TrackLabelInfo] — ligne principale en
-/// `textPrimary`, secondaire en `textSecondary` uniquement si des
+/// Rendu à deux lignes de [TrackLabelInfo] — les deux pistes en
+/// `textPrimary` (une option grisée a l'air désactivée alors qu'elle
+/// reste cliquable), secondaire en `textSecondary` uniquement si des
 /// drapeaux s'appliquent (jamais de ligne vide). Piste active :
-/// typographie (gras) + coche discrète, jamais un aplat de couleur.
+/// typographie (gras) + coche discrète, jamais une couleur atténuée.
 class TrackLabelText extends StatelessWidget {
   final TrackLabelInfo info;
   final bool selected;
@@ -204,8 +205,7 @@ class TrackLabelText extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color:
-                    selected ? AppColors.textPrimary : AppColors.textSecondary,
+                color: AppColors.textPrimary,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),
         ),

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 import 'package:fladder/util/focus_provider.dart';
 import 'package:fladder/util/position_provider.dart';
+import 'package:fladder/widgets/shared/anchored_popover.dart';
 import 'package:fladder/widgets/shared/ensure_visible.dart';
 import 'package:fladder/widgets/shared/item_actions.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
 
-class EnumBox<T> extends StatelessWidget {
+class EnumBox<T> extends StatefulWidget {
   final String? current;
   final Widget? currentWidget;
   final bool autoFocus;
@@ -21,15 +20,34 @@ class EnumBox<T> extends StatelessWidget {
     required this.itemBuilder,
     this.onFocusChanged,
     super.key,
-  }) : assert(
-            current != null || currentWidget != null, "At least one of 'current' or 'currentWidget' must be provided");
+  }) : assert(current != null || currentWidget != null,
+            "At least one of 'current' or 'currentWidget' must be provided");
+
+  @override
+  State<EnumBox<T>> createState() => _EnumBoxState<T>();
+}
+
+class _EnumBoxState<T> extends State<EnumBox<T>> {
+  // Champ d'état : le popover doit rester rattaché au même contrôleur si ce
+  // widget se reconstruit (ex. valeur courante changée ailleurs) pendant
+  // qu'il est ouvert.
+  final _controller = AnchoredPopoverController();
+
+  List<PopoverOption> _options(List<ItemAction> items) {
+    return items.whereType<ItemActionButton>().map((item) {
+      return PopoverOption(
+        content: item.label ?? const SizedBox.shrink(),
+        selected: item.selected,
+        onSelect: () => item.action?.call(),
+      );
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context).textTheme.titleMedium;
     const padding = EdgeInsets.symmetric(horizontal: 12, vertical: 6);
-    final itemList = itemBuilder(context);
-    final useBottomSheet = AdaptiveLayout.inputDeviceOf(context) != InputDevice.pointer;
+    final itemList = widget.itemBuilder(context);
 
     final foreGroundColor = Theme.of(context).colorScheme.onPrimaryContainer;
 
@@ -38,7 +56,8 @@ class EnumBox<T> extends StatelessWidget {
     final labelWidget = Padding(
       padding: padding,
       child: Material(
-        textStyle: textStyle?.copyWith(fontWeight: FontWeight.bold, color: foreGroundColor),
+        textStyle: textStyle?.copyWith(
+            fontWeight: FontWeight.bold, color: foreGroundColor),
         color: Colors.transparent,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -46,15 +65,15 @@ class EnumBox<T> extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Flexible(
-              child: currentWidget != null
+              child: widget.currentWidget != null
                   ? DefaultTextStyle.merge(
                       style: textStyle?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: foreGroundColor,
                       ),
-                      child: currentWidget!,
+                      child: widget.currentWidget!,
                     )
-                  : Text(current ?? "", textAlign: TextAlign.start),
+                  : Text(widget.current ?? "", textAlign: TextAlign.start),
             ),
             const SizedBox(width: 6),
             if (itemList.length > 1)
@@ -68,14 +87,19 @@ class EnumBox<T> extends StatelessWidget {
     );
     final position = PositionProvider.of(context);
     final borderRadius = BorderRadius.horizontal(
-      left:
-          position == null || position == PositionContext.first ? const Radius.circular(16) : const Radius.circular(4),
-      right:
-          position == null || position == PositionContext.last ? const Radius.circular(16) : const Radius.circular(4),
+      left: position == null || position == PositionContext.first
+          ? const Radius.circular(16)
+          : const Radius.circular(4),
+      right: position == null || position == PositionContext.last
+          ? const Radius.circular(16)
+          : const Radius.circular(4),
     );
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withAlpha(hasMultipleItems ? 255 : 100),
+        color: Theme.of(context)
+            .colorScheme
+            .primaryContainer
+            .withAlpha(hasMultipleItems ? 255 : 100),
         borderRadius: borderRadius,
         border: BoxBorder.all(
           color: Theme.of(context).colorScheme.primaryContainer,
@@ -84,43 +108,26 @@ class EnumBox<T> extends StatelessWidget {
         ),
       ),
       clipBehavior: Clip.hardEdge,
-      child: useBottomSheet
-          ? FocusButton(
-              child: labelWidget,
-              darkOverlay: false,
-              autoFocus: autoFocus,
-              borderRadius: borderRadius,
-              onFocusChanged: onFocusChanged ??
-                  (value) {
-                    if (value) {
-                      context.ensureVisible();
-                    }
-                  },
-              onTap: hasMultipleItems
-                  ? () => showBottomSheetPill(
-                        context: context,
-                        content: (context, scrollController) => ListView(
-                          shrinkWrap: true,
-                          controller: scrollController,
-                          children: [
-                            const SizedBox(height: 6),
-                            ...itemList.map(
-                              (e) => e.toListItem(context),
-                            ),
-                          ],
-                        ),
-                      )
-                  : null,
-            )
-          : PopupMenuButton(
-              tooltip: '',
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              enabled: hasMultipleItems,
-              itemBuilder: (context) => itemList.map((e) => e.toPopupMenuItem()).toList(),
-              padding: padding,
-              child: labelWidget,
-              requestFocus: true,
-            ),
+      child: AnchoredPopover(
+        controller: _controller,
+        popoverBuilder: (context, close) => PopoverOptionList(
+          onSelected: close,
+          options: _options(itemList),
+        ),
+        child: FocusButton(
+          child: labelWidget,
+          darkOverlay: false,
+          autoFocus: widget.autoFocus,
+          borderRadius: borderRadius,
+          onFocusChanged: widget.onFocusChanged ??
+              (value) {
+                if (value) {
+                  context.ensureVisible();
+                }
+              },
+          onTap: hasMultipleItems ? _controller.toggle : null,
+        ),
+      ),
     );
   }
 }
@@ -156,7 +163,10 @@ class EnumSelection<T> extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
               child: label,
             ),
-            EnumBox(current: current, currentWidget: currentWidget, itemBuilder: itemBuilder),
+            EnumBox(
+                current: current,
+                currentWidget: currentWidget,
+                itemBuilder: itemBuilder),
           ].toList(),
         ),
       ),
