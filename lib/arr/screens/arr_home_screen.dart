@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fladder/arr/models/arr_service.dart';
 import 'package:fladder/arr/providers/arr_providers.dart';
 import 'package:fladder/arr/screens/arr_calendar_screen.dart';
+import 'package:fladder/arr/screens/arr_library_screen.dart';
 import 'package:fladder/arr/screens/arr_queue_screen.dart';
 import 'package:fladder/arr/widgets/arr_desktop_scope.dart';
 import 'package:fladder/routes/auto_router.gr.dart';
@@ -13,15 +14,15 @@ import 'package:fladder/screens/shared/chips/filter_button.dart';
 import 'package:fladder/theme/app_theme.dart';
 import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
 
-enum _ArrTab { queue, calendar }
+enum _ArrTab { library, queue, calendar }
 
 /// Accueil du module *Arr — toujours atteignable depuis "Arr" dans la
 /// barre latérale, même sans aucun service configuré (sans quoi la
 /// configuration elle-même serait inatteignable) : invite alors à la
 /// configurer. Dès qu'au moins un service l'est, affiche le sélecteur
-/// d'instance puis, en dessous, les onglets File d'attente/Calendrier —
-/// recherche interactive et réglages restent atteignables via les
-/// raccourcis en haut à droite.
+/// d'instance puis, en dessous, les onglets Bibliothèque/File
+/// d'attente/Calendrier — recherche interactive et réglages restent
+/// atteignables via les raccourcis en haut à droite.
 @RoutePage()
 class ArrHomeScreen extends ConsumerStatefulWidget {
   const ArrHomeScreen({super.key});
@@ -32,7 +33,7 @@ class ArrHomeScreen extends ConsumerStatefulWidget {
 
 class _ArrHomeScreenState extends ConsumerState<ArrHomeScreen> {
   ArrService? _selected;
-  _ArrTab _tab = _ArrTab.queue;
+  _ArrTab _tab = _ArrTab.library;
 
   @override
   Widget build(BuildContext context) {
@@ -156,19 +157,31 @@ class _ArrHomeContent extends StatelessWidget {
           ],
           _ArrTabStrip(tab: tab, onSelectTab: onSelectTab),
           const SizedBox(height: AppSpacing.md),
+          // Le défilement est décidé par le contenu de chaque onglet, pas
+          // ici : la grille Bibliothèque est virtualisée (GridView.builder)
+          // et a besoin d'une hauteur bornée pour gérer son propre
+          // défilement — l'envelopper dans un SingleChildScrollView comme
+          // les deux autres onglets construirait toutes ses jaquettes d'un
+          // coup et annulerait la virtualisation.
           Expanded(
-            child: SingleChildScrollView(
-              child: switch (tab) {
-                _ArrTab.queue => ArrQueueScreen(
+            child: switch (tab) {
+              _ArrTab.library => ArrLibraryScreen(
+                  key: ValueKey(selectedService),
+                  service: selectedService,
+                ),
+              _ArrTab.queue => SingleChildScrollView(
+                  child: ArrQueueScreen(
                     key: ValueKey(selectedService),
                     service: selectedService,
                   ),
-                _ArrTab.calendar => ArrCalendarScreen(
+                ),
+              _ArrTab.calendar => SingleChildScrollView(
+                  child: ArrCalendarScreen(
                     key: ValueKey(selectedService),
                     service: selectedService,
                   ),
-              },
-            ),
+                ),
+            },
           ),
         ],
       ),
@@ -195,6 +208,11 @@ class _ArrTabStrip extends StatelessWidget {
       ),
       child: Row(
         children: [
+          _ArrTabButton(
+            label: 'Bibliothèque',
+            selected: tab == _ArrTab.library,
+            onTap: () => onSelectTab(_ArrTab.library),
+          ),
           _ArrTabButton(
             label: 'File d\'attente',
             selected: tab == _ArrTab.queue,

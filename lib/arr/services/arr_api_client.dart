@@ -142,6 +142,29 @@ abstract class ArrApiClient {
     }
   }
 
+  Future<ArrResult<dynamic>> put(String path, {Object? body}) async {
+    final Uri uri;
+    try {
+      uri = _resolve(path);
+    } on FormatException {
+      return const ArrFailure(ArrApiError.unreachable, 'URL invalide');
+    }
+    try {
+      final response = await _client
+          .put(
+            uri,
+            headers: {..._headers, 'Content-Type': 'application/json'},
+            body: body == null ? null : jsonEncode(body),
+          )
+          .timeout(_timeout);
+      return _handle(response);
+    } on TimeoutException {
+      return const ArrFailure(ArrApiError.unreachable, 'Délai dépassé');
+    } catch (e) {
+      return ArrFailure(ArrApiError.unreachable, e.toString());
+    }
+  }
+
   Future<ArrResult<dynamic>> delete(String path,
       {Map<String, String>? query, Object? body}) async {
     final Uri uri;
@@ -492,6 +515,28 @@ class RadarrApiClient extends ArrApiClient {
 
   Future<ArrResult<List<ArrRelease>>> releasesForMovie(int movieId) =>
       searchReleases({'movieId': movieId.toString()});
+
+  /// `PUT /api/v3/movie/{id}` — repart de [ArrMovie.raw] (Radarr exige le
+  /// corps complet de la ressource, pas un correctif partiel) avec
+  /// uniquement `monitored` changé.
+  Future<ArrResult<void>> setMovieMonitored(ArrMovie movie, bool monitored) =>
+      _asVoid(() => put('/api/v3/movie/${movie.id}',
+          body: {...movie.raw, 'monitored': monitored}));
+
+  /// `DELETE /api/v3/movie/{id}` — retire aussi le fichier déjà
+  /// téléchargé, cohérent avec le "supprimer" attendu depuis la grille
+  /// (pas seulement un retrait du suivi Radarr).
+  Future<ArrResult<void>> deleteMovie(int id) => _asVoid(
+      () => delete('/api/v3/movie/$id', query: const {'deleteFiles': 'true'}));
+
+  /// `POST /api/v3/command` `{name: "MoviesSearch", movieIds: [id]}` —
+  /// recherche automatique (indexeurs déjà configurés), pas la recherche
+  /// interactive avec sélection manuelle de release.
+  Future<ArrResult<void>> triggerMovieSearch(int id) =>
+      _asVoid(() => post('/api/v3/command', body: {
+            'name': 'MoviesSearch',
+            'movieIds': [id]
+          }));
 }
 
 class SonarrApiClient extends ArrApiClient {
@@ -543,4 +588,33 @@ class SonarrApiClient extends ArrApiClient {
         'seriesId': seriesId.toString(),
         'seasonNumber': seasonNumber.toString(),
       });
+
+  /// `PUT /api/v3/series/{id}` — même principe que
+  /// [RadarrApiClient.setMovieMonitored].
+  Future<ArrResult<void>> setSeriesMonitored(
+          ArrSeries series, bool monitored) =>
+      _asVoid(() => put('/api/v3/series/${series.id}',
+          body: {...series.raw, 'monitored': monitored}));
+
+  /// `DELETE /api/v3/series/{id}` — retire aussi les fichiers déjà
+  /// téléchargés.
+  Future<ArrResult<void>> deleteSeries(int id) => _asVoid(
+      () => delete('/api/v3/series/$id', query: const {'deleteFiles': 'true'}));
+
+  /// `POST /api/v3/command` `{name: "SeriesSearch", seriesId: id}` —
+  /// recherche automatique de tous les épisodes manquants surveillés.
+  Future<ArrResult<void>> triggerSeriesSearch(int id) => _asVoid(() =>
+      post('/api/v3/command', body: {'name': 'SeriesSearch', 'seriesId': id}));
+}
+
+/// Réduit un résultat de faible intérêt (le corps de la réponse
+/// PUT/DELETE/POST /command n'est pas exploité par les appelants) à
+/// succès/échec, en conservant la catégorie d'erreur.
+Future<ArrResult<void>> _asVoid(
+    Future<ArrResult<dynamic>> Function() call) async {
+  final result = await call();
+  return switch (result) {
+    ArrSuccess() => const ArrSuccess(null),
+    ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+  };
 }

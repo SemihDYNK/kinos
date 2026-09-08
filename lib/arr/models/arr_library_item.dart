@@ -45,6 +45,13 @@ class ArrMovie {
   /// Qualité du fichier déjà présent — `null` si [hasFile] est faux.
   final String? qualityName;
 
+  /// Corps JSON brut tel que reçu — Radarr exige le corps complet de la
+  /// ressource sur `PUT /api/v3/movie/{id}` (pas un correctif partiel) :
+  /// gardé pour renvoyer exactement ce qui a été lu, avec un seul champ
+  /// changé (ex. `monitored`), plutôt que de reconstruire une ressource
+  /// partielle qui perdrait les champs que ce modèle ne connaît pas.
+  final Map<String, dynamic> raw;
+
   const ArrMovie({
     required this.id,
     required this.title,
@@ -53,6 +60,7 @@ class ArrMovie {
     required this.monitored,
     required this.hasFile,
     required this.qualityName,
+    required this.raw,
   });
 
   factory ArrMovie.fromJson(
@@ -78,6 +86,7 @@ class ArrMovie {
       monitored: json['monitored'] as bool? ?? false,
       hasFile: json['hasFile'] as bool? ?? false,
       qualityName: qualityName,
+      raw: json,
     );
   }
 }
@@ -93,6 +102,9 @@ class ArrSeries {
   final int episodeCount;
   final int episodeFileCount;
 
+  /// Corps JSON brut tel que reçu — même raison que [ArrMovie.raw].
+  final Map<String, dynamic> raw;
+
   const ArrSeries({
     required this.id,
     required this.title,
@@ -102,6 +114,7 @@ class ArrSeries {
     required this.seasonCount,
     required this.episodeCount,
     required this.episodeFileCount,
+    required this.raw,
   });
 
   factory ArrSeries.fromJson(
@@ -127,6 +140,7 @@ class ArrSeries {
           statistics is Map ? (statistics['episodeCount'] as int? ?? 0) : 0,
       episodeFileCount:
           statistics is Map ? (statistics['episodeFileCount'] as int? ?? 0) : 0,
+      raw: json,
     );
   }
 }

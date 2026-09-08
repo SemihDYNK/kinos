@@ -14,6 +14,7 @@ class ArrLibraryEntry {
   const ArrLibraryEntry.series(this.series) : movie = null;
 
   bool get isMovie => movie != null;
+  int get id => movie?.id ?? series!.id;
   String get title => movie?.title ?? series!.title;
   int? get year => movie?.year ?? series?.year;
   String? get posterUrl => movie?.posterUrl ?? series?.posterUrl;
