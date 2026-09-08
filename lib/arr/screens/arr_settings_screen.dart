@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fladder/arr/models/arr_credentials.dart';
 import 'package:fladder/arr/models/arr_service.dart';
+import 'package:fladder/arr/models/qbittorrent_credentials.dart';
 import 'package:fladder/arr/providers/arr_providers.dart';
+import 'package:fladder/arr/providers/qbittorrent_providers.dart';
 import 'package:fladder/arr/services/arr_api_client.dart';
+import 'package:fladder/arr/services/qbittorrent_api_client.dart';
 import 'package:fladder/arr/widgets/arr_desktop_scope.dart';
 import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
 import 'package:fladder/theme/app_theme.dart';
@@ -48,6 +51,24 @@ class ArrSettingsScreen extends StatelessWidget {
                   const _ArrServiceSettingsCard(service: ArrService.radarr),
                   const SizedBox(height: AppSpacing.lg),
                   const _ArrServiceSettingsCard(service: ArrService.sonarr),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    'Client de téléchargement',
+                    style: Theme.of(context).textTheme.headlineLarge,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    "qBittorrent — nécessaire pour mettre en pause ou reprendre "
+                    "un téléchargement depuis la file d'attente : l'API "
+                    "Radarr/Sonarr n'expose pas cette action elle-même. Une "
+                    "seule instance, partagée par Radarr et Sonarr.",
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const _QBittorrentSettingsCard(),
                 ],
               ),
             ),
@@ -203,6 +224,160 @@ class _ArrServiceSettingsCardState
           if (_testResult != null) ...[
             const SizedBox(height: AppSpacing.sm),
             _ArrTestResultLabel(result: _testResult!, service: widget.service),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _QBittorrentSettingsCard extends ConsumerStatefulWidget {
+  const _QBittorrentSettingsCard();
+
+  @override
+  ConsumerState<_QBittorrentSettingsCard> createState() =>
+      _QBittorrentSettingsCardState();
+}
+
+class _QBittorrentSettingsCardState
+    extends ConsumerState<_QBittorrentSettingsCard> {
+  final _urlController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _seeded = false;
+  bool _testing = false;
+  bool? _testResult;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _seed(QBittorrentCredentials credentials) {
+    if (_seeded) return;
+    _seeded = true;
+    _urlController.text = credentials.baseUrl;
+    _usernameController.text = credentials.username;
+    _passwordController.text = credentials.password;
+  }
+
+  Future<void> _testConnection() async {
+    setState(() {
+      _testing = true;
+      _testResult = null;
+    });
+    final client = QBittorrentApiClient(
+      baseUrl: _urlController.text.trim(),
+      username: _usernameController.text.trim(),
+      password: _passwordController.text,
+    );
+    try {
+      final result = await client.testConnection();
+      if (!mounted) return;
+      setState(() {
+        _testResult = result;
+        _testing = false;
+      });
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final credentials = QBittorrentCredentials(
+      baseUrl: _urlController.text.trim(),
+      username: _usernameController.text.trim(),
+      password: _passwordController.text,
+    );
+    await ref.read(qbittorrentCredentialsProvider.notifier).save(credentials);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    FladderSnack.show('qBittorrent enregistré', context: context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(qbittorrentCredentialsProvider).whenData(_seed);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadii.cardBorder,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('qBittorrent',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: AppSpacing.md),
+          _ArrField(
+            label: 'URL',
+            hint: 'http://localhost:8080',
+            controller: _urlController,
+            keyboardType: TextInputType.url,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _ArrField(
+            label: "Nom d'utilisateur",
+            hint: '',
+            controller: _usernameController,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _ArrField(
+            label: 'Mot de passe',
+            hint: '',
+            controller: _passwordController,
+            obscure: true,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              FocusRing(
+                borderRadius: AppRadii.controlBorder,
+                onActivate: _testing ? null : _testConnection,
+                child: ExcludeFocus(
+                  child: OutlinedButton(
+                    onPressed: _testing ? null : _testConnection,
+                    child: _testing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Tester la connexion'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              FocusRing(
+                borderRadius: AppRadii.controlBorder,
+                onActivate: _saving ? null : _save,
+                child: ExcludeFocus(
+                  child: FilledButton(
+                    onPressed: _saving ? null : _save,
+                    child: const Text('Enregistrer'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_testResult != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _testResult!
+                  ? 'Connecté à qBittorrent'
+                  : "Échec — vérifiez l'URL et les identifiants.",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: _testResult! ? AppColors.success : AppColors.error,
+                  ),
+            ),
           ],
         ],
       ),
