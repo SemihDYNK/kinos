@@ -123,4 +123,91 @@ void main() {
           (result as ArrConnectionFailed).error, ArrApiError.invalidResponse);
     });
   });
+
+  group('ArrApiClient.fetchQueue', () {
+    test('parses a Sonarr queue response (series/episode, not movie)',
+        () async {
+      // Forme réelle d'une réponse Sonarr : `{records: [...]}` (paginée,
+      // pas une liste nue), chaque enregistrement portant `series`/
+      // `episode` là où Radarr porte `movie`.
+      final client = SonarrApiClient(
+        baseUrl: 'https://sonarr.example.com',
+        apiKey: 'key',
+        httpClient: MockClient((request) async {
+          expect(request.url.path, '/api/v3/queue');
+          return http.Response(
+            jsonEncode({
+              'page': 1,
+              'pageSize': 250,
+              'totalRecords': 1,
+              'records': [
+                {
+                  'id': 7,
+                  'seriesId': 12,
+                  'episodeId': 345,
+                  'series': {'id': 12, 'title': 'Some Series'},
+                  'episode': {'id': 345, 'seasonNumber': 2, 'episodeNumber': 5},
+                  'title': 'Some.Series.S02E05.1080p.WEB-DL-GROUP',
+                  'size': 1073741824,
+                  'sizeleft': 268435456,
+                  'status': 'downloading',
+                  'trackedDownloadStatus': 'ok',
+                  'trackedDownloadState': 'downloading',
+                  'protocol': 'usenet',
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      final result = await client.fetchQueue();
+
+      expect(result, isA<ArrSuccess>());
+      final items = (result as ArrSuccess).data;
+      expect(items, hasLength(1));
+      expect(items.single.id, 7);
+      expect(items.single.title, 'Some.Series.S02E05.1080p.WEB-DL-GROUP');
+    });
+
+    test('a single malformed record does not take down the rest of the queue',
+        () async {
+      final client = SonarrApiClient(
+        baseUrl: 'https://sonarr.example.com',
+        apiKey: 'key',
+        httpClient: MockClient((request) async => http.Response(
+              jsonEncode({
+                'records': [
+                  'not even an object',
+                  {'id': 2, 'title': 'Readable record'},
+                ],
+              }),
+              200,
+            )),
+      );
+
+      final result = await client.fetchQueue();
+
+      expect(result, isA<ArrSuccess>());
+      final items = (result as ArrSuccess).data;
+      expect(items, hasLength(1));
+      expect(items.single.title, 'Readable record');
+    });
+
+    test('a non-list `records` field is reported as an invalid response',
+        () async {
+      final client = SonarrApiClient(
+        baseUrl: 'https://sonarr.example.com',
+        apiKey: 'key',
+        httpClient:
+            MockClient((request) async => http.Response(jsonEncode({}), 200)),
+      );
+
+      final result = await client.fetchQueue();
+
+      expect(result, isA<ArrFailure>());
+      expect((result as ArrFailure).error, ArrApiError.invalidResponse);
+    });
+  });
 }

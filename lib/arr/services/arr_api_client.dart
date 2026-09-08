@@ -307,14 +307,40 @@ abstract class ArrApiClient {
       return const ArrFailure(
           ArrApiError.invalidResponse, 'Réponse inattendue');
     }
-    try {
-      return ArrSuccess(records
-          .whereType<Map<String, dynamic>>()
-          .map(ArrQueueItem.fromJson)
-          .toList());
-    } catch (_) {
-      return const ArrFailure(ArrApiError.invalidResponse, 'Réponse illisible');
+
+    // Diagnostic (build debug uniquement) : Radarr porte `movie` en plus
+    // des champs communs, Sonarr porte `series`/`episode` — si un champ
+    // scalaire venait à différer entre les deux services d'une façon que
+    // ArrQueueItem.fromJson ne tolère pas encore, ce sont ces clés-là
+    // qu'il faut comparer.
+    assert(() {
+      final first = records.isNotEmpty && records.first is Map
+          ? records.first as Map
+          : null;
+      if (first != null) {
+        log('Arr queue (diagnostic) — clés du premier enregistrement : '
+            '${first.keys.toList()}');
+      }
+      return true;
+    }());
+
+    // Chaque ligne est isolée : ArrQueueItem.fromJson ne devrait plus
+    // lever (tous ses champs se replient proprement), mais une ligne
+    // malformée d'une façon totalement imprévue ne doit dans tous les
+    // cas jamais faire disparaître la file entière — seulement cette
+    // ligne-là.
+    final items = <ArrQueueItem>[];
+    for (final record in records.whereType<Map<String, dynamic>>()) {
+      try {
+        items.add(ArrQueueItem.fromJson(record));
+      } catch (e) {
+        assert(() {
+          log('Arr queue (diagnostic) — ligne ignorée, exception : $e');
+          return true;
+        }());
+      }
     }
+    return ArrSuccess(items);
   }
 
   /// `DELETE /api/v3/queue/{id}` — retire une ligne. [removeFromClient]
@@ -369,32 +395,10 @@ abstract class ArrApiClient {
     };
   }
 
-  /// `POST /api/v3/queue/{id}/pause` et `.../resume` — mettre en
-  /// pause/reprendre une ligne côté client de téléchargement.
-  ///
-  /// ATTENTION : ces deux routes sont une supposition raisonnable (forme
-  /// cohérente avec le reste de l'API), pas confirmée contre un serveur
-  /// réel — je n'ai pas trouvé de documentation officielle d'une action
-  /// pause/reprendre sur `/api/v3/queue` au moment d'écrire ceci ; de
-  /// nombreux clients de téléchargement ne l'exposent d'ailleurs pas du
-  /// tout via *Arr. Si le serveur répond 404/405, l'écran doit afficher
-  /// l'échec clairement plutôt que rester silencieux — à vérifier contre
-  /// un vrai Radarr/Sonarr avant de considérer ceci fiable.
-  Future<ArrResult<void>> pauseQueueItem(int id) async {
-    final result = await post('/api/v3/queue/$id/pause');
-    return switch (result) {
-      ArrSuccess() => const ArrSuccess(null),
-      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
-    };
-  }
-
-  Future<ArrResult<void>> resumeQueueItem(int id) async {
-    final result = await post('/api/v3/queue/$id/resume');
-    return switch (result) {
-      ArrSuccess() => const ArrSuccess(null),
-      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
-    };
-  }
+  // Pas de pause/reprise ici : confirmé contre un serveur réel que
+  // `/api/v3/queue/{id}/pause` répond 405 (seul DELETE est accepté sur ce
+  // chemin) — l'API *Arr n'expose pas cette action, elle appartient au
+  // client de téléchargement lui-même. Cf. QBittorrentApiClient.
 
   void close() => _client.close();
 }
