@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/items/episode_model.dart';
-import 'package:fladder/models/items/season_model.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/humanize_duration.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/labeled_selector.dart';
-import 'package:fladder/widgets/shared/media_progress_bar.dart';
-import 'package:fladder/widgets/shared/media_thumbnail.dart';
+import 'package:kinos/models/items/episode_model.dart';
+import 'package:kinos/models/items/season_model.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/humanize_duration.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/labeled_selector.dart';
+import 'package:kinos/widgets/shared/media_progress_bar.dart';
+import 'package:kinos/widgets/shared/media_thumbnail.dart';
 
 /// Sélecteur de saison ([LabeledSelector], même composant que les
 /// sélecteurs de piste juste au-dessus) puis grille des épisodes de la

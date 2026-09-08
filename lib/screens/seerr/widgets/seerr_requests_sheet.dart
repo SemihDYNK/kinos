@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/seerr/seerr_dashboard_model.dart';
-import 'package:fladder/providers/seerr_user_provider.dart';
-import 'package:fladder/screens/seerr/widgets/seerr_request_banner_card.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
-import 'package:fladder/widgets/shared/modal_side_sheet.dart';
+import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
+import 'package:kinos/providers/seerr_user_provider.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_request_banner_card.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/refresh_state.dart';
+import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
+import 'package:kinos/widgets/shared/modal_side_sheet.dart';
 
 Future<void> showSeerrRequestsSheet({
   required BuildContext context,

@@ -5,20 +5,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'package:fladder/models/items/audio_model.dart';
-import 'package:fladder/models/media_playback_model.dart';
-import 'package:fladder/providers/settings/video_player_settings_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/screens/video_player/video_player.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/music_player_bar_content.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/video_player_bar_content.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/models/items/audio_model.dart';
+import 'package:kinos/models/media_playback_model.dart';
+import 'package:kinos/providers/settings/video_player_settings_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/video_player/video_player.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/refresh_state.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/music_player_bar_content.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/video_player_bar_content.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 double floatingPlayerHeight(BuildContext context) =>
     switch (AdaptiveLayout.viewSizeOf(context)) {

@@ -6,24 +6,24 @@ import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
-import 'package:fladder/arr/models/arr_media_detail.dart';
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/providers/arr_detail_providers.dart';
-import 'package:fladder/arr/providers/arr_jellyfin_link_provider.dart';
-import 'package:fladder/arr/screens/widgets/arr_detail_edit_dialog.dart';
-import 'package:fladder/arr/screens/widgets/arr_detail_search_section.dart';
-import 'package:fladder/arr/screens/widgets/arr_season_summary_list.dart';
-import 'package:fladder/arr/services/arr_api_client.dart';
-import 'package:fladder/arr/widgets/arr_desktop_scope.dart';
-import 'package:fladder/models/items/images_models.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/details_screens/components/media_info_formatters.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/router_extension.dart';
-import 'package:fladder/util/sliver_list_padding.dart';
-import 'package:fladder/widgets/shared/fading_hero_backdrop.dart';
+import 'package:kinos/arr/models/arr_media_detail.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_detail_providers.dart';
+import 'package:kinos/arr/providers/arr_jellyfin_link_provider.dart';
+import 'package:kinos/arr/screens/widgets/arr_detail_edit_dialog.dart';
+import 'package:kinos/arr/screens/widgets/arr_detail_search_section.dart';
+import 'package:kinos/arr/screens/widgets/arr_season_summary_list.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
+import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/details_screens/components/media_info_formatters.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/router_extension.dart';
+import 'package:kinos/util/sliver_list_padding.dart';
+import 'package:kinos/widgets/shared/fading_hero_backdrop.dart';
 
 /// Fiche détail Arr — ouverte depuis une jaquette de la bibliothèque
 /// (cf. `ArrLibraryGrid`). Alimentée par Radarr/Sonarr, pas par Jellyfin :

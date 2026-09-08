@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/models/items/movie_model.dart';
-import 'package:fladder/screens/shared/media/components/chip_button.dart';
-import 'package:fladder/util/string_extensions.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/models/items/movie_model.dart';
+import 'package:kinos/screens/shared/media/components/chip_button.dart';
+import 'package:kinos/util/string_extensions.dart';
 
 class Ratings extends StatelessWidget {
   final double? communityRating;

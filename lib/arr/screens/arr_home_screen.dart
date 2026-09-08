@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/providers/arr_providers.dart';
-import 'package:fladder/arr/screens/arr_calendar_screen.dart';
-import 'package:fladder/arr/screens/arr_library_screen.dart';
-import 'package:fladder/arr/screens/arr_queue_screen.dart';
-import 'package:fladder/arr/widgets/arr_desktop_scope.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/shared/chips/filter_button.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_providers.dart';
+import 'package:kinos/arr/screens/arr_calendar_screen.dart';
+import 'package:kinos/arr/screens/arr_library_screen.dart';
+import 'package:kinos/arr/screens/arr_queue_screen.dart';
+import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/shared/chips/filter_button.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 
 enum _ArrTab { library, queue, calendar }
 

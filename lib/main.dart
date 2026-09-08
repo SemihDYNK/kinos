@@ -4,25 +4,25 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/bootstrap/app_bootstrap.dart';
-import 'package:fladder/bootstrap/platform/platform_app_wrapper.dart';
-import 'package:fladder/l10n/generated/app_localizations.dart';
-import 'package:fladder/localization_delegates.dart';
-import 'package:fladder/providers/arguments_provider.dart';
-import 'package:fladder/providers/crash_log_provider.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/providers/shared_provider.dart';
-import 'package:fladder/providers/sync_provider.dart';
-import 'package:fladder/providers/theme/app_theme_provider.dart';
-import 'package:fladder/routes/auto_router.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/application_info.dart';
-import 'package:fladder/util/deep_link_helper.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/themes_data.dart';
-import 'package:fladder/widgets/media_query_scaler.dart';
-import 'package:fladder/widgets/pip_lifecycle_controller.dart';
+import 'package:kinos/bootstrap/app_bootstrap.dart';
+import 'package:kinos/bootstrap/platform/platform_app_wrapper.dart';
+import 'package:kinos/l10n/generated/app_localizations.dart';
+import 'package:kinos/localization_delegates.dart';
+import 'package:kinos/providers/arguments_provider.dart';
+import 'package:kinos/providers/crash_log_provider.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/providers/shared_provider.dart';
+import 'package:kinos/providers/sync_provider.dart';
+import 'package:kinos/providers/theme/app_theme_provider.dart';
+import 'package:kinos/routes/auto_router.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/application_info.dart';
+import 'package:kinos/util/deep_link_helper.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/themes_data.dart';
+import 'package:kinos/widgets/media_query_scaler.dart';
+import 'package:kinos/widgets/pip_lifecycle_controller.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();

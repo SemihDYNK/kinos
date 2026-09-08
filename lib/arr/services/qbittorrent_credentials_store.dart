@@ -3,7 +3,7 @@ import 'dart:developer';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:fladder/arr/models/qbittorrent_credentials.dart';
+import 'package:kinos/arr/models/qbittorrent_credentials.dart';
 
 /// Persiste [QBittorrentCredentials] dans le coffre sécurisé — même
 /// politique que [ArrCredentialsStore], jamais SharedPreferences. Une

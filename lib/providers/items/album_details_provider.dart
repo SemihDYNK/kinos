@@ -4,14 +4,14 @@ import 'package:chopper/chopper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart' as logging;
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/album_model.dart';
-import 'package:fladder/models/items/audio_model.dart';
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/connectivity_provider.dart';
-import 'package:fladder/providers/service_provider.dart';
-import 'package:fladder/providers/sync_provider.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/album_model.dart';
+import 'package:kinos/models/items/audio_model.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/connectivity_provider.dart';
+import 'package:kinos/providers/service_provider.dart';
+import 'package:kinos/providers/sync_provider.dart';
 
 final albumDetailsProvider =
     StateNotifierProvider.autoDispose.family<AlbumDetailsNotifier, AlbumModel?, String>((ref, id) {

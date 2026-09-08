@@ -5,23 +5,23 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/collection_types.dart';
-import 'package:fladder/models/items/playlist_model.dart';
-import 'package:fladder/models/library_filters_model.dart';
-import 'package:fladder/models/view_model.dart';
-import 'package:fladder/providers/dashboard_mode_provider.dart';
-import 'package:fladder/providers/library_filters_provider.dart';
-import 'package:fladder/providers/playlist_provider.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/providers/views_provider.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/color_extensions.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/destination_model.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/navigation_button.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/navigation_items.dart';
-import 'package:fladder/widgets/shared/custom_tooltip.dart';
-import 'package:fladder/widgets/shared/simple_overflow_widget.dart';
+import 'package:kinos/models/collection_types.dart';
+import 'package:kinos/models/items/playlist_model.dart';
+import 'package:kinos/models/library_filters_model.dart';
+import 'package:kinos/models/view_model.dart';
+import 'package:kinos/providers/dashboard_mode_provider.dart';
+import 'package:kinos/providers/library_filters_provider.dart';
+import 'package:kinos/providers/playlist_provider.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/providers/views_provider.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/color_extensions.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/destination_model.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/navigation_button.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/navigation_items.dart';
+import 'package:kinos/widgets/shared/custom_tooltip.dart';
+import 'package:kinos/widgets/shared/simple_overflow_widget.dart';
 
 class SideNavigationButtons extends ConsumerWidget {
   const SideNavigationButtons({

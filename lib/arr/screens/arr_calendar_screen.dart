@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Onglet "Calendrier" — structure d'accueil seulement pour l'instant, le
 /// contenu (sorties à venir/manquantes par jour) suit dans un prochain

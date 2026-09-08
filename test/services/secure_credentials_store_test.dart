@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/models/credentials_model.dart';
-import 'package:fladder/services/secure_credentials_store.dart';
+import 'package:kinos/models/credentials_model.dart';
+import 'package:kinos/services/secure_credentials_store.dart';
 
 import '../support/fake_secure_storage_platform.dart';
 

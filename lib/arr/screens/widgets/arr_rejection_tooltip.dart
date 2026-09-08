@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Infobulle des motifs de rejet — ne s'appuie PAS sur [Tooltip] : sa
 /// cible (l'icône, colonne la plus à gauche du tableau) est trop proche du

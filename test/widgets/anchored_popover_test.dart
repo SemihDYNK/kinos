@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/widgets/shared/anchored_popover.dart';
+import 'package:kinos/widgets/shared/anchored_popover.dart';
 
 Widget _harness({
   required Widget Function(BuildContext, VoidCallback close) popoverBuilder,

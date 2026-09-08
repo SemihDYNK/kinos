@@ -2,11 +2,11 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/settings/home_row_model.dart';
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/dashboard/home_row_random_seed_provider.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/settings/home_row_model.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/dashboard/home_row_random_seed_provider.dart';
 
 const _rowItemLimit = 16;
 

@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: depend_on_referenced_packages
 import 'package:uuid/uuid.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/models/settings/home_row_model.dart';
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/database_provider.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/models/settings/home_row_model.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/database_provider.dart';
 
 const _homeRowsSettingKey = 'home_rows';
 const _homeRowsSettingScope = 'dashboard';

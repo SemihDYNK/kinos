@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/widgets/keyboard/keyboard_localization.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/widgets/keyboard/keyboard_localization.dart';
 
 class AlphaNumericKeyboard extends ConsumerStatefulWidget {
   final void Function(String character) onCharacter;

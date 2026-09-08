@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/screens/shared/detail_scaffold.dart';
-import 'package:fladder/screens/shared/media/components/poster_placeholder.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/fladder_image.dart';
-import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
-import 'package:fladder/util/list_padding.dart';
-import 'package:fladder/util/router_extension.dart';
-import 'package:fladder/util/string_extensions.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/screens/shared/detail_scaffold.dart';
+import 'package:kinos/screens/shared/media/components/poster_placeholder.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
+import 'package:kinos/util/list_padding.dart';
+import 'package:kinos/util/router_extension.dart';
+import 'package:kinos/util/string_extensions.dart';
 
 class EmptyItem extends ConsumerWidget {
   final ItemBaseModel item;

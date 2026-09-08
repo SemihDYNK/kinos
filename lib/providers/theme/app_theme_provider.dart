@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/providers/arguments_provider.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/theme/palette_service.dart';
+import 'package:kinos/providers/arguments_provider.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/theme/palette_service.dart';
 
 /// Teinte courante du bandeau d'accueil.
 ///

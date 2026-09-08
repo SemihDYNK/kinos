@@ -4,19 +4,19 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/providers/control_panel/control_livetv_provider.dart';
-import 'package:fladder/screens/control_panel/control_livetv/listing_provider_card.dart';
-import 'package:fladder/screens/control_panel/control_livetv/listing_provider_edit_dialog.dart';
-import 'package:fladder/screens/control_panel/control_livetv/refresh_guide_button.dart';
-import 'package:fladder/screens/control_panel/control_livetv/tuner_host_card.dart';
-import 'package:fladder/screens/control_panel/control_livetv/tuner_host_edit_dialog.dart';
-import 'package:fladder/screens/control_panel/widgets/control_panel_card.dart';
-import 'package:fladder/screens/settings/settings_scaffold.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/widgets/shared/pull_to_refresh.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/providers/control_panel/control_livetv_provider.dart';
+import 'package:kinos/screens/control_panel/control_livetv/listing_provider_card.dart';
+import 'package:kinos/screens/control_panel/control_livetv/listing_provider_edit_dialog.dart';
+import 'package:kinos/screens/control_panel/control_livetv/refresh_guide_button.dart';
+import 'package:kinos/screens/control_panel/control_livetv/tuner_host_card.dart';
+import 'package:kinos/screens/control_panel/control_livetv/tuner_host_edit_dialog.dart';
+import 'package:kinos/screens/control_panel/widgets/control_panel_card.dart';
+import 'package:kinos/screens/settings/settings_scaffold.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/refresh_state.dart';
+import 'package:kinos/widgets/shared/pull_to_refresh.dart';
 
 @RoutePage()
 class ControlLiveTvPage extends ConsumerWidget {

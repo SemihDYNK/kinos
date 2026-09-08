@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/screens/shared/chips/filter_button.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/list_padding.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/map_bool_helper.dart';
-import 'package:fladder/widgets/shared/ensure_visible.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
-import 'package:fladder/widgets/shared/modal_side_sheet.dart';
+import 'package:kinos/screens/shared/chips/filter_button.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/list_padding.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/map_bool_helper.dart';
+import 'package:kinos/widgets/shared/ensure_visible.dart';
+import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
+import 'package:kinos/widgets/shared/modal_side_sheet.dart';
 
 class CategoryChip<T> extends StatelessWidget {
   final Map<T, bool> items;

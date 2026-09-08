@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/syncing/database_item.dart';
-import 'package:fladder/providers/database_provider.dart';
-import 'package:fladder/theme/palette_service.dart';
+import 'package:kinos/models/syncing/database_item.dart';
+import 'package:kinos/providers/database_provider.dart';
+import 'package:kinos/theme/palette_service.dart';
 
 /// Persiste la dominante extraite d'une jaquette dans la table Drift
 /// `palette_cache`, pour ne pas refaire l'extraction à chaque apparition

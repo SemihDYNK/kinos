@@ -5,16 +5,16 @@ import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/media_playback_model.dart';
-import 'package:fladder/models/playback/playback_queue_state.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/fladder_image.dart';
-import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
-import 'package:fladder/wrappers/media_control_wrapper.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/media_playback_model.dart';
+import 'package:kinos/models/playback/playback_queue_state.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
+import 'package:kinos/wrappers/media_control_wrapper.dart';
 
 typedef QueueSectionReorderCallback = Future<void> Function(
   AudioQueueSection section,

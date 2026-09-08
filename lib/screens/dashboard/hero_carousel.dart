@@ -3,16 +3,16 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/providers/theme/app_theme_provider.dart';
-import 'package:fladder/providers/theme/palette_service_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/theme/palette_service.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/humanize_duration.dart';
-import 'package:fladder/util/item_base_model/play_item_helpers.dart';
-import 'package:fladder/util/refresh_state.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/providers/theme/app_theme_provider.dart';
+import 'package:kinos/providers/theme/palette_service_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/theme/palette_service.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/humanize_duration.dart';
+import 'package:kinos/util/item_base_model/play_item_helpers.dart';
+import 'package:kinos/util/refresh_state.dart';
 
 /// Bandeau carrousel du tableau de bord.
 ///

@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/account_model.dart';
-import 'package:fladder/providers/arguments_provider.dart';
-import 'package:fladder/providers/shared_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/shared/fladder_logo.dart';
-import 'package:fladder/screens/shared/route_wrapper.dart';
-import 'package:fladder/services/local_network_permission.dart';
+import 'package:kinos/models/account_model.dart';
+import 'package:kinos/providers/arguments_provider.dart';
+import 'package:kinos/providers/shared_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/shared/fladder_logo.dart';
+import 'package:kinos/screens/shared/route_wrapper.dart';
+import 'package:kinos/services/local_network_permission.dart';
 
 @RoutePage()
 class SplashScreen extends ConsumerStatefulWidget {

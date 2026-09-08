@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/settings/home_settings_model.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/providers/settings/home_settings_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/settings/settings_list_tile.dart';
-import 'package:fladder/screens/settings/widgets/settings_label_divider.dart';
-import 'package:fladder/screens/settings/widgets/settings_list_group.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/models/settings/home_settings_model.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/providers/settings/home_settings_provider.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/settings/settings_list_tile.dart';
+import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
+import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 List<Widget> buildClientSettingsDashboard(BuildContext context, WidgetRef ref) {
   final clientSettings = ref.watch(clientSettingsProvider);

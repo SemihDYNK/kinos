@@ -1,12 +1,12 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'package:fladder/l10n/generated/app_localizations.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/episode_model.dart';
-import 'package:fladder/models/items/series_model.dart';
-import 'package:fladder/models/seerr/seerr_dashboard_model.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/util/notification_helpers.dart';
+import 'package:kinos/l10n/generated/app_localizations.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/episode_model.dart';
+import 'package:kinos/models/items/series_model.dart';
+import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/util/notification_helpers.dart';
 
 part 'notification_model.freezed.dart';
 part 'notification_model.g.dart';

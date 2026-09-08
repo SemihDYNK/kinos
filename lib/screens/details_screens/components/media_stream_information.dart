@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/screens/details_screens/components/label_title_item.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/enum_selection.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/screens/details_screens/components/label_title_item.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/enum_selection.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 class MediaStreamHelper {
   final MediaStreamsModel mediaStream;

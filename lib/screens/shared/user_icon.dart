@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/account_model.dart';
-import 'package:fladder/screens/shared/flat_button.dart';
-import 'package:fladder/util/custom_cache_manager.dart';
-import 'package:fladder/util/string_extensions.dart';
+import 'package:kinos/models/account_model.dart';
+import 'package:kinos/screens/shared/flat_button.dart';
+import 'package:kinos/util/custom_cache_manager.dart';
+import 'package:kinos/util/string_extensions.dart';
 
 class UserIcon extends ConsumerWidget {
   final AccountModel? user;

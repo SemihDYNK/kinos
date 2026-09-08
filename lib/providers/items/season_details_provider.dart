@@ -1,14 +1,14 @@
 import 'dart:developer';
 
 import 'package:chopper/chopper.dart';
-import 'package:fladder/models/items/special_feature_model.dart';
+import 'package:kinos/models/items/special_feature_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/models/items/episode_model.dart';
-import 'package:fladder/models/items/season_model.dart';
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/service_provider.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/models/items/episode_model.dart';
+import 'package:kinos/models/items/season_model.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/service_provider.dart';
 import 'package:logging/logging.dart' as logging;
 
 final seasonDetailsProvider =

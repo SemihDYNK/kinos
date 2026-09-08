@@ -3,7 +3,7 @@ import 'dart:developer';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:fladder/models/credentials_model.dart';
+import 'package:kinos/models/credentials_model.dart';
 
 /// Persists [CredentialsModel] (server URL, token, deviceId, ...) in the
 /// platform's secure credential vault instead of plain SharedPreferences -

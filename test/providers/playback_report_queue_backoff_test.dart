@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/providers/playback_report_queue_provider.dart';
+import 'package:kinos/providers/playback_report_queue_provider.dart';
 
 void main() {
   group('PlaybackReportQueueWorker.backoffForAttempts', () {

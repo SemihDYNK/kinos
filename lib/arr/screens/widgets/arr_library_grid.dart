@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:fladder/arr/models/arr_library_entry.dart';
-import 'package:fladder/arr/models/arr_library_poster.dart';
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/arr/models/arr_library_entry.dart';
+import 'package:kinos/arr/models/arr_library_poster.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Grille de jaquettes de la bibliothèque — virtualisée (`GridView
 /// .builder`, la bibliothèque peut faire plusieurs milliers d'entrées) :

@@ -3,10 +3,10 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 
-import 'package:fladder/models/api_result.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/models/api_result.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 class FladderSnack {
   static final FladderSnack _instance = FladderSnack._internal();

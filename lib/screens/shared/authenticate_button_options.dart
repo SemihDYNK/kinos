@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/account_model.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/screens/shared/passcode_input.dart';
-import 'package:fladder/util/auth_service.dart';
-import 'package:fladder/util/list_padding.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/models/account_model.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/passcode_input.dart';
+import 'package:kinos/util/auth_service.dart';
+import 'package:kinos/util/list_padding.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 Future<void> showAuthOptionsDialogue(
   BuildContext context,

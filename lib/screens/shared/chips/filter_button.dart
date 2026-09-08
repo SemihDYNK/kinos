@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Bouton de filtre sobre — texte (+ icône optionnelle) dans un cadre fin,
 /// jamais une pastille pleinement arrondie ni un fond coloré plein.

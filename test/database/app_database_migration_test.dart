@@ -3,7 +3,7 @@ import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/models/syncing/database_item.dart';
+import 'package:kinos/models/syncing/database_item.dart';
 
 import '../drift_generated/schema.dart';
 import '../drift_generated/schema_v1.dart' as v1;

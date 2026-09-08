@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/models/items/images_models.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/fladder_image.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/fladder_image.dart';
 
 /// Vignette 16:9 avec repli : [thumbnail] (Thumb ou Backdrop, déjà en
 /// 16:9) en cover si disponible, sinon [fallback] (typiquement Primary,

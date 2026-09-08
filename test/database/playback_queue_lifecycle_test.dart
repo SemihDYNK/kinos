@@ -3,7 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/models/syncing/database_item.dart';
+import 'package:kinos/models/syncing/database_item.dart';
 
 /// See app_database_migration_test.dart: AppDatabase takes a [Ref] only to
 /// read the logged-in account's id for its query helpers - not exercised by

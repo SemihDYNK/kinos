@@ -10,11 +10,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 
-import 'package:fladder/background/update_notifications_worker.dart';
-import 'package:fladder/models/last_seen_notifications_model.dart';
-import 'package:fladder/providers/arguments_provider.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/providers/shared_provider.dart';
+import 'package:kinos/background/update_notifications_worker.dart';
+import 'package:kinos/models/last_seen_notifications_model.dart';
+import 'package:kinos/providers/arguments_provider.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/providers/shared_provider.dart';
 
 final supportsNotificationsProvider = Provider.autoDispose<bool>((ref) {
   final leanBackMode = ref.watch(argumentsStateProvider.select((value) => value.leanBackMode));

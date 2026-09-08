@@ -1,4 +1,4 @@
-import 'package:fladder/util/video_properties.dart';
+import 'package:kinos/util/video_properties.dart';
 
 /// Étiquette du badge qualité affiché dans le lecteur — jamais le profil
 /// source brut (ex. "DoVi/HDR10") : le HDR est tonemappé vers SDR par

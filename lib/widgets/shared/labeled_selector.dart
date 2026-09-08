@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/widgets/shared/anchored_popover.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/anchored_popover.dart';
 
 /// Sélecteur sobre "Libellé · valeur" qui ouvre une liste de choix — jamais
 /// une pastille remplie (cf. CLAUDE.md, pas de couleur d'accent

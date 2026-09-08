@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/library_search/library_search_options.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/dashboard/single_row_section.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/library_search/library_search_options.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/dashboard/single_row_section.dart';
 
 /// Rangée "Ajouts récents" — une ligne (cf. [SingleRowSection]), "tout voir"
 /// mène à la vue complète triée par date d'ajout.

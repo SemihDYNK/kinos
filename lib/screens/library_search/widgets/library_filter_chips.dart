@@ -4,22 +4,22 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/models/library_search/library_search_model.dart';
-import 'package:fladder/models/library_search/library_search_options.dart';
-import 'package:fladder/providers/library_search_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/seerr/widgets/seerr_filter_dialogs.dart';
-import 'package:fladder/screens/shared/chips/category_chip.dart';
-import 'package:fladder/screens/shared/chips/filter_button.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/map_bool_helper.dart';
-import 'package:fladder/util/refresh_state.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/models/library_search/library_search_model.dart';
+import 'package:kinos/models/library_search/library_search_options.dart';
+import 'package:kinos/providers/library_search_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_filter_dialogs.dart';
+import 'package:kinos/screens/shared/chips/category_chip.dart';
+import 'package:kinos/screens/shared/chips/filter_button.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/map_bool_helper.dart';
+import 'package:kinos/util/refresh_state.dart';
 
 class LibraryFilterChips extends ConsumerStatefulWidget {
   const LibraryFilterChips({super.key});

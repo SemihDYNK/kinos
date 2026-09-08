@@ -1,5 +1,5 @@
-import 'package:fladder/models/items/images_models.dart';
-import 'package:fladder/providers/api_provider.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/providers/api_provider.dart';
 
 const _tmdbPosterBaseUrl = 'https://image.tmdb.org/t/p/w500';
 const _tmdbBackdropBaseUrl = 'https://image.tmdb.org/t/p/w780';

@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/models/settings/home_row_model.dart';
-import 'package:fladder/providers/dashboard/home_row_items_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/dashboard/single_row_section.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/models/settings/home_row_model.dart';
+import 'package:kinos/providers/dashboard/home_row_items_provider.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/dashboard/single_row_section.dart';
 
 /// Une rangée configurable de l'accueil (cf. [HomeRowType]).
 ///

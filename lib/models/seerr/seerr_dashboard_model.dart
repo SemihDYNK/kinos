@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/images_models.dart';
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/models/items/movie_model.dart';
-import 'package:fladder/models/items/overview_model.dart';
-import 'package:fladder/models/items/series_model.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/models/items/movie_model.dart';
+import 'package:kinos/models/items/overview_model.dart';
+import 'package:kinos/models/items/series_model.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 enum SeerrRequestStatus {
   unknown,

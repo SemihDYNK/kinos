@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 class PosterPlaceholder extends StatelessWidget {
   final ItemBaseModel item;

@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/items/season_model.dart';
-import 'package:fladder/providers/sync/sync_provider_helpers.dart';
-import 'package:fladder/screens/syncing/sync_button.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/fladder_image.dart';
-import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/widgets/shared/clickable_text.dart';
-import 'package:fladder/widgets/shared/horizontal_list.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
-import 'package:fladder/widgets/shared/status_card.dart';
+import 'package:kinos/models/items/season_model.dart';
+import 'package:kinos/providers/sync/sync_provider_helpers.dart';
+import 'package:kinos/screens/syncing/sync_button.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/focus_provider.dart';
+import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/refresh_state.dart';
+import 'package:kinos/widgets/shared/clickable_text.dart';
+import 'package:kinos/widgets/shared/horizontal_list.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
+import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
+import 'package:kinos/widgets/shared/status_card.dart';
 
 class SeasonsRow extends ConsumerWidget {
   final EdgeInsets contentPadding;

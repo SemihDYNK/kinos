@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/qbittorrent_credentials.dart';
-import 'package:fladder/arr/services/qbittorrent_api_client.dart';
-import 'package:fladder/arr/services/qbittorrent_credentials_store.dart';
+import 'package:kinos/arr/models/qbittorrent_credentials.dart';
+import 'package:kinos/arr/services/qbittorrent_api_client.dart';
+import 'package:kinos/arr/services/qbittorrent_credentials_store.dart';
 
 final qbittorrentCredentialsStoreProvider =
     Provider<QBittorrentCredentialsStore>(

@@ -1,5 +1,5 @@
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/widgets/shared/fladder_slider.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/widgets/shared/fladder_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

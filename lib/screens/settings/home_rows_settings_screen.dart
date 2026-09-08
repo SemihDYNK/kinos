@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/models/settings/home_row_model.dart';
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/settings/home_rows_provider.dart';
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/models/settings/home_row_model.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/settings/home_rows_provider.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Écran de configuration des rangées de l'accueil : activation,
 /// réordonnancement (glisser-déposer + équivalent clavier), ajout.

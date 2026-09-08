@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/arr_credentials.dart';
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/services/arr_api_client.dart';
-import 'package:fladder/arr/services/arr_credentials_store.dart';
+import 'package:kinos/arr/models/arr_credentials.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
+import 'package:kinos/arr/services/arr_credentials_store.dart';
 
 final arrCredentialsStoreProvider =
     Provider<ArrCredentialsStore>((ref) => const ArrCredentialsStore());

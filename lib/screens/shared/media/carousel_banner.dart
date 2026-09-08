@@ -4,19 +4,19 @@ import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/screens/shared/media/banner_play_button.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/fladder_image.dart';
-import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
-import 'package:fladder/util/list_padding.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/themes_data.dart';
-import 'package:fladder/widgets/shared/ensure_visible.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/screens/shared/media/banner_play_button.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/focus_provider.dart';
+import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
+import 'package:kinos/util/list_padding.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/themes_data.dart';
+import 'package:kinos/widgets/shared/ensure_visible.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
+import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 
 class CarouselBanner extends ConsumerStatefulWidget {
   final PageController? controller;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/util/focus_provider.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 class TunerHostCard extends StatelessWidget {
   final TunerHostInfo tunerHost;

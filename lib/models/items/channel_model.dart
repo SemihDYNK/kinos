@@ -1,15 +1,15 @@
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart' as dto;
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/l10n/generated/app_localizations.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/channel_program.dart';
-import 'package:fladder/models/items/images_models.dart';
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/models/items/overview_model.dart';
-import 'package:fladder/models/items/watched_state.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart' as dto;
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/l10n/generated/app_localizations.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/channel_program.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/models/items/overview_model.dart';
+import 'package:kinos/models/items/watched_state.dart';
 
 class ChannelModel extends ItemBaseModel {
   final String channelId;

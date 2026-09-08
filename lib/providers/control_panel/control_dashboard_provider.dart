@@ -1,9 +1,9 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart' as jelly;
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/service_provider.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart' as jelly;
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/service_provider.dart';
 
 part 'control_dashboard_provider.freezed.dart';
 part 'control_dashboard_provider.g.dart';

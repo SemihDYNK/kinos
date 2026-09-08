@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/media_playback_model.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/screens/shared/animated_fade_size.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/floating_player_bar.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/models/media_playback_model.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/screens/shared/animated_fade_size.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/floating_player_bar.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 class BottomMenuBar extends ConsumerWidget {
   final List<ItemAction> actions;

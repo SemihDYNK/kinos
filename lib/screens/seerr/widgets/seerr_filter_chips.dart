@@ -4,15 +4,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/providers/seerr_search_provider.dart';
-import 'package:fladder/screens/seerr/widgets/seerr_filter_dialogs.dart';
-import 'package:fladder/screens/shared/chips/category_chip.dart';
-import 'package:fladder/screens/shared/chips/filter_button.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/map_bool_helper.dart';
-import 'package:fladder/util/refresh_state.dart';
+import 'package:kinos/providers/seerr_search_provider.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_filter_dialogs.dart';
+import 'package:kinos/screens/shared/chips/category_chip.dart';
+import 'package:kinos/screens/shared/chips/filter_button.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/map_bool_helper.dart';
+import 'package:kinos/util/refresh_state.dart';
 
 class SeerrFilterChips extends ConsumerWidget {
   const SeerrFilterChips({super.key});

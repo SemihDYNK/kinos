@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 /// Libellé d'une piste audio ou sous-titre, décomposé plutôt que le
 /// `DisplayTitle` brut de Jellyfin (souvent une concaténation illisible,

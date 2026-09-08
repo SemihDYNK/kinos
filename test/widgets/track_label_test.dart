@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/l10n/generated/app_localizations.dart';
-import 'package:fladder/localization_delegates.dart';
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/track_label.dart';
+import 'package:kinos/l10n/generated/app_localizations.dart';
+import 'package:kinos/localization_delegates.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/track_label.dart';
 
 void main() {
   group('formatChannelLayout', () {

@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-import 'package:fladder/arr/services/arr_api_client.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
 
 void main() {
   group('ArrApiClient.testConnection', () {

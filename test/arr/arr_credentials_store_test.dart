@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/arr/models/arr_credentials.dart';
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/services/arr_credentials_store.dart';
+import 'package:kinos/arr/models/arr_credentials.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/services/arr_credentials_store.dart';
 
 import '../support/fake_secure_storage_platform.dart';
 

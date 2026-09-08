@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/arr_media_detail.dart';
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/providers/arr_search_providers.dart';
-import 'package:fladder/arr/services/arr_api_client.dart';
+import 'package:kinos/arr/models/arr_media_detail.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_search_providers.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
 
 /// Identifie une fiche détail — instance ET identifiant d'œuvre, jamais
 /// partagé avec la grille bibliothèque ni la file d'attente (cf.

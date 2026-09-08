@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/items/chapters_model.dart';
-import 'package:fladder/models/items/media_segments_model.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/util/duration_extensions.dart';
-import 'package:fladder/util/list_padding.dart';
-import 'package:fladder/util/string_extensions.dart';
-import 'package:fladder/widgets/gapped_container_shape.dart';
-import 'package:fladder/widgets/shared/fladder_slider.dart';
-import 'package:fladder/widgets/shared/trick_play_image.dart';
+import 'package:kinos/models/items/chapters_model.dart';
+import 'package:kinos/models/items/media_segments_model.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/util/duration_extensions.dart';
+import 'package:kinos/util/list_padding.dart';
+import 'package:kinos/util/string_extensions.dart';
+import 'package:kinos/widgets/gapped_container_shape.dart';
+import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/trick_play_image.dart';
 
 class VideoProgressBar extends ConsumerStatefulWidget {
   final Function(bool value) wasPlayingChanged;

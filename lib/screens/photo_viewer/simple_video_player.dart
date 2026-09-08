@@ -7,20 +7,20 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'package:fladder/models/items/photos_model.dart';
-import 'package:fladder/models/settings/video_player_settings.dart';
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/settings/photo_view_settings_provider.dart';
-import 'package:fladder/providers/settings/video_player_settings_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/duration_extensions.dart';
-import 'package:fladder/util/fladder_image.dart';
-import 'package:fladder/widgets/shared/fladder_slider.dart';
-import 'package:fladder/wrappers/players/base_player.dart';
-import 'package:fladder/wrappers/players/lib_mdk.dart'
-    if (dart.library.html) 'package:fladder/stubs/web/lib_mdk_web.dart';
-import 'package:fladder/wrappers/players/lib_mpv.dart';
+import 'package:kinos/models/items/photos_model.dart';
+import 'package:kinos/models/settings/video_player_settings.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/settings/photo_view_settings_provider.dart';
+import 'package:kinos/providers/settings/video_player_settings_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/duration_extensions.dart';
+import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/wrappers/players/base_player.dart';
+import 'package:kinos/wrappers/players/lib_mdk.dart'
+    if (dart.library.html) 'package:kinos/stubs/web/lib_mdk_web.dart';
+import 'package:kinos/wrappers/players/lib_mpv.dart';
 
 class SimpleVideoPlayer extends ConsumerStatefulWidget {
   final PhotoModel video;

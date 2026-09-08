@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/providers/arr_providers.dart';
-import 'package:fladder/arr/services/arr_api_client.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_providers.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
 
 /// Client Radarr typé, ou `null` tant que le service n'est pas configuré —
 /// centralise le seul endroit où [arrApiClientProvider] (typé

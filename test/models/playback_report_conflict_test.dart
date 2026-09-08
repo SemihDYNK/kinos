@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/models/playback/playback_report_conflict.dart';
+import 'package:kinos/models/playback/playback_report_conflict.dart';
 
 void main() {
   group('PlaybackConflictResolver', () {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/widgets/shared/anchored_popover.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/anchored_popover.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 /// Sélecteur sobre "libellé + valeur actuelle" (profil de qualité, dossier
 /// racine, serveur, tags, demandeur...) — remplace `EnumSelection` dans la

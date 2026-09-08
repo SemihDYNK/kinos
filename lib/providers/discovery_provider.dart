@@ -6,9 +6,9 @@ import 'dart:io';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/providers/service_provider.dart';
-import 'package:fladder/services/local_network_permission.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/providers/service_provider.dart';
+import 'package:kinos/services/local_network_permission.dart';
 
 part 'discovery_provider.g.dart';
 part 'discovery_provider.mapper.dart';

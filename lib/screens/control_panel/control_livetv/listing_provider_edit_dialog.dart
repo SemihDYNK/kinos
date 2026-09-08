@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/providers/control_panel/control_tuner_edit_provider.dart';
-import 'package:fladder/screens/shared/outlined_text_field.dart';
-import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/enum_selection.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/providers/control_panel/control_tuner_edit_provider.dart';
+import 'package:kinos/screens/shared/outlined_text_field.dart';
+import 'package:kinos/util/focus_provider.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/enum_selection.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 class ListingProviderEditDialog extends StatefulWidget {
   final ListingsProviderInfo? provider;

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:square_progress_indicator/square_progress_indicator.dart';
 
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 class AutoApproveBanner extends StatelessWidget {
   final SeerrUserModel? user;

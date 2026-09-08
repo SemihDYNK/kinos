@@ -7,19 +7,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-import 'package:fladder/models/book_model.dart';
-import 'package:fladder/providers/book_viewer_provider.dart';
-import 'package:fladder/providers/items/book_details_provider.dart';
-import 'package:fladder/providers/settings/book_viewer_settings_provider.dart';
-import 'package:fladder/screens/book_viewer/book_viewer_chapters.dart';
-import 'package:fladder/screens/book_viewer/book_viewer_settings.dart';
-import 'package:fladder/screens/shared/default_title_bar.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/input_handler.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/throttler.dart';
-import 'package:fladder/widgets/shared/fladder_slider.dart';
+import 'package:kinos/models/book_model.dart';
+import 'package:kinos/providers/book_viewer_provider.dart';
+import 'package:kinos/providers/items/book_details_provider.dart';
+import 'package:kinos/providers/settings/book_viewer_settings_provider.dart';
+import 'package:kinos/screens/book_viewer/book_viewer_chapters.dart';
+import 'package:kinos/screens/book_viewer/book_viewer_settings.dart';
+import 'package:kinos/screens/shared/default_title_bar.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/input_handler.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/throttler.dart';
+import 'package:kinos/widgets/shared/fladder_slider.dart';
 
 class BookViewController {
   bool controlsVisible = true;

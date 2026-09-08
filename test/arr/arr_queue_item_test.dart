@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/arr/models/arr_queue_item.dart';
+import 'package:kinos/arr/models/arr_queue_item.dart';
 
 void main() {
   group('ArrQueueStatus.fromApi', () {

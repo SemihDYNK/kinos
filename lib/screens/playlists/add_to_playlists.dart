@@ -4,15 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:square_progress_indicator/square_progress_indicator.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/providers/playlist_provider.dart';
-import 'package:fladder/screens/shared/adaptive_dialog.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/screens/shared/outlined_text_field.dart';
-import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/alert_content.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/providers/playlist_provider.dart';
+import 'package:kinos/screens/shared/adaptive_dialog.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/outlined_text_field.dart';
+import 'package:kinos/util/focus_provider.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/alert_content.dart';
+import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 
 Future<void> addItemToPlaylist(BuildContext context, List<ItemBaseModel> item) {
   return showDialogAdaptive(context: context, builder: (context) => AddToPlaylist(items: item));

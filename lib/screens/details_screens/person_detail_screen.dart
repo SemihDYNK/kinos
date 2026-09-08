@@ -4,20 +4,20 @@ import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/providers/items/person_details_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/screens/seerr/widgets/seerr_poster_row.dart';
-import 'package:fladder/screens/shared/detail_scaffold.dart';
-import 'package:fladder/screens/shared/media/external_urls.dart';
-import 'package:fladder/screens/shared/media/poster_row.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/fladder_image.dart';
-import 'package:fladder/util/list_extensions.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/string_extensions.dart';
-import 'package:fladder/util/widget_extensions.dart';
-import 'package:fladder/widgets/shared/selectable_icon_button.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/providers/items/person_details_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_poster_row.dart';
+import 'package:kinos/screens/shared/detail_scaffold.dart';
+import 'package:kinos/screens/shared/media/external_urls.dart';
+import 'package:kinos/screens/shared/media/poster_row.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/list_extensions.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/string_extensions.dart';
+import 'package:kinos/util/widget_extensions.dart';
+import 'package:kinos/widgets/shared/selectable_icon_button.dart';
 
 class PersonDetailScreen extends ConsumerStatefulWidget {
   final Person person;

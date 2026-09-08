@@ -1,4 +1,4 @@
-import 'package:fladder/arr/models/arr_library_item.dart';
+import 'package:kinos/arr/models/arr_library_item.dart';
 
 /// Film ou série choisi dans la recherche bibliothèque — l'un des deux
 /// champs est renseigné, jamais les deux (cf. les constructeurs nommés).

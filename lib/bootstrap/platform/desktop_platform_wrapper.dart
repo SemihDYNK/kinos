@@ -5,17 +5,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:macos_window_utils/window_manipulator.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:smtc_windows/smtc_windows.dart' if (dart.library.html) 'package:fladder/stubs/web/smtc_web.dart';
+import 'package:smtc_windows/smtc_windows.dart' if (dart.library.html) 'package:kinos/stubs/web/smtc_web.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'package:fladder/bootstrap/platform/base_app_wrapper.dart';
-import 'package:fladder/logic/application_menu.dart';
-import 'package:fladder/providers/arguments_provider.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/src/application_menu.g.dart';
-import 'package:fladder/util/macos_window_helpers.dart';
-import 'package:fladder/util/window_helper.dart';
+import 'package:kinos/bootstrap/platform/base_app_wrapper.dart';
+import 'package:kinos/logic/application_menu.dart';
+import 'package:kinos/providers/arguments_provider.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/src/application_menu.g.dart';
+import 'package:kinos/util/macos_window_helpers.dart';
+import 'package:kinos/util/window_helper.dart';
 
 class DesktopAppWrapper extends BaseAppWrapper {
   const DesktopAppWrapper({super.key, required super.builder});

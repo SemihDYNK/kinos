@@ -4,21 +4,21 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/images_models.dart';
-import 'package:fladder/providers/theme/app_theme_provider.dart';
-import 'package:fladder/providers/theme/palette_service_provider.dart';
-import 'package:fladder/providers/window_title_provider.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/theme/palette_service.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/router_extension.dart';
-import 'package:fladder/util/sliver_list_padding.dart';
-import 'package:fladder/widgets/shared/fading_hero_backdrop.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
-import 'package:fladder/widgets/shared/pull_to_refresh.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/providers/theme/app_theme_provider.dart';
+import 'package:kinos/providers/theme/palette_service_provider.dart';
+import 'package:kinos/providers/window_title_provider.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/theme/palette_service.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/router_extension.dart';
+import 'package:kinos/util/sliver_list_padding.dart';
+import 'package:kinos/widgets/shared/fading_hero_backdrop.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
+import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
+import 'package:kinos/widgets/shared/pull_to_refresh.dart';
 
 /// Écran de détail film/série (et fiche Seerr, cf. `SeerrDetailsScreen`) —
 /// même langage visuel que le tableau de bord : bandeau plein cadre teinté

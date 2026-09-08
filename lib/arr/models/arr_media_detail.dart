@@ -1,4 +1,4 @@
-import 'package:fladder/arr/models/arr_library_item.dart';
+import 'package:kinos/arr/models/arr_library_item.dart';
 
 /// Fanart (bandeau) d'un film/série — cf. [resolveArrImageUrl].
 String? resolveArrFanartUrl(

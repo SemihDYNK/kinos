@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout_model.dart';
-import 'package:fladder/util/poster_defaults.dart';
-import 'package:fladder/widgets/shared/anchored_popover.dart';
-import 'package:fladder/widgets/shared/modal_side_sheet.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout_model.dart';
+import 'package:kinos/util/poster_defaults.dart';
+import 'package:kinos/widgets/shared/anchored_popover.dart';
+import 'package:kinos/widgets/shared/modal_side_sheet.dart';
 
 // `showModalSideSheet` lit `AdaptiveLayout.of(context)` — un modèle minimal
 // suffit ici, la modale de demande Seerr (vrai appelant) en fournit un réel

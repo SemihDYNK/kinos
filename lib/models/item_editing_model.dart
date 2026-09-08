@@ -4,12 +4,12 @@ import 'package:flutter/widgets.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart' as jelly;
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/models/items/series_model.dart';
-import 'package:fladder/providers/image_provider.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart' as jelly;
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/models/items/series_model.dart';
+import 'package:kinos/providers/image_provider.dart';
 
 class EditItemsProvider {
   final List<EditingImageModel> serverImages;

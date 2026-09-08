@@ -5,22 +5,22 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/account_model.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/library_filter_model.dart';
-import 'package:fladder/models/media_playback_model.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/routes/auto_router.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/shared/user_icon.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/navigation_body.dart';
-import 'package:fladder/widgets/shared/custom_tooltip.dart';
+import 'package:kinos/models/account_model.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/library_filter_model.dart';
+import 'package:kinos/models/media_playback_model.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/routes/auto_router.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/shared/user_icon.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/navigation_body.dart';
+import 'package:kinos/widgets/shared/custom_tooltip.dart';
 
 /// Cible d'échappement clavier depuis le contenu : GridFocusTraveler et
 /// FocusRow y renvoient le focus quand on sort par la gauche (flèche

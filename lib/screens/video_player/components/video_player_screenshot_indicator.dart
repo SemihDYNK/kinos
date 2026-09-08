@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:async/async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/models/playback/playback_model.dart';
-import 'package:fladder/models/settings/video_player_settings.dart';
-import 'package:fladder/providers/settings/video_player_settings_provider.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/util/input_handler.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/models/playback/playback_model.dart';
+import 'package:kinos/models/settings/video_player_settings.dart';
+import 'package:kinos/providers/settings/video_player_settings_provider.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/util/input_handler.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 class VideoPlayerScreenshotIndicator extends ConsumerStatefulWidget {
   const VideoPlayerScreenshotIndicator({super.key});

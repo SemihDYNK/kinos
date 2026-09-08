@@ -6,17 +6,17 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/bootstrap/app_bootstrap.dart';
-import 'package:fladder/models/settings/arguments_model.dart';
-import 'package:fladder/models/settings/client_settings_model.dart';
-import 'package:fladder/models/settings/key_combinations.dart';
-import 'package:fladder/providers/arguments_provider.dart';
-import 'package:fladder/providers/shared_provider.dart';
-import 'package:fladder/providers/sync_provider.dart';
-import 'package:fladder/providers/update_notifications_provider.dart';
-import 'package:fladder/src/directory_bookmark.g.dart';
-import 'package:fladder/util/custom_color_themes.dart';
-import 'package:fladder/util/debouncer.dart';
+import 'package:kinos/bootstrap/app_bootstrap.dart';
+import 'package:kinos/models/settings/arguments_model.dart';
+import 'package:kinos/models/settings/client_settings_model.dart';
+import 'package:kinos/models/settings/key_combinations.dart';
+import 'package:kinos/providers/arguments_provider.dart';
+import 'package:kinos/providers/shared_provider.dart';
+import 'package:kinos/providers/sync_provider.dart';
+import 'package:kinos/providers/update_notifications_provider.dart';
+import 'package:kinos/src/directory_bookmark.g.dart';
+import 'package:kinos/util/custom_color_themes.dart';
+import 'package:kinos/util/debouncer.dart';
 
 final clientSettingsProvider = StateNotifierProvider<ClientSettingsNotifier, ClientSettingsModel>((ref) {
   return ClientSettingsNotifier(ref);

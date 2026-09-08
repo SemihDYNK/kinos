@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/arr/models/arr_media_detail.dart';
-import 'package:fladder/arr/screens/widgets/arr_detail_edit_dialog.dart';
+import 'package:kinos/arr/models/arr_media_detail.dart';
+import 'package:kinos/arr/screens/widgets/arr_detail_edit_dialog.dart';
 
 void main() {
   ArrDetailEntry entry() {

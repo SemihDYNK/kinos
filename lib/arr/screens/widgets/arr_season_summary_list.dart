@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/arr/models/arr_media_detail.dart';
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/arr/models/arr_media_detail.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Liste des saisons d'une série sur la fiche détail — épisodes
 /// présents/total et surveillance, par saison. Purement informatif :

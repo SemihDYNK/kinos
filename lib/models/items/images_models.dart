@@ -8,10 +8,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart' as enums;
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart' as dto;
-import 'package:fladder/providers/image_provider.dart';
-import 'package:fladder/util/custom_cache_manager.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart' as enums;
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart' as dto;
+import 'package:kinos/providers/image_provider.dart';
+import 'package:kinos/util/custom_cache_manager.dart';
 
 class ImagesData {
   final ImageData? primary;

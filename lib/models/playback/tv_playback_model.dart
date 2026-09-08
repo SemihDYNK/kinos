@@ -4,22 +4,22 @@ import 'dart:developer';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/channel_model.dart';
-import 'package:fladder/models/items/channel_program.dart';
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/models/live_tv_model.dart';
-import 'package:fladder/models/playback/playback_model.dart';
-import 'package:fladder/models/playback/playback_queue_state.dart';
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/live_tv_provider.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/src/video_player_helper.g.dart';
-import 'package:fladder/util/bitrate_helper.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/wrappers/media_control_wrapper.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/channel_model.dart';
+import 'package:kinos/models/items/channel_program.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/models/live_tv_model.dart';
+import 'package:kinos/models/playback/playback_model.dart';
+import 'package:kinos/models/playback/playback_queue_state.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/live_tv_provider.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/src/video_player_helper.g.dart';
+import 'package:kinos/util/bitrate_helper.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/wrappers/media_control_wrapper.dart';
 
 class TvPlaybackModel extends PlaybackModel {
   static Timer? _refreshTimer;

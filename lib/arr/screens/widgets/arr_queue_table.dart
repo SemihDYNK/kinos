@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:fladder/arr/models/arr_queue_item.dart';
-import 'package:fladder/screens/details_screens/components/media_info_formatters.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/widgets/shared/focus_row.dart';
+import 'package:kinos/arr/models/arr_queue_item.dart';
+import 'package:kinos/screens/details_screens/components/media_info_formatters.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/focus_row.dart';
 
 enum _ArrQueueColumn {
   title,

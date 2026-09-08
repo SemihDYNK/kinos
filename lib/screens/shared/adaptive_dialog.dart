@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 
 /// [backgroundColor]/[shape] : repli inchangé (thème par défaut de
 /// [Dialog]) si omis — n'affecte donc aucun des appelants existants.

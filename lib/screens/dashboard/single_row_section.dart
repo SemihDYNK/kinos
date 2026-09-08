@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/fladder_image.dart';
-import 'package:fladder/widgets/shared/grid_focus_traveler.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/widgets/shared/grid_focus_traveler.dart';
 
 /// Grille "Ajouts récents" à une ligne, réutilisée par toutes les sections
 /// de l'accueil (fixes et rangées configurables) : une vraie grille qui

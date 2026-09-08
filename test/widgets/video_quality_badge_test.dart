@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/screens/video_player/components/video_quality_badge.dart';
-import 'package:fladder/util/video_properties.dart';
+import 'package:kinos/screens/video_player/components/video_quality_badge.dart';
+import 'package:kinos/util/video_properties.dart';
 
 void main() {
   group('playerHdrBadgeLabel', () {

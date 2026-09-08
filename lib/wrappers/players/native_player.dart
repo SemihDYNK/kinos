@@ -3,16 +3,16 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/models/playback/direct_playback_model.dart';
-import 'package:fladder/models/playback/offline_playback_model.dart';
-import 'package:fladder/models/playback/playback_model.dart';
-import 'package:fladder/models/playback/transcode_playback_model.dart';
-import 'package:fladder/models/playback/tv_playback_model.dart';
-import 'package:fladder/models/settings/video_player_settings.dart';
-import 'package:fladder/src/video_player_helper.g.dart';
-import 'package:fladder/wrappers/players/base_player.dart';
-import 'package:fladder/wrappers/players/player_states.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/models/playback/direct_playback_model.dart';
+import 'package:kinos/models/playback/offline_playback_model.dart';
+import 'package:kinos/models/playback/playback_model.dart';
+import 'package:kinos/models/playback/transcode_playback_model.dart';
+import 'package:kinos/models/playback/tv_playback_model.dart';
+import 'package:kinos/models/settings/video_player_settings.dart';
+import 'package:kinos/src/video_player_helper.g.dart';
+import 'package:kinos/wrappers/players/base_player.dart';
+import 'package:kinos/wrappers/players/player_states.dart';
 
 bool nativeActivityStarted = false;
 

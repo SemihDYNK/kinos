@@ -4,13 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/settings/key_combinations.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/providers/settings/video_player_settings_provider.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/ensure_visible.dart';
+import 'package:kinos/models/settings/key_combinations.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/providers/settings/video_player_settings_provider.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/ensure_visible.dart';
 
 // Only use for actively checking if a shortcut is being changed
 bool changingShortCut = false;

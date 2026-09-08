@@ -5,22 +5,22 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/settings/client_settings_model.dart';
-import 'package:fladder/providers/dashboard_mode_provider.dart';
-import 'package:fladder/providers/sync_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/providers/window_title_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/screens/shared/global_hotkeys.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/string_extensions.dart';
-import 'package:fladder/widgets/keyboard/slide_in_keyboard.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/adaptive_fab.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/destination_model.dart';
-import 'package:fladder/widgets/navigation_scaffold/navigation_scaffold.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
+import 'package:kinos/models/settings/client_settings_model.dart';
+import 'package:kinos/providers/dashboard_mode_provider.dart';
+import 'package:kinos/providers/sync_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/providers/window_title_provider.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/global_hotkeys.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/string_extensions.dart';
+import 'package:kinos/widgets/keyboard/slide_in_keyboard.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/adaptive_fab.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/destination_model.dart';
+import 'package:kinos/widgets/navigation_scaffold/navigation_scaffold.dart';
+import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 
 enum HomeTabs {
   dashboard,

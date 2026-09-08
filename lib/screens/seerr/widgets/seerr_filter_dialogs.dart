@@ -5,17 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/providers/seerr_api_provider.dart';
-import 'package:fladder/providers/seerr_search_provider.dart';
-import 'package:fladder/screens/shared/outlined_text_field.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/custom_cache_manager.dart';
-import 'package:fladder/util/debouncer.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/widgets/shared/adaptive_range_input.dart';
-import 'package:fladder/widgets/shared/ensure_visible.dart';
+import 'package:kinos/providers/seerr_api_provider.dart';
+import 'package:kinos/providers/seerr_search_provider.dart';
+import 'package:kinos/screens/shared/outlined_text_field.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/custom_cache_manager.dart';
+import 'package:kinos/util/debouncer.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/refresh_state.dart';
+import 'package:kinos/widgets/shared/adaptive_range_input.dart';
+import 'package:kinos/widgets/shared/ensure_visible.dart';
 
 String yearLabel(BuildContext context, (int? minYear, int? maxYear) yearRange) {
   final minYear = yearRange.$1;

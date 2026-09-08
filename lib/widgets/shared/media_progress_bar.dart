@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Fine barre de progression, alignée sur le bord bas d'une vignette —
 /// visible seulement si [progress] (0-100) est entamé. Partagée entre

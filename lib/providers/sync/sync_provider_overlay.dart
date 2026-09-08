@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/models/syncing/sync_item.dart';
-import 'package:fladder/models/syncing/transcode_download_model.dart';
-import 'package:fladder/models/syncing/transcode_music_download_model.dart';
-import 'package:fladder/providers/sync_provider.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/models/syncing/sync_item.dart';
+import 'package:kinos/models/syncing/transcode_download_model.dart';
+import 'package:kinos/models/syncing/transcode_music_download_model.dart';
+import 'package:kinos/providers/sync_provider.dart';
 
 extension SyncOverlayHelpers on SyncNotifier {
   Future<void> writeOverlayFile(

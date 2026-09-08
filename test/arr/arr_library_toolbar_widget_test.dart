@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/providers/arr_library_providers.dart';
-import 'package:fladder/screens/shared/chips/filter_button.dart';
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_library_providers.dart';
+import 'package:kinos/screens/shared/chips/filter_button.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Reproduit la Row complète de la barre d'outils de ArrLibraryScreen
 /// (texte de raccourcis + 4 FilterButton + menu de tri + bouton de sens)

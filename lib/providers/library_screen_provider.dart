@@ -5,16 +5,16 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/models/collection_types.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/models/recommended_model.dart';
-import 'package:fladder/models/view_model.dart';
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/service_provider.dart';
-import 'package:fladder/providers/views_provider.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/models/collection_types.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/models/recommended_model.dart';
+import 'package:kinos/models/view_model.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/service_provider.dart';
+import 'package:kinos/providers/views_provider.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 part 'library_screen_provider.freezed.dart';
 part 'library_screen_provider.g.dart';

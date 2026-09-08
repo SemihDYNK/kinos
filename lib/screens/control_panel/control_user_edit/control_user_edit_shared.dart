@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/screens/settings/widgets/settings_list_group.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/screens/shared/outlined_text_field.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/extensions/day_of_week_extensions.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/string_extensions.dart';
-import 'package:fladder/widgets/shared/enum_selection.dart';
-import 'package:fladder/widgets/shared/filled_button_await.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/outlined_text_field.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/extensions/day_of_week_extensions.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/string_extensions.dart';
+import 'package:kinos/widgets/shared/enum_selection.dart';
+import 'package:kinos/widgets/shared/filled_button_await.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 class AccessSchedulesEditor extends StatelessWidget {
   final String label;

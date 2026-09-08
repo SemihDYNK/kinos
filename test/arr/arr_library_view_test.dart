@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/arr/providers/arr_library_providers.dart';
+import 'package:kinos/arr/providers/arr_library_providers.dart';
 
 void main() {
   group('ArrLibraryViewNotifier', () {

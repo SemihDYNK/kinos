@@ -5,24 +5,24 @@ import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/account_model.dart';
-import 'package:fladder/providers/control_panel/control_users_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/control_panel/widgets/auth_link_dialog.dart';
-import 'package:fladder/screens/control_panel/widgets/control_users_create.dart';
-import 'package:fladder/screens/settings/settings_scaffold.dart';
-import 'package:fladder/screens/settings/widgets/settings_label_divider.dart';
-import 'package:fladder/screens/shared/default_alert_dialog.dart';
-import 'package:fladder/screens/shared/user_icon.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/humanize_duration.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
-import 'package:fladder/widgets/shared/pull_to_refresh.dart';
+import 'package:kinos/models/account_model.dart';
+import 'package:kinos/providers/control_panel/control_users_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/control_panel/widgets/auth_link_dialog.dart';
+import 'package:kinos/screens/control_panel/widgets/control_users_create.dart';
+import 'package:kinos/screens/settings/settings_scaffold.dart';
+import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
+import 'package:kinos/screens/shared/default_alert_dialog.dart';
+import 'package:kinos/screens/shared/user_icon.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/focus_provider.dart';
+import 'package:kinos/util/humanize_duration.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/refresh_state.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
+import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
+import 'package:kinos/widgets/shared/pull_to_refresh.dart';
 
 @RoutePage()
 class ControlUsersPage extends ConsumerWidget {

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/screens/details_screens/person_detail_screen.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/fladder_image.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/string_extensions.dart';
-import 'package:fladder/widgets/shared/modal_bottom_sheet.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/screens/details_screens/person_detail_screen.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/fladder_image.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/string_extensions.dart';
+import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 
 /// Casting (grille compacte) et informations techniques, en deux colonnes —
 /// 60/40, l'une sous l'autre en dessous de [_narrowBreakpoint].

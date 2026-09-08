@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/screens/shared/outlined_text_field.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/screens/shared/outlined_text_field.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 String timePickerString(BuildContext context, Duration? duration) {
   if (duration == null) return context.localized.never;

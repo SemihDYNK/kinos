@@ -4,19 +4,19 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/items/album_model.dart';
-import 'package:fladder/models/items/artist_model.dart';
-import 'package:fladder/models/items/audio_model.dart';
-import 'package:fladder/models/items/episode_model.dart';
-import 'package:fladder/models/items/playlist_model.dart';
-import 'package:fladder/models/items/season_model.dart';
-import 'package:fladder/models/items/series_model.dart';
-import 'package:fladder/models/syncing/download_stream.dart';
-import 'package:fladder/models/syncing/sync_item.dart';
-import 'package:fladder/providers/sync/background_download_provider.dart';
-import 'package:fladder/providers/sync/sync_provider_helpers.dart';
-import 'package:fladder/providers/sync_provider.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/models/items/album_model.dart';
+import 'package:kinos/models/items/artist_model.dart';
+import 'package:kinos/models/items/audio_model.dart';
+import 'package:kinos/models/items/episode_model.dart';
+import 'package:kinos/models/items/playlist_model.dart';
+import 'package:kinos/models/items/season_model.dart';
+import 'package:kinos/models/items/series_model.dart';
+import 'package:kinos/models/syncing/download_stream.dart';
+import 'package:kinos/models/syncing/sync_item.dart';
+import 'package:kinos/providers/sync/background_download_provider.dart';
+import 'package:kinos/providers/sync/sync_provider_helpers.dart';
+import 'package:kinos/providers/sync_provider.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 const _cancellableStatuses = {
   TaskStatus.canceled,

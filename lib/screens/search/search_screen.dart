@@ -1,7 +1,7 @@
-import 'package:fladder/providers/search_provider.dart';
-import 'package:fladder/screens/shared/media/poster_grid.dart';
-import 'package:fladder/util/debouncer.dart';
-import 'package:fladder/util/string_extensions.dart';
+import 'package:kinos/providers/search_provider.dart';
+import 'package:kinos/screens/shared/media/poster_grid.dart';
+import 'package:kinos/util/debouncer.dart';
+import 'package:kinos/util/string_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

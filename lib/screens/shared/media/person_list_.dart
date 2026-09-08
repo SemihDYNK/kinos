@@ -1,5 +1,5 @@
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/screens/details_screens/details_screens.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/screens/details_screens/details_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

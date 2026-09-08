@@ -7,22 +7,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/chapters_model.dart';
-import 'package:fladder/models/items/images_models.dart';
-import 'package:fladder/models/items/item_shared_models.dart';
-import 'package:fladder/models/items/media_segments_model.dart';
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/models/items/trick_play_model.dart';
-import 'package:fladder/models/syncing/local_settings_table.dart';
-import 'package:fladder/models/syncing/palette_cache_table.dart';
-import 'package:fladder/models/syncing/playback_queue_table.dart';
-import 'package:fladder/models/syncing/sync_item.dart';
-import 'package:fladder/providers/user_provider.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/chapters_model.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
+import 'package:kinos/models/items/media_segments_model.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/models/items/trick_play_model.dart';
+import 'package:kinos/models/syncing/local_settings_table.dart';
+import 'package:kinos/models/syncing/palette_cache_table.dart';
+import 'package:kinos/models/syncing/playback_queue_table.dart';
+import 'package:kinos/models/syncing/sync_item.dart';
+import 'package:kinos/providers/user_provider.dart';
 
-export 'package:fladder/models/syncing/local_settings_table.dart';
-export 'package:fladder/models/syncing/palette_cache_table.dart';
-export 'package:fladder/models/syncing/playback_queue_table.dart';
+export 'package:kinos/models/syncing/local_settings_table.dart';
+export 'package:kinos/models/syncing/palette_cache_table.dart';
+export 'package:kinos/models/syncing/playback_queue_table.dart';
 
 part 'database_item.g.dart';
 

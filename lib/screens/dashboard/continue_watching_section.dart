@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/l10n/generated/app_localizations.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/episode_model.dart';
-import 'package:fladder/models/items/images_models.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/focus_row.dart';
-import 'package:fladder/widgets/shared/grid_focus_traveler.dart';
-import 'package:fladder/widgets/shared/media_progress_bar.dart';
-import 'package:fladder/widgets/shared/media_thumbnail.dart';
+import 'package:kinos/l10n/generated/app_localizations.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/episode_model.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/focus_row.dart';
+import 'package:kinos/widgets/shared/grid_focus_traveler.dart';
+import 'package:kinos/widgets/shared/media_progress_bar.dart';
+import 'package:kinos/widgets/shared/media_thumbnail.dart';
 
 /// En dessous de ce nombre d'items, la rangée n'est pas étalée sur toute la
 /// largeur — cf. [_SparseRow].

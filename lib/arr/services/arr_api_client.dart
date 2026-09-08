@@ -4,10 +4,10 @@ import 'dart:developer';
 
 import 'package:http/http.dart' as http;
 
-import 'package:fladder/arr/models/arr_library_item.dart';
-import 'package:fladder/arr/models/arr_media_detail.dart';
-import 'package:fladder/arr/models/arr_queue_item.dart';
-import 'package:fladder/arr/models/arr_release.dart';
+import 'package:kinos/arr/models/arr_library_item.dart';
+import 'package:kinos/arr/models/arr_media_detail.dart';
+import 'package:kinos/arr/models/arr_queue_item.dart';
+import 'package:kinos/arr/models/arr_release.dart';
 
 /// Catégories d'échec explicites, pour un message clair côté écran —
 /// jamais une exception brute affichée telle quelle.

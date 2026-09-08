@@ -9,13 +9,13 @@ import 'package:fvp/mdk.dart';
 import 'package:image/image.dart' as img;
 import 'package:video_player/video_player.dart';
 
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/models/playback/playback_model.dart';
-import 'package:fladder/models/settings/subtitle_settings_model.dart';
-import 'package:fladder/models/settings/video_player_settings.dart';
-import 'package:fladder/screens/video_player/video_player.dart' as video_screen;
-import 'package:fladder/wrappers/players/base_player.dart';
-import 'package:fladder/wrappers/players/player_states.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/models/playback/playback_model.dart';
+import 'package:kinos/models/settings/subtitle_settings_model.dart';
+import 'package:kinos/models/settings/video_player_settings.dart';
+import 'package:kinos/screens/video_player/video_player.dart' as video_screen;
+import 'package:kinos/wrappers/players/base_player.dart';
+import 'package:kinos/wrappers/players/player_states.dart';
 
 class LibMDK extends BasePlayer {
   VideoPlayerController? _controller;

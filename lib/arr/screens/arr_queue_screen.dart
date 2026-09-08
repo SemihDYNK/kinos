@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/providers/arr_queue_providers.dart';
-import 'package:fladder/arr/providers/qbittorrent_providers.dart';
-import 'package:fladder/arr/screens/widgets/arr_queue_table.dart';
-import 'package:fladder/arr/services/arr_api_client.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_queue_providers.dart';
+import 'package:kinos/arr/providers/qbittorrent_providers.dart';
+import 'package:kinos/arr/screens/widgets/arr_queue_table.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Onglet "File d'attente" — relie [arrQueueProvider] (polling 5s,
 /// `.family.autoDispose` par service) à [ArrQueueTable]. Cet écran est le

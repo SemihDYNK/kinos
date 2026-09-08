@@ -4,21 +4,21 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/providers/items/episode_details_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/screens/details_screens/components/media_info_formatters.dart';
-import 'package:fladder/screens/details_screens/components/media_info_section.dart';
-import 'package:fladder/screens/details_screens/components/media_meta_line.dart';
-import 'package:fladder/screens/details_screens/components/media_stream_selectors.dart';
-import 'package:fladder/screens/shared/media_detail_scaffold.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/humanize_duration.dart';
-import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
-import 'package:fladder/util/item_base_model/play_item_helpers.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/router_extension.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/providers/items/episode_details_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/screens/details_screens/components/media_info_formatters.dart';
+import 'package:kinos/screens/details_screens/components/media_info_section.dart';
+import 'package:kinos/screens/details_screens/components/media_meta_line.dart';
+import 'package:kinos/screens/details_screens/components/media_stream_selectors.dart';
+import 'package:kinos/screens/shared/media_detail_scaffold.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/humanize_duration.dart';
+import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
+import 'package:kinos/util/item_base_model/play_item_helpers.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/router_extension.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 /// Fiche d'un épisode ouvert directement (recherche, "Continuer à
 /// regarder"...) — même structure que [MediaDetailScaffold] pour film et

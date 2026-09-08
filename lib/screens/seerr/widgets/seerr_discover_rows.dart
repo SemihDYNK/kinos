@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/providers/seerr_dashboard_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/seerr/widgets/seerr_poster_row.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/providers/seerr_dashboard_provider.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_poster_row.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 /// Rangées de découverte Seerr — tendances, films/séries populaires, à
 /// venir — sourcées de [seerrDashboardProvider] (`/api/v1/discover/*`,

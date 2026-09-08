@@ -3,8 +3,8 @@ import 'dart:developer';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:fladder/arr/models/arr_credentials.dart';
-import 'package:fladder/arr/models/arr_service.dart';
+import 'package:kinos/arr/models/arr_credentials.dart';
+import 'package:kinos/arr/models/arr_service.dart';
 
 /// Persiste [ArrCredentials] (URL, clé API) dans le coffre sécurisé de la
 /// plateforme — même politique que [SecureCredentialsStore] pour les

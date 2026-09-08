@@ -4,13 +4,13 @@ import 'package:async/async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/account_model.dart';
-import 'package:fladder/models/settings/video_player_settings.dart';
-import 'package:fladder/providers/settings/video_player_settings_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/util/input_handler.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/models/account_model.dart';
+import 'package:kinos/models/settings/video_player_settings.dart';
+import 'package:kinos/providers/settings/video_player_settings_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/util/input_handler.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 /// Controller to trigger the seek indicator from outside (e.g., double-tap).
 /// The parent widget creates this controller and passes it to [VideoPlayerSeekIndicator],

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/arr/models/arr_library_item.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/widgets/shared/labeled_selector.dart';
+import 'package:kinos/arr/models/arr_library_item.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/labeled_selector.dart';
 
 /// Choix d'une saison entière ou d'un épisode précis, une fois une série
 /// sélectionnée — la recherche interactive Sonarr accepte l'un ou l'autre

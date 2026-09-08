@@ -8,11 +8,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:local_auth/local_auth.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.swagger.dart';
-import 'package:fladder/models/credentials_model.dart';
-import 'package:fladder/models/library_filters_model.dart';
-import 'package:fladder/models/seerr_credentials_model.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/models/credentials_model.dart';
+import 'package:kinos/models/library_filters_model.dart';
+import 'package:kinos/models/seerr_credentials_model.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 part 'account_model.freezed.dart';
 part 'account_model.g.dart';

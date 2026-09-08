@@ -6,27 +6,27 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/providers/dashboard_mode_provider.dart';
-import 'package:fladder/providers/dashboard_provider.dart';
-import 'package:fladder/providers/settings/home_rows_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/providers/views_provider.dart';
-import 'package:fladder/screens/dashboard/continue_watching_section.dart';
-import 'package:fladder/screens/dashboard/hero_carousel.dart';
-import 'package:fladder/screens/dashboard/home_row_section.dart';
-import 'package:fladder/screens/dashboard/music_dashboard_screen.dart';
-import 'package:fladder/screens/dashboard/recently_added_section.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/home_screen.dart';
-import 'package:fladder/screens/shared/nested_scaffold.dart';
-import 'package:fladder/screens/shared/nested_sliver_appbar.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/sliver_list_padding.dart';
-import 'package:fladder/widgets/shared/fading_hero_backdrop.dart';
-import 'package:fladder/widgets/shared/pull_to_refresh.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/providers/dashboard_mode_provider.dart';
+import 'package:kinos/providers/dashboard_provider.dart';
+import 'package:kinos/providers/settings/home_rows_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/providers/views_provider.dart';
+import 'package:kinos/screens/dashboard/continue_watching_section.dart';
+import 'package:kinos/screens/dashboard/hero_carousel.dart';
+import 'package:kinos/screens/dashboard/home_row_section.dart';
+import 'package:kinos/screens/dashboard/music_dashboard_screen.dart';
+import 'package:kinos/screens/dashboard/recently_added_section.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/home_screen.dart';
+import 'package:kinos/screens/shared/nested_scaffold.dart';
+import 'package:kinos/screens/shared/nested_sliver_appbar.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/sliver_list_padding.dart';
+import 'package:kinos/widgets/shared/fading_hero_backdrop.dart';
+import 'package:kinos/widgets/shared/pull_to_refresh.dart';
 
 /// Types de collection dans le périmètre du projet — films et séries
 /// uniquement (cf. CLAUDE.md § Périmètre).

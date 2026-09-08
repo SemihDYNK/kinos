@@ -1,11 +1,11 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:fladder/models/seerr/seerr_dashboard_model.dart';
-import 'package:fladder/providers/seerr_api_provider.dart';
-import 'package:fladder/providers/seerr_user_provider.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/util/map_bool_helper.dart';
+import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
+import 'package:kinos/providers/seerr_api_provider.dart';
+import 'package:kinos/providers/seerr_user_provider.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/util/map_bool_helper.dart';
 
 part 'seerr_search_provider.freezed.dart';
 part 'seerr_search_provider.g.dart';

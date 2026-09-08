@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/providers/api_provider.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/providers/api_provider.dart';
 
 typedef ArrJellyfinLinkQuery = ({String title, int? year, bool isMovie});
 typedef ArrJellyfinLinkMatch = ({String id, String name});

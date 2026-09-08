@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/settings/client_settings_model.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/screens/settings/widgets/key_listener.dart';
-import 'package:fladder/screens/settings/widgets/settings_label_divider.dart';
-import 'package:fladder/screens/settings/widgets/settings_list_group.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/models/settings/client_settings_model.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/screens/settings/widgets/key_listener.dart';
+import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
+import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 List<Widget> buildClientSettingsShortCuts(
   BuildContext context,

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/arr/models/arr_media_detail.dart';
+import 'package:kinos/arr/models/arr_media_detail.dart';
 
 void main() {
   group('extractArrRating', () {

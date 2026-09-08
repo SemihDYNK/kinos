@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/theme/palette_service.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/theme/palette_service.dart';
 
 void main() {
   late PaletteService service;

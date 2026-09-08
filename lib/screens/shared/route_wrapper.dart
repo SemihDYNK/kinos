@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/models/settings/client_settings_model.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/screens/shared/global_hotkeys.dart';
+import 'package:kinos/models/settings/client_settings_model.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/screens/shared/global_hotkeys.dart';
 
 class RouteWrapper extends StatelessWidget {
   final Widget child;

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
 
-import 'package:fladder/models/items/media_streams_model.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/labeled_selector.dart';
-import 'package:fladder/widgets/shared/track_label.dart';
+import 'package:kinos/models/items/media_streams_model.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/labeled_selector.dart';
+import 'package:kinos/widgets/shared/track_label.dart';
 
 /// Sélecteurs de version, piste audio et sous-titres — [LabeledSelector],
 /// jamais une pastille remplie (cf. CLAUDE.md, pas de couleur d'accent

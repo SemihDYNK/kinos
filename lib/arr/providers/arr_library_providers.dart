@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/arr_library_entry.dart';
-import 'package:fladder/arr/models/arr_library_item.dart';
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/providers/arr_search_providers.dart';
-import 'package:fladder/arr/services/arr_api_client.dart';
+import 'package:kinos/arr/models/arr_library_entry.dart';
+import 'package:kinos/arr/models/arr_library_item.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_search_providers.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
 
 /// État de la bibliothèque d'un service — `error` ne s'affiche que
 /// lorsque [entries] est vide, même logique que [ArrQueueState].

@@ -5,13 +5,13 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:xid/xid.dart';
 
-import 'package:fladder/models/library_filter_model.dart';
-import 'package:fladder/models/library_search/library_search_model.dart';
-import 'package:fladder/models/view_model.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/theme.dart';
-import 'package:fladder/util/color_extensions.dart';
-import 'package:fladder/util/string_extensions.dart';
+import 'package:kinos/models/library_filter_model.dart';
+import 'package:kinos/models/library_search/library_search_model.dart';
+import 'package:kinos/models/view_model.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/theme.dart';
+import 'package:kinos/util/color_extensions.dart';
+import 'package:kinos/util/string_extensions.dart';
 
 part 'library_filters_model.freezed.dart';
 part 'library_filters_model.g.dart';

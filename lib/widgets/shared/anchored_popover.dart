@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Voile ancré sur son déclencheur — pour un choix simple qui ne
 /// justifie ni une feuille modale ni un panneau plein cadre. Reprend le

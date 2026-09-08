@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart';
-import 'package:fladder/models/item_editing_model.dart';
-import 'package:fladder/providers/edit_item_provider.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/screens/settings/settings_list_tile.dart';
-import 'package:fladder/screens/shared/file_picker.dart';
-import 'package:fladder/util/custom_cache_manager.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/models/item_editing_model.dart';
+import 'package:kinos/providers/edit_item_provider.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/screens/settings/settings_list_tile.dart';
+import 'package:kinos/screens/shared/file_picker.dart';
+import 'package:kinos/util/custom_cache_manager.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/focus_provider.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 class EditImageContent extends ConsumerStatefulWidget {
   final ImageType type;

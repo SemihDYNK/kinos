@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:overflow_view/overflow_view.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/media_playback_model.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/duration_extensions.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/shared/player_bar_shared.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/media_playback_model.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/duration_extensions.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/shared/player_bar_shared.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 /// Lecteur réduit (bandeau du bas, visible pendant une lecture minimisée)
 /// — même langage visuel que le lecteur plein écran : voile

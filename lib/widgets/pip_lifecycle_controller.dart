@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/media_playback_model.dart';
-import 'package:fladder/providers/pip_provider.dart';
-import 'package:fladder/providers/settings/video_player_settings_provider.dart';
-import 'package:fladder/providers/video_player_provider.dart';
-import 'package:fladder/wrappers/pip_manager.dart';
+import 'package:kinos/models/media_playback_model.dart';
+import 'package:kinos/providers/pip_provider.dart';
+import 'package:kinos/providers/settings/video_player_settings_provider.dart';
+import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/wrappers/pip_manager.dart';
 
 class PipLifecycleController extends ConsumerStatefulWidget {
   const PipLifecycleController({super.key, required this.child});

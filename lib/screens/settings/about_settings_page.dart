@@ -5,16 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/funding_model.dart' as funding;
-import 'package:fladder/screens/crash_screen/crash_screen.dart';
-import 'package:fladder/screens/settings/settings_scaffold.dart';
-import 'package:fladder/screens/settings/widgets/settings_update_information.dart';
-import 'package:fladder/screens/shared/fladder_icon.dart';
-import 'package:fladder/screens/shared/fladder_logo.dart';
-import 'package:fladder/screens/shared/media/external_urls.dart';
-import 'package:fladder/util/application_info.dart';
-import 'package:fladder/util/list_padding.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/models/funding_model.dart' as funding;
+import 'package:kinos/screens/crash_screen/crash_screen.dart';
+import 'package:kinos/screens/settings/settings_scaffold.dart';
+import 'package:kinos/screens/settings/widgets/settings_update_information.dart';
+import 'package:kinos/screens/shared/fladder_icon.dart';
+import 'package:kinos/screens/shared/fladder_logo.dart';
+import 'package:kinos/screens/shared/media/external_urls.dart';
+import 'package:kinos/util/application_info.dart';
+import 'package:kinos/util/list_padding.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 class _Socials {
   final String label;

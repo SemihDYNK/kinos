@@ -7,19 +7,19 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:fladder/models/items/audio_model.dart';
-import 'package:fladder/models/syncing/sync_item.dart';
-import 'package:fladder/models/syncing/transcode_download_model.dart';
-import 'package:fladder/models/syncing/transcode_music_download_model.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/providers/sync/background_download_provider.dart';
-import 'package:fladder/providers/sync/sync_provider_helpers.dart';
-import 'package:fladder/providers/sync_provider.dart';
-import 'package:fladder/screens/settings/widgets/transcode_music_settings_popup.dart';
-import 'package:fladder/screens/settings/widgets/transcode_settings_popup.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/refresh_state.dart';
-import 'package:fladder/widgets/shared/filled_button_await.dart';
+import 'package:kinos/models/items/audio_model.dart';
+import 'package:kinos/models/syncing/sync_item.dart';
+import 'package:kinos/models/syncing/transcode_download_model.dart';
+import 'package:kinos/models/syncing/transcode_music_download_model.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/providers/sync/background_download_provider.dart';
+import 'package:kinos/providers/sync/sync_provider_helpers.dart';
+import 'package:kinos/providers/sync_provider.dart';
+import 'package:kinos/screens/settings/widgets/transcode_music_settings_popup.dart';
+import 'package:kinos/screens/settings/widgets/transcode_settings_popup.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/refresh_state.dart';
+import 'package:kinos/widgets/shared/filled_button_await.dart';
 
 class SyncOptionsButton extends ConsumerWidget {
   final SyncedItem syncedItem;

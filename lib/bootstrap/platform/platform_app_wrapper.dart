@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/bootstrap/platform/base_app_wrapper.dart';
-import 'package:fladder/bootstrap/platform/desktop_platform_wrapper.dart';
-import 'package:fladder/bootstrap/platform/mobile_app_wrapper.dart';
-import 'package:fladder/bootstrap/platform/web_app_wrapper.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/bootstrap/platform/base_app_wrapper.dart';
+import 'package:kinos/bootstrap/platform/desktop_platform_wrapper.dart';
+import 'package:kinos/bootstrap/platform/mobile_app_wrapper.dart';
+import 'package:kinos/bootstrap/platform/web_app_wrapper.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 
 class PlatformAppWrapper extends ConsumerStatefulWidget {
   const PlatformAppWrapper({super.key, required this.builder});

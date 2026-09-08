@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
 
-import 'package:fladder/util/list_padding.dart';
+import 'package:kinos/util/list_padding.dart';
 
 class Area {
   final double initialArea;

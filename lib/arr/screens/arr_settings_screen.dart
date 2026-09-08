@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/arr_credentials.dart';
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/models/qbittorrent_credentials.dart';
-import 'package:fladder/arr/providers/arr_providers.dart';
-import 'package:fladder/arr/providers/qbittorrent_providers.dart';
-import 'package:fladder/arr/services/arr_api_client.dart';
-import 'package:fladder/arr/services/qbittorrent_api_client.dart';
-import 'package:fladder/arr/widgets/arr_desktop_scope.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/arr/models/arr_credentials.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/models/qbittorrent_credentials.dart';
+import 'package:kinos/arr/providers/arr_providers.dart';
+import 'package:kinos/arr/providers/qbittorrent_providers.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
+import 'package:kinos/arr/services/qbittorrent_api_client.dart';
+import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Réglages Radarr et Sonarr — URL, clé API, test de connexion, pour
 /// chaque service séparément. Route enfant de l'écran Réglages.

@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/l10n/generated/app_localizations.dart';
-import 'package:fladder/models/settings/client_settings_model.dart';
-import 'package:fladder/providers/settings/client_settings_provider.dart';
-import 'package:fladder/screens/settings/settings_list_tile.dart';
-import 'package:fladder/screens/settings/widgets/settings_label_divider.dart';
-import 'package:fladder/screens/settings/widgets/settings_list_group.dart';
-import 'package:fladder/screens/shared/input_fields.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/widgets/shared/fladder_slider.dart';
-import 'package:fladder/widgets/shared/item_actions.dart';
+import 'package:kinos/l10n/generated/app_localizations.dart';
+import 'package:kinos/models/settings/client_settings_model.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/screens/settings/settings_list_tile.dart';
+import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
+import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
+import 'package:kinos/screens/shared/input_fields.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/fladder_slider.dart';
+import 'package:kinos/widgets/shared/item_actions.dart';
 
 List<Widget> buildClientSettingsVisual(
   BuildContext context,

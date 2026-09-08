@@ -3,22 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/seerr/seerr_dashboard_model.dart';
-import 'package:fladder/providers/seerr_dashboard_provider.dart';
-import 'package:fladder/providers/seerr_user_provider.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/home_screen.dart';
-import 'package:fladder/screens/seerr/widgets/seerr_poster_row.dart';
-import 'package:fladder/screens/seerr/widgets/seerr_request_banner_row.dart';
-import 'package:fladder/screens/seerr/widgets/seerr_request_popup.dart';
-import 'package:fladder/screens/shared/nested_scaffold.dart';
-import 'package:fladder/screens/shared/nested_sliver_appbar.dart';
-import 'package:fladder/seerr/seerr_models.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/localization_helper.dart';
-import 'package:fladder/util/sliver_list_padding.dart';
-import 'package:fladder/widgets/navigation_scaffold/components/background_image.dart';
-import 'package:fladder/widgets/shared/pull_to_refresh.dart';
+import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
+import 'package:kinos/providers/seerr_dashboard_provider.dart';
+import 'package:kinos/providers/seerr_user_provider.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/home_screen.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_poster_row.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_request_banner_row.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_request_popup.dart';
+import 'package:kinos/screens/shared/nested_scaffold.dart';
+import 'package:kinos/screens/shared/nested_sliver_appbar.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/sliver_list_padding.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/background_image.dart';
+import 'package:kinos/widgets/shared/pull_to_refresh.dart';
 
 @RoutePage()
 class SeerrScreen extends ConsumerStatefulWidget {

@@ -1,7 +1,7 @@
-import 'package:fladder/providers/user_provider.dart';
-import 'package:fladder/screens/login/widgets/login_icon.dart';
-import 'package:fladder/screens/shared/outlined_text_field.dart';
-import 'package:fladder/util/localization_helper.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/screens/login/widgets/login_icon.dart';
+import 'package:kinos/screens/shared/outlined_text_field.dart';
+import 'package:kinos/util/localization_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

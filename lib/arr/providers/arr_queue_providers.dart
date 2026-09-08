@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/arr_queue_item.dart';
-import 'package:fladder/arr/models/arr_service.dart';
-import 'package:fladder/arr/providers/arr_providers.dart';
-import 'package:fladder/arr/providers/qbittorrent_providers.dart';
-import 'package:fladder/arr/services/arr_api_client.dart';
-import 'package:fladder/arr/services/qbittorrent_api_client.dart';
+import 'package:kinos/arr/models/arr_queue_item.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_providers.dart';
+import 'package:kinos/arr/providers/qbittorrent_providers.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
+import 'package:kinos/arr/services/qbittorrent_api_client.dart';
 
 /// État de la file d'attente d'un service — `error` ne s'affiche que
 /// lorsque [items] est vide : un échec de rafraîchissement ponctuel (ex.

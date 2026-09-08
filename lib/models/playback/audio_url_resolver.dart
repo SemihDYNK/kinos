@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/models/items/item_stream_model.dart';
-import 'package:fladder/providers/api_provider.dart';
-import 'package:fladder/providers/sync_provider.dart';
-import 'package:fladder/providers/user_provider.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/item_stream_model.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/sync_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
 
 class AudioUrlResolver {
   const AudioUrlResolver(this.ref);

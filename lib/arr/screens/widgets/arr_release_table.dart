@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:fladder/arr/models/arr_grab_status.dart';
-import 'package:fladder/arr/models/arr_release.dart';
-import 'package:fladder/arr/screens/widgets/arr_rejection_tooltip.dart';
-import 'package:fladder/screens/details_screens/components/media_info_formatters.dart';
-import 'package:fladder/screens/shared/media/external_urls.dart';
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/arr/models/arr_grab_status.dart';
+import 'package:kinos/arr/models/arr_release.dart';
+import 'package:kinos/arr/screens/widgets/arr_rejection_tooltip.dart';
+import 'package:kinos/screens/details_screens/components/media_info_formatters.dart';
+import 'package:kinos/screens/shared/media/external_urls.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 enum _ArrReleaseColumn {
   rejected,

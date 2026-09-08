@@ -6,20 +6,20 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/arr/models/arr_grab_status.dart';
-import 'package:fladder/arr/models/arr_library_entry.dart';
-import 'package:fladder/arr/models/arr_library_item.dart';
-import 'package:fladder/arr/models/arr_release.dart';
-import 'package:fladder/arr/providers/arr_search_providers.dart';
-import 'package:fladder/arr/screens/widgets/arr_release_table.dart';
-import 'package:fladder/arr/screens/widgets/arr_season_episode_picker.dart';
-import 'package:fladder/arr/services/arr_api_client.dart';
-import 'package:fladder/arr/widgets/arr_desktop_scope.dart';
-import 'package:fladder/routes/auto_router.gr.dart';
-import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
-import 'package:fladder/theme/app_theme.dart';
-import 'package:fladder/util/adaptive_layout/adaptive_layout.dart';
-import 'package:fladder/util/router_extension.dart';
+import 'package:kinos/arr/models/arr_grab_status.dart';
+import 'package:kinos/arr/models/arr_library_entry.dart';
+import 'package:kinos/arr/models/arr_library_item.dart';
+import 'package:kinos/arr/models/arr_release.dart';
+import 'package:kinos/arr/providers/arr_search_providers.dart';
+import 'package:kinos/arr/screens/widgets/arr_release_table.dart';
+import 'package:kinos/arr/screens/widgets/arr_season_episode_picker.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
+import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/shared/fladder_notification_overlay.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/util/router_extension.dart';
 
 /// Recherche interactive — bibliothèque Radarr/Sonarr existante, choix
 /// d'un film ou d'une série (puis saison ou épisode), résultats des

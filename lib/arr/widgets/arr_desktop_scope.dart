@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:fladder/theme/app_theme.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 /// Force la densité "desk", quel que soit le réglage global — le module
 /// *Arr est bureau uniquement : pas de mode salon, pas de navigation

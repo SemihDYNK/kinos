@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/jellyfin/jellyfin_open_api.enums.swagger.dart' as jelly;
-import 'package:fladder/models/item_base_model.dart';
-import 'package:fladder/providers/arguments_provider.dart';
-import 'package:fladder/screens/shared/media/poster_widget.dart';
-import 'package:fladder/screens/shared/media/tv_poster_row.dart';
-import 'package:fladder/util/focus_provider.dart';
-import 'package:fladder/util/item_base_model/item_base_model_extensions.dart';
-import 'package:fladder/widgets/shared/ensure_visible.dart';
-import 'package:fladder/widgets/shared/horizontal_list.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart' as jelly;
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/providers/arguments_provider.dart';
+import 'package:kinos/screens/shared/media/poster_widget.dart';
+import 'package:kinos/screens/shared/media/tv_poster_row.dart';
+import 'package:kinos/util/focus_provider.dart';
+import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
+import 'package:kinos/widgets/shared/ensure_visible.dart';
+import 'package:kinos/widgets/shared/horizontal_list.dart';
 
 class PosterRow extends ConsumerWidget {
   final List<ItemBaseModel> posters;

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fladder/models/syncing/database_item.dart';
+import 'package:kinos/models/syncing/database_item.dart';
 
 /// Single shared [AppDatabase] instance for the whole app.
 ///
