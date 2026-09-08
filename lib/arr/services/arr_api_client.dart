@@ -5,6 +5,7 @@ import 'dart:developer';
 import 'package:http/http.dart' as http;
 
 import 'package:fladder/arr/models/arr_library_item.dart';
+import 'package:fladder/arr/models/arr_queue_item.dart';
 import 'package:fladder/arr/models/arr_release.dart';
 
 /// Catégories d'échec explicites, pour un message clair côté écran —
@@ -141,6 +142,30 @@ abstract class ArrApiClient {
     }
   }
 
+  Future<ArrResult<dynamic>> delete(String path,
+      {Map<String, String>? query, Object? body}) async {
+    final Uri uri;
+    try {
+      uri = _resolve(path, query);
+    } on FormatException {
+      return const ArrFailure(ArrApiError.unreachable, 'URL invalide');
+    }
+    try {
+      final response = await _client
+          .delete(
+            uri,
+            headers: {..._headers, 'Content-Type': 'application/json'},
+            body: body == null ? null : jsonEncode(body),
+          )
+          .timeout(_timeout);
+      return _handle(response);
+    } on TimeoutException {
+      return const ArrFailure(ArrApiError.unreachable, 'Délai dépassé');
+    } catch (e) {
+      return ArrFailure(ArrApiError.unreachable, e.toString());
+    }
+  }
+
   ArrResult<dynamic> _handle(http.Response response) {
     final status = response.statusCode;
     if (status >= 200 && status < 300) {
@@ -248,6 +273,123 @@ abstract class ArrApiClient {
       'guid': guid,
       'indexerId': indexerId,
     });
+    return switch (result) {
+      ArrSuccess() => const ArrSuccess(null),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// `GET /api/v3/queue` — file d'attente de téléchargement, tous les
+  /// éléments d'une page (250 : largement au-delà de ce qu'une file
+  /// affiche en pratique, évite d'avoir à paginer un tableau qui se
+  /// rafraîchit déjà toutes les 5s). `includeUnknownXItems` couvre les
+  /// entrées pas encore rattachées à un film/épisode connu (import
+  /// manuel en attente), qui resteraient sinon invisibles.
+  Future<ArrResult<List<ArrQueueItem>>> fetchQueue() async {
+    final result = await get('/api/v3/queue', query: {
+      'page': '1',
+      'pageSize': '250',
+      'includeUnknownMovieItems': 'true',
+      'includeUnknownSeriesItems': 'true',
+    });
+    return switch (result) {
+      ArrSuccess(:final data) => _parseQueue(data),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  ArrResult<List<ArrQueueItem>> _parseQueue(dynamic data) {
+    // Réponse paginée : `{records: [...], totalRecords: ...}`, pas une
+    // liste nue comme `/release` — à la différence de la plupart des
+    // autres endpoints de ce client.
+    final records = data is Map ? data['records'] : null;
+    if (records is! List) {
+      return const ArrFailure(
+          ArrApiError.invalidResponse, 'Réponse inattendue');
+    }
+    try {
+      return ArrSuccess(records
+          .whereType<Map<String, dynamic>>()
+          .map(ArrQueueItem.fromJson)
+          .toList());
+    } catch (_) {
+      return const ArrFailure(ArrApiError.invalidResponse, 'Réponse illisible');
+    }
+  }
+
+  /// `DELETE /api/v3/queue/{id}` — retire une ligne. [removeFromClient]
+  /// annule aussi le téléchargement chez le client (torrent/usenet), pas
+  /// seulement dans la file *Arr ; [blocklist] empêche le même
+  /// téléchargement d'être proposé à nouveau et déclenche une recherche
+  /// de remplacement côté serveur.
+  Future<ArrResult<void>> removeQueueItem(
+    int id, {
+    required bool removeFromClient,
+    required bool blocklist,
+  }) async {
+    final result = await delete('/api/v3/queue/$id', query: {
+      'removeFromClient': removeFromClient.toString(),
+      'blocklist': blocklist.toString(),
+    });
+    return switch (result) {
+      ArrSuccess() => const ArrSuccess(null),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// `DELETE /api/v3/queue/bulk` — même effet que [removeQueueItem], sur
+  /// plusieurs lignes en un seul appel (sélection multiple).
+  Future<ArrResult<void>> removeQueueItems(
+    List<int> ids, {
+    required bool removeFromClient,
+    required bool blocklist,
+  }) async {
+    final result = await delete('/api/v3/queue/bulk', query: {
+      'removeFromClient': removeFromClient.toString(),
+      'blocklist': blocklist.toString(),
+    }, body: {
+      'ids': ids,
+    });
+    return switch (result) {
+      ArrSuccess() => const ArrSuccess(null),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// `POST /api/v3/queue/grab/{id}` — force l'import d'une ligne bloquée
+  /// (import en attente/rejeté). Endpoint non vérifié contre un serveur
+  /// réel au moment d'écrire ceci : un 404/405 signifie que cette version
+  /// de Radarr/Sonarr ne l'expose pas ainsi — l'écran doit alors afficher
+  /// l'échec plutôt que prétendre avoir réussi.
+  Future<ArrResult<void>> forceImportQueueItem(int id) async {
+    final result = await post('/api/v3/queue/grab/$id');
+    return switch (result) {
+      ArrSuccess() => const ArrSuccess(null),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// `POST /api/v3/queue/{id}/pause` et `.../resume` — mettre en
+  /// pause/reprendre une ligne côté client de téléchargement.
+  ///
+  /// ATTENTION : ces deux routes sont une supposition raisonnable (forme
+  /// cohérente avec le reste de l'API), pas confirmée contre un serveur
+  /// réel — je n'ai pas trouvé de documentation officielle d'une action
+  /// pause/reprendre sur `/api/v3/queue` au moment d'écrire ceci ; de
+  /// nombreux clients de téléchargement ne l'exposent d'ailleurs pas du
+  /// tout via *Arr. Si le serveur répond 404/405, l'écran doit afficher
+  /// l'échec clairement plutôt que rester silencieux — à vérifier contre
+  /// un vrai Radarr/Sonarr avant de considérer ceci fiable.
+  Future<ArrResult<void>> pauseQueueItem(int id) async {
+    final result = await post('/api/v3/queue/$id/pause');
+    return switch (result) {
+      ArrSuccess() => const ArrSuccess(null),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  Future<ArrResult<void>> resumeQueueItem(int id) async {
+    final result = await post('/api/v3/queue/$id/resume');
     return switch (result) {
       ArrSuccess() => const ArrSuccess(null),
       ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
