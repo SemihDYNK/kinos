@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fladder/arr/models/arr_queue_item.dart';
 import 'package:fladder/arr/models/arr_service.dart';
 import 'package:fladder/arr/providers/arr_providers.dart';
+import 'package:fladder/arr/providers/qbittorrent_providers.dart';
 import 'package:fladder/arr/services/arr_api_client.dart';
+import 'package:fladder/arr/services/qbittorrent_api_client.dart';
 
 /// État de la file d'attente d'un service — `error` ne s'affiche que
 /// lorsque [items] est vide : un échec de rafraîchissement ponctuel (ex.
@@ -101,14 +103,57 @@ class ArrQueueNotifier extends StateNotifier<ArrQueueState> {
   /// polling — après une action utilisateur (pause, retrait...).
   Future<void> refreshNow() => _fetch();
 
-  Future<ArrResult<void>> pause(int id) =>
-      _act((client) => client.pauseQueueItem(id));
+  /// Pas de pause/reprise côté API *Arr (confirmé 405 sur un serveur réel :
+  /// `/api/v3/queue/{id}/pause` n'existe pas, seul DELETE est accepté sur ce
+  /// chemin) — l'opération appartient au client de téléchargement.
+  /// `downloadId` d'une ligne de file *Arr est le hash du torrent attendu
+  /// par qBittorrent. L'appelant est responsable de désactiver le contrôle
+  /// quand `downloadId` est absent ou qu'aucun client n'est configuré,
+  /// plutôt que de laisser cette méthode échouer silencieusement au clic.
+  Future<ArrResult<void>> pause(String downloadId) =>
+      _qbAction(downloadId, (client) => client.pause(downloadId));
 
-  Future<ArrResult<void>> resume(int id) =>
-      _act((client) => client.resumeQueueItem(id));
+  Future<ArrResult<void>> resume(String downloadId) =>
+      _qbAction(downloadId, (client) => client.resume(downloadId));
+
+  Future<ArrResult<void>> _qbAction(
+    String downloadId,
+    Future<bool> Function(QBittorrentApiClient client) action,
+  ) async {
+    final client = ref.read(qbittorrentClientProvider);
+    if (client == null) {
+      return const ArrFailure(
+          ArrApiError.unreachable, 'Client de téléchargement non configuré');
+    }
+    final ok = await action(client);
+    if (!ok) {
+      return const ArrFailure(ArrApiError.unreachable,
+          'Action refusée par le client de téléchargement');
+    }
+    await refreshNow();
+    return const ArrSuccess(null);
+  }
 
   Future<ArrResult<void>> forceImport(int id) =>
       _act((client) => client.forceImportQueueItem(id));
+
+  /// Applique "forcer l'import" à chaque épisode d'un paquet de saison —
+  /// l'API *Arr n'a pas d'équivalent groupé, un appel par élément est
+  /// nécessaire. Un seul rafraîchissement à la fin plutôt qu'un par
+  /// épisode.
+  Future<ArrResult<void>> forceImportGroup(List<int> ids) async {
+    final client = _client;
+    if (client == null) {
+      return const ArrFailure(ArrApiError.unreachable, 'Service non configuré');
+    }
+    ArrResult<void> last = const ArrSuccess(null);
+    for (final id in ids) {
+      final result = await client.forceImportQueueItem(id);
+      if (result is ArrFailure) last = result;
+    }
+    await refreshNow();
+    return last;
+  }
 
   Future<ArrResult<void>> remove(
     int id, {

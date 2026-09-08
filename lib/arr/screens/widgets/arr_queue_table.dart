@@ -32,6 +32,12 @@ Color _statusColor(ArrQueueStatus status) => switch (status) {
 /// constante sur toutes les lignes ; gardée quand même pour rester lisible
 /// si une vue combinée est ajoutée plus tard.
 ///
+/// Une ligne par [ArrQueueGroup] plutôt que par [ArrQueueItem] : un paquet
+/// de saison Sonarr partage un seul `downloadId` sur plusieurs
+/// enregistrements (un par épisode), qu'il faut regrouper — sans quoi
+/// taille/progression, identiques sur chaque épisode, semblent se répéter
+/// et se lisent comme démultipliées par le nombre d'épisodes.
+///
 /// Sélection multiple (Maj/Ctrl+clic) et menu contextuel appliqués au
 /// widget parent via les callbacks — cette table ne connaît que
 /// l'affichage, le tri et la sélection ; jamais d'appel réseau direct
@@ -39,15 +45,22 @@ Color _statusColor(ArrQueueStatus status) => switch (status) {
 class ArrQueueTable extends StatefulWidget {
   final List<ArrQueueItem> items;
   final String instanceLabel;
-  final void Function(ArrQueueItem item) onPause;
-  final void Function(ArrQueueItem item) onResume;
-  final void Function(ArrQueueItem item) onForceImport;
-  final void Function(List<ArrQueueItem> items,
+
+  /// `true` si un client qBittorrent est configuré — condition nécessaire
+  /// (mais pas suffisante : la route peut encore échouer au moment de
+  /// l'appel) pour activer pause/reprise sur une ligne.
+  final bool downloadClientReady;
+
+  final void Function(ArrQueueGroup group) onPause;
+  final void Function(ArrQueueGroup group) onResume;
+  final void Function(ArrQueueGroup group) onForceImport;
+  final void Function(List<ArrQueueGroup> groups,
       {required bool removeFromClient, required bool blocklist}) onRemove;
 
   const ArrQueueTable({
     required this.items,
     required this.instanceLabel,
+    required this.downloadClientReady,
     required this.onPause,
     required this.onResume,
     required this.onForceImport,
@@ -63,10 +76,12 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
   _ArrQueueColumn _sortColumn = _ArrQueueColumn.status;
   bool _ascending = true;
 
-  final Set<int> _selected = {};
+  final Set<String> _selected = {};
+  final Set<String> _expanded = {};
   int? _lastClickedIndex;
 
   static const _checkboxWidth = 32.0;
+  static const _expandWidth = 20.0;
   static const _minTitleWidth = 240.0;
   static const _instanceWidth = 72.0;
   static const _indexerWidth = 120.0;
@@ -75,10 +90,18 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
   static const _progressWidth = 140.0;
   static const _timeLeftWidth = 84.0;
   static const _statusWidth = 130.0;
-  static const _actionsWidth = 72.0;
+  // 80, pas 72 : chaque FocusRing de cette colonne dessine son anneau de
+  // focus *en dehors* de son enfant (`padding: EdgeInsets.all(focusWidth)`,
+  // cf. app_theme.dart) sans redimensionner l'enfant en retour — deux
+  // boutons dans cette colonne ajoutent donc 2×2×2.0 = 8px que la largeur
+  // devait déjà prévoir. C'est la cause exacte du débordement de 8px
+  // observé (bande rayée en debug) : élargir la colonne, pas la découper.
+  static const _actionsWidth = 80.0;
   static const _columnGap = AppSpacing.xs;
 
   static const _minTableWidth = _checkboxWidth +
+      _columnGap +
+      _expandWidth +
       _columnGap +
       _minTitleWidth +
       _columnGap +
@@ -108,9 +131,9 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
   int _compareStr(String? a, String? b) =>
       (a?.toLowerCase() ?? '').compareTo(b?.toLowerCase() ?? '');
 
-  List<ArrQueueItem> get _sorted {
-    final sorted = [...widget.items];
-    sorted.sort((a, b) {
+  List<ArrQueueGroup> get _sorted {
+    final groups = ArrQueueGroup.groupItems(widget.items);
+    groups.sort((a, b) {
       final result = switch (_sortColumn) {
         _ArrQueueColumn.title => _compareStr(a.title, b.title),
         _ArrQueueColumn.indexer => _compareStr(a.indexer, b.indexer),
@@ -122,7 +145,7 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
       };
       return _ascending ? result : -result;
     });
-    return sorted;
+    return groups;
   }
 
   void _onHeaderTap(_ArrQueueColumn column) {
@@ -136,34 +159,40 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
     });
   }
 
-  void _onRowTap(int index, List<ArrQueueItem> rows,
+  void _onRowTap(int index, List<ArrQueueGroup> rows,
       {required bool shift, required bool ctrl}) {
-    final id = rows[index].id;
+    final key = rows[index].key;
     setState(() {
       if (shift && _lastClickedIndex != null) {
         final start = _lastClickedIndex!.clamp(0, rows.length - 1);
         final range = [start, index]..sort();
-        _selected.addAll(rows.sublist(range[0], range[1] + 1).map((e) => e.id));
+        _selected
+            .addAll(rows.sublist(range[0], range[1] + 1).map((e) => e.key));
       } else if (ctrl) {
-        if (!_selected.add(id)) _selected.remove(id);
+        if (!_selected.add(key)) _selected.remove(key);
         _lastClickedIndex = index;
       } else {
         _selected
           ..clear()
-          ..add(id);
+          ..add(key);
         _lastClickedIndex = index;
       }
     });
   }
 
+  void _toggleExpanded(String key) => setState(() {
+        if (!_expanded.remove(key)) _expanded.add(key);
+      });
+
   void _clearSelection() => setState(_selected.clear);
 
   Future<void> _confirmRemove(
     BuildContext context,
-    List<ArrQueueItem> items, {
+    List<ArrQueueGroup> groups, {
     required bool blocklist,
   }) async {
-    final multiple = items.length > 1;
+    final totalItems = groups.fold<int>(0, (sum, g) => sum + g.episodeCount);
+    final multiple = totalItems > 1;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -173,9 +202,9 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
             blocklist ? 'Blocklist et remplacement' : 'Retirer de la file'),
         content: Text(
           blocklist
-              ? '${multiple ? '${items.length} éléments seront' : "\"${items.first.title}\" sera"} '
+              ? '${multiple ? '$totalItems éléments seront' : "\"${groups.first.title}\" sera"} '
                   'bloqués et retirés du client de téléchargement ; le serveur cherchera un remplacement.'
-              : '${multiple ? '${items.length} éléments seront' : "\"${items.first.title}\" sera"} '
+              : '${multiple ? '$totalItems éléments seront' : "\"${groups.first.title}\" sera"} '
                   'retirés de la file et annulés côté client de téléchargement.',
         ),
         actions: [
@@ -191,7 +220,7 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
       ),
     );
     if (confirmed == true) {
-      widget.onRemove(items, removeFromClient: true, blocklist: blocklist);
+      widget.onRemove(groups, removeFromClient: true, blocklist: blocklist);
       _clearSelection();
     }
   }
@@ -255,36 +284,46 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
     );
   }
 
+  bool _canControl(ArrQueueGroup group) =>
+      widget.downloadClientReady && (group.downloadId?.isNotEmpty ?? false);
+
+  String _controlDisabledReason(ArrQueueGroup group) {
+    if (group.downloadId == null || group.downloadId!.isEmpty) {
+      return 'Identifiant de téléchargement absent — action indisponible.';
+    }
+    return 'Client de téléchargement non configuré (Réglages → qBittorrent).';
+  }
+
   void _showContextMenu(
-      BuildContext context, Offset globalPosition, ArrQueueItem row) {
-    final targets = _selected.contains(row.id) && _selected.length > 1
-        ? widget.items.where((e) => _selected.contains(e.id)).toList()
+      BuildContext context, Offset globalPosition, ArrQueueGroup row) {
+    final targets = _selected.contains(row.key) && _selected.length > 1
+        ? _sorted.where((e) => _selected.contains(e.key)).toList()
         : [row];
-    if (targets.length == 1 && !_selected.contains(row.id)) {
+    if (targets.length == 1 && !_selected.contains(row.key)) {
       setState(() {
         _selected
           ..clear()
-          ..add(row.id);
+          ..add(row.key);
       });
     }
 
     final position = RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy,
         globalPosition.dx, globalPosition.dy);
     final singleRowActionable = targets.length == 1 ? targets.first : null;
+    final controllable =
+        singleRowActionable != null && _canControl(singleRowActionable);
 
     showMenu<void>(
       context: context,
       position: position,
       items: [
-        if (singleRowActionable != null &&
-            singleRowActionable.status != ArrQueueStatus.paused)
+        if (controllable && singleRowActionable.status != ArrQueueStatus.paused)
           PopupMenuItem(
             onTap: () => widget.onPause(singleRowActionable),
             child: const _MenuLabel(
                 icon: Icons.pause_rounded, label: 'Mettre en pause'),
           ),
-        if (singleRowActionable != null &&
-            singleRowActionable.status == ArrQueueStatus.paused)
+        if (controllable && singleRowActionable.status == ArrQueueStatus.paused)
           PopupMenuItem(
             onTap: () => widget.onResume(singleRowActionable),
             child: const _MenuLabel(
@@ -338,7 +377,7 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
                   someSelected: _selected.isNotEmpty,
                   onToggleAll: (value) => setState(() {
                     if (value) {
-                      _selected.addAll(rows.map((e) => e.id));
+                      _selected.addAll(rows.map((e) => e.key));
                     } else {
                       _selected.clear();
                     }
@@ -352,25 +391,40 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
                         style: TextStyle(color: AppColors.textSecondary)),
                   )
                 else
-                  for (final (index, item) in rows.indexed)
+                  for (final (index, group) in rows.indexed) ...[
                     _ArrQueueRow(
-                      key: ValueKey(item.id),
-                      item: item,
+                      key: ValueKey(group.key),
+                      group: group,
                       striped: index.isOdd,
-                      selected: _selected.contains(item.id),
+                      selected: _selected.contains(group.key),
+                      expanded: _expanded.contains(group.key),
                       instanceLabel: widget.instanceLabel,
+                      canControl: _canControl(group),
+                      controlDisabledReason: _controlDisabledReason(group),
                       onTap: ({required shift, required ctrl}) =>
                           _onRowTap(index, rows, shift: shift, ctrl: ctrl),
                       onSecondaryTap: (position) =>
-                          _showContextMenu(context, position, item),
-                      onOpenDetail: () => _showDetail(context, item),
+                          _showContextMenu(context, position, group),
+                      onOpenDetail: () => _showDetail(context, group.primary),
                       onDelete: () =>
-                          _confirmRemove(context, [item], blocklist: false),
-                      onPause: () => widget.onPause(item),
-                      onResume: () => widget.onResume(item),
+                          _confirmRemove(context, [group], blocklist: false),
+                      onPause: () => widget.onPause(group),
+                      onResume: () => widget.onResume(group),
+                      onToggleExpanded: group.isGrouped
+                          ? () => _toggleExpanded(group.key)
+                          : null,
                       onMoreActions: (position) =>
-                          _showContextMenu(context, position, item),
+                          _showContextMenu(context, position, group),
                     ),
+                    if (group.isGrouped && _expanded.contains(group.key))
+                      for (final item in group.items)
+                        _ArrQueueSubRow(
+                          key: ValueKey('${group.key}-${item.id}'),
+                          item: item,
+                          striped: index.isOdd,
+                          onOpenDetail: () => _showDetail(context, item),
+                        ),
+                  ],
               ],
             ),
           ),
@@ -528,6 +582,8 @@ class _ArrQueueHeaderRow extends StatelessWidget {
             ),
           ),
           gap,
+          const SizedBox(width: _ArrQueueTableState._expandWidth),
+          gap,
           Expanded(
               child: _header(
                   context, 'Titre', double.infinity, _ArrQueueColumn.title)),
@@ -569,34 +625,42 @@ class _ArrQueueHeaderRow extends StatelessWidget {
 }
 
 class _ArrQueueRow extends StatelessWidget {
-  final ArrQueueItem item;
+  final ArrQueueGroup group;
   final bool striped;
   final bool selected;
+  final bool expanded;
   final String instanceLabel;
+  final bool canControl;
+  final String controlDisabledReason;
   final void Function({required bool shift, required bool ctrl}) onTap;
   final void Function(Offset globalPosition) onSecondaryTap;
   final VoidCallback onOpenDetail;
   final VoidCallback onDelete;
   final VoidCallback onPause;
   final VoidCallback onResume;
+  final VoidCallback? onToggleExpanded;
   final void Function(Offset globalPosition) onMoreActions;
 
   const _ArrQueueRow({
-    required this.item,
+    required this.group,
     required this.striped,
     required this.selected,
+    required this.expanded,
     required this.instanceLabel,
+    required this.canControl,
+    required this.controlDisabledReason,
     required this.onTap,
     required this.onSecondaryTap,
     required this.onOpenDetail,
     required this.onDelete,
     required this.onPause,
     required this.onResume,
+    required this.onToggleExpanded,
     required this.onMoreActions,
     super.key,
   });
 
-  bool get _isPaused => item.status == ArrQueueStatus.paused;
+  bool get _isPaused => group.status == ArrQueueStatus.paused;
 
   @override
   Widget build(BuildContext context) {
@@ -605,7 +669,7 @@ class _ArrQueueRow extends StatelessWidget {
         .bodySmall
         ?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.9));
     const gap = SizedBox(width: AppSpacing.xs);
-    final progress = item.progress;
+    final progress = group.progress;
 
     return ColoredBox(
       color: selected
@@ -630,9 +694,9 @@ class _ArrQueueRow extends StatelessWidget {
             onActivate: onOpenDetail,
             // Pas d'ExcludeFocus ici : contrairement au motif habituel
             // (un seul enfant nativement focusable à exclure), cette
-            // ligne contient aussi les FocusRing pause/reprendre et
-            // "plus d'actions", qui doivent rester atteignables — flèche
-            // droite pour y entrer, cf. FocusRow ci-dessus.
+            // ligne contient aussi les FocusRing déplier/pause/reprendre
+            // et "plus d'actions", qui doivent rester atteignables —
+            // flèche droite pour y entrer, cf. FocusRow ci-dessus.
             child: Builder(
               builder: (context) {
                 // État capturé à `onTapDown`, consommé par `onTap` juste
@@ -675,13 +739,57 @@ class _ArrQueueRow extends StatelessWidget {
                           ),
                         ),
                         gap,
+                        SizedBox(
+                          width: _ArrQueueTableState._expandWidth,
+                          child: onToggleExpanded == null
+                              ? null
+                              : FocusRing(
+                                  borderRadius: AppRadii.controlBorder,
+                                  onActivate: onToggleExpanded,
+                                  child: ExcludeFocus(
+                                    child: InkWell(
+                                      borderRadius: AppRadii.controlBorder,
+                                      onTap: onToggleExpanded,
+                                      child: Icon(
+                                        expanded
+                                            ? Icons.expand_more_rounded
+                                            : Icons.chevron_right_rounded,
+                                        size: 16,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        gap,
                         Expanded(
-                          child: Tooltip(
-                            message: item.title,
-                            child: Text(item.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: baseStyle),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Tooltip(
+                                  message: group.title,
+                                  child: Text(group.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: baseStyle),
+                                ),
+                              ),
+                              if (group.isGrouped) ...[
+                                const SizedBox(width: AppSpacing.xs),
+                                Text(
+                                  group.groupLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                          color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                         gap,
@@ -695,7 +803,7 @@ class _ArrQueueRow extends StatelessWidget {
                         gap,
                         SizedBox(
                           width: _ArrQueueTableState._indexerWidth,
-                          child: Text(item.indexer ?? '—',
+                          child: Text(group.indexer ?? '—',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: baseStyle),
@@ -703,7 +811,7 @@ class _ArrQueueRow extends StatelessWidget {
                         gap,
                         SizedBox(
                           width: _ArrQueueTableState._qualityWidth,
-                          child: Text(item.qualityName ?? '—',
+                          child: Text(group.qualityName ?? '—',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: baseStyle),
@@ -711,7 +819,7 @@ class _ArrQueueRow extends StatelessWidget {
                         gap,
                         SizedBox(
                           width: _ArrQueueTableState._sizeWidth,
-                          child: Text(formatFileSize(item.size) ?? '—',
+                          child: Text(formatFileSize(group.size) ?? '—',
                               textAlign: TextAlign.end,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -731,7 +839,7 @@ class _ArrQueueRow extends StatelessWidget {
                                     minHeight: 6,
                                     backgroundColor: AppColors.border,
                                     valueColor: AlwaysStoppedAnimation(
-                                        _statusColor(item.status)),
+                                        _statusColor(group.status)),
                                   ),
                                 ),
                               ),
@@ -748,7 +856,7 @@ class _ArrQueueRow extends StatelessWidget {
                         gap,
                         SizedBox(
                           width: _ArrQueueTableState._timeLeftWidth,
-                          child: Text(item.timeLeft ?? '—',
+                          child: Text(group.timeLeft ?? '—',
                               textAlign: TextAlign.end,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -757,11 +865,16 @@ class _ArrQueueRow extends StatelessWidget {
                         gap,
                         SizedBox(
                           width: _ArrQueueTableState._statusWidth,
-                          child: Text(item.status.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: baseStyle?.copyWith(
-                                  color: _statusColor(item.status))),
+                          child: Tooltip(
+                            message: group.statusMessages.isEmpty
+                                ? group.status.label
+                                : group.statusMessages.join('\n'),
+                            child: Text(group.status.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: baseStyle?.copyWith(
+                                    color: _statusColor(group.status))),
+                          ),
                         ),
                         gap,
                         SizedBox(
@@ -771,21 +884,29 @@ class _ArrQueueRow extends StatelessWidget {
                             children: [
                               FocusRing(
                                 borderRadius: AppRadii.controlBorder,
-                                onActivate: _isPaused ? onResume : onPause,
+                                onActivate: canControl
+                                    ? (_isPaused ? onResume : onPause)
+                                    : null,
                                 child: ExcludeFocus(
                                   child: Tooltip(
-                                    message: _isPaused
-                                        ? 'Reprendre'
-                                        : 'Mettre en pause',
+                                    message: canControl
+                                        ? (_isPaused
+                                            ? 'Reprendre'
+                                            : 'Mettre en pause')
+                                        : controlDisabledReason,
                                     child: IconButton(
                                       iconSize: 16,
                                       visualDensity: VisualDensity.compact,
-                                      onPressed: _isPaused ? onResume : onPause,
+                                      onPressed: canControl
+                                          ? (_isPaused ? onResume : onPause)
+                                          : null,
                                       icon: Icon(
                                         _isPaused
                                             ? Icons.play_arrow_rounded
                                             : Icons.pause_rounded,
-                                        color: AppColors.textSecondary,
+                                        color: canControl
+                                            ? AppColors.textSecondary
+                                            : AppColors.textDisabled,
                                       ),
                                     ),
                                   ),
@@ -831,6 +952,72 @@ class _ArrQueueRow extends StatelessWidget {
                   ),
                 );
               },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Ligne d'épisode repliée sous un paquet de saison déplié — lecture
+/// seule (le groupe entier porte les actions), mais reste atteignable au
+/// clavier (Entrée ouvre son détail) : chaque sous-ligne est un enfant à
+/// part entière du même parcours de focus que les lignes de groupe,
+/// naviguable aux flèches haut/bas comme n'importe quel autre "voisin".
+class _ArrQueueSubRow extends StatelessWidget {
+  final ArrQueueItem item;
+  final bool striped;
+  final VoidCallback onOpenDetail;
+
+  const _ArrQueueSubRow({
+    required this.item,
+    required this.striped,
+    required this.onOpenDetail,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: AppColors.textSecondary);
+    return ColoredBox(
+      color: striped ? AppColors.surface : Colors.transparent,
+      child: Focus(
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          if (event.logicalKey == LogicalKeyboardKey.enter) {
+            onOpenDetail();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: FocusRing(
+          borderRadius: AppRadii.controlBorder,
+          onActivate: onOpenDetail,
+          child: ExcludeFocus(
+            child: InkWell(
+              onTap: onOpenDetail,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: _ArrQueueTableState._checkboxWidth +
+                      AppSpacing.xs +
+                      _ArrQueueTableState._expandWidth +
+                      AppSpacing.xs +
+                      AppSpacing.lg,
+                  right: AppSpacing.xs,
+                  top: AppSpacing.xxs,
+                  bottom: AppSpacing.xxs,
+                ),
+                child: Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: style,
+                ),
+              ),
             ),
           ),
         ),

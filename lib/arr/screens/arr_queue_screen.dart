@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fladder/arr/models/arr_service.dart';
 import 'package:fladder/arr/providers/arr_queue_providers.dart';
+import 'package:fladder/arr/providers/qbittorrent_providers.dart';
 import 'package:fladder/arr/screens/widgets/arr_queue_table.dart';
 import 'package:fladder/arr/services/arr_api_client.dart';
 import 'package:fladder/screens/shared/fladder_notification_overlay.dart';
@@ -76,40 +77,55 @@ class ArrQueueScreen extends ConsumerWidget {
       );
     }
 
+    final downloadClientReady = ref.watch(qbittorrentClientProvider) != null;
+
     return ArrQueueTable(
       items: state.items,
       instanceLabel: service.label,
-      onPause: (item) => _runAction(
+      downloadClientReady: downloadClientReady,
+      onPause: (group) {
+        final downloadId = group.downloadId;
+        if (downloadId == null || downloadId.isEmpty) return;
+        _runAction(
+          context,
+          () => notifier.pause(downloadId),
+          failureContext: 'Pause',
+        );
+      },
+      onResume: (group) {
+        final downloadId = group.downloadId;
+        if (downloadId == null || downloadId.isEmpty) return;
+        _runAction(
+          context,
+          () => notifier.resume(downloadId),
+          failureContext: 'Reprise',
+        );
+      },
+      // Un appel par épisode : la file entière du groupe est visée,
+      // l'API *Arr n'a pas d'équivalent "forcer l'import" groupé.
+      onForceImport: (group) => _runAction(
         context,
-        () => notifier.pause(item.id),
-        failureContext: 'Pause',
-      ),
-      onResume: (item) => _runAction(
-        context,
-        () => notifier.resume(item.id),
-        failureContext: 'Reprise',
-      ),
-      onForceImport: (item) => _runAction(
-        context,
-        () => notifier.forceImport(item.id),
+        () => notifier.forceImportGroup(group.items.map((e) => e.id).toList()),
         failureContext: 'Import forcé',
       ),
-      onRemove: (items, {required removeFromClient, required blocklist}) =>
-          _runAction(
-        context,
-        () => items.length == 1
-            ? notifier.remove(
-                items.first.id,
-                removeFromClient: removeFromClient,
-                blocklist: blocklist,
-              )
-            : notifier.removeMultiple(
-                items.map((e) => e.id).toList(),
-                removeFromClient: removeFromClient,
-                blocklist: blocklist,
-              ),
-        failureContext: 'Retrait',
-      ),
+      onRemove: (groups, {required removeFromClient, required blocklist}) {
+        final ids = groups.expand((g) => g.items.map((e) => e.id)).toList();
+        _runAction(
+          context,
+          () => ids.length == 1
+              ? notifier.remove(
+                  ids.first,
+                  removeFromClient: removeFromClient,
+                  blocklist: blocklist,
+                )
+              : notifier.removeMultiple(
+                  ids,
+                  removeFromClient: removeFromClient,
+                  blocklist: blocklist,
+                ),
+          failureContext: 'Retrait',
+        );
+      },
     );
   }
 
