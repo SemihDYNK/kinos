@@ -83,7 +83,11 @@ class _CastGrid extends StatelessWidget {
 
   static const _tileWidth = 88.0;
   static const _maxRows = 1;
-  static const _tileAspectRatio = 0.72;
+
+  /// Hauteur approximative d'une ligne de `bodySmall` (nom, sous la
+  /// vignette carrée) — un seul repère plutôt qu'une mesure exacte via
+  /// `TextPainter`, même principe que `season_episode_section.dart`.
+  static const _labelHeight = 18.0;
 
   void _seeAll(BuildContext context) {
     showBottomSheetPill(
@@ -131,14 +135,17 @@ class _CastGrid extends StatelessWidget {
     final maxVisible = columns * _maxRows;
     final visible = people.take(maxVisible).toList();
     final truncated = people.length > maxVisible;
-    // `visible` s'arrête déjà à une rangée (itemCount du GridView ne dépasse
-    // jamais `columns`), mais rien n'empêchait un éventuel dépassement de
-    // peindre au-delà — un fragment de vignette (visage tronqué) restait
-    // visible sous la rangée. Hauteur du conteneur contrainte à exactement
-    // une rangée (même calcul que `childAspectRatio` ci-dessous), et
-    // ClipRect en dernier rempart : rien ne peut plus déborder.
+    // Vignette carrée + libellé (nom, une ligne) — hauteur dérivée de la
+    // largeur de cellule réelle, jamais d'un ratio fixe approximatif (même
+    // bug/même remède que `season_episode_section.dart` : un
+    // `childAspectRatio` reconverti en pixels par le delegate peut tomber
+    // quelques dixièmes de pixel sous ce que le libellé réclame en
+    // entier — débordement visible en debug). `mainAxisExtent` ci-dessous
+    // fixe ça ; le `ClipRect`/`SizedBox` restent pour une raison distincte
+    // (cf. commentaire plus bas) : borner le conteneur à exactement une
+    // rangée, `visible` pouvant en théorie déborder de `columns` éléments.
     final cellWidth = (width - (columns - 1) * AppSpacing.sm) / columns;
-    final rowHeight = cellWidth / _tileAspectRatio;
+    final tileHeight = cellWidth + AppSpacing.xxs + _labelHeight;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,9 +180,16 @@ class _CastGrid extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
+        // `visible` s'arrête déjà à une rangée (itemCount du GridView ne
+        // dépasse jamais `columns`), mais rien n'empêchait un éventuel
+        // dépassement de peindre au-delà — un fragment de vignette (visage
+        // tronqué) restait visible sous la rangée. Hauteur du conteneur
+        // contrainte à exactement une rangée, et ClipRect en dernier
+        // rempart pour ce cas précis : rien à voir avec le débordement de
+        // mainAxisExtent réglé plus haut, qui n'a plus lieu d'être masqué.
         ClipRect(
           child: SizedBox(
-            height: rowHeight,
+            height: tileHeight,
             child: GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -184,7 +198,7 @@ class _CastGrid extends StatelessWidget {
                 crossAxisCount: columns,
                 crossAxisSpacing: AppSpacing.sm,
                 mainAxisSpacing: AppSpacing.sm,
-                childAspectRatio: _tileAspectRatio,
+                mainAxisExtent: tileHeight,
               ),
               itemBuilder: (context, index) =>
                   _CastTile(person: visible[index]),

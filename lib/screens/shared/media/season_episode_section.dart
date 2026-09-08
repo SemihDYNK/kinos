@@ -75,9 +75,13 @@ class _SeasonEpisodeSectionState extends ConsumerState<SeasonEpisodeSection> {
           // Vignette 16:9 + libellé (numéro/titre, une ligne) + durée (une
           // ligne) — même principe de calcul que _CastGrid : la hauteur de
           // rangée découle de la largeur de vignette réelle, jamais d'un
-          // ratio fixe approximatif.
+          // ratio fixe approximatif. `mainAxisExtent` (pixels exacts), pas
+          // `childAspectRatio` (converti en pixels par le delegate via une
+          // division flottante — l'arrondi qui en ressort peut être
+          // inférieur de quelques dixièmes de pixel à `tileHeight`, que le
+          // libellé sous l'image réclame quand même en entier : débordement
+          // visible en debug, bande rayée).
           final tileHeight = tileWidth * 9 / 16 + AppSpacing.xs + 44;
-          final rowAspectRatio = tileWidth / tileHeight;
 
           return FocusTraversalGroup(
             child: Column(
@@ -106,7 +110,7 @@ class _SeasonEpisodeSectionState extends ConsumerState<SeasonEpisodeSection> {
                     crossAxisCount: columns,
                     crossAxisSpacing: AppSpacing.sm,
                     mainAxisSpacing: AppSpacing.md,
-                    childAspectRatio: rowAspectRatio,
+                    mainAxisExtent: tileHeight,
                   ),
                   itemBuilder: (context, index) =>
                       _EpisodeTile(episode: selected.episodes[index]),
