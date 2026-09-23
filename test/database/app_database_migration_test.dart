@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,23 @@ void main() {
       await db.close();
     });
 
+    test('v2 -> v3 arrives at the schema declared by AppDatabase today', () async {
+      final connection = await verifier.startAt(2);
+      final db = AppDatabase(_fakeRef(), connection);
+      await verifier.migrateAndValidate(db, 3);
+      await db.close();
+    });
+
+    test('v2 -> v3 creates an empty recommendation_cache_entries table', () async {
+      final connection = await verifier.startAt(2);
+      final db = AppDatabase(_fakeRef(), connection);
+      await verifier.migrateAndValidate(db, 3);
+
+      expect(await db.select(db.recommendationCacheEntries).get(), isEmpty);
+
+      await db.close();
+    });
+
     test('a fresh install (onCreate) can read/write all four tables', () async {
       final db = AppDatabase(_fakeRef(), NativeDatabase.memory());
       addTearDown(db.close);
@@ -95,6 +113,197 @@ void main() {
       await db.setSetting('brightness', '0.8', scope: 'display-1');
       expect((await db.getSetting('brightness', scope: 'display-1'))?.value, '0.8');
       expect(await db.getSetting('brightness', scope: 'display-2'), isNull);
+    });
+  });
+
+  group('AppDatabase.recommendationCache', () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = AppDatabase(_fakeRef(), NativeDatabase.memory());
+      addTearDown(db.close);
+    });
+
+    RecommendationCacheEntriesCompanion entry(String userId, int position,
+            {String title = 'A film',
+            RecommendationRowKind rowKind = RecommendationRowKind.forYou}) =>
+        RecommendationCacheEntriesCompanion.insert(
+          userId: userId,
+          rowKind: rowKind,
+          position: position,
+          source: RecommendationEntrySource.jellyfin,
+          jellyfinItemId: Value('item-$position'),
+          title: title,
+        );
+
+    test('replaceRecommendationCache stores entries in position order', () async {
+      await db.replaceRecommendationCache(
+        userId: 'user-1',
+        rowKind: RecommendationRowKind.forYou,
+        entries: [entry('user-1', 1), entry('user-1', 0)],
+      );
+
+      final rows = await db
+          .getRecommendationCache(
+              userId: 'user-1', rowKind: RecommendationRowKind.forYou)
+          .get();
+
+      expect(rows.map((r) => r.position), [0, 1]);
+    });
+
+    test('replaceRecommendationCache replaces, never accumulates', () async {
+      await db.replaceRecommendationCache(
+        userId: 'user-1',
+        rowKind: RecommendationRowKind.forYou,
+        entries: [entry('user-1', 0, title: 'Old')],
+      );
+      await db.replaceRecommendationCache(
+        userId: 'user-1',
+        rowKind: RecommendationRowKind.forYou,
+        entries: [entry('user-1', 0, title: 'New')],
+      );
+
+      final rows = await db
+          .getRecommendationCache(
+              userId: 'user-1', rowKind: RecommendationRowKind.forYou)
+          .get();
+
+      expect(rows, hasLength(1));
+      expect(rows.single.title, 'New');
+    });
+
+    test(
+        'a cache written for one Jellyfin user is never returned for another '
+        '— the cross-profile leak this scoping exists to prevent', () async {
+      await db.replaceRecommendationCache(
+        userId: 'user-1',
+        rowKind: RecommendationRowKind.forYou,
+        entries: [entry('user-1', 0, title: 'User 1 pick')],
+      );
+      await db.replaceRecommendationCache(
+        userId: 'user-2',
+        rowKind: RecommendationRowKind.forYou,
+        entries: [entry('user-2', 0, title: 'User 2 pick')],
+      );
+
+      final user1Rows = await db
+          .getRecommendationCache(
+              userId: 'user-1', rowKind: RecommendationRowKind.forYou)
+          .get();
+      final user2Rows = await db
+          .getRecommendationCache(
+              userId: 'user-2', rowKind: RecommendationRowKind.forYou)
+          .get();
+
+      expect(user1Rows.map((r) => r.title), ['User 1 pick']);
+      expect(user2Rows.map((r) => r.title), ['User 2 pick']);
+    });
+
+    test('replacing one user\'s cache never touches another user\'s rows',
+        () async {
+      await db.replaceRecommendationCache(
+        userId: 'user-1',
+        rowKind: RecommendationRowKind.forYou,
+        entries: [entry('user-1', 0)],
+      );
+      await db.replaceRecommendationCache(
+        userId: 'user-2',
+        rowKind: RecommendationRowKind.forYou,
+        entries: [entry('user-2', 0)],
+      );
+
+      // Remplace le cache de user-1 par une liste vide (ex. calcul frais
+      // sans candidat) — celui de user-2 doit rester intact.
+      await db.replaceRecommendationCache(
+        userId: 'user-1',
+        rowKind: RecommendationRowKind.forYou,
+        entries: [],
+      );
+
+      final user2Rows = await db
+          .getRecommendationCache(
+              userId: 'user-2', rowKind: RecommendationRowKind.forYou)
+          .get();
+      expect(user2Rows, hasLength(1));
+    });
+
+    test('a cache entry within maxAge is returned', () async {
+      final now = DateTime(2025, 6, 15);
+      await db.into(db.recommendationCacheEntries).insert(
+            entry('user-1', 0).copyWith(
+              capturedAt: Value(now.subtract(const Duration(days: 3))),
+            ),
+          );
+
+      final rows = await db
+          .getRecommendationCache(
+            userId: 'user-1',
+            rowKind: RecommendationRowKind.forYou,
+            now: now,
+          )
+          .get();
+
+      expect(rows, hasLength(1));
+    });
+
+    test(
+        'a cache entry older than maxAge is not returned — a cache from '
+        'three months ago is worth less than nothing', () async {
+      final now = DateTime(2025, 6, 15);
+      await db.into(db.recommendationCacheEntries).insert(
+            entry('user-1', 0).copyWith(
+              capturedAt: Value(now.subtract(const Duration(days: 90))),
+            ),
+          );
+
+      final rows = await db
+          .getRecommendationCache(
+            userId: 'user-1',
+            rowKind: RecommendationRowKind.forYou,
+            now: now,
+          )
+          .get();
+
+      expect(rows, isEmpty);
+    });
+
+    test('maxAge is configurable, not hardcoded to the default week',
+        () async {
+      final now = DateTime(2025, 6, 15);
+      await db.into(db.recommendationCacheEntries).insert(
+            entry('user-1', 0).copyWith(
+              capturedAt: Value(now.subtract(const Duration(days: 3))),
+            ),
+          );
+
+      final rows = await db
+          .getRecommendationCache(
+            userId: 'user-1',
+            rowKind: RecommendationRowKind.forYou,
+            maxAge: const Duration(days: 1),
+            now: now,
+          )
+          .get();
+
+      expect(rows, isEmpty,
+          reason: 'un plafond d\'un jour doit rejeter une entrée de 3 jours');
+    });
+
+    test('an entry for a different row kind is never returned', () async {
+      await db.replaceRecommendationCache(
+        userId: 'user-1',
+        rowKind: RecommendationRowKind.setAside,
+        entries: [
+          entry('user-1', 0, rowKind: RecommendationRowKind.setAside)
+        ],
+      );
+
+      final rows = await db
+          .getRecommendationCache(
+              userId: 'user-1', rowKind: RecommendationRowKind.forYou)
+          .get();
+
+      expect(rows, isEmpty);
     });
   });
 }

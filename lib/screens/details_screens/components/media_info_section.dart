@@ -6,6 +6,7 @@ import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/string_extensions.dart';
+import 'package:kinos/util/text_metrics.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 
 /// Casting (grille compacte) et informations techniques, en deux colonnes —
@@ -84,11 +85,6 @@ class _CastGrid extends StatelessWidget {
   static const _tileWidth = 88.0;
   static const _maxRows = 1;
 
-  /// Hauteur approximative d'une ligne de `bodySmall` (nom, sous la
-  /// vignette carrée) — un seul repère plutôt qu'une mesure exacte via
-  /// `TextPainter`, même principe que `season_episode_section.dart`.
-  static const _labelHeight = 18.0;
-
   void _seeAll(BuildContext context) {
     showBottomSheetPill(
       context: context,
@@ -145,7 +141,19 @@ class _CastGrid extends StatelessWidget {
     // (cf. commentaire plus bas) : borner le conteneur à exactement une
     // rangée, `visible` pouvant en théorie déborder de `columns` éléments.
     final cellWidth = (width - (columns - 1) * AppSpacing.sm) / columns;
-    final tileHeight = cellWidth + AppSpacing.xxs + _labelHeight;
+    // Hauteur de ligne mesurée réellement (`measuredLineHeight`, pas un
+    // repère approximatif) et budget explicite du padding que
+    // `FocusRing` retire à son enfant (`FocusRing.contentInset`) —
+    // `_CastTile` ci-dessous enrobe son contenu dans un `FocusRing`,
+    // l'oublier reproduit le débordement de 0,5 px de
+    // `season_episode_section.dart` (masqué ici par le `ClipRect` plus
+    // bas, qui existe pour une raison distincte).
+    final labelHeight =
+        measuredLineHeight(context, Theme.of(context).textTheme.bodySmall);
+    final tileHeight = cellWidth +
+        AppSpacing.xxs +
+        labelHeight +
+        FocusRing.contentInset(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

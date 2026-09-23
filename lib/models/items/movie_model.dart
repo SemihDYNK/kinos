@@ -23,6 +23,7 @@ part 'movie_model.mapper.dart';
 
 @MappableClass()
 class MovieModel extends ItemStreamModel with MovieModelMappable {
+  @override
   final String originalTitle;
   final String? path;
   final DateTime premiereDate;

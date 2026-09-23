@@ -17,12 +17,14 @@ import 'package:kinos/models/items/trick_play_model.dart';
 import 'package:kinos/models/syncing/local_settings_table.dart';
 import 'package:kinos/models/syncing/palette_cache_table.dart';
 import 'package:kinos/models/syncing/playback_queue_table.dart';
+import 'package:kinos/models/syncing/recommendation_cache_table.dart';
 import 'package:kinos/models/syncing/sync_item.dart';
 import 'package:kinos/providers/user_provider.dart';
 
 export 'package:kinos/models/syncing/local_settings_table.dart';
 export 'package:kinos/models/syncing/palette_cache_table.dart';
 export 'package:kinos/models/syncing/playback_queue_table.dart';
+export 'package:kinos/models/syncing/recommendation_cache_table.dart';
 
 part 'database_item.g.dart';
 
@@ -50,7 +52,13 @@ class DatabaseItems extends Table {
   Set<Column<Object>> get primaryKey => {userId, id};
 }
 
-@DriftDatabase(tables: [DatabaseItems, PlaybackQueue, PaletteCache, Settings])
+@DriftDatabase(tables: [
+  DatabaseItems,
+  PlaybackQueue,
+  PaletteCache,
+  Settings,
+  RecommendationCacheEntries,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(this.ref, [QueryExecutor? executor]) : super(executor ?? _openConnection());
 
@@ -59,7 +67,7 @@ class AppDatabase extends _$AppDatabase {
   String get userId => ref.read(userProvider.select((value) => value?.id ?? ""));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -67,13 +75,27 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
         },
         onUpgrade: (Migrator m, int from, int to) async {
-          if (from < 2) {
+          if (from < 2 && to >= 2) {
             await m.createTable(playbackQueue);
             await m.createIndex(playbackQueueUserItem);
             await m.createIndex(playbackQueuePending);
             await m.createTable(paletteCache);
             await m.createTable(settings);
             await m.createIndex(settingsScope);
+          }
+          // `to >= 3`, pas seulement `from < 3` : SchemaVerifier
+          // (`migrateAndValidate`, tests de migration) peut demander une
+          // migration vers une version antérieure à `schemaVersion` actuel
+          // pour valider une étape intermédiaire (ex. v1 -> v2, alors que
+          // `AppDatabase` déclare déjà v3) — sans ce garde-fou, cette étape
+          // s'exécutait quand même (elle ne regardait que `from`), créant
+          // la table hors de la version ciblée par le test et provoquant
+          // une double création détectée en pratique ("index already
+          // exists") sur le test "v1 -> v2 preserves existing
+          // database_items rows" une fois `schemaVersion` passé à 3.
+          if (from < 3 && to >= 3) {
+            await m.createTable(recommendationCacheEntries);
+            await m.createIndex(recommendationCacheUserRow);
           }
         },
       );
@@ -275,6 +297,49 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteSetting(String key, {String scope = 'global'}) =>
       (delete(settings)..where((tbl) => tbl.key.equals(key) & tbl.scope.equals(scope))).go();
+
+  // --- recommendation_cache_entries: dernier calcul de recommandations
+  // affiché en attendant qu'un nouveau aboutisse en arrière-plan, cf.
+  // `recommendation_cache_table.dart` ---
+
+  /// [userId] explicite, jamais [userId] (le getter ambiant ci-dessus) :
+  /// cf. le commentaire sur `RecommendationCacheEntries.userId` — une
+  /// fuite entre profils ici est le défaut précis que ce paramètre
+  /// explicite empêche.
+  Future<void> replaceRecommendationCache({
+    required String userId,
+    required RecommendationRowKind rowKind,
+    required List<RecommendationCacheEntriesCompanion> entries,
+  }) async {
+    await batch((batch) {
+      batch.deleteWhere(
+          recommendationCacheEntries,
+          (tbl) =>
+              tbl.userId.equals(userId) & tbl.rowKind.equalsValue(rowKind));
+      batch.insertAll(recommendationCacheEntries, entries);
+    });
+  }
+
+  /// N'inclut jamais une entrée plus vieille que [maxAge] (cf.
+  /// [defaultRecommendationCacheMaxAge]) : un cache de plusieurs mois
+  /// affiché comme s'il était frais vaudrait moins que rien. [now]
+  /// explicite (comme partout ailleurs dans le module recommandations)
+  /// pour un calcul de fraîcheur reproductible en test — `DateTime.now()`
+  /// par défaut en dehors des tests.
+  Selectable<RecommendationCacheEntry> getRecommendationCache({
+    required String userId,
+    required RecommendationRowKind rowKind,
+    Duration maxAge = defaultRecommendationCacheMaxAge,
+    DateTime? now,
+  }) {
+    final cutoff = (now ?? DateTime.now()).subtract(maxAge);
+    return (select(recommendationCacheEntries)
+      ..where((tbl) =>
+          tbl.userId.equals(userId) &
+          tbl.rowKind.equalsValue(rowKind) &
+          tbl.capturedAt.isBiggerOrEqualValue(cutoff))
+      ..orderBy([(t) => OrderingTerm(expression: t.position)]));
+  }
 
   static QueryExecutor _openConnection() {
     return driftDatabase(

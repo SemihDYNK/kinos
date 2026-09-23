@@ -77,6 +77,17 @@ class ItemBaseModel with ItemBaseModelMappable {
     required this.jellyType,
   });
 
+  /// Titre original (VO), quand connu — [MovieModel]/[SeriesModel] le
+  /// portent nativement (champ `originalTitle`, dont ce getter n'est que
+  /// le pendant polymorphe), `null` pour les autres types. Simple
+  /// getter, pas un champ `@MappableClass()` : rien à régénérer pour cet
+  /// ajout, contrairement à `overview.providerIds`. Sert de repli
+  /// supplémentaire à l'appariement Arr/Jellyfin par titre (cf.
+  /// `arr_jellyfin_dedup.dart`) — un candidat Radarr/Sonarr est souvent
+  /// titré dans la langue d'origine quand Jellyfin affiche un titre
+  /// localisé, ou l'inverse.
+  String? get originalTitle => null;
+
   ItemBaseModel? setProgress(double progress) {
     return copyWith(userData: userData.copyWith(progress: progress));
   }

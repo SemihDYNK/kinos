@@ -45,6 +45,18 @@ class ContinueWatchingSection extends StatelessWidget {
     // Largeur qu'une vignette aurait dans une grille pleine à ce nombre de
     // colonnes — réutilisée telle quelle par la rangée peu remplie.
     final tileWidth = (width - (columns - 1) * AppSpacing.gridGap) / columns;
+    // Vignette 16:9 + libellé sous l'image (titre une ligne + sous-titre
+    // une ligne, cf. _ContinueWatchingCard) — hauteur dérivée de la
+    // largeur réelle, jamais d'un ratio fixe appliqué à la carte entière
+    // (image + libellé) : la fraction de pixel que produit ce ratio
+    // reconverti en pixels est inférieure à ce que les deux lignes de
+    // texte réclament en entier — débordement visible en debug (bande
+    // rayée) sur toutes les vignettes à la fois. Même formule que
+    // `season_episode_section.dart` (16:9 + AppSpacing.xs + 44, même
+    // gabarit de libellé). Réutilisée telle quelle par la rangée peu
+    // remplie (`_SparseRow`), qui appliquait le même `AspectRatio(16/9)`
+    // problématique à la carte entière.
+    final tileHeight = tileWidth * 9 / 16 + AppSpacing.xs + 44;
 
     return SliverMainAxisGroup(
       slivers: [
@@ -61,7 +73,10 @@ class ContinueWatchingSection extends StatelessWidget {
           padding: contentPadding.copyWith(top: AppSpacing.sm),
           sliver: items.length < _fullGridThreshold
               ? SliverToBoxAdapter(
-                  child: _SparseRow(items: items, tileWidth: tileWidth),
+                  child: _SparseRow(
+                      items: items,
+                      tileWidth: tileWidth,
+                      tileHeight: tileHeight),
                 )
               : GridFocusTraveler(
                   itemCount: items.length,
@@ -70,7 +85,7 @@ class ContinueWatchingSection extends StatelessWidget {
                     crossAxisCount: columns,
                     crossAxisSpacing: AppSpacing.gridGap,
                     mainAxisSpacing: AppSpacing.gridGap,
-                    childAspectRatio: 16 / 9,
+                    mainAxisExtent: tileHeight,
                   ),
                   itemBuilder: (context, selectedIndex, index) =>
                       _ContinueWatchingCard(item: items[index]),
@@ -87,8 +102,12 @@ class ContinueWatchingSection extends StatelessWidget {
 class _SparseRow extends StatelessWidget {
   final List<ItemBaseModel> items;
   final double tileWidth;
+  final double tileHeight;
 
-  const _SparseRow({required this.items, required this.tileWidth});
+  const _SparseRow(
+      {required this.items,
+      required this.tileWidth,
+      required this.tileHeight});
 
   @override
   Widget build(BuildContext context) {
@@ -98,12 +117,14 @@ class _SparseRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final item in items) ...[
+            // `tileHeight` en dur (pas d'AspectRatio) — même raison que la
+            // grille pleine ci-dessus : la carte a un libellé sous l'image
+            // qui réclame sa hauteur entière, un ratio fixe appliqué à la
+            // carte entière peut y manquer de quelques dixièmes de pixel.
             SizedBox(
               width: tileWidth,
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: _ContinueWatchingCard(item: item),
-              ),
+              height: tileHeight,
+              child: _ContinueWatchingCard(item: item),
             ),
             if (item != items.last) const SizedBox(width: AppSpacing.gridGap),
           ],

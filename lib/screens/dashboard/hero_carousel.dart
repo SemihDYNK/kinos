@@ -157,7 +157,10 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel> {
 
   String _metaLine(ItemBaseModel item) {
     final parts = [
-      item.overview.productionYear?.toString(),
+      // `yearAired`, pas `productionYear` — jamais peuplé pour un item
+      // chargé depuis le serveur (cf. `OverviewModel.fromBaseItemDto`),
+      // d'où une année toujours absente de cette ligne jusqu'ici.
+      item.overview.yearAired?.toString(),
       item.overview.runTime?.humanize,
       item.streamModel?.resolution?.value,
       item.overview.genreItems.firstOrNull?.name,

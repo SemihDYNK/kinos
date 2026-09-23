@@ -8,6 +8,7 @@ import 'package:kinos/models/items/season_model.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/humanize_duration.dart';
 import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/util/text_metrics.dart';
 import 'package:kinos/widgets/shared/labeled_selector.dart';
 import 'package:kinos/widgets/shared/media_progress_bar.dart';
 import 'package:kinos/widgets/shared/media_thumbnail.dart';
@@ -81,7 +82,26 @@ class _SeasonEpisodeSectionState extends ConsumerState<SeasonEpisodeSection> {
           // inférieur de quelques dixièmes de pixel à `tileHeight`, que le
           // libellé sous l'image réclame quand même en entier : débordement
           // visible en debug, bande rayée).
-          final tileHeight = tileWidth * 9 / 16 + AppSpacing.xs + 44;
+          //
+          // Hauteur des lignes de texte mesurée réellement
+          // (`measuredLineHeight`, pas `fontSize * height` : cette
+          // approximation sous-évalue légèrement la hauteur de ligne
+          // effective) et budget explicite du padding que `FocusRing`
+          // retire à son enfant (`FocusRing.contentInset`) — sans ce
+          // second terme, `_EpisodeTile` (enrobé dans un `FocusRing`
+          // juste en dessous) débordait de 0,5 px sur chaque cellule,
+          // quelle que soit la largeur de fenêtre : un budget qui ne
+          // compte que l'image et le libellé oublie l'anneau de focus qui
+          // entoure la cellule entière.
+          final titleHeight = measuredLineHeight(
+              context, Theme.of(context).textTheme.bodyMedium);
+          final runtimeHeight = measuredLineHeight(
+              context, Theme.of(context).textTheme.bodySmall);
+          final tileHeight = tileWidth * 9 / 16 +
+              AppSpacing.xs +
+              titleHeight +
+              runtimeHeight +
+              FocusRing.contentInset(context);
 
           return FocusTraversalGroup(
             child: Column(

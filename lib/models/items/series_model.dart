@@ -24,6 +24,7 @@ class SeriesModel extends ItemBaseModel with SeriesModelMappable {
   final List<SeasonModel>? seasons;
   final EpisodeModel? selectedEpisode;
   final List<SpecialFeatureModel>? specialFeatures;
+  @override
   final String originalTitle;
   final String sortName;
   final String status;

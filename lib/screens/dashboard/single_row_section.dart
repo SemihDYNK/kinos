@@ -22,11 +22,18 @@ class SingleRowSection extends StatelessWidget {
   final EdgeInsets contentPadding;
   final VoidCallback? onSeeAll;
 
+  /// Style du titre — défaut inchangé (`headlineMedium`) pour toutes les
+  /// rangées existantes. Les rangées d'inventaire du catalogue (lot
+  /// graines/inventaire) passent `AppTypography.catalogSectionTitle`
+  /// pour la rupture de registre typographique demandée (cf. spec).
+  final TextStyle? titleStyle;
+
   const SingleRowSection({
     required this.title,
     required this.items,
     required this.contentPadding,
     this.onSeeAll,
+    this.titleStyle,
     super.key,
   });
 
@@ -50,7 +57,8 @@ class SingleRowSection extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style:
+                      titleStyle ?? Theme.of(context).textTheme.headlineMedium,
                 ),
                 const Spacer(),
                 if (onSeeAll != null)
@@ -105,7 +113,9 @@ class _Tile extends StatelessWidget {
     // cover dans une cellule 2:3 — contain sur fond surface, comme la
     // vignette "Continuer à regarder" pour le même cas de figure.
     final image = item.getPosters?.primary;
-    final fallback = image == null ? (item.getPosters?.thumb ?? item.getPosters?.randomBackDrop) : null;
+    final fallback = image == null
+        ? (item.getPosters?.thumb ?? item.getPosters?.randomBackDrop)
+        : null;
 
     return FocusRing(
       onActivate: () => item.navigateTo(context),

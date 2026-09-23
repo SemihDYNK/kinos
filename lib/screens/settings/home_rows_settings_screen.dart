@@ -320,6 +320,13 @@ class _ParamPickerState extends ConsumerState<_ParamPicker> {
       case HomeRowType.unwatched:
       case HomeRowType.rediscover:
       case HomeRowType.similar:
+      case HomeRowType.forYou:
+      case HomeRowType.setAside:
+      case HomeRowType.tasteSeeds:
+      case HomeRowType.catalogWellRated:
+      case HomeRowType.catalogNarrowGenres:
+      case HomeRowType.catalogDecades:
+      case HomeRowType.catalogLongFilms:
         return const [];
     }
   }

@@ -203,6 +203,23 @@ abstract final class AppTypography {
     color: AppColors.textPrimary,
   );
 
+  /// Rupture de registre sur les titres de rangée d'inventaire du
+  /// catalogue ("Bien notés, jamais vus", "Genres étroits"...) — cf.
+  /// spec du lot graines/inventaire : visible mais sobre, entre
+  /// [sectionTitleSmall] (20px) et [cardTitle] (14px). `textSecondary`
+  /// (pas `textPrimary`) et sans le `letterSpacing` négatif des titres
+  /// `sectionTitle*` — un changement de registre typographique, jamais
+  /// un titre de section explicite superposé ("Votre catalogue" n'existe
+  /// pas, cf. spec : "aucune rangée ni titre de transition explicite").
+  static const catalogSectionTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w500,
+    fontVariations: [FontVariation('wght', 500)],
+    height: 1.2,
+    color: AppColors.textSecondary,
+  );
+
   /// Titre de carte.
   static const cardTitle = TextStyle(
     fontFamily: fontFamily,
@@ -453,6 +470,18 @@ ThemeData buildAppTheme({
 // rien ne doit être atteignable à la souris sans l'être au clavier.
 
 class FocusRing extends StatefulWidget {
+  /// Espace vertical (et horizontal, la valeur est la même dans les deux
+  /// sens) que le padding interne de [FocusRing] retire à son enfant —
+  /// deux fois `density.focusWidth` (une fois de chaque côté). À budgéter
+  /// explicitement dans toute cellule de grille à hauteur fixe
+  /// (`mainAxisExtent`) qui enrobe son contenu dans un [FocusRing] :
+  /// l'oublier a causé un débordement de 0.5 px sous les vignettes
+  /// d'épisode (`season_episode_section.dart`) — l'anneau ne se dessine
+  /// *pas* "en dehors du contenu" comme le suggérait un commentaire
+  /// obsolète ci-dessous, son padding réduit bien la boîte disponible.
+  static double contentInset(BuildContext context) =>
+      context.tokens.density.focusWidth * 2;
+
   const FocusRing({
     super.key,
     required this.child,
@@ -513,7 +542,9 @@ class _FocusRingState extends State<FocusRing> {
               width: density.focusWidth,
             ),
           ),
-          // L'anneau se dessine en dehors du contenu, sans le décaler.
+          // Ce padding retire bien de l'espace à l'enfant (il ne se
+          // dessine pas "en dehors" du contenu) — cf. [contentInset], à
+          // budgéter dans toute cellule de grille à hauteur fixe.
           padding: EdgeInsets.all(density.focusWidth),
           child: AnimatedScale(
             duration: AppDurations.hover,

@@ -1034,6 +1034,12 @@ class JellyService {
     List<ItemSortBy>? sortBy,
     List<SortOrder>? sortOrder,
     int? limit,
+    // Pagination (calibrage : requête concurrente par pages, cf.
+    // `recommendation_providers.dart`/`unwatchedLibraryProvider`) —
+    // ajouté à ce passe-plat existant plutôt que d'appeler `api.`
+    // directement depuis le module recommandations, pour rester le seul
+    // point d'entrée `/Users/{userId}/Items`.
+    int? startIndex,
     bool? recursive,
     List<BaseItemKind>? includeItemTypes,
     List<String>? genreIds,
@@ -1054,6 +1060,7 @@ class JellyService {
       sortOrder: sortOrder,
       includeItemTypes: includeItemTypes,
       limit: limit,
+      startIndex: startIndex,
       genreIds: genreIds,
       personIds: personIds,
       studioIds: studioIds,

@@ -179,6 +179,22 @@ final homeRowItemsProvider = FutureProvider.autoDispose
           enableImageTypes: _rowImageTypes,
         );
         return _toItems(ref, response.body?.items);
+
+      case HomeRowType.forYou:
+      case HomeRowType.setAside:
+      case HomeRowType.tasteSeeds:
+      case HomeRowType.catalogWellRated:
+      case HomeRowType.catalogNarrowGenres:
+      case HomeRowType.catalogDecades:
+      case HomeRowType.catalogLongFilms:
+        // Jamais atteint en pratique : leur contenu vient de
+        // `recommendationResultProvider`/`homeSeedRowsResultProvider`/
+        // `homeCatalogInventoryResultProvider` (`lib/recommendations/`),
+        // pas d'une requête `/Items` —
+        // `dashboard_screen.dart` route ces types vers leurs propres
+        // sections, pas vers `HomeRowSection`/ce provider. Cf. le
+        // commentaire sur `HomeRowType`.
+        return const [];
     }
   } catch (_) {
     return const [];

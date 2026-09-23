@@ -19,6 +19,32 @@ const _homeRowsSettingScope = 'dashboard';
 /// vide la liste ensuite.
 const _homeRowsInitializedKey = 'home_rows_initialized';
 
+/// Migration ponctuelle (lot B du système de recommandation) : ajoute
+/// les rangées [HomeRowType.forYou]/[HomeRowType.setAside] à une
+/// installation déjà en place (qui n'a donc jamais passé par
+/// [_seedDefaults], seul endroit où elles sont ajoutées d'origine).
+/// Même principe que [_homeRowsInitializedKey] : ne doit jamais se
+/// reproduire, même si l'utilisateur retire ensuite ces deux rangées.
+const _recommendationRowsMigrationKey = 'home_rows_recommendation_migration';
+
+/// Migration ponctuelle (lot des rangées par graine + inventaire du
+/// catalogue) — même principe que [_recommendationRowsMigrationKey],
+/// pour les cinq nouveaux types catégorie ([HomeRowType.tasteSeeds] et
+/// les quatre [HomeRowType.catalogWellRated]/[HomeRowType.catalogNarrowGenres]/
+/// [HomeRowType.catalogDecades]/[HomeRowType.catalogLongFilms]).
+const _catalogRowsMigrationKey = 'home_rows_catalog_migration';
+
+/// Ordre par défaut des cinq nouveaux types catégorie — cf. spec :
+/// rangées par graine, puis l'inventaire dans l'ordre bien notés →
+/// genres étroits → décennies → longs métrages.
+const _defaultCatalogRowTypes = [
+  HomeRowType.tasteSeeds,
+  HomeRowType.catalogWellRated,
+  HomeRowType.catalogNarrowGenres,
+  HomeRowType.catalogDecades,
+  HomeRowType.catalogLongFilms,
+];
+
 /// Genres/films et séries uniquement (cf. CLAUDE.md § Périmètre).
 const _defaultRowItemTypes = [BaseItemKind.movie, BaseItemKind.series];
 
@@ -50,8 +76,16 @@ class HomeRowsNotifier extends StateNotifier<List<HomeRowModel>> {
           scope: _homeRowsSettingScope);
       // Premier lancement seulement : jamais si l'utilisateur a déjà
       // supprimé toutes ses rangées (l'initialisation, elle, a bien eu
-      // lieu — seul l'état de la liste a changé depuis).
-      if (initialized == null) await _seedDefaults();
+      // lieu — seul l'état de la liste a changé depuis). Dans ce
+      // dernier cas, la migration ci-dessous s'applique quand même : une
+      // liste vidée par l'utilisateur ne doit pas bloquer l'arrivée des
+      // deux nouvelles rangées système.
+      if (initialized == null) {
+        await _seedDefaults();
+      } else {
+        await _ensureRecommendationRows();
+        await _ensureCatalogRows();
+      }
       return;
     }
     try {
@@ -65,6 +99,81 @@ class HomeRowsNotifier extends StateNotifier<List<HomeRowModel>> {
       // Préférence corrompue : on repart d'une liste vide plutôt que de
       // planter le tableau de bord.
     }
+    await _ensureRecommendationRows();
+    await _ensureCatalogRows();
+  }
+
+  /// Ajoute [HomeRowType.forYou]/[HomeRowType.setAside] en tête de liste
+  /// si elles n'y sont pas déjà — une seule fois, jamais reproduit (cf.
+  /// [_recommendationRowsMigrationKey]). Sans effet pour une installation
+  /// qui vient de passer par [_seedDefaults] (elle les inclut déjà et
+  /// pose le même indicateur, cf. plus bas).
+  Future<void> _ensureRecommendationRows() async {
+    final db = ref.read(appDatabaseProvider);
+    final migrated = await db.getSetting(_recommendationRowsMigrationKey,
+        scope: _homeRowsSettingScope);
+    if (migrated != null) return;
+
+    final hasForYou = state.any((r) => r.type == HomeRowType.forYou);
+    final hasSetAside = state.any((r) => r.type == HomeRowType.setAside);
+    if (!hasForYou || !hasSetAside) {
+      final newRows = [
+        if (!hasForYou)
+          HomeRowModel(
+            id: _uuid.v4(),
+            type: HomeRowType.forYou,
+            title: HomeRowType.forYou.defaultTitle(null),
+            order: 0,
+          ),
+        if (!hasSetAside)
+          HomeRowModel(
+            id: _uuid.v4(),
+            type: HomeRowType.setAside,
+            title: HomeRowType.setAside.defaultTitle(null),
+            order: 0,
+          ),
+      ];
+      await _reindexAndPersist([...newRows, ...state]);
+    }
+
+    await db.setSetting(_recommendationRowsMigrationKey, '1',
+        scope: _homeRowsSettingScope);
+  }
+
+  /// Ajoute les cinq types catégorie du lot graines/inventaire (cf.
+  /// [_defaultCatalogRowTypes]) juste après [HomeRowType.setAside] si
+  /// absents — une seule fois, jamais reproduit (cf.
+  /// [_catalogRowsMigrationKey]). Même motif que
+  /// [_ensureRecommendationRows].
+  Future<void> _ensureCatalogRows() async {
+    final db = ref.read(appDatabaseProvider);
+    final migrated = await db.getSetting(_catalogRowsMigrationKey,
+        scope: _homeRowsSettingScope);
+    if (migrated != null) return;
+
+    final missing = _defaultCatalogRowTypes
+        .where((type) => state.every((r) => r.type != type))
+        .toList();
+    if (missing.isNotEmpty) {
+      final setAsideIndex =
+          state.indexWhere((r) => r.type == HomeRowType.setAside);
+      final insertAt = setAsideIndex == -1 ? 0 : setAsideIndex + 1;
+      final newRows = [
+        for (final type in missing)
+          HomeRowModel(
+            id: _uuid.v4(),
+            type: type,
+            title: type.defaultTitle(null),
+            order: 0,
+          ),
+      ];
+      final list = [...state];
+      list.insertAll(insertAt, newRows);
+      await _reindexAndPersist(list);
+    }
+
+    await db.setSetting(_catalogRowsMigrationKey, '1',
+        scope: _homeRowsSettingScope);
   }
 
   /// Jeu de rangées par défaut au tout premier lancement : jamais vus, les
@@ -76,6 +185,31 @@ class HomeRowsNotifier extends StateNotifier<List<HomeRowModel>> {
   /// configuration ; ne se reproduit jamais, cf. [_homeRowsInitializedKey].
   Future<void> _seedDefaults() async {
     final rows = [
+      // Recommandations (lot B) en tête — cf. spec : "entre Continuer à
+      // regarder et Ajouts récents", donc avant tout le reste dans
+      // l'ordre persistant aussi (même si leur zone d'affichage réelle
+      // est fixe, cf. dashboard_screen.dart).
+      HomeRowModel(
+        id: _uuid.v4(),
+        type: HomeRowType.forYou,
+        title: HomeRowType.forYou.defaultTitle(null),
+        order: 0,
+      ),
+      HomeRowModel(
+        id: _uuid.v4(),
+        type: HomeRowType.setAside,
+        title: HomeRowType.setAside.defaultTitle(null),
+        order: 1,
+      ),
+      // Graines + inventaire du catalogue, juste après les deux
+      // rangées ci-dessus (cf. _defaultCatalogRowTypes).
+      for (final type in _defaultCatalogRowTypes)
+        HomeRowModel(
+          id: _uuid.v4(),
+          type: type,
+          title: type.defaultTitle(null),
+          order: 0,
+        ),
       HomeRowModel(
         id: _uuid.v4(),
         type: HomeRowType.unwatched,
@@ -86,13 +220,13 @@ class HomeRowsNotifier extends StateNotifier<List<HomeRowModel>> {
         id: _uuid.v4(),
         type: HomeRowType.topRated,
         title: HomeRowType.topRated.defaultTitle(null),
-        order: 1,
+        order: 0,
       ),
       HomeRowModel(
         id: _uuid.v4(),
         type: HomeRowType.rediscover,
         title: HomeRowType.rediscover.defaultTitle(null),
-        order: 2,
+        order: 0,
       ),
     ];
 
@@ -112,9 +246,18 @@ class HomeRowsNotifier extends StateNotifier<List<HomeRowModel>> {
       // premières rangées suffisent, l'accueil ne doit pas en dépendre.
     }
 
-    state = rows;
+    // Réindexé par position : les entrées ci-dessus portent un `order`
+    // provisoire (0 pour la plupart, cf. leur construction), seul
+    // l'ordre de la liste compte ici.
+    state = [for (var i = 0; i < rows.length; i++) rows[i].copyWith(order: i)];
     final db = ref.read(appDatabaseProvider);
     await db.setSetting(_homeRowsInitializedKey, '1',
+        scope: _homeRowsSettingScope);
+    // Déjà incluses ci-dessus : les migrations n'ont rien à faire pour
+    // une installation qui vient de démarrer.
+    await db.setSetting(_recommendationRowsMigrationKey, '1',
+        scope: _homeRowsSettingScope);
+    await db.setSetting(_catalogRowsMigrationKey, '1',
         scope: _homeRowsSettingScope);
     await _persist();
   }

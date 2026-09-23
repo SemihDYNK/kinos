@@ -1649,6 +1649,706 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   }
 }
 
+class $RecommendationCacheEntriesTable extends RecommendationCacheEntries
+    with TableInfo<$RecommendationCacheEntriesTable, RecommendationCacheEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RecommendationCacheEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId =
+      GeneratedColumn<String>('user_id', aliasedName, false,
+          additionalChecks: GeneratedColumn.checkTextLength(
+            minTextLength: 1,
+          ),
+          type: DriftSqlType.string,
+          requiredDuringInsert: true);
+  @override
+  late final GeneratedColumnWithTypeConverter<RecommendationRowKind, String>
+      rowKind = GeneratedColumn<String>('row_kind', aliasedName, false,
+              type: DriftSqlType.string, requiredDuringInsert: true)
+          .withConverter<RecommendationRowKind>(
+              $RecommendationCacheEntriesTable.$converterrowKind);
+  static const VerificationMeta _positionMeta =
+      const VerificationMeta('position');
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+      'position', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumnWithTypeConverter<RecommendationEntrySource, String>
+      source = GeneratedColumn<String>('source', aliasedName, false,
+              type: DriftSqlType.string, requiredDuringInsert: true)
+          .withConverter<RecommendationEntrySource>(
+              $RecommendationCacheEntriesTable.$convertersource);
+  static const VerificationMeta _jellyfinItemIdMeta =
+      const VerificationMeta('jellyfinItemId');
+  @override
+  late final GeneratedColumn<String> jellyfinItemId = GeneratedColumn<String>(
+      'jellyfin_item_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _jellyfinItemTypeMeta =
+      const VerificationMeta('jellyfinItemType');
+  @override
+  late final GeneratedColumn<String> jellyfinItemType = GeneratedColumn<String>(
+      'jellyfin_item_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _arrIdMeta = const VerificationMeta('arrId');
+  @override
+  late final GeneratedColumn<int> arrId = GeneratedColumn<int>(
+      'arr_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _arrServiceMeta =
+      const VerificationMeta('arrService');
+  @override
+  late final GeneratedColumn<String> arrService = GeneratedColumn<String>(
+      'arr_service', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title =
+      GeneratedColumn<String>('title', aliasedName, false,
+          additionalChecks: GeneratedColumn.checkTextLength(
+            minTextLength: 1,
+          ),
+          type: DriftSqlType.string,
+          requiredDuringInsert: true);
+  static const VerificationMeta _yearMeta = const VerificationMeta('year');
+  @override
+  late final GeneratedColumn<int> year = GeneratedColumn<int>(
+      'year', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _justificationMeta =
+      const VerificationMeta('justification');
+  @override
+  late final GeneratedColumn<String> justification = GeneratedColumn<String>(
+      'justification', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _capturedAtMeta =
+      const VerificationMeta('capturedAt');
+  @override
+  late final GeneratedColumn<DateTime> capturedAt = GeneratedColumn<DateTime>(
+      'captured_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        userId,
+        rowKind,
+        position,
+        source,
+        jellyfinItemId,
+        jellyfinItemType,
+        arrId,
+        arrService,
+        title,
+        year,
+        justification,
+        capturedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'recommendation_cache_entries';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<RecommendationCacheEntry> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(_positionMeta,
+          position.isAcceptableOrUnknown(data['position']!, _positionMeta));
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('jellyfin_item_id')) {
+      context.handle(
+          _jellyfinItemIdMeta,
+          jellyfinItemId.isAcceptableOrUnknown(
+              data['jellyfin_item_id']!, _jellyfinItemIdMeta));
+    }
+    if (data.containsKey('jellyfin_item_type')) {
+      context.handle(
+          _jellyfinItemTypeMeta,
+          jellyfinItemType.isAcceptableOrUnknown(
+              data['jellyfin_item_type']!, _jellyfinItemTypeMeta));
+    }
+    if (data.containsKey('arr_id')) {
+      context.handle(
+          _arrIdMeta, arrId.isAcceptableOrUnknown(data['arr_id']!, _arrIdMeta));
+    }
+    if (data.containsKey('arr_service')) {
+      context.handle(
+          _arrServiceMeta,
+          arrService.isAcceptableOrUnknown(
+              data['arr_service']!, _arrServiceMeta));
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('year')) {
+      context.handle(
+          _yearMeta, year.isAcceptableOrUnknown(data['year']!, _yearMeta));
+    }
+    if (data.containsKey('justification')) {
+      context.handle(
+          _justificationMeta,
+          justification.isAcceptableOrUnknown(
+              data['justification']!, _justificationMeta));
+    }
+    if (data.containsKey('captured_at')) {
+      context.handle(
+          _capturedAtMeta,
+          capturedAt.isAcceptableOrUnknown(
+              data['captured_at']!, _capturedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RecommendationCacheEntry map(Map<String, dynamic> data,
+      {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RecommendationCacheEntry(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      userId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}user_id'])!,
+      rowKind: $RecommendationCacheEntriesTable.$converterrowKind.fromSql(
+          attachedDatabase.typeMapping
+              .read(DriftSqlType.string, data['${effectivePrefix}row_kind'])!),
+      position: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}position'])!,
+      source: $RecommendationCacheEntriesTable.$convertersource.fromSql(
+          attachedDatabase.typeMapping
+              .read(DriftSqlType.string, data['${effectivePrefix}source'])!),
+      jellyfinItemId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}jellyfin_item_id']),
+      jellyfinItemType: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}jellyfin_item_type']),
+      arrId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}arr_id']),
+      arrService: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}arr_service']),
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      year: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}year']),
+      justification: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}justification']),
+      capturedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}captured_at'])!,
+    );
+  }
+
+  @override
+  $RecommendationCacheEntriesTable createAlias(String alias) {
+    return $RecommendationCacheEntriesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<RecommendationRowKind, String, String>
+      $converterrowKind = const EnumNameConverter<RecommendationRowKind>(
+          RecommendationRowKind.values);
+  static JsonTypeConverter2<RecommendationEntrySource, String, String>
+      $convertersource = const EnumNameConverter<RecommendationEntrySource>(
+          RecommendationEntrySource.values);
+}
+
+class RecommendationCacheEntry extends DataClass
+    implements Insertable<RecommendationCacheEntry> {
+  final int id;
+  final String userId;
+  final RecommendationRowKind rowKind;
+
+  /// Rang dans la rangée (0 = premier) — l'ordre du calcul n'est pas
+  /// autrement garanti par SQLite sans `ORDER BY` explicite sur cette
+  /// colonne.
+  final int position;
+  final RecommendationEntrySource source;
+
+  /// Id Jellyfin — présent seulement si [source] est `jellyfin`. Seul
+  /// nécessaire pour reconstruire à la fois la jaquette
+  /// (`imageUtilityProvider.getItemsImageUrl(id)`, vérifié : aucun tag
+  /// d'image requis) et la destination du clic — aucune donnée Jellyfin
+  /// plus riche n'est persistée.
+  final String? jellyfinItemId;
+
+  /// `'movie'` ou `'series'` — présent seulement si [source] est
+  /// `jellyfin`, nécessaire pour router le clic sans recharger l'item
+  /// complet au préalable.
+  final String? jellyfinItemType;
+
+  /// Id Radarr/Sonarr — présent seulement si [source] est `arr`.
+  final int? arrId;
+
+  /// `'radarr'` ou `'sonarr'` — présent seulement si [source] est
+  /// `arr`. Pas d'URL de jaquette persistée ici : elle se reconstruit à
+  /// la lecture avec les identifiants Arr *actuels* (cf.
+  /// `resolveArrPosterUrl`) plutôt que de garder une clé API embarquée
+  /// dans une URL sur disque, potentiellement périmée en plus d'y être
+  /// exposée.
+  final String? arrService;
+  final String title;
+  final int? year;
+
+  /// Déjà traduit et mis en forme (`justificationLabel`, cf.
+  /// `justification_label.dart`) — une entrée figée n'a besoin d'aucune
+  /// autre donnée du moteur (`TraitKey`, profil...) pour s'afficher.
+  /// `null` : même règle que partout ailleurs, aucune justification
+  /// affichée plutôt qu'un texte de remplacement.
+  final String? justification;
+
+  /// Horodatage du calcul qui a produit cette entrée — base de la durée
+  /// de validité (cf. [defaultRecommendationCacheMaxAge] et
+  /// `AppDatabase.getRecommendationCache`) : un cache trop vieux n'est
+  /// plus affiché du tout plutôt que de montrer une recommandation
+  /// obsolète comme si elle était fraîche.
+  final DateTime capturedAt;
+  const RecommendationCacheEntry(
+      {required this.id,
+      required this.userId,
+      required this.rowKind,
+      required this.position,
+      required this.source,
+      this.jellyfinItemId,
+      this.jellyfinItemType,
+      this.arrId,
+      this.arrService,
+      required this.title,
+      this.year,
+      this.justification,
+      required this.capturedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['user_id'] = Variable<String>(userId);
+    {
+      map['row_kind'] = Variable<String>(
+          $RecommendationCacheEntriesTable.$converterrowKind.toSql(rowKind));
+    }
+    map['position'] = Variable<int>(position);
+    {
+      map['source'] = Variable<String>(
+          $RecommendationCacheEntriesTable.$convertersource.toSql(source));
+    }
+    if (!nullToAbsent || jellyfinItemId != null) {
+      map['jellyfin_item_id'] = Variable<String>(jellyfinItemId);
+    }
+    if (!nullToAbsent || jellyfinItemType != null) {
+      map['jellyfin_item_type'] = Variable<String>(jellyfinItemType);
+    }
+    if (!nullToAbsent || arrId != null) {
+      map['arr_id'] = Variable<int>(arrId);
+    }
+    if (!nullToAbsent || arrService != null) {
+      map['arr_service'] = Variable<String>(arrService);
+    }
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || year != null) {
+      map['year'] = Variable<int>(year);
+    }
+    if (!nullToAbsent || justification != null) {
+      map['justification'] = Variable<String>(justification);
+    }
+    map['captured_at'] = Variable<DateTime>(capturedAt);
+    return map;
+  }
+
+  RecommendationCacheEntriesCompanion toCompanion(bool nullToAbsent) {
+    return RecommendationCacheEntriesCompanion(
+      id: Value(id),
+      userId: Value(userId),
+      rowKind: Value(rowKind),
+      position: Value(position),
+      source: Value(source),
+      jellyfinItemId: jellyfinItemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(jellyfinItemId),
+      jellyfinItemType: jellyfinItemType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(jellyfinItemType),
+      arrId:
+          arrId == null && nullToAbsent ? const Value.absent() : Value(arrId),
+      arrService: arrService == null && nullToAbsent
+          ? const Value.absent()
+          : Value(arrService),
+      title: Value(title),
+      year: year == null && nullToAbsent ? const Value.absent() : Value(year),
+      justification: justification == null && nullToAbsent
+          ? const Value.absent()
+          : Value(justification),
+      capturedAt: Value(capturedAt),
+    );
+  }
+
+  factory RecommendationCacheEntry.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RecommendationCacheEntry(
+      id: serializer.fromJson<int>(json['id']),
+      userId: serializer.fromJson<String>(json['userId']),
+      rowKind: $RecommendationCacheEntriesTable.$converterrowKind
+          .fromJson(serializer.fromJson<String>(json['rowKind'])),
+      position: serializer.fromJson<int>(json['position']),
+      source: $RecommendationCacheEntriesTable.$convertersource
+          .fromJson(serializer.fromJson<String>(json['source'])),
+      jellyfinItemId: serializer.fromJson<String?>(json['jellyfinItemId']),
+      jellyfinItemType: serializer.fromJson<String?>(json['jellyfinItemType']),
+      arrId: serializer.fromJson<int?>(json['arrId']),
+      arrService: serializer.fromJson<String?>(json['arrService']),
+      title: serializer.fromJson<String>(json['title']),
+      year: serializer.fromJson<int?>(json['year']),
+      justification: serializer.fromJson<String?>(json['justification']),
+      capturedAt: serializer.fromJson<DateTime>(json['capturedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'userId': serializer.toJson<String>(userId),
+      'rowKind': serializer.toJson<String>(
+          $RecommendationCacheEntriesTable.$converterrowKind.toJson(rowKind)),
+      'position': serializer.toJson<int>(position),
+      'source': serializer.toJson<String>(
+          $RecommendationCacheEntriesTable.$convertersource.toJson(source)),
+      'jellyfinItemId': serializer.toJson<String?>(jellyfinItemId),
+      'jellyfinItemType': serializer.toJson<String?>(jellyfinItemType),
+      'arrId': serializer.toJson<int?>(arrId),
+      'arrService': serializer.toJson<String?>(arrService),
+      'title': serializer.toJson<String>(title),
+      'year': serializer.toJson<int?>(year),
+      'justification': serializer.toJson<String?>(justification),
+      'capturedAt': serializer.toJson<DateTime>(capturedAt),
+    };
+  }
+
+  RecommendationCacheEntry copyWith(
+          {int? id,
+          String? userId,
+          RecommendationRowKind? rowKind,
+          int? position,
+          RecommendationEntrySource? source,
+          Value<String?> jellyfinItemId = const Value.absent(),
+          Value<String?> jellyfinItemType = const Value.absent(),
+          Value<int?> arrId = const Value.absent(),
+          Value<String?> arrService = const Value.absent(),
+          String? title,
+          Value<int?> year = const Value.absent(),
+          Value<String?> justification = const Value.absent(),
+          DateTime? capturedAt}) =>
+      RecommendationCacheEntry(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        rowKind: rowKind ?? this.rowKind,
+        position: position ?? this.position,
+        source: source ?? this.source,
+        jellyfinItemId:
+            jellyfinItemId.present ? jellyfinItemId.value : this.jellyfinItemId,
+        jellyfinItemType: jellyfinItemType.present
+            ? jellyfinItemType.value
+            : this.jellyfinItemType,
+        arrId: arrId.present ? arrId.value : this.arrId,
+        arrService: arrService.present ? arrService.value : this.arrService,
+        title: title ?? this.title,
+        year: year.present ? year.value : this.year,
+        justification:
+            justification.present ? justification.value : this.justification,
+        capturedAt: capturedAt ?? this.capturedAt,
+      );
+  RecommendationCacheEntry copyWithCompanion(
+      RecommendationCacheEntriesCompanion data) {
+    return RecommendationCacheEntry(
+      id: data.id.present ? data.id.value : this.id,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      rowKind: data.rowKind.present ? data.rowKind.value : this.rowKind,
+      position: data.position.present ? data.position.value : this.position,
+      source: data.source.present ? data.source.value : this.source,
+      jellyfinItemId: data.jellyfinItemId.present
+          ? data.jellyfinItemId.value
+          : this.jellyfinItemId,
+      jellyfinItemType: data.jellyfinItemType.present
+          ? data.jellyfinItemType.value
+          : this.jellyfinItemType,
+      arrId: data.arrId.present ? data.arrId.value : this.arrId,
+      arrService:
+          data.arrService.present ? data.arrService.value : this.arrService,
+      title: data.title.present ? data.title.value : this.title,
+      year: data.year.present ? data.year.value : this.year,
+      justification: data.justification.present
+          ? data.justification.value
+          : this.justification,
+      capturedAt:
+          data.capturedAt.present ? data.capturedAt.value : this.capturedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecommendationCacheEntry(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('rowKind: $rowKind, ')
+          ..write('position: $position, ')
+          ..write('source: $source, ')
+          ..write('jellyfinItemId: $jellyfinItemId, ')
+          ..write('jellyfinItemType: $jellyfinItemType, ')
+          ..write('arrId: $arrId, ')
+          ..write('arrService: $arrService, ')
+          ..write('title: $title, ')
+          ..write('year: $year, ')
+          ..write('justification: $justification, ')
+          ..write('capturedAt: $capturedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      userId,
+      rowKind,
+      position,
+      source,
+      jellyfinItemId,
+      jellyfinItemType,
+      arrId,
+      arrService,
+      title,
+      year,
+      justification,
+      capturedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RecommendationCacheEntry &&
+          other.id == this.id &&
+          other.userId == this.userId &&
+          other.rowKind == this.rowKind &&
+          other.position == this.position &&
+          other.source == this.source &&
+          other.jellyfinItemId == this.jellyfinItemId &&
+          other.jellyfinItemType == this.jellyfinItemType &&
+          other.arrId == this.arrId &&
+          other.arrService == this.arrService &&
+          other.title == this.title &&
+          other.year == this.year &&
+          other.justification == this.justification &&
+          other.capturedAt == this.capturedAt);
+}
+
+class RecommendationCacheEntriesCompanion
+    extends UpdateCompanion<RecommendationCacheEntry> {
+  final Value<int> id;
+  final Value<String> userId;
+  final Value<RecommendationRowKind> rowKind;
+  final Value<int> position;
+  final Value<RecommendationEntrySource> source;
+  final Value<String?> jellyfinItemId;
+  final Value<String?> jellyfinItemType;
+  final Value<int?> arrId;
+  final Value<String?> arrService;
+  final Value<String> title;
+  final Value<int?> year;
+  final Value<String?> justification;
+  final Value<DateTime> capturedAt;
+  const RecommendationCacheEntriesCompanion({
+    this.id = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.rowKind = const Value.absent(),
+    this.position = const Value.absent(),
+    this.source = const Value.absent(),
+    this.jellyfinItemId = const Value.absent(),
+    this.jellyfinItemType = const Value.absent(),
+    this.arrId = const Value.absent(),
+    this.arrService = const Value.absent(),
+    this.title = const Value.absent(),
+    this.year = const Value.absent(),
+    this.justification = const Value.absent(),
+    this.capturedAt = const Value.absent(),
+  });
+  RecommendationCacheEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required String userId,
+    required RecommendationRowKind rowKind,
+    required int position,
+    required RecommendationEntrySource source,
+    this.jellyfinItemId = const Value.absent(),
+    this.jellyfinItemType = const Value.absent(),
+    this.arrId = const Value.absent(),
+    this.arrService = const Value.absent(),
+    required String title,
+    this.year = const Value.absent(),
+    this.justification = const Value.absent(),
+    this.capturedAt = const Value.absent(),
+  })  : userId = Value(userId),
+        rowKind = Value(rowKind),
+        position = Value(position),
+        source = Value(source),
+        title = Value(title);
+  static Insertable<RecommendationCacheEntry> custom({
+    Expression<int>? id,
+    Expression<String>? userId,
+    Expression<String>? rowKind,
+    Expression<int>? position,
+    Expression<String>? source,
+    Expression<String>? jellyfinItemId,
+    Expression<String>? jellyfinItemType,
+    Expression<int>? arrId,
+    Expression<String>? arrService,
+    Expression<String>? title,
+    Expression<int>? year,
+    Expression<String>? justification,
+    Expression<DateTime>? capturedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (userId != null) 'user_id': userId,
+      if (rowKind != null) 'row_kind': rowKind,
+      if (position != null) 'position': position,
+      if (source != null) 'source': source,
+      if (jellyfinItemId != null) 'jellyfin_item_id': jellyfinItemId,
+      if (jellyfinItemType != null) 'jellyfin_item_type': jellyfinItemType,
+      if (arrId != null) 'arr_id': arrId,
+      if (arrService != null) 'arr_service': arrService,
+      if (title != null) 'title': title,
+      if (year != null) 'year': year,
+      if (justification != null) 'justification': justification,
+      if (capturedAt != null) 'captured_at': capturedAt,
+    });
+  }
+
+  RecommendationCacheEntriesCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? userId,
+      Value<RecommendationRowKind>? rowKind,
+      Value<int>? position,
+      Value<RecommendationEntrySource>? source,
+      Value<String?>? jellyfinItemId,
+      Value<String?>? jellyfinItemType,
+      Value<int?>? arrId,
+      Value<String?>? arrService,
+      Value<String>? title,
+      Value<int?>? year,
+      Value<String?>? justification,
+      Value<DateTime>? capturedAt}) {
+    return RecommendationCacheEntriesCompanion(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      rowKind: rowKind ?? this.rowKind,
+      position: position ?? this.position,
+      source: source ?? this.source,
+      jellyfinItemId: jellyfinItemId ?? this.jellyfinItemId,
+      jellyfinItemType: jellyfinItemType ?? this.jellyfinItemType,
+      arrId: arrId ?? this.arrId,
+      arrService: arrService ?? this.arrService,
+      title: title ?? this.title,
+      year: year ?? this.year,
+      justification: justification ?? this.justification,
+      capturedAt: capturedAt ?? this.capturedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (rowKind.present) {
+      map['row_kind'] = Variable<String>($RecommendationCacheEntriesTable
+          .$converterrowKind
+          .toSql(rowKind.value));
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>($RecommendationCacheEntriesTable
+          .$convertersource
+          .toSql(source.value));
+    }
+    if (jellyfinItemId.present) {
+      map['jellyfin_item_id'] = Variable<String>(jellyfinItemId.value);
+    }
+    if (jellyfinItemType.present) {
+      map['jellyfin_item_type'] = Variable<String>(jellyfinItemType.value);
+    }
+    if (arrId.present) {
+      map['arr_id'] = Variable<int>(arrId.value);
+    }
+    if (arrService.present) {
+      map['arr_service'] = Variable<String>(arrService.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (year.present) {
+      map['year'] = Variable<int>(year.value);
+    }
+    if (justification.present) {
+      map['justification'] = Variable<String>(justification.value);
+    }
+    if (capturedAt.present) {
+      map['captured_at'] = Variable<DateTime>(capturedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecommendationCacheEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('rowKind: $rowKind, ')
+          ..write('position: $position, ')
+          ..write('source: $source, ')
+          ..write('jellyfinItemId: $jellyfinItemId, ')
+          ..write('jellyfinItemType: $jellyfinItemType, ')
+          ..write('arrId: $arrId, ')
+          ..write('arrService: $arrService, ')
+          ..write('title: $title, ')
+          ..write('year: $year, ')
+          ..write('justification: $justification, ')
+          ..write('capturedAt: $capturedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1656,6 +2356,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PlaybackQueueTable playbackQueue = $PlaybackQueueTable(this);
   late final $PaletteCacheTable paletteCache = $PaletteCacheTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $RecommendationCacheEntriesTable recommendationCacheEntries =
+      $RecommendationCacheEntriesTable(this);
   late final Index databaseId = Index('database_id',
       'CREATE INDEX database_id ON database_items (user_id, id)');
   late final Index playbackQueueUserItem = Index('playback_queue_user_item',
@@ -1664,6 +2366,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       'CREATE INDEX playback_queue_pending ON playback_queue (attempts, created_at)');
   late final Index settingsScope = Index(
       'settings_scope', 'CREATE INDEX settings_scope ON settings (scope)');
+  late final Index recommendationCacheUserRow = Index(
+      'recommendation_cache_user_row',
+      'CREATE INDEX recommendation_cache_user_row ON recommendation_cache_entries (user_id, row_kind, position)');
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1673,10 +2378,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         playbackQueue,
         paletteCache,
         settings,
+        recommendationCacheEntries,
         databaseId,
         playbackQueueUserItem,
         playbackQueuePending,
-        settingsScope
+        settingsScope,
+        recommendationCacheUserRow
       ];
 }
 
@@ -2503,6 +3210,312 @@ typedef $$SettingsTableProcessedTableManager = ProcessedTableManager<
     (Setting, BaseReferences<_$AppDatabase, $SettingsTable, Setting>),
     Setting,
     PrefetchHooks Function()>;
+typedef $$RecommendationCacheEntriesTableCreateCompanionBuilder
+    = RecommendationCacheEntriesCompanion Function({
+  Value<int> id,
+  required String userId,
+  required RecommendationRowKind rowKind,
+  required int position,
+  required RecommendationEntrySource source,
+  Value<String?> jellyfinItemId,
+  Value<String?> jellyfinItemType,
+  Value<int?> arrId,
+  Value<String?> arrService,
+  required String title,
+  Value<int?> year,
+  Value<String?> justification,
+  Value<DateTime> capturedAt,
+});
+typedef $$RecommendationCacheEntriesTableUpdateCompanionBuilder
+    = RecommendationCacheEntriesCompanion Function({
+  Value<int> id,
+  Value<String> userId,
+  Value<RecommendationRowKind> rowKind,
+  Value<int> position,
+  Value<RecommendationEntrySource> source,
+  Value<String?> jellyfinItemId,
+  Value<String?> jellyfinItemType,
+  Value<int?> arrId,
+  Value<String?> arrService,
+  Value<String> title,
+  Value<int?> year,
+  Value<String?> justification,
+  Value<DateTime> capturedAt,
+});
+
+class $$RecommendationCacheEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $RecommendationCacheEntriesTable> {
+  $$RecommendationCacheEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<RecommendationRowKind, RecommendationRowKind,
+          String>
+      get rowKind => $composableBuilder(
+          column: $table.rowKind,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<int> get position => $composableBuilder(
+      column: $table.position, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<RecommendationEntrySource,
+          RecommendationEntrySource, String>
+      get source => $composableBuilder(
+          column: $table.source,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<String> get jellyfinItemId => $composableBuilder(
+      column: $table.jellyfinItemId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get jellyfinItemType => $composableBuilder(
+      column: $table.jellyfinItemType,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get arrId => $composableBuilder(
+      column: $table.arrId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get arrService => $composableBuilder(
+      column: $table.arrService, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get year => $composableBuilder(
+      column: $table.year, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get justification => $composableBuilder(
+      column: $table.justification, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get capturedAt => $composableBuilder(
+      column: $table.capturedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$RecommendationCacheEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $RecommendationCacheEntriesTable> {
+  $$RecommendationCacheEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get rowKind => $composableBuilder(
+      column: $table.rowKind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get position => $composableBuilder(
+      column: $table.position, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get source => $composableBuilder(
+      column: $table.source, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get jellyfinItemId => $composableBuilder(
+      column: $table.jellyfinItemId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get jellyfinItemType => $composableBuilder(
+      column: $table.jellyfinItemType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get arrId => $composableBuilder(
+      column: $table.arrId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get arrService => $composableBuilder(
+      column: $table.arrService, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get year => $composableBuilder(
+      column: $table.year, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get justification => $composableBuilder(
+      column: $table.justification,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get capturedAt => $composableBuilder(
+      column: $table.capturedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$RecommendationCacheEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RecommendationCacheEntriesTable> {
+  $$RecommendationCacheEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<RecommendationRowKind, String> get rowKind =>
+      $composableBuilder(column: $table.rowKind, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<RecommendationEntrySource, String>
+      get source => $composableBuilder(
+          column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get jellyfinItemId => $composableBuilder(
+      column: $table.jellyfinItemId, builder: (column) => column);
+
+  GeneratedColumn<String> get jellyfinItemType => $composableBuilder(
+      column: $table.jellyfinItemType, builder: (column) => column);
+
+  GeneratedColumn<int> get arrId =>
+      $composableBuilder(column: $table.arrId, builder: (column) => column);
+
+  GeneratedColumn<String> get arrService => $composableBuilder(
+      column: $table.arrService, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<int> get year =>
+      $composableBuilder(column: $table.year, builder: (column) => column);
+
+  GeneratedColumn<String> get justification => $composableBuilder(
+      column: $table.justification, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get capturedAt => $composableBuilder(
+      column: $table.capturedAt, builder: (column) => column);
+}
+
+class $$RecommendationCacheEntriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $RecommendationCacheEntriesTable,
+    RecommendationCacheEntry,
+    $$RecommendationCacheEntriesTableFilterComposer,
+    $$RecommendationCacheEntriesTableOrderingComposer,
+    $$RecommendationCacheEntriesTableAnnotationComposer,
+    $$RecommendationCacheEntriesTableCreateCompanionBuilder,
+    $$RecommendationCacheEntriesTableUpdateCompanionBuilder,
+    (
+      RecommendationCacheEntry,
+      BaseReferences<_$AppDatabase, $RecommendationCacheEntriesTable,
+          RecommendationCacheEntry>
+    ),
+    RecommendationCacheEntry,
+    PrefetchHooks Function()> {
+  $$RecommendationCacheEntriesTableTableManager(
+      _$AppDatabase db, $RecommendationCacheEntriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RecommendationCacheEntriesTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RecommendationCacheEntriesTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RecommendationCacheEntriesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> userId = const Value.absent(),
+            Value<RecommendationRowKind> rowKind = const Value.absent(),
+            Value<int> position = const Value.absent(),
+            Value<RecommendationEntrySource> source = const Value.absent(),
+            Value<String?> jellyfinItemId = const Value.absent(),
+            Value<String?> jellyfinItemType = const Value.absent(),
+            Value<int?> arrId = const Value.absent(),
+            Value<String?> arrService = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<int?> year = const Value.absent(),
+            Value<String?> justification = const Value.absent(),
+            Value<DateTime> capturedAt = const Value.absent(),
+          }) =>
+              RecommendationCacheEntriesCompanion(
+            id: id,
+            userId: userId,
+            rowKind: rowKind,
+            position: position,
+            source: source,
+            jellyfinItemId: jellyfinItemId,
+            jellyfinItemType: jellyfinItemType,
+            arrId: arrId,
+            arrService: arrService,
+            title: title,
+            year: year,
+            justification: justification,
+            capturedAt: capturedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String userId,
+            required RecommendationRowKind rowKind,
+            required int position,
+            required RecommendationEntrySource source,
+            Value<String?> jellyfinItemId = const Value.absent(),
+            Value<String?> jellyfinItemType = const Value.absent(),
+            Value<int?> arrId = const Value.absent(),
+            Value<String?> arrService = const Value.absent(),
+            required String title,
+            Value<int?> year = const Value.absent(),
+            Value<String?> justification = const Value.absent(),
+            Value<DateTime> capturedAt = const Value.absent(),
+          }) =>
+              RecommendationCacheEntriesCompanion.insert(
+            id: id,
+            userId: userId,
+            rowKind: rowKind,
+            position: position,
+            source: source,
+            jellyfinItemId: jellyfinItemId,
+            jellyfinItemType: jellyfinItemType,
+            arrId: arrId,
+            arrService: arrService,
+            title: title,
+            year: year,
+            justification: justification,
+            capturedAt: capturedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$RecommendationCacheEntriesTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $RecommendationCacheEntriesTable,
+        RecommendationCacheEntry,
+        $$RecommendationCacheEntriesTableFilterComposer,
+        $$RecommendationCacheEntriesTableOrderingComposer,
+        $$RecommendationCacheEntriesTableAnnotationComposer,
+        $$RecommendationCacheEntriesTableCreateCompanionBuilder,
+        $$RecommendationCacheEntriesTableUpdateCompanionBuilder,
+        (
+          RecommendationCacheEntry,
+          BaseReferences<_$AppDatabase, $RecommendationCacheEntriesTable,
+              RecommendationCacheEntry>
+        ),
+        RecommendationCacheEntry,
+        PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2515,4 +3528,8 @@ class $AppDatabaseManager {
       $$PaletteCacheTableTableManager(_db, _db.paletteCache);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
+  $$RecommendationCacheEntriesTableTableManager
+      get recommendationCacheEntries =>
+          $$RecommendationCacheEntriesTableTableManager(
+              _db, _db.recommendationCacheEntries);
 }

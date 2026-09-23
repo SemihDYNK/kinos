@@ -77,6 +77,9 @@ class OverviewModelMapper extends ClassMapperBase<OverviewModel> {
   static const Field<OverviewModel, List<String>> _f$productionLocations =
       Field('productionLocations', _$productionLocations,
           opt: true, def: const []);
+  static Map<String, String>? _$providerIds(OverviewModel v) => v.providerIds;
+  static const Field<OverviewModel, Map<String, String>> _f$providerIds =
+      Field('providerIds', _$providerIds, opt: true);
 
   @override
   final MappableFields<OverviewModel> fields = const {
@@ -98,6 +101,7 @@ class OverviewModelMapper extends ClassMapperBase<OverviewModel> {
     #people: _f$people,
     #seerrUrl: _f$seerrUrl,
     #productionLocations: _f$productionLocations,
+    #providerIds: _f$providerIds,
   };
   @override
   final bool ignoreNull = true;
@@ -121,7 +125,8 @@ class OverviewModelMapper extends ClassMapperBase<OverviewModel> {
         tags: data.dec(_f$tags),
         people: data.dec(_f$people),
         seerrUrl: data.dec(_f$seerrUrl),
-        productionLocations: data.dec(_f$productionLocations));
+        productionLocations: data.dec(_f$productionLocations),
+        providerIds: data.dec(_f$providerIds));
   }
 
   @override
@@ -155,6 +160,8 @@ abstract class OverviewModelCopyWith<$R, $In extends OverviewModel, $Out>
   ListCopyWith<$R, Person, ObjectCopyWith<$R, Person, Person>> get people;
   ListCopyWith<$R, String, ObjectCopyWith<$R, String, String>>
       get productionLocations;
+  MapCopyWith<$R, String, String, ObjectCopyWith<$R, String, String>>?
+      get providerIds;
   $R call(
       {Duration? runTime,
       String? summary,
@@ -173,7 +180,8 @@ abstract class OverviewModelCopyWith<$R, $In extends OverviewModel, $Out>
       List<String>? tags,
       List<Person>? people,
       String? seerrUrl,
-      List<String>? productionLocations});
+      List<String>? productionLocations,
+      Map<String, String>? providerIds});
   OverviewModelCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(Then<$Out2, $R2> t);
 }
 
@@ -240,6 +248,14 @@ class _OverviewModelCopyWithImpl<$R, $Out>
           (v, t) => ObjectCopyWith(v, $identity, t),
           (v) => call(productionLocations: v));
   @override
+  MapCopyWith<$R, String, String, ObjectCopyWith<$R, String, String>>?
+      get providerIds => $value.providerIds != null
+          ? MapCopyWith(
+              $value.providerIds!,
+              (v, t) => ObjectCopyWith(v, $identity, t),
+              (v) => call(providerIds: v))
+          : null;
+  @override
   $R call(
           {Object? runTime = $none,
           String? summary,
@@ -258,7 +274,8 @@ class _OverviewModelCopyWithImpl<$R, $Out>
           List<String>? tags,
           List<Person>? people,
           Object? seerrUrl = $none,
-          List<String>? productionLocations}) =>
+          List<String>? productionLocations,
+          Object? providerIds = $none}) =>
       $apply(FieldCopyWithData({
         if (runTime != $none) #runTime: runTime,
         if (summary != null) #summary: summary,
@@ -278,7 +295,8 @@ class _OverviewModelCopyWithImpl<$R, $Out>
         if (people != null) #people: people,
         if (seerrUrl != $none) #seerrUrl: seerrUrl,
         if (productionLocations != null)
-          #productionLocations: productionLocations
+          #productionLocations: productionLocations,
+        if (providerIds != $none) #providerIds: providerIds
       }));
   @override
   OverviewModel $make(CopyWithData data) => OverviewModel(
@@ -300,7 +318,8 @@ class _OverviewModelCopyWithImpl<$R, $Out>
       people: data.get(#people, or: $value.people),
       seerrUrl: data.get(#seerrUrl, or: $value.seerrUrl),
       productionLocations:
-          data.get(#productionLocations, or: $value.productionLocations));
+          data.get(#productionLocations, or: $value.productionLocations),
+      providerIds: data.get(#providerIds, or: $value.providerIds));
 
   @override
   OverviewModelCopyWith<$R2, OverviewModel, $Out2> $chain<$R2, $Out2>(

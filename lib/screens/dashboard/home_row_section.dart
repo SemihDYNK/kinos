@@ -66,6 +66,19 @@ class HomeRowSection extends ConsumerWidget {
       case HomeRowType.rediscover:
       case HomeRowType.similar:
         return null;
+      case HomeRowType.forYou:
+      case HomeRowType.setAside:
+      case HomeRowType.tasteSeeds:
+      case HomeRowType.catalogWellRated:
+      case HomeRowType.catalogNarrowGenres:
+      case HomeRowType.catalogDecades:
+      case HomeRowType.catalogLongFilms:
+        // Jamais atteint en pratique : `dashboard_screen.dart` route ces
+        // types vers leurs propres sections, pas vers ce widget (leur
+        // contenu ne vient pas de `/Items`) — cf. le commentaire sur
+        // `HomeRowType`. Traité ici pour que ce `switch` reste exhaustif
+        // si jamais un appelant s'y trompait.
+        return null;
     }
   }
 

@@ -32,6 +32,19 @@ class OverviewModel with OverviewModelMappable {
   /// Pays de production — affiché dans le panneau "Informations" de
   /// l'écran de détail.
   final List<String> productionLocations;
+
+  /// Identifiants des fournisseurs de métadonnées externes tels que
+  /// Jellyfin les porte (`ProviderIds`, ex. `{"Tmdb": "755898", "Imdb":
+  /// "tt0092991"}`) — appariement exact avec Radarr/Sonarr (qui portent
+  /// `tmdbId`/`imdbId`/`tvdbId`), cf. `arr_jellyfin_dedup.dart` : un
+  /// identifiant partagé prime sur tout rapprochement de titre, sensible
+  /// à la langue et à la notation (chiffres romains, articles...).
+  /// N'est renseigné que si la requête a explicitement demandé
+  /// `ItemFields.providerids` (même principe que `studios`/`people`/
+  /// `tags` ci-dessus) — `null` sinon, pas une liste vide : distingue
+  /// "non demandé" de "l'item n'a aucun identifiant".
+  final Map<String, String>? providerIds;
+
   const OverviewModel({
     this.runTime,
     this.summary = "",
@@ -51,7 +64,25 @@ class OverviewModel with OverviewModelMappable {
     this.people = const [],
     this.seerrUrl,
     this.productionLocations = const [],
+    this.providerIds,
   });
+
+  /// Recherche insensible à la casse dans [providerIds] — Jellyfin utilise
+  /// systématiquement une clé capitalisée ("Tmdb", "Imdb", "Tvdb"), mais
+  /// rien ne garantit cette casse exacte selon la version du serveur ou
+  /// le plugin de métadonnées.
+  String? _providerId(String key) {
+    final ids = providerIds;
+    if (ids == null) return null;
+    for (final entry in ids.entries) {
+      if (entry.key.toLowerCase() == key) return entry.value;
+    }
+    return null;
+  }
+
+  String? get tmdbId => _providerId('tmdb');
+  String? get imdbId => _providerId('imdb');
+  String? get tvdbId => _providerId('tvdb');
 
   List<Person> get directors {
     return people
@@ -96,6 +127,8 @@ class OverviewModel with OverviewModelMappable {
           ? Person.peopleFromDto(item.people ?? [], ref)
           : <Person>[],
       productionLocations: item.productionLocations ?? [],
+      providerIds: item.providerIds
+          ?.map((key, value) => MapEntry(key, value.toString())),
     );
   }
 }

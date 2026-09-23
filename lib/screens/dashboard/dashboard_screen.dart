@@ -8,6 +8,7 @@ import 'package:sliver_tools/sliver_tools.dart';
 
 import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
 import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/settings/home_row_model.dart';
 import 'package:kinos/providers/dashboard_mode_provider.dart';
 import 'package:kinos/providers/dashboard_provider.dart';
 import 'package:kinos/providers/settings/home_rows_provider.dart';
@@ -17,7 +18,10 @@ import 'package:kinos/screens/dashboard/continue_watching_section.dart';
 import 'package:kinos/screens/dashboard/hero_carousel.dart';
 import 'package:kinos/screens/dashboard/home_row_section.dart';
 import 'package:kinos/screens/dashboard/music_dashboard_screen.dart';
+import 'package:kinos/screens/dashboard/catalog_inventory_section.dart';
 import 'package:kinos/screens/dashboard/recently_added_section.dart';
+import 'package:kinos/screens/dashboard/recommendation_row_section.dart';
+import 'package:kinos/screens/dashboard/seed_row_section.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/home_screen.dart';
 import 'package:kinos/screens/shared/nested_scaffold.dart';
@@ -122,8 +126,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final innerPadding = padding.copyWith(left: padding.left - sideBarInset);
     final dashboardData = ref.watch(dashboardProvider);
     final views = ref.watch(viewsProvider);
-    final homeRows =
-        ref.watch(homeRowsProvider).where((row) => row.enabled).toList();
+    final allRows = ref.watch(homeRowsProvider);
+    final enabledRows = allRows.where((row) => row.enabled).toList();
+    // Rangées de recommandation (lot B) séparées du reste : rendues plus
+    // haut sur la page, entre "Continuer à regarder" et "Ajouts récents"
+    // (cf. spec), pas après comme les rangées configurables classiques.
+    // Toujours dans `homeRowsProvider`/`homeRows` (même activation,
+    // même réordonnancement clavier/glisser-déposer que les autres) —
+    // seule leur position d'affichage est différente, cf.
+    // `HomeRowType.forYou`/`.setAside`.
+    final recommendationRows = enabledRows
+        .where((row) =>
+            row.type == HomeRowType.forYou || row.type == HomeRowType.setAside)
+        .toList();
+    // Types catégorie du lot graines/inventaire (cf. le commentaire sur
+    // `HomeRowType`) : comme les deux ci-dessus, activés/réordonnés via
+    // `homeRowsProvider`, mais routés vers leurs propres sections
+    // (`TasteSeedRowsSection`/`CatalogInventorySection`) plutôt que la
+    // boucle générique ci-dessous — leur contenu réel (0 à N sous-rangées
+    // dynamiques) ne vient jamais de `homeRowItemsProvider`.
+    final enabledCatalogTypes = enabledRows.map((r) => r.type).toSet();
+    final homeRows = enabledRows
+        .where((row) =>
+            row.type != HomeRowType.forYou &&
+            row.type != HomeRowType.setAside &&
+            row.type != HomeRowType.tasteSeeds &&
+            row.type != HomeRowType.catalogWellRated &&
+            row.type != HomeRowType.catalogNarrowGenres &&
+            row.type != HomeRowType.catalogDecades &&
+            row.type != HomeRowType.catalogLongFilms)
+        .toList();
 
     final recentlyAdded = views.dashboardViews
         .where(
@@ -242,6 +274,48 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                       ],
                     ),
+            ),
+            // Entre "Continuer à regarder" et "Ajouts récents" (cf. spec)
+            // — en dehors du SliverStack/FadingHeroBackdrop ci-dessus,
+            // donc sur AppColors.background pur comme tout ce qui suit,
+            // jamais teinté (cf. CLAUDE.md § Bandeau teinté : "la grille
+            // Ajouts récents et tout ce qui suit restent sur #0A0A0A
+            // pur").
+            for (final row in recommendationRows)
+              SliverPadding(
+                padding: const EdgeInsets.only(top: AppSpacing.xl),
+                sliver: switch (row.type) {
+                  HomeRowType.forYou =>
+                    ForYouRowSection(row: row, contentPadding: padding),
+                  HomeRowType.setAside =>
+                    SetAsideRowSection(row: row, contentPadding: padding),
+                  _ => const SliverToBoxAdapter(child: SizedBox.shrink()),
+                },
+              ),
+            // Graines + inventaire du catalogue (cf. spec) : entre les
+            // rangées de recommandation et "Ajouts récents", qui garde sa
+            // position actuelle. Pas de rangée/titre de transition
+            // explicite entre les deux — seule la typographie des titres
+            // d'inventaire change de registre (cf.
+            // `AppTypography.catalogSectionTitle`).
+            if (enabledCatalogTypes.contains(HomeRowType.tasteSeeds))
+              SliverPadding(
+                padding: const EdgeInsets.only(top: AppSpacing.xl),
+                sliver: TasteSeedRowsSection(contentPadding: padding),
+              ),
+            SliverPadding(
+              padding: const EdgeInsets.only(top: AppSpacing.xl),
+              sliver: CatalogInventorySection(
+                contentPadding: padding,
+                showWellRated:
+                    enabledCatalogTypes.contains(HomeRowType.catalogWellRated),
+                showNarrowGenres: enabledCatalogTypes
+                    .contains(HomeRowType.catalogNarrowGenres),
+                showDecades:
+                    enabledCatalogTypes.contains(HomeRowType.catalogDecades),
+                showLongFilms:
+                    enabledCatalogTypes.contains(HomeRowType.catalogLongFilms),
+              ),
             ),
             SliverPadding(
               padding: const EdgeInsets.only(top: AppSpacing.xl),

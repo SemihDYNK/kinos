@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/shared_provider.dart';
+import 'package:kinos/recommendations/providers/recommendation_providers.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/settings/client_sections/client_settings_advanced.dart';
 import 'package:kinos/screens/settings/client_sections/client_settings_dashboard.dart';
@@ -17,6 +18,7 @@ import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/settings/settings_scaffold.dart';
 import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
 import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/simple_duration_picker.dart';
@@ -26,15 +28,39 @@ class ClientSettingsPage extends ConsumerStatefulWidget {
   const ClientSettingsPage({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ClientSettingsPageState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _ClientSettingsPageState();
 }
 
 class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
   late final nextUpDaysEditor = TextEditingController(
-      text: ref.read(clientSettingsProvider.select((value) => value.nextUpDateCutoff?.inDays ?? 14)).toString());
+      text: ref
+          .read(clientSettingsProvider
+              .select((value) => value.nextUpDateCutoff?.inDays ?? 14))
+          .toString());
 
   late final libraryPageSizeController = TextEditingController(
-      text: ref.read(clientSettingsProvider.select((value) => value.libraryPageSize))?.toString() ?? "");
+      text: ref
+              .read(clientSettingsProvider
+                  .select((value) => value.libraryPageSize))
+              ?.toString() ??
+          "");
+
+  bool _recomputingRecommendations = false;
+
+  Future<void> _forceRecommendationRecompute() async {
+    if (_recomputingRecommendations) return;
+    setState(() => _recomputingRecommendations = true);
+    try {
+      await forceRecommendationRecompute(ref);
+      if (!mounted) return;
+      KinosSnack.show(
+          'Recommandations : nouveau calcul au prochain retour à l\'accueil',
+          context: context);
+    } finally {
+      if (mounted) setState(() => _recomputingRecommendations = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,9 +85,12 @@ class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
 
                 if (timePicker == null) return;
 
-                ref.read(clientSettingsProvider.notifier).setTimeOut(timePicker != Duration.zero
-                    ? Duration(minutes: timePicker.inMinutes, seconds: timePicker.inSeconds % 60)
-                    : null);
+                ref.read(clientSettingsProvider.notifier).setTimeOut(
+                    timePicker != Duration.zero
+                        ? Duration(
+                            minutes: timePicker.inMinutes,
+                            seconds: timePicker.inSeconds % 60)
+                        : null);
               },
             ),
           ],
@@ -73,29 +102,47 @@ class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
         const SizedBox(height: 12),
         ...buildClientSettingsDashboard(context, ref),
         const SizedBox(height: 12),
-        ...buildClientSettingsVisual(context, ref, nextUpDaysEditor, libraryPageSizeController),
+        ...buildClientSettingsVisual(
+            context, ref, nextUpDaysEditor, libraryPageSizeController),
         const SizedBox(height: 12),
         ...buildClientSettingsTheme(context, ref),
         const SizedBox(height: 12),
         if (AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer) ...[
-          ...settingsListGroup(context, SettingsLabelDivider(label: context.localized.controls), [
+          ...settingsListGroup(context,
+              SettingsLabelDivider(label: context.localized.controls), [
             SettingsListTile(
               label: Text(context.localized.mouseDragSupport),
-              subLabel: Text(clientSettings.mouseDragSupport ? context.localized.enabled : context.localized.disabled),
-              onTap: () => ref
-                  .read(clientSettingsProvider.notifier)
-                  .update((current) => current.copyWith(mouseDragSupport: !clientSettings.mouseDragSupport)),
+              subLabel: Text(clientSettings.mouseDragSupport
+                  ? context.localized.enabled
+                  : context.localized.disabled),
+              onTap: () => ref.read(clientSettingsProvider.notifier).update(
+                  (current) => current.copyWith(
+                      mouseDragSupport: !clientSettings.mouseDragSupport)),
               trailing: Switch(
                 value: clientSettings.mouseDragSupport,
                 onChanged: (value) => ref
                     .read(clientSettingsProvider.notifier)
-                    .update((current) => current.copyWith(mouseDragSupport: !clientSettings.mouseDragSupport)),
+                    .update((current) => current.copyWith(
+                        mouseDragSupport: !clientSettings.mouseDragSupport)),
               ),
             ),
           ]),
           const SizedBox(height: 12),
         ],
         ...buildClientSettingsAdvanced(context, ref),
+        const SizedBox(height: 12),
+        ...settingsListGroup(context, null, [
+          SettingsListTile(
+            label: Text(_recomputingRecommendations
+                ? "Recommandations : nouveau calcul demandé…"
+                : "Recalculer les recommandations"),
+            subLabel: const Text(
+                "Force un nouveau calcul complet au prochain retour à l'accueil — sinon, le cache existant est réutilisé jusqu'à 24 h."),
+            onTap: _recomputingRecommendations
+                ? null
+                : _forceRecommendationRecompute,
+          ),
+        ]),
         if (kDebugMode) ...[
           const SizedBox(height: 64),
           SettingsListTile(
@@ -140,7 +187,9 @@ class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
                             const SizedBox(width: 8),
                             ElevatedButton(
                               onPressed: () async {
-                                await ref.read(sharedPreferencesProvider).clear();
+                                await ref
+                                    .read(sharedPreferencesProvider)
+                                    .clear();
                                 context.router.push(LoginRoute());
                               },
                               child: Text(context.localized.clear),

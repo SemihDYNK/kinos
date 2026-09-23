@@ -3,6 +3,32 @@ import 'package:flutter/foundation.dart';
 /// Type de source d'une rangée configurable de l'accueil. Toutes reposent
 /// sur des requêtes `/Items` (ou `/Persons`, `/Items/{id}/Similar`) déjà
 /// exposées par [JellyService] — aucun plugin serveur requis.
+///
+/// Exception : [forYou] et [setAside] (lot B du système de
+/// recommandation) — leur contenu vient de `recommendationResultProvider`
+/// (`lib/recommendations/`), pas d'une requête `/Items` filtrée. Ce sont
+/// des types "système" au même titre que [topRated]/[unwatched] (pas de
+/// paramètre, singuliers), mais leur rendu ne passe pas par
+/// `homeRowItemsProvider`/`HomeRowSection` comme les autres — cf.
+/// `dashboard_screen.dart`, qui les route vers `ForYouRowSection`/
+/// `SetAsideRowSection` (`lib/screens/dashboard/recommendation_row_section.dart`).
+/// Ils restent dans ce même modèle et ce même provider (`homeRowsProvider`)
+/// pour hériter gratuitement de l'activation/désactivation et du
+/// réordonnancement déjà en place.
+///
+/// Même exception, même raison, pour [tasteSeeds]/[catalogWellRated]/
+/// [catalogNarrowGenres]/[catalogDecades]/[catalogLongFilms] (lot des
+/// rangées par graine + inventaire du catalogue) — leur contenu vient de
+/// `homeSeedRowsResultProvider`/`homeCatalogInventoryResultProvider`.
+/// Chacun est un type par **catégorie**, pas
+/// par instance : le nombre réel de rangées (graines retenues, genres
+/// étroits, décennies) varie d'une session à l'autre selon le profil et
+/// la bibliothèque, un `HomeRowModel` par instance dynamique n'aurait pas
+/// de sens à persister. Activer/désactiver/réordonner porte donc sur la
+/// catégorie entière ; [title] n'est alors utilisé que dans l'écran de
+/// configuration, jamais affiché tel quel sur l'accueil (chaque
+/// sous-rangée calcule son propre titre — œuvre source, nom du genre,
+/// nom de la décennie...).
 enum HomeRowType {
   genre,
   topRated,
@@ -12,7 +38,14 @@ enum HomeRowType {
   rediscover,
   decade,
   similar,
-  collection;
+  collection,
+  forYou,
+  setAside,
+  tasteSeeds,
+  catalogWellRated,
+  catalogNarrowGenres,
+  catalogDecades,
+  catalogLongFilms;
 
   /// Vrai si ce type a besoin d'un paramètre choisi par l'utilisateur
   /// (genre, personne, studio, décennie ou collection).
@@ -26,7 +59,14 @@ enum HomeRowType {
         HomeRowType.topRated ||
         HomeRowType.unwatched ||
         HomeRowType.rediscover ||
-        HomeRowType.similar =>
+        HomeRowType.similar ||
+        HomeRowType.forYou ||
+        HomeRowType.setAside ||
+        HomeRowType.tasteSeeds ||
+        HomeRowType.catalogWellRated ||
+        HomeRowType.catalogNarrowGenres ||
+        HomeRowType.catalogDecades ||
+        HomeRowType.catalogLongFilms =>
           false,
       };
 
@@ -41,6 +81,13 @@ enum HomeRowType {
         HomeRowType.decade => 'Décennie',
         HomeRowType.similar => 'Parce que vous avez aimé...',
         HomeRowType.collection => 'Collection',
+        HomeRowType.forYou => 'Pour vous',
+        HomeRowType.setAside => 'Vous l\'aviez mis de côté',
+        HomeRowType.tasteSeeds => 'Rangées par graine',
+        HomeRowType.catalogWellRated => 'Bien notés, jamais vus',
+        HomeRowType.catalogNarrowGenres => 'Genres étroits',
+        HomeRowType.catalogDecades => 'Décennies',
+        HomeRowType.catalogLongFilms => 'Plus de 2h30',
       };
 
   /// Titre par défaut proposé pour une nouvelle rangée de ce type, en
@@ -56,6 +103,13 @@ enum HomeRowType {
         HomeRowType.unwatched => 'Jamais vus',
         HomeRowType.rediscover => 'À redécouvrir',
         HomeRowType.similar => 'Parce que vous avez aimé...',
+        HomeRowType.forYou => 'Pour vous',
+        HomeRowType.setAside => 'Vous l\'aviez mis de côté',
+        HomeRowType.tasteSeeds => 'Rangées par graine',
+        HomeRowType.catalogWellRated => 'Bien notés, jamais vus',
+        HomeRowType.catalogNarrowGenres => 'Genres étroits',
+        HomeRowType.catalogDecades => 'Décennies',
+        HomeRowType.catalogLongFilms => 'Plus de 2h30',
       };
 }
 
