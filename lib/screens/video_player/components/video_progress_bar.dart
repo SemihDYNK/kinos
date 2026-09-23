@@ -7,11 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/models/items/chapters_model.dart';
 import 'package:kinos/models/items/media_segments_model.dart';
 import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/duration_extensions.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/string_extensions.dart';
-import 'package:kinos/widgets/gapped_container_shape.dart';
 import 'package:kinos/widgets/shared/kinos_slider.dart';
+import 'package:kinos/widgets/shared/segmented_track.dart';
 import 'package:kinos/widgets/shared/trick_play_image.dart';
 
 class VideoProgressBar extends ConsumerStatefulWidget {
@@ -63,6 +64,37 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
   double chapterCardWidth = 250;
   Duration currentDuration = Duration.zero;
 
+  /// Hauteurs communes à la barre de progression et à la barre de
+  /// volume — cf. [SegmentedTrack.heightRest]/[SegmentedTrack.heightHover].
+  /// `KinosSlider` reste utilisé ci-dessous, mais seulement pour son
+  /// geste (glissement/tap) : son propre rendu de piste
+  /// (`GappedContainerShape`, pensé pour un curseur isolé façon volume,
+  /// pas pour une barre de progression) est rendu totalement
+  /// transparent.
+  static const _trackHeightRest = SegmentedTrack.heightRest;
+  static const _trackHeightHover = SegmentedTrack.heightHover;
+
+  /// Géométrie du petit marqueur triangulaire (un carré pivoté à -45°)
+  /// sous l'infobulle de chapitre — cf. [chapterCard]. Taille du carré
+  /// avant rotation, et décalage vers le bas appliqué avant rotation
+  /// pour détacher visuellement sa pointe du bord de l'infobulle.
+  static const _caretSize = 30.0;
+  static const _caretPushDown = 10.0;
+
+  /// Distance verticale entre le bord bas (non transformé) de la carte
+  /// infobulle+marqueur et la pointe du marqueur une fois pivoté.
+  /// `Stack(alignment: bottomCenter)` place le CENTRE du carré (30 px de
+  /// côté) à `côté / 2` au-dessus de ce bord bas, avant le décalage de
+  /// `_caretPushDown` vers le bas ; la rotation à -45° l'éloigne encore
+  /// de `côté × √2 / 2` (moitié de sa diagonale) en dessous de son
+  /// propre centre. Net : `pushDown + côté × (√2 − 1) / 2` — dérivée de
+  /// la géométrie du marqueur, jamais un nombre choisi à l'oeil (mesuré
+  /// et corrigé une première fois via RenderBox : la formule initiale
+  /// omettait le terme `−côté/2` de l'alignement `bottomCenter`, d'où un
+  /// écart de 15 px avec le centre réel de la piste).
+  static final double _caretTipDrop =
+      _caretPushDown + _caretSize * (math.sqrt2 - 1) / 2;
+
   @override
   Widget build(BuildContext context) {
     final List<Chapter> chapters =
@@ -72,15 +104,16 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
     final position = onDragStart ? currentDuration : widget.position;
     final MediaSegmentsModel? mediaSegments =
         ref.read(playBackModel.select((value) => value?.mediaSegments));
-    final relativeFraction =
-        position.inMilliseconds / widget.duration.inMilliseconds;
+    final durationMs = widget.duration.inMilliseconds;
+    final playedFraction = durationMs > 0
+        ? (position.inMilliseconds / durationMs).clamp(0.0, 1.0)
+        : 0.0;
+    final bufferFraction = durationMs > 0
+        ? (widget.buffer.inMilliseconds / durationMs).clamp(0.0, 1.0)
+        : 0.0;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final sliderHeight =
-            SliderTheme.of(context).trackHeight ?? (constraints.maxHeight / 3);
-        final bufferWidth = calculateFractionWidth(constraints, widget.buffer);
-        final bufferFraction =
-            relativeFraction / (bufferWidth / constraints.maxWidth);
+        final trackHeight = isVisible ? _trackHeightHover : _trackHeightRest;
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -119,12 +152,20 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                   },
                   child: Opacity(
                     opacity: widget.buffering ? 0 : 1.0,
+                    // `KinosSlider` ne sert plus qu'à reconnaître le
+                    // geste (tap/glissement) et à déclencher onChangeStart/
+                    // onChanged/onChangeEnd — son propre rendu de piste
+                    // (`GappedContainerShape`, le trou visible dans
+                    // l'ancienne version) est rendu invisible ici ;
+                    // `SegmentedTrack` ci-dessous porte tout l'affichage.
                     child: KinosSlider(
                       min: 0.0,
                       max: widget.duration.inMilliseconds.toDouble(),
                       animation: Duration.zero,
                       thumbWidth: 10.0,
                       showThumb: false,
+                      activeTrackColor: Colors.transparent,
+                      inactiveTrackColor: Colors.transparent,
                       value: (position.inMilliseconds).toDouble().clamp(
                             0,
                             widget.duration.inMilliseconds.toDouble(),
@@ -159,127 +200,124 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                 ),
               ),
             ),
-            IgnorePointer(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  ...?mediaSegments?.segments.map(
-                    (segment) => Positioned(
-                      left: calculateStartOffset(constraints, segment.start),
-                      right: calculateRightOffset(constraints, segment.end),
-                      bottom: 0,
-                      child: Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: segment.type.color,
-                          borderRadius: BorderRadius.circular(
-                            100,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (!widget.buffering) ...{
-                    //VideoBufferBar
-                    Positioned(
-                      left: 0,
-                      child: SizedBox(
-                        width: (constraints.maxWidth /
-                                (widget.duration.inMilliseconds /
-                                    widget.buffer.inMilliseconds))
-                            .clamp(1, constraints.maxWidth),
-                        height: sliderHeight,
-                        child: GappedContainerShape(
-                          activeColor: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.5),
-                          inActiveColor: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.5),
-                          thumbPosition: bufferFraction,
-                        ),
-                      ),
-                    ),
-                  } else
-                    Align(
-                      alignment: Alignment.center,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(100),
-                        child: LinearProgressIndicator(
-                          backgroundColor: Colors.transparent,
-                          minHeight: sliderHeight,
-                        ),
-                      ),
-                    ),
-                  if (chapters.isNotEmpty && !widget.buffering) ...{
-                    ...chapters.map(
-                      (chapter) {
-                        final offset = constraints.maxWidth /
-                            (widget.duration.inMilliseconds /
-                                    chapter.startPosition.inMilliseconds)
-                                .clamp(1, constraints.maxWidth);
-                        final activePosition =
-                            chapter.startPosition < widget.position;
-                        if (chapter.startPosition.inSeconds == 0) return null;
-                        return Positioned(
-                          left: offset,
-                          child: IgnorePointer(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: activePosition
-                                    ? Theme.of(context).colorScheme.onPrimary
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.5),
+            // `Positioned.fill` + `Center` explicite : la piste ne doit
+            // JAMAIS dépendre de l'alignement ambiant du `Stack`
+            // englobant. Preuve mesurée de la régression (RenderBox) :
+            // sans ceci, ce sous-arbre n'était pas positionné (pas de
+            // `Positioned`), donc régi par l'alignement PAR DÉFAUT du
+            // `Stack` racine (`AlignmentDirectional.topStart`, jamais
+            // explicité) — la piste (haute de seulement `trackHeight`,
+            // 4-6 px) se retrouvait plaquée en haut de la zone de 20 px
+            // (centre Y ≈ trackHeight/2, ~2-3 px), alors que le pouce
+            // (ci-dessous, `SizedBox` occupant toute la hauteur) se
+            // centrait lui correctement à Y=10 — écart mesuré : 7 px,
+            // exactement le décalage rapporté (858 vs 865).
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      AnimatedContainer(
+                        duration: AppDurations.hover,
+                        height: trackHeight,
+                        width: double.infinity,
+                        child: widget.buffering
+                            ? const ClipRRect(
+                                borderRadius: AppRadii.controlBorder,
+                                child: LinearProgressIndicator(
+                                  backgroundColor: AppColors.progressTrack,
+                                  valueColor: AlwaysStoppedAnimation(
+                                      AppColors.textPrimary),
+                                ),
+                              )
+                            : SegmentedTrack(
+                                height: trackHeight,
+                                primaryFraction: playedFraction,
+                                secondaryFraction: bufferFraction,
                               ),
-                              height: constraints.maxHeight,
-                              width: sliderHeight - (activePosition ? 2 : 4),
+                      ),
+                      ...?mediaSegments?.segments.map(
+                        (segment) => Positioned(
+                          left:
+                              calculateStartOffset(constraints, segment.start),
+                          right: calculateRightOffset(constraints, segment.end),
+                          child: Container(
+                            height: _trackHeightHover,
+                            decoration: BoxDecoration(
+                              color: segment.type.color,
+                              borderRadius: AppRadii.controlBorder,
                             ),
                           ),
-                        );
+                        ),
+                      ),
+                      if (chapters.isNotEmpty && !widget.buffering) ...{
+                        ...chapters.map(
+                          (chapter) {
+                            final offset = constraints.maxWidth /
+                                (widget.duration.inMilliseconds /
+                                        chapter.startPosition.inMilliseconds)
+                                    .clamp(1, constraints.maxWidth);
+                            final activePosition =
+                                chapter.startPosition < widget.position;
+                            if (chapter.startPosition.inSeconds == 0) {
+                              return null;
+                            }
+                            return Positioned(
+                              left: offset,
+                              child: IgnorePointer(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: activePosition
+                                        ? AppColors.background
+                                        : AppColors.textPrimary
+                                            .withValues(alpha: 0.5),
+                                  ),
+                                  height: constraints.maxHeight,
+                                  width: _trackHeightHover -
+                                      (activePosition ? 2 : 4),
+                                ),
+                              ),
+                            );
+                          },
+                        ).nonNulls,
                       },
-                    ).nonNulls,
-                  },
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
             if (!widget.buffering) ...[
-              chapterCard(context, position, isVisible),
+              chapterCard(
+                  context, position, isVisible, constraints.maxHeight / 2),
+              // Curseur (pouce) — `top: 0, bottom: 0` explicites (au lieu
+              // d'un `SizedBox(height: constraints.maxHeight)` qui ne
+              // fonctionnait que parce que sa hauteur coïncidait avec
+              // celle de la zone) : centré par construction, sans lien
+              // avec la hauteur animée de la piste (`trackHeight`,
+              // 4-6 px) — visible seulement au survol/glissement/focus
+              // (`isVisible`), jamais au repos.
               Positioned(
                 left: (constraints.maxWidth /
                         (widget.duration.inMilliseconds /
                             position.inMilliseconds))
                     .clamp(1, constraints.maxWidth),
+                top: 0,
+                bottom: 0,
                 child: Transform.translate(
-                  offset: Offset(-(constraints.maxHeight / 2), 0),
+                  offset: const Offset(-AppSpacing.sm / 2, 0),
                   child: IgnorePointer(
-                    child: SizedBox(
-                      height: constraints.maxHeight,
-                      width: constraints.maxHeight,
-                      child: Center(
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 125),
-                          // hideHandleAtRest : la poignée n'existe qu'au
-                          // survol/glissement/focus, pas juste en plus
-                          // petit comme le comportement historique.
-                          opacity:
-                              widget.hideHandleAtRest && !isVisible ? 0 : 1,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 125),
-                            height:
-                                isVisible ? sliderHeight * 3.5 : sliderHeight,
-                            width: sliderHeight,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: isVisible
-                                  ? Theme.of(context).colorScheme.onSurface
-                                  : Theme.of(context).colorScheme.primary,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                    child: Center(
+                      child: AnimatedOpacity(
+                        duration: AppDurations.hover,
+                        opacity: isVisible ? 1 : 0,
+                        child: Container(
+                          height: AppSpacing.sm,
+                          width: AppSpacing.sm,
+                          decoration: const BoxDecoration(
+                            color: AppColors.textPrimary,
+                            shape: BoxShape.circle,
                           ),
                         ),
                       ),
@@ -316,8 +354,8 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
     return constraints.maxWidth - endOffset;
   }
 
-  Widget chapterCard(BuildContext context, Duration duration, bool visible) {
-    const double height = 350;
+  Widget chapterCard(BuildContext context, Duration duration, bool visible,
+      double zoneCenterY) {
     final currentStream = ref.watch(playBackModel.select((value) => value));
     final chapter =
         (currentStream?.chapters ?? []).getChapterFromDuration(currentDuration);
@@ -328,110 +366,134 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
     return Positioned(
       left:
           calculatedPosition.clamp(-10, screenWidth - (chapterCardWidth + 45)),
+      // Ancre le bord bas de la carte à une distance FIXE et calculée
+      // (`_caretTipDrop`) du centre de la piste (`zoneCenterY`) : la
+      // pointe du marqueur triangulaire vise exactement ce centre,
+      // quelle que soit la hauteur réelle du contenu (image + légende,
+      // variable selon la longueur du nom de chapitre) — remplace
+      // l'ancien `Transform.translate(0, -height - 10)` qui supposait
+      // une hauteur de carte constante (350 px, jamais la hauteur
+      // réelle), une approximation qui ne coïncidait qu'à quelques
+      // pixels près avec le centre réel de la piste (mesuré : ~3 px
+      // d'écart rapporté).
+      bottom: zoneCenterY + _caretTipDrop,
       child: IgnorePointer(
         child: AnimatedOpacity(
           opacity: visible ? 1 : 0,
           duration: const Duration(milliseconds: 250),
           child: ConstrainedBox(
-            constraints:
-                BoxConstraints(maxHeight: height, maxWidth: chapterCardWidth),
-            child: Transform.translate(
-              offset: const Offset(0, -height - 10),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: AnimatedSize(
-                    duration: const Duration(milliseconds: 250),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 250),
-                            child: ClipRRect(
-                              borderRadius:
-                                  const BorderRadius.all(Radius.circular(8)),
-                              child: trickPlay == null ||
-                                      trickPlay.images.isEmpty
-                                  ? chapter != null
-                                      ? Image(
-                                          image: chapter.imageProvider,
-                                          fit: BoxFit.contain,
-                                        )
-                                      : const SizedBox.shrink()
-                                  : AspectRatio(
-                                      aspectRatio: trickPlay.width.toDouble() /
-                                          trickPlay.height.toDouble(),
-                                      child: TrickPlayImage(
-                                        trickPlay,
-                                        position: currentDuration,
-                                      ),
+            constraints: BoxConstraints(maxWidth: chapterCardWidth),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 250),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 250),
+                          child: ClipRRect(
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(8)),
+                            child: trickPlay == null || trickPlay.images.isEmpty
+                                ? chapter != null
+                                    ? Image(
+                                        image: chapter.imageProvider,
+                                        fit: BoxFit.contain,
+                                      )
+                                    : const SizedBox.shrink()
+                                : AspectRatio(
+                                    aspectRatio: trickPlay.width.toDouble() /
+                                        trickPlay.height.toDouble(),
+                                    child: TrickPlayImage(
+                                      trickPlay,
+                                      position: currentDuration,
                                     ),
-                            ),
+                                  ),
                           ),
                         ),
-                        Stack(
-                          alignment: Alignment.bottomCenter,
-                          children: [
-                            Transform.translate(
-                              offset: Offset(offsetDifference, 10),
-                              child: Transform.rotate(
-                                angle: -math.pi / 4,
-                                child: Container(
-                                  height: 30,
-                                  width: 30,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        Theme.of(context).colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                      ),
+                      Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          Transform.translate(
+                            offset: Offset(offsetDifference, _caretPushDown),
+                            child: Transform.rotate(
+                              angle: -math.pi / 4,
+                              child: Container(
+                                key: const Key('chapter-card-caret'),
+                                height: _caretSize,
+                                width: _caretSize,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.surfaceHigh,
+                                  borderRadius: AppRadii.cardBorder,
                                 ),
                               ),
                             ),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.max,
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    if (chapter?.name.isNotEmpty ?? false)
-                                      Flexible(
-                                        child: Text(
-                                          chapter?.name.capitalize() ?? "",
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleSmall
-                                              ?.copyWith(
-                                                  fontWeight: FontWeight.bold),
-                                        ),
+                          ),
+                          Container(
+                            decoration: const BoxDecoration(
+                              color: AppColors.surfaceHigh,
+                              borderRadius: AppRadii.cardBorder,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              // `MainAxisSize.min`, pas `.max` : cette
+                              // Row vit dans une `ConstrainedBox
+                              // (maxWidth: chapterCardWidth)` (250) —
+                              // avec `.max`, elle réclamait ces 250 px
+                              // même quand le texte tenait dans 80,
+                              // d'où la boîte bien plus large que son
+                              // contenu rapportée (mesuré : la largeur
+                              // de la Row égalait la contrainte
+                              // maximale, pas la somme de ses enfants).
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                spacing: AppSpacing.sm,
+                                children: [
+                                  if (chapter?.name.isNotEmpty ?? false)
+                                    Flexible(
+                                      child: Text(
+                                        chapter?.name.capitalize() ?? "",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                                fontWeight: FontWeight.bold),
                                       ),
-                                    Text(
-                                      currentDuration.readAbleDuration,
-                                      textAlign: TextAlign.center,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                              fontWeight: FontWeight.bold),
-                                    )
-                                  ],
-                                ),
+                                    ),
+                                  Text(
+                                    currentDuration.readAbleDuration,
+                                    textAlign: TextAlign.center,
+                                    // Typographie tabulaire : même
+                                    // traitement que le compteur du
+                                    // voile (cf.
+                                    // `video_player_bar_content.dart`),
+                                    // les chiffres ne sautent plus
+                                    // latéralement à chaque seconde.
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures()
+                                      ],
+                                    ),
+                                  )
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ].addPadding(const EdgeInsets.symmetric(vertical: 4)),
-                    ),
+                          ),
+                        ],
+                      ),
+                    ].addPadding(const EdgeInsets.symmetric(vertical: 4)),
                   ),
                 ),
               ),
@@ -450,22 +512,5 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
       currentDuration = Duration(
           milliseconds: (widget.duration.inMilliseconds * value).toInt());
     });
-  }
-}
-
-class CustomTrackShape extends RoundedRectSliderTrackShape {
-  @override
-  Rect getPreferredRect({
-    required RenderBox parentBox,
-    Offset offset = Offset.zero,
-    required SliderThemeData sliderTheme,
-    bool isEnabled = false,
-    bool isDiscrete = false,
-  }) {
-    final trackHeight = sliderTheme.trackHeight;
-    final trackLeft = offset.dx;
-    final trackTop = offset.dy + (parentBox.size.height - trackHeight!) / 2;
-    final trackWidth = parentBox.size.width;
-    return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
   }
 }

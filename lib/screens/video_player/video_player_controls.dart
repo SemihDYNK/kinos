@@ -512,7 +512,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                           side: const BorderSide(color: AppColors.borderStrong),
                         ),
                         onPressed: () => minimizePlayer(context),
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                        icon: const Icon(IconsaxPlusLinear.arrow_down_1),
                         label: const Text('Réduire'),
                       ),
                     ),
@@ -616,20 +616,43 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xxs),
+              // `spaceBetween` + deux `Flexible`, jamais un `Spacer` au
+              // milieu : mesuré (RenderBox) — avec un `Spacer` (flex:1,
+              // fit tight) à côté de deux `Flexible` (flex:1, fit
+              // loose), le Spacer occupe TOUJOURS son tiers de largeur
+              // complet, mais les `Flexible` rétrécissent à leur texte
+              // sans que cet espace inutilisé soit redistribué : le
+              // texte de droite finissait à mi-largeur (~54 % mesuré),
+              // jamais au bord — exactement le "-50:33 vers 36 %"
+              // rapporté. `spaceBetween` calcule l'espace restant une
+              // fois les DEUX textes posés à leur taille réelle et le
+              // place entièrement entre eux — aucun `Spacer` requis.
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(mediaPlayback.position.readAbleDuration,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: AppColors.textSecondary)),
-                  Text(
+                  Flexible(
+                    child: Text(
+                      mediaPlayback.position.readAbleDuration,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                    ),
+                  ),
+                  Flexible(
+                    child: Text(
                       '-${(mediaPlayback.duration - mediaPlayback.position).readAbleDuration}',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: AppColors.textSecondary)),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      textAlign: TextAlign.right,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -638,24 +661,32 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                   Expanded(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
+                      // Transport : une seule famille d'icônes
+                      // (IconsaxPlusLinear, celle déjà utilisée pour
+                      // précédent/suivant et le reste du voile) et une
+                      // seule taille (32) — sauf lecture/pause, seul
+                      // repère de hiérarchie voulu, par l'échelle
+                      // uniquement (cf. CLAUDE.md : "le caractère vient
+                      // de l'échelle... jamais de l'ornement"), pas par
+                      // un fond en disque.
+                      spacing: AppSpacing.xxs,
                       children: [
-                        previousButton,
+                        previousButton(iconSize: 32),
                         _desktopSeekButton(
-                          icon: IconsaxPlusBroken.refresh,
-                          flip: false,
+                          icon: IconsaxPlusLinear.backward_10_seconds,
                           tooltip: _tooltipFor(
                               'Reculer de 10 s', VideoHotKeys.seekBack),
                           onPressed: () => seekBack(ref, seconds: 10),
                         ),
                         _desktopPlayPauseButton(playing),
                         _desktopSeekButton(
-                          icon: IconsaxPlusBroken.refresh,
-                          flip: true,
+                          icon: IconsaxPlusLinear.forward_10_seconds,
                           tooltip: _tooltipFor(
                               'Avancer de 10 s', VideoHotKeys.seekForward),
                           onPressed: () => seekForward(ref, seconds: 10),
                         ),
-                        nextVideoButton,
+                        nextVideoButton(iconSize: 32),
+                        _desktopStopButton(),
                         const SizedBox(width: AppSpacing.md),
                         _desktopPopoverButton(
                           icon: IconsaxPlusLinear.subtitle,
@@ -672,19 +703,19 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                           optionsBuilder: _audioOptions,
                         ),
                         _desktopPopoverButton(
-                          icon: Icons.aspect_ratio_rounded,
+                          icon: IconsaxPlusLinear.crop,
                           tooltip: 'Image',
                           controller: _imagePopover,
                           optionsBuilder: _imageOptions,
                         ),
                         _desktopPopoverButton(
-                          icon: Icons.speed_rounded,
+                          icon: IconsaxPlusLinear.speedometer,
                           tooltip: 'Vitesse',
                           controller: _speedPopover,
                           optionsBuilder: _speedOptions,
                         ),
                         _desktopPopoverButton(
-                          icon: IconsaxPlusLinear.speedometer,
+                          icon: IconsaxPlusLinear.slider_horizontal,
                           tooltip: 'Qualité',
                           controller: _qualityPopover,
                           optionsBuilder: _qualityOptions,
@@ -694,18 +725,15 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
+                    spacing: AppSpacing.xs,
                     children: [
-                      // Plus discret que le groupe de transport : curseur
-                      // fin (SliderTheme local, ne change rien pour les
-                      // autres lecteurs qui utilisent ce même composant)
-                      // et court (`width`, jusque-là un paramètre mort —
-                      // corrigé au passage dans video_volume_slider.dart).
-                      SliderTheme(
-                        data: const SliderThemeData(trackHeight: 3),
-                        child: VideoVolumeSlider(
-                          width: 50,
-                          onChanged: () => resetTimer(),
-                        ),
+                      // `SliderTheme` retiré : `VideoVolumeSlider` ne
+                      // s'appuie plus sur `KinosSlider`/l'ambiant Material
+                      // pour son rendu (piste `SegmentedTrack`, hauteur
+                      // gérée en interne, cf. video_volume_slider.dart) —
+                      // ce wrapper n'avait plus aucun effet.
+                      VideoVolumeSlider(
+                        onChanged: () => resetTimer(),
                       ),
                       FocusRing(
                         borderRadius: AppRadii.controlBorder,
@@ -715,7 +743,16 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                           child: Tooltip(
                             message: _tooltipFor(context.localized.fullScreen,
                                 VideoHotKeys.fullScreen),
-                            child: const FullScreenButton(),
+                            // `FullScreenButton` est partagé avec d'autres
+                            // barres (`full_screen_wrapper.dart`, hors
+                            // périmètre) — sa taille d'icône par défaut
+                            // n'est pas modifiée là-bas, seulement
+                            // localement ici pour rejoindre les icônes
+                            // secondaires du transport (32).
+                            child: const IconTheme(
+                              data: IconThemeData(size: 32),
+                              child: FullScreenButton(),
+                            ),
                           ),
                         ),
                       ),
@@ -738,6 +775,14 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
     return combo == null || combo.isEmpty ? label : '$label ($combo)';
   }
 
+  /// Seule icône de la barre en dehors de l'échelle commune (32) — le
+  /// repère de hiérarchie voulu (cf. spec : "une taille supérieure
+  /// uniquement pour lecture/pause") est purement une question
+  /// d'échelle, jamais un fond en disque : l'ancien
+  /// `IconButton.filledTonal` (le "disque gris translucide" rapporté)
+  /// venait des couleurs par défaut de Material, pas des jetons du
+  /// thème — contraire à CLAUDE.md ("aucune couleur codée en dur", et
+  /// "le caractère vient de l'échelle... jamais de l'ornement").
   Widget _desktopPlayPauseButton(bool playing) {
     return FocusRing(
       borderRadius: AppRadii.controlBorder,
@@ -746,8 +791,8 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
         child: Tooltip(
           message:
               _tooltipFor(context.localized.playPause, VideoHotKeys.playPause),
-          child: IconButton.filledTonal(
-            iconSize: 38,
+          child: IconButton(
+            iconSize: 48,
             onPressed: () => ref.read(videoPlayerProvider).playOrPause(),
             icon: Icon(playing ? IconsaxPlusBold.pause : IconsaxPlusBold.play),
           ),
@@ -756,9 +801,34 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
     );
   }
 
+  /// Retiré de `desktopTopBar` (à côté de "Réduire", cf. historique) :
+  /// réduire et quitter sont deux actions distinctes, mais quitter est un
+  /// contrôle de transport, pas un contrôle de fenêtre — sa place est
+  /// dans le groupe transport, après "suivant", juste avant le groupe
+  /// options. Taille alignée sur les icônes secondaires (32, ce n'est
+  /// pas l'action principale de la barre — lecture/pause l'est) mais
+  /// icône PLEINE (`IconsaxPlusBold`, même solidité que lecture/pause) :
+  /// un arrêt est une action aussi définitive qu'une pause/lecture,
+  /// contrairement aux contrôles de navigation (Linear) qui l'entourent.
+  Widget _desktopStopButton() {
+    return FocusRing(
+      borderRadius: AppRadii.controlBorder,
+      onActivate: () => closePlayer(),
+      child: ExcludeFocus(
+        child: Tooltip(
+          message: context.localized.stop,
+          child: IconButton(
+            iconSize: 32,
+            onPressed: () => closePlayer(),
+            icon: const Icon(IconsaxPlusBold.stop),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _desktopSeekButton({
     required IconData icon,
-    required bool flip,
     required String tooltip,
     required VoidCallback onPressed,
   }) {
@@ -771,9 +841,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
           child: IconButton(
             iconSize: 32,
             onPressed: onPressed,
-            icon: flip
-                ? Transform.flip(flipX: true, child: Icon(icon))
-                : Icon(icon),
+            icon: Icon(icon),
           ),
         ),
       ),
@@ -806,9 +874,15 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
         child: ExcludeFocus(
           child: Tooltip(
             message: tooltip,
+            // Couleur pleine par défaut (héritée du thème,
+            // `AppColors.textPrimary`) — l'ancien `AppColors.textSecondary`
+            // fixe ici, quel que soit l'état, était justement le "gris
+            // au hasard" signalé : un jeton existe, mais appliqué sans
+            // notion d'état, il ne veut rien dire.
             child: IconButton(
+              iconSize: 32,
               onPressed: controller.toggle,
-              icon: Icon(icon, color: AppColors.textSecondary),
+              icon: Icon(icon),
             ),
           ),
         ),
@@ -1097,7 +1171,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                       )),
                     ),
                   ),
-                  previousButton,
+                  previousButton(),
                   seekBackwardButton(ref),
                   IconButton.filledTonal(
                     iconSize: 38,
@@ -1109,7 +1183,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                     ),
                   ),
                   seekForwardButton(ref),
-                  nextVideoButton,
+                  nextVideoButton(),
                   Flexible(
                     flex: 2,
                     child: Row(
@@ -1252,7 +1326,11 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
     );
   }
 
-  Widget get previousButton {
+  /// `iconSize` : 30 par défaut (comportement historique, layout
+  /// tactile inchangé — aucun de ses appels ne passe ce paramètre) ;
+  /// `desktopBottomBar` passe 32 pour rejoindre la taille commune des
+  /// icônes secondaires du transport.
+  Widget previousButton({double iconSize = 30}) {
     return Consumer(
       builder: (context, ref, child) {
         final previousVideo =
@@ -1268,7 +1346,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
           textStyle: Theme.of(context).textTheme.labelLarge,
           child: IconButton(
             onPressed: loadPreviousVideo(ref, video: previousVideo),
-            iconSize: 30,
+            iconSize: iconSize,
             icon: const Icon(
               IconsaxPlusLinear.backward,
             ),
@@ -1288,7 +1366,8 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
         : null;
   }
 
-  Widget get nextVideoButton {
+  /// `iconSize` : cf. [previousButton].
+  Widget nextVideoButton({double iconSize = 30}) {
     return Consumer(
       builder: (context, ref, child) {
         final nextVideo =
@@ -1304,7 +1383,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
           textStyle: Theme.of(context).textTheme.labelLarge,
           child: IconButton(
             onPressed: loadNextVideo(ref, video: nextVideo),
-            iconSize: 30,
+            iconSize: iconSize,
             icon: const Icon(
               IconsaxPlusLinear.forward,
             ),

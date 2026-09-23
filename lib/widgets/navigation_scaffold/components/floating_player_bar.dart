@@ -93,11 +93,10 @@ class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
           },
         ),
         action: () {
-          final player = ref.read(videoPlayerProvider);
           final playerVolume = ref.read(
               videoPlayerSettingsProvider.select((value) => value.volume));
           final volume = playerVolume == 0 ? 100.0 : 0.0;
-          player.setVolume(volume);
+          ref.read(videoPlayerSettingsProvider.notifier).setVolume(volume);
         });
     final favouriteAction = ItemActionButton(
       label: Text(isFavourite

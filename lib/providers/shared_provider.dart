@@ -64,7 +64,9 @@ class SharedUtility extends SharedHelper {
     try {
       _ref.read(clientSettingsProvider.notifier).initialize(clientSettings);
       _ref.read(homeSettingsProvider.notifier).state = homeSettings;
-      _ref.read(videoPlayerSettingsProvider.notifier).state = videoPlayerSettings;
+      _ref
+          .read(videoPlayerSettingsProvider.notifier)
+          .restoreFromPersisted(videoPlayerSettings, lastNonZeroVideoVolume);
       _ref.read(subtitleSettingsProvider.notifier).state = subtitleSettings;
       _ref.read(bookViewerSettingsProvider.notifier).state = bookViewSettings;
       _ref.read(photoViewSettingsProvider.notifier).state = photoViewSettings;
@@ -87,6 +89,7 @@ class SharedKeys {
   static const String _clientSettingsKey = 'clientSettings';
   static const String _homeSettingsKey = 'homeSettings';
   static const String _videoPlayerSettingsKey = 'videoPlayerSettings';
+  static const String _lastNonZeroVideoVolumeKey = 'lastNonZeroVideoVolume';
   static const String _subtitleSettingsKey = 'subtitleSettings';
   static const String _bookViewSettingsKey = 'bookViewSettings';
   static const String _photoViewSettingsKey = 'photoViewSettings';
@@ -358,6 +361,17 @@ class SharedHelper {
 
   set videoPlayerSettings(VideoPlayerSettingsModel settings) {
     sharedPreferences.setString(SharedKeys._videoPlayerSettingsKey, jsonEncode(settings.toJson()));
+  }
+
+  /// Dernier volume non nul connu (`VideoPlayerSettingsProviderNotifier
+  /// ._setVolume`, jamais écrasé par un volume à 0) — ce que
+  /// `restoreFromPersisted` restaure quand le volume persisté est 0,
+  /// pour ne jamais relancer l'app en silence après une session muette.
+  double get lastNonZeroVideoVolume =>
+      sharedPreferences.getDouble(SharedKeys._lastNonZeroVideoVolumeKey) ?? 100;
+
+  set lastNonZeroVideoVolume(double value) {
+    sharedPreferences.setDouble(SharedKeys._lastNonZeroVideoVolumeKey, value);
   }
 
   PhotoViewSettingsModel get photoViewSettings {

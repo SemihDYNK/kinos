@@ -205,6 +205,11 @@ dev_dependencies:
   chopper_generator: ^8.2.0
   json_serializable: ^6.9.5
   custom_lint: ^0.7.6
+  # Neutralise le canal de plateforme dans les tests du lecteur
+  # (`video_player_volume_sync_test.dart`) — sans rapport avec le volume,
+  # `MediaControlsWrapper._applyWakelock` l'appelle à chaque événement
+  # d'état.
+  wakelock_plus_platform_interface: ^1.3.0
   freezed: ^3.1.0
   swagger_dart_code_generator: ^3.0.3
   riverpod_generator: ^2.6.5

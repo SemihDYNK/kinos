@@ -248,7 +248,7 @@ class MusicFloatingPlayerBarContent extends ConsumerWidget {
                                 IconButton(
                                   onPressed: () {
                                     final volume = playerVolume == 0 ? 100.0 : 0.0;
-                                    ref.read(videoPlayerProvider).setVolume(volume);
+                                    ref.read(videoPlayerSettingsProvider.notifier).setVolume(volume);
                                   },
                                   icon: Icon(
                                     playerVolume == 0 ? IconsaxPlusBold.volume_cross : IconsaxPlusBold.volume_high,

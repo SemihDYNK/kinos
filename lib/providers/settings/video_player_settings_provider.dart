@@ -29,12 +29,40 @@ class VideoPlayerSettingsProviderNotifier extends StateNotifier<VideoPlayerSetti
   @override
   set state(VideoPlayerSettingsModel value) {
     value = _sanitizeCrossfade(value);
-    final oldState = super.state;
     super.state = value;
     ref.read(sharedUtilityProvider).videoPlayerSettings = value;
-    if (!oldState.playerSame(value)) {
-      ref.read(videoPlayerProvider.notifier).init();
-    }
+    // Ni la ré-init du moteur au changement de backend, ni la poussée du
+    // volume, ne se font plus depuis ce setter : les deux faisaient
+    // `ref.read(videoPlayerProvider...)`, alors que `videoPlayerProvider`
+    // lit DÉJÀ ce provider-ci ailleurs (`loadPlaybackItem`/
+    // `loadAudioPlaybackItem`, `video_player_provider.dart`) — un read en
+    // sens inverse ici formait un cycle que Riverpod détecte dès que les
+    // deux sens ont été empruntés au moins une fois dans la session
+    // (`CircularDependencyError`, reproduit en usage réel après le
+    // chargement d'une première vidéo puis un changement de volume ;
+    // jamais vu par les tests `FakeBasePlayer`, qui n'appellent jamais
+    // `loadPlaybackItem`). Déplacé dans le `ref.listen(videoPlayerSettingsProvider,
+    // ...)` déjà présent côté `VideoPlayerNotifier.init()` — seul sens de
+    // dépendance permis : ce provider-ci ne doit jamais lire
+    // `videoPlayerProvider`, ni directement ni via son `.notifier`.
+  }
+
+  /// Restaure les réglages persistés au démarrage
+  /// (`SharedUtility.loadSettings()`) — jamais une écriture directe de
+  /// `state` : c'est cette voie-là (assignation brute, hors
+  /// `_setVolume`) qui laissait le moteur non informé du volume restauré
+  /// (le bug d'origine). Passe par le setter ci-dessus, qui pousse
+  /// maintenant la correction au moteur lui-même.
+  ///
+  /// Règle validée : un volume persisté à 0 (muet à la fermeture de la
+  /// session précédente) ne doit jamais relancer l'app en silence sans
+  /// indication — restaure [lastNonZeroVolume] à la place (100 à défaut
+  /// côté appelant, cf. `SharedHelper.lastNonZeroVideoVolume`).
+  void restoreFromPersisted(
+      VideoPlayerSettingsModel persisted, double lastNonZeroVolume) {
+    state = persisted.internalVolume == 0
+        ? persisted.copyWith(internalVolume: lastNonZeroVolume)
+        : persisted;
   }
 
   void setScreenBrightness(double? value) async {
@@ -75,14 +103,22 @@ class VideoPlayerSettingsProviderNotifier extends StateNotifier<VideoPlayerSetti
   }
 
   void _setVolume(double value) {
+    // Le moteur est notifié par le setter de `state` lui-même (cf.
+    // ci-dessus) — pas d'appel à `videoPlayerProvider` ici, pour qu'il
+    // n'existe qu'un seul chemin qui le fasse, quelle que soit l'origine
+    // de l'écriture.
     state = state.copyWith(internalVolume: value);
+    // Mémorise le dernier volume non nul pour `restoreFromPersisted` —
+    // un volume à 0 n'écrase jamais ce repère (cf. `SharedHelper
+    // .lastNonZeroVideoVolume`), c'est justement ce qui permet de ne
+    // jamais relancer l'app en silence après une session muette.
+    if (value > 0) {
+      ref.read(sharedUtilityProvider).lastNonZeroVideoVolume = value;
+    }
     if ({TargetPlatform.android, TargetPlatform.iOS}.contains(defaultTargetPlatform)) {
-      ref.read(videoPlayerProvider).setVolume(100);
       VolumeController.instance.showSystemUI = false;
       VolumeController.instance.setVolume(value / 100);
       log("Setting system volume to $value");
-    } else {
-      ref.read(videoPlayerProvider).setVolume(value);
     }
   }
 
@@ -96,7 +132,11 @@ class VideoPlayerSettingsProviderNotifier extends StateNotifier<VideoPlayerSetti
     }
 
     ref.read(playbackRateProvider.notifier).state = value;
-    ref.read(videoPlayerProvider).setSpeed(value);
+    // `activeVideoPlayerHolderProvider`, jamais `videoPlayerProvider`
+    // directement : cf. le commentaire du holder dans
+    // `video_player_provider.dart` — même raison structurelle que le
+    // volume (cycle Riverpod).
+    ref.read(activeVideoPlayerHolderProvider).wrapper?.setSpeed(value);
   }
 
   void toggleOrientation(Set<DeviceOrientation>? orientation) =>
@@ -108,7 +148,11 @@ class VideoPlayerSettingsProviderNotifier extends StateNotifier<VideoPlayerSetti
 
   void nextChapter() {
     final chapters = ref.read(playBackModel)?.chapters ?? [];
-    final currentPosition = ref.read(videoPlayerProvider.select((value) => value.lastState?.position));
+    // `activeVideoPlayerHolderProvider`, jamais `videoPlayerProvider`
+    // directement : même raison structurelle que `steppedSpeed`
+    // ci-dessus (cycle Riverpod).
+    final wrapper = ref.read(activeVideoPlayerHolderProvider).wrapper;
+    final currentPosition = wrapper?.lastState?.position;
 
     if (chapters.isNotEmpty && currentPosition != null) {
       final currentChapter = chapters.lastWhereOrNull((element) => element.startPosition <= currentPosition);
@@ -116,9 +160,9 @@ class VideoPlayerSettingsProviderNotifier extends StateNotifier<VideoPlayerSetti
       if (currentChapter != null) {
         final nextChapterIndex = chapters.indexOf(currentChapter) + 1;
         if (nextChapterIndex < chapters.length) {
-          ref.read(videoPlayerProvider).seek(chapters[nextChapterIndex].startPosition);
+          wrapper?.seek(chapters[nextChapterIndex].startPosition);
         } else {
-          ref.read(videoPlayerProvider).seek(currentChapter.startPosition);
+          wrapper?.seek(currentChapter.startPosition);
         }
       }
     }
@@ -126,7 +170,8 @@ class VideoPlayerSettingsProviderNotifier extends StateNotifier<VideoPlayerSetti
 
   void prevChapter() {
     final chapters = ref.read(playBackModel)?.chapters ?? [];
-    final currentPosition = ref.read(videoPlayerProvider.select((value) => value.lastState?.position));
+    final wrapper = ref.read(activeVideoPlayerHolderProvider).wrapper;
+    final currentPosition = wrapper?.lastState?.position;
 
     if (chapters.isNotEmpty && currentPosition != null) {
       final currentChapter = chapters.lastWhereOrNull((element) => element.startPosition <= currentPosition);
@@ -134,9 +179,9 @@ class VideoPlayerSettingsProviderNotifier extends StateNotifier<VideoPlayerSetti
       if (currentChapter != null) {
         final prevChapterIndex = chapters.indexOf(currentChapter) - 1;
         if (prevChapterIndex >= 0) {
-          ref.read(videoPlayerProvider).seek(chapters[prevChapterIndex].startPosition);
+          wrapper?.seek(chapters[prevChapterIndex].startPosition);
         } else {
-          ref.read(videoPlayerProvider).seek(currentChapter.startPosition);
+          wrapper?.seek(currentChapter.startPosition);
         }
       }
     }

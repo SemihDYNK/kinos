@@ -19,6 +19,33 @@ final mediaPlaybackProvider = StateProvider<MediaPlaybackModel>((ref) => MediaPl
 
 final playBackModel = StateProvider<PlaybackModel?>((ref) => null);
 
+/// Passerelle pour les commandes vitesse/chapitre émises depuis
+/// `VideoPlayerSettingsProviderNotifier` (raccourcis clavier,
+/// `steppedSpeed`/`nextChapter`/`prevChapter`) — nécessaire car ce
+/// provider-là ne doit JAMAIS lire `videoPlayerProvider` : celui-ci lit
+/// déjà `videoPlayerSettingsProvider` ailleurs (`loadPlaybackItem`/
+/// `loadAudioPlaybackItem` plus bas, et l'écoute de réglages de
+/// `VideoPlayerNotifier`), donc un read en sens inverse formerait un
+/// cycle que Riverpod détecte dès que les deux sens ont été empruntés
+/// au moins une fois dans la session (`CircularDependencyError`, cf. le
+/// correctif volume équivalent ci-dessous).
+///
+/// Ce holder est délibérément SANS AUCUNE dépendance déclarée (son
+/// `create` ne lit ni ne watch rien) : un simple conteneur mutable,
+/// rempli une fois par `VideoPlayerNotifier` à sa construction, lu à la
+/// demande côté réglages. Ni watch ni read vers l'un ou l'autre
+/// provider dans SA propre construction — donc aucune arête
+/// transitive ne peut refermer le cycle (le graphe de dépendances de
+/// Riverpod suit les arêtes de façon transitive, pas seulement
+/// directe : un médiateur qui lirait lui-même l'un des deux côtés
+/// rouvrirait le même problème un cran plus loin).
+class ActiveVideoPlayerHolder {
+  MediaControlsWrapper? wrapper;
+}
+
+final activeVideoPlayerHolderProvider =
+    Provider<ActiveVideoPlayerHolder>((ref) => ActiveVideoPlayerHolder());
+
 final videoPlayerProvider = StateNotifierProvider<VideoPlayerNotifier, MediaControlsWrapper>((ref) {
   final videoPlayer = VideoPlayerNotifier(ref);
   videoPlayer.init();
@@ -26,7 +53,17 @@ final videoPlayerProvider = StateNotifierProvider<VideoPlayerNotifier, MediaCont
 });
 
 class VideoPlayerNotifier extends StateNotifier<MediaControlsWrapper> {
-  VideoPlayerNotifier(this.ref) : super(MediaControlsWrapper(ref: ref));
+  VideoPlayerNotifier(this.ref) : super(MediaControlsWrapper(ref: ref)) {
+    // Enregistré dès la construction, pas seulement dans `init()` : les
+    // tests (`FakeBasePlayer`) construisent `VideoPlayerNotifier`
+    // directement (via `videoPlayerProvider.overrideWith`) SANS jamais
+    // appeler `init()` — volontairement, pour ne jamais créer de vrai
+    // lecteur mpv/`AudioService` (cf. `video_player_volume_sync_test.dart`).
+    // Si l'écoute des réglages ne vivait que dans `init()`, ces tests ne
+    // l'exerceraient jamais.
+    ref.read(activeVideoPlayerHolderProvider).wrapper = state;
+    _listenToSettings();
+  }
 
   final Ref ref;
 
@@ -52,18 +89,11 @@ class VideoPlayerNotifier extends StateNotifier<MediaControlsWrapper> {
       s.cancel();
     }
 
-    settingsChanged = ref.listen(
-      videoPlayerSettingsProvider,
-      (previous, next) {
-        final currentItem = ref.read(playBackModel)?.item;
-        if (currentItem != null) {
-          state.applyReplayGain(
-            currentItem,
-            settings: next,
-          );
-        }
-      },
-    );
+    // Réenregistre l'écoute (`_listenToSettings` ferme déjà l'ancien
+    // abonnement avant d'en reposer un) : `init()` peut être rappelé
+    // depuis CE MÊME abonnement, cf. le déclenchement
+    // `!previous.playerSame(next)` plus bas.
+    _listenToSettings();
 
     final subscription = state.stateStream.listen((value) {
       updateBuffering(value.buffering);
@@ -74,6 +104,58 @@ class VideoPlayerNotifier extends StateNotifier<MediaControlsWrapper> {
     });
 
     subscriptions.add(subscription);
+  }
+
+  void _listenToSettings() {
+    settingsChanged?.close();
+    settingsChanged = ref.listen(
+      videoPlayerSettingsProvider,
+      (previous, next) {
+        final currentItem = ref.read(playBackModel)?.item;
+        if (currentItem != null) {
+          state.applyReplayGain(
+            currentItem,
+            settings: next,
+          );
+        }
+
+        // Rechargement du moteur si le backend a changé (hardware accel,
+        // libass, taille de tampon, moteur MPV/MDK/natif) — déplacé ici
+        // depuis `VideoPlayerSettingsProviderNotifier.state=`, qui
+        // faisait `ref.read(videoPlayerProvider.notifier).init()` :
+        // CE provider (`videoPlayerProvider`) lit déjà
+        // `videoPlayerSettingsProvider` ailleurs (`loadPlaybackItem`/
+        // `loadAudioPlaybackItem`, ligne ~171/223), donc un read en sens
+        // inverse depuis le provider de réglages formait un cycle —
+        // Riverpod le détecte dès que les DEUX sens ont été empruntés au
+        // moins une fois dans la session (`CircularDependencyError`,
+        // observé en usage réel après le chargement d'une première
+        // vidéo, jamais reproduit par les tests `FakeBasePlayer` qui
+        // n'appellent jamais `loadPlaybackItem`). Un seul sens de
+        // dépendance possible : ce provider écoute les réglages, jamais
+        // l'inverse.
+        if (previous != null && !previous.playerSame(next)) {
+          init();
+          return;
+        }
+
+        // Idem pour le volume — déplacé depuis le même setter
+        // (`VideoPlayerSettingsProviderNotifier._setVolume`/`set state`,
+        // qui faisait `ref.read(videoPlayerProvider)`), pour la même
+        // raison structurelle. Seule source de vérité pour le volume :
+        // l'app pousse vers le moteur, jamais l'inverse — le moteur
+        // ré-émet fidèlement chaque palier de son propre fondu
+        // lecture/pause (`lib_mpv.dart::_startPlaybackFade`, actif par
+        // défaut) comme un vrai `PlayerState.volume`, jamais un
+        // changement externe (un relais moteur -> interface a existé
+        // brièvement, `syncVolumeFromEngine`, retiré : il faisait
+        // chuter l'affichage à 0 à chaque pause).
+        final volumeChanged = previous?.internalVolume != next.internalVolume;
+        if (volumeChanged && state.hasPlayer) {
+          state.setVolume(next.volume);
+        }
+      },
+    );
   }
 
   Future<void> updateBuffering(bool event) async =>
