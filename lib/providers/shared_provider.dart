@@ -121,6 +121,24 @@ class SharedHelper {
   /// (and vice versa) from being marked done.
   bool _seerrMigrationChecked = false;
 
+  /// Accounts (by [_accountKey]) whose last [_hydrateAccount] attempt hit a
+  /// vault read error - a locked/absent keyring, a native backend crash,
+  /// anything short of "no entry" (which is the normal, expected case for
+  /// e.g. an account with no Seerr configured, and never lands here).
+  ///
+  /// [saveAccounts] must treat these as untouchable: the in-memory
+  /// [AccountModel] for a key in this set is missing its real credentials
+  /// (still the SharedPreferences placeholder), so writing it to the vault
+  /// would overwrite the real Jellyfin token with that placeholder, and
+  /// `seerrCredentials == null` would read as "disconnected" and delete the
+  /// real Seerr entry - destroying both on a merely-unavailable vault. An
+  /// account is dropped from this set the next time [_hydrateAccount]
+  /// succeeds for it (both reads), so it heals itself on the next
+  /// successful [getAccounts] once the vault is back.
+  final Set<String> _unhydratedAccountKeys = {};
+
+  static String _accountKey(AccountModel account) => '${account.credentials.serverId}:${account.id}';
+
   SharedHelper({
     this.ref,
     required this.sharedPreferences,
@@ -172,6 +190,7 @@ class SharedHelper {
     });
     await secureCredentials.delete(account.credentials.serverId, account.id);
     await seerrCredentials.delete(account.credentials.serverId, account.id);
+    _unhydratedAccountKeys.remove(_accountKey(account));
     return (await saveAccounts(savedAccounts));
   }
 
@@ -191,32 +210,62 @@ class SharedHelper {
 
     try {
       final accounts = savedAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
-      return Future.wait(accounts.map((account) async {
-        final hydrated = await _hydrateCredentials(account);
-        return _hydrateSeerrCredentials(hydrated);
-      }));
+      return Future.wait(accounts.map(_hydrateAccount));
     } catch (_, stacktrace) {
       log(stacktrace.toString());
       return [];
     }
   }
 
-  Future<AccountModel> _hydrateCredentials(AccountModel account) async {
-    final storedCredentials = await secureCredentials.read(account.credentials.serverId, account.id);
-    // No vault entry (e.g. it was cleared outside the app) leaves the
-    // account's placeholder credentials as-is rather than dropping it -
-    // failing to log in with an empty token is easier to recover from than
-    // an account silently disappearing from the list.
-    return storedCredentials == null ? account : account.copyWith(credentials: storedCredentials);
-  }
+  /// Rehydrates one account's [CredentialsModel] and [SeerrCredentialsModel]
+  /// from their respective vaults, each read isolated in its own try/catch
+  /// so a Jellyfin vault error never prevents attempting the Seerr read (or
+  /// vice versa), and neither ever propagates out to fail the whole
+  /// [getAccounts] batch - a degraded account stays in the returned list
+  /// (without its secrets) instead of silently vanishing from it, so the UI
+  /// can offer reconnecting it rather than the account just disappearing.
+  ///
+  /// Tracks success/failure in [_unhydratedAccountKeys] - see its doc for
+  /// why [saveAccounts] needs that.
+  Future<AccountModel> _hydrateAccount(AccountModel account) async {
+    final key = _accountKey(account);
+    var hydrated = account;
+    var fullyHydrated = true;
 
-  /// Same as [_hydrateCredentials] for Seerr: no vault entry (never
-  /// configured, or cleared outside the app) leaves [AccountModel
-  /// .seerrCredentials] as whatever SharedPreferences already had - `null`
-  /// in the common case.
-  Future<AccountModel> _hydrateSeerrCredentials(AccountModel account) async {
-    final storedSeerrCredentials = await seerrCredentials.read(account.credentials.serverId, account.id);
-    return storedSeerrCredentials == null ? account : account.copyWith(seerrCredentials: storedSeerrCredentials);
+    try {
+      final storedCredentials = await secureCredentials.read(account.credentials.serverId, account.id);
+      // No vault entry (e.g. it was cleared outside the app) leaves the
+      // account's placeholder credentials as-is rather than dropping it -
+      // failing to log in with an empty token is easier to recover from
+      // than an account silently disappearing from the list.
+      if (storedCredentials != null) hydrated = hydrated.copyWith(credentials: storedCredentials);
+    } catch (e, stacktrace) {
+      fullyHydrated = false;
+      // Never interpolate `storedCredentials`/`e`'s payload here - only
+      // the account's non-secret `key` and the platform exception message,
+      // which describes the failure (locked keyring, backend crash, ...),
+      // not the value that failed to be read.
+      log('Failed to read Jellyfin credentials from secure storage for $key, '
+          'keeping the account without them: $e\n$stacktrace');
+    }
+
+    try {
+      final storedSeerrCredentials = await seerrCredentials.read(account.credentials.serverId, account.id);
+      if (storedSeerrCredentials != null) {
+        hydrated = hydrated.copyWith(seerrCredentials: storedSeerrCredentials);
+      }
+    } catch (e, stacktrace) {
+      fullyHydrated = false;
+      log('Failed to read Seerr credentials from secure storage for $key, '
+          'keeping the account without them: $e\n$stacktrace');
+    }
+
+    if (fullyHydrated) {
+      _unhydratedAccountKeys.remove(key);
+    } else {
+      _unhydratedAccountKeys.add(key);
+    }
+    return hydrated;
   }
 
   /// One-time, idempotent move of every account's [CredentialsModel] out of
@@ -362,8 +411,20 @@ class SharedHelper {
   /// in their place. An account whose Seerr credentials are no longer
   /// configured (disconnected, or never set up) has its vault entry deleted
   /// rather than an empty value written - nothing left to protect there.
+  ///
+  /// An account in [_unhydratedAccountKeys] skips ALL vault writes (both
+  /// save and delete) for this call - its in-memory credentials are the
+  /// SharedPreferences placeholder, not the real thing, because the last
+  /// read from the vault failed. Writing that placeholder to the vault
+  /// would overwrite the real Jellyfin token with it, and treat a merely
+  /// unreadable Seerr entry as "disconnected" and delete it - turning a
+  /// temporary vault outage into permanent data loss the moment any routine
+  /// update (last-used timestamp, avatar, ...) calls this. Only the
+  /// SharedPreferences write (with the usual placeholders) still happens,
+  /// so the rest of the account list stays in sync.
   Future<bool?> saveAccounts(List<AccountModel> accounts) async {
     for (final account in accounts) {
+      if (_unhydratedAccountKeys.contains(_accountKey(account))) continue;
       await secureCredentials.save(account.credentials.serverId, account.id, account.credentials);
       if (account.seerrCredentials?.isConfigured == true) {
         await seerrCredentials.save(account.credentials.serverId, account.id, account.seerrCredentials!);
