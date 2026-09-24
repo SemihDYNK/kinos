@@ -1,0 +1,27 @@
+{
+  "id": 513,
+  "status": 1,
+  "media": {
+    "id": 9001,
+    "tmdbId": null,
+    "tvdbId": 355567,
+    "status": 3,
+    "mediaType": "tv"
+  },
+  "createdAt": "2024-05-02T11:00:00.000Z",
+  "updatedAt": "2024-05-02T11:00:00.000Z",
+  "requestedBy": {
+    "id": 3,
+    "email": "alice@example.com",
+    "username": "alice",
+    "displayName": "Alice"
+  },
+  "is4k": false,
+  "seasons": [
+    { "id": 101, "seasonNumber": 1, "status": 1 },
+    { "id": 102, "seasonNumber": 2, "status": 1 }
+  ],
+  "serverId": 1,
+  "profileId": 4,
+  "rootFolder": "/tv"
+}

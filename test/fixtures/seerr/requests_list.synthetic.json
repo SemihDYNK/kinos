@@ -1,0 +1,43 @@
+{
+  "pageInfo": { "pages": 3, "pageSize": 10, "results": 25, "page": 1 },
+  "results": [
+    {
+      "id": 512,
+      "status": 2,
+      "media": {
+        "id": 4821,
+        "tmdbId": 603692,
+        "tvdbId": null,
+        "status": 5,
+        "mediaType": "movie"
+      },
+      "createdAt": "2024-05-01T10:00:00.000Z",
+      "updatedAt": "2024-05-01T10:05:00.000Z",
+      "requestedBy": { "id": 3, "displayName": "Alice" },
+      "is4k": false,
+      "seasons": [],
+      "serverId": 0,
+      "profileId": 6,
+      "rootFolder": "/movies"
+    },
+    {
+      "id": 513,
+      "status": 4,
+      "media": {
+        "id": 9001,
+        "tmdbId": null,
+        "tvdbId": 355567,
+        "status": 1,
+        "mediaType": "tv"
+      },
+      "createdAt": "2024-05-02T11:00:00.000Z",
+      "updatedAt": "2024-05-02T11:10:00.000Z",
+      "requestedBy": { "id": 5, "displayName": "Bob" },
+      "is4k": false,
+      "seasons": [{ "id": 101, "seasonNumber": 1 }],
+      "serverId": 1,
+      "profileId": 4,
+      "rootFolder": "/tv"
+    }
+  ]
+}

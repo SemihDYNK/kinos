@@ -1,0 +1,29 @@
+{
+  "id": 603692,
+  "title": "John Wick: Chapter 4",
+  "originalTitle": "John Wick: Chapter 4",
+  "overview": "With the price on his head ever increasing, John Wick uncovers a path to defeating The High Table.",
+  "posterPath": "/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg",
+  "backdropPath": "/tljbiTC4ydDrLYXsu0jVoyYtj0O.jpg",
+  "releaseDate": "2023-03-22",
+  "voteAverage": 7.8,
+  "voteCount": 4200,
+  "runtime": 169,
+  "genres": [
+    { "id": 28, "name": "Action" },
+    { "id": 53, "name": "Thriller" }
+  ],
+  "externalIds": {
+    "imdbId": "tt10366206",
+    "facebookId": null,
+    "instagramId": null,
+    "twitterId": null
+  },
+  "mediaInfo": {
+    "id": 4821,
+    "tmdbId": 603692,
+    "status": 5,
+    "jellyfinMediaId": "abcd1234-jellyfin-item-id",
+    "requests": []
+  }
+}

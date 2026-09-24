@@ -1,0 +1,55 @@
+{
+  "page": 1,
+  "totalPages": 20,
+  "totalResults": 400,
+  "results": [
+    {
+      "id": 603692,
+      "mediaType": "movie",
+      "title": "John Wick: Chapter 4",
+      "originalTitle": "John Wick: Chapter 4",
+      "overview": "With the price on his head ever increasing, John Wick uncovers a path to defeating The High Table.",
+      "posterPath": "/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg",
+      "backdropPath": "/tljbiTC4ydDrLYXsu0jVoyYtj0O.jpg",
+      "releaseDate": "2023-03-22",
+      "mediaInfo": {
+        "id": 4821,
+        "tmdbId": 603692,
+        "status": 5,
+        "requests": []
+      }
+    },
+    {
+      "id": 94997,
+      "mediaType": "tv",
+      "name": "House of the Dragon",
+      "originalName": "House of the Dragon",
+      "overview": "The Targaryen dynasty is at the absolute apex of its power, with more than 15 dragons under their yoke.",
+      "posterPath": "/z2yahl2uefxDCl0nogcRBstwruJ.jpg",
+      "backdropPath": "/etj8E2o0Bud0HkONVQPjyCkIvpv.jpg",
+      "firstAirDate": "2022-08-21",
+      "mediaInfo": null
+    },
+    {
+      "id": 287,
+      "mediaType": "person",
+      "name": "Brad Pitt",
+      "overview": null
+    },
+    {
+      "id": 1399,
+      "mediaType": null,
+      "name": "Game of Thrones",
+      "originalName": "Game of Thrones",
+      "overview": "Seven noble families fight for control of the mythical land of Westeros.",
+      "posterPath": "/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+      "firstAirDate": "2011-04-17",
+      "mediaInfo": {
+        "id": 55,
+        "tvdbId": 121361,
+        "status": 5,
+        "requests": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": 512,
+  "status": 1,
+  "media": {
+    "id": 4821,
+    "tmdbId": 603692,
+    "tvdbId": null,
+    "status": 2,
+    "mediaType": "movie"
+  },
+  "createdAt": "2024-05-01T10:00:00.000Z",
+  "updatedAt": "2024-05-01T10:00:00.000Z",
+  "requestedBy": {
+    "id": 3,
+    "email": "alice@example.com",
+    "username": "alice",
+    "displayName": "Alice"
+  },
+  "is4k": false,
+  "seasons": [],
+  "serverId": 0,
+  "profileId": 6,
+  "rootFolder": "/movies"
+}

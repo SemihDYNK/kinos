@@ -1,0 +1,41 @@
+{
+  "id": 94997,
+  "name": "House of the Dragon",
+  "originalName": "House of the Dragon",
+  "overview": "The Targaryen dynasty is at the absolute apex of its power, with more than 15 dragons under their yoke.",
+  "posterPath": "/z2yahl2uefxDCl0nogcRBstwruJ.jpg",
+  "backdropPath": "/etj8E2o0Bud0HkONVQPjyCkIvpv.jpg",
+  "firstAirDate": "2022-08-21",
+  "lastAirDate": "2024-07-14",
+  "voteAverage": 8.4,
+  "voteCount": 3100,
+  "numberOfSeasons": 2,
+  "numberOfEpisodes": 18,
+  "genres": [{ "id": 10765, "name": "Sci-Fi & Fantasy" }],
+  "seasons": [
+    {
+      "id": 1,
+      "name": "Season 1",
+      "overview": "The first season.",
+      "seasonNumber": 1,
+      "posterPath": "/season1poster.jpg",
+      "episodeCount": 10
+    }
+  ],
+  "externalIds": {
+    "imdbId": "tt11198330",
+    "facebookId": null,
+    "instagramId": null,
+    "twitterId": null
+  },
+  "mediaInfo": {
+    "id": 4900,
+    "tvdbId": 371572,
+    "status": 4,
+    "seasons": [
+      { "id": 1, "seasonNumber": 1, "status": 5 },
+      { "id": 2, "seasonNumber": 2, "status": 3 }
+    ],
+    "requests": []
+  }
+}
