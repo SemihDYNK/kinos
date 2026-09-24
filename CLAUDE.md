@@ -10,7 +10,7 @@ Cible : Linux desktop uniquement — CachyOS / Ryoku (Arch + Hyprland) / AMD RDN
 |---|---|
 | `lib/providers/`, `lib/models/`, `lib/wrappers/` | Rester au plus près de l'amont. Corrections et ajouts seulement. |
 | `lib/screens/`, `lib/widgets/` | Divergence libre. C'est notre UI. |
-| Module Arr (à venir) | Code neuf, dossiers séparés, zéro conflit avec l'amont. |
+| `lib/arr/` (Sonarr/Radarr) | Livré. Code neuf, dossiers séparés, zéro conflit avec l'amont. |
 
 `upstream` est un remote. Ne jamais restructurer la couche données sans raison :
 chaque divergence coûte à chaque merge.
@@ -99,8 +99,40 @@ photos, SyncPlay, contrôle à distance.
 
 Un serveur, plusieurs profils utilisateurs.
 
+**Seerr (Overseerr/Jellyseerr)** est dans le périmètre : demander
+l'ajout d'un titre absent de la bibliothèque, suivre le statut d'une
+demande, gérer les demandes côté admin. Visible seulement si un
+service Seerr est configuré sur le profil actif. Ses identifiants
+(clé API, cookie de session) vivent dans `flutter_secure_storage`, au
+même titre que Jellyfin et Arr — jamais dans `SharedPreferences`.
+
 ## Reste à faire
 
-- [ ] Réécriture UI complète
-- [ ] Module Sonarr/Radarr (file, calendrier, recherche interactive, blocklist)
-- [ ] Renommage du projet et nouveau logo (la GPL ne couvre pas la marque)
+Module Arr, réécriture UI (langage visuel du projet) et renommage
+Fladder → Kinos (package, identité, icônes) sont livrés. Reste côté
+Arr : vue qBittorrent dédiée (client et identifiants déjà en place,
+seule la vue manque). La blocklist Arr est abandonnée, hors périmètre.
+
+Feuille de route, dans cet ordre :
+
+- [ ] Lot Seerr : découverte hors catalogue
+- [ ] AniList : mapping d'identifiants d'abord
+- [ ] Import Letterboxd : alimente le profil de goût, jamais les
+      candidats recommandés
+- [ ] Mode salon (double densité, déjà porté par le thème — reste
+      l'activation/bascule de bout en bout)
+
+En attente :
+
+- [ ] 9 messages en français non traduits dans les autres langues
+- [ ] Relecture du `NOTICE` avant publication
+
+Dette connue :
+
+- [ ] ~20 fichiers d'overlays/indicateurs du lecteur vidéo (volume,
+      luminosité, vitesse, capture d'écran, plein écran audio,
+      sélecteur de sous-titres) en couleurs/rayons bruts plutôt qu'en
+      jetons du thème
+- [ ] `localPin` (verrouillage local de l'app) stocké en clair sur
+      disque — risque moindre qu'un secret de compte distant, mais pas
+      blanchi
