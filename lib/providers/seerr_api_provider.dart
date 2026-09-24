@@ -27,6 +27,12 @@ class SeerrApi extends _$SeerrApi {
       interceptors: [
         SeerrRequest(ref),
         SeerrResponse(ref),
+        // `Level.basic` only: verified against chopper's own source
+        // (http_logging_interceptor.dart) that this level logs
+        // method/url/status lines ONLY, never headers or body. Never raise
+        // this to `.headers`/`.body` — `SeerrRequest` sets the real Seerr
+        // `X-Api-Key`/`Cookie` on every outgoing request, and either of
+        // those levels would print it straight to the console.
         HttpLoggingInterceptor(level: Level.basic),
       ],
     );

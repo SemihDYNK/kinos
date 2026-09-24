@@ -13,7 +13,7 @@ part of 'credentials_model.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
-mixin _$CredentialsModel implements DiagnosticableTreeMixin {
+mixin _$CredentialsModel {
   String get token;
   String get url;
   String? get localUrl;
@@ -31,23 +31,6 @@ mixin _$CredentialsModel implements DiagnosticableTreeMixin {
 
   /// Serializes this CredentialsModel to a JSON map.
   Map<String, dynamic> toJson();
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    properties
-      ..add(DiagnosticsProperty('type', 'CredentialsModel'))
-      ..add(DiagnosticsProperty('token', token))
-      ..add(DiagnosticsProperty('url', url))
-      ..add(DiagnosticsProperty('localUrl', localUrl))
-      ..add(DiagnosticsProperty('serverName', serverName))
-      ..add(DiagnosticsProperty('serverId', serverId))
-      ..add(DiagnosticsProperty('deviceId', deviceId));
-  }
-
-  @override
-  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
-    return 'CredentialsModel(token: $token, url: $url, localUrl: $localUrl, serverName: $serverName, serverId: $serverId, deviceId: $deviceId)';
-  }
 }
 
 /// @nodoc
@@ -282,7 +265,7 @@ extension CredentialsModelPatterns on CredentialsModel {
 
 /// @nodoc
 @JsonSerializable()
-class _CredentialsModel extends CredentialsModel with DiagnosticableTreeMixin {
+class _CredentialsModel extends CredentialsModel {
   _CredentialsModel(
       {this.token = "",
       this.url = "",
@@ -325,23 +308,6 @@ class _CredentialsModel extends CredentialsModel with DiagnosticableTreeMixin {
     return _$CredentialsModelToJson(
       this,
     );
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    properties
-      ..add(DiagnosticsProperty('type', 'CredentialsModel.internal'))
-      ..add(DiagnosticsProperty('token', token))
-      ..add(DiagnosticsProperty('url', url))
-      ..add(DiagnosticsProperty('localUrl', localUrl))
-      ..add(DiagnosticsProperty('serverName', serverName))
-      ..add(DiagnosticsProperty('serverId', serverId))
-      ..add(DiagnosticsProperty('deviceId', deviceId));
-  }
-
-  @override
-  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
-    return 'CredentialsModel.internal(token: $token, url: $url, localUrl: $localUrl, serverName: $serverName, serverId: $serverId, deviceId: $deviceId)';
   }
 }
 
