@@ -11,10 +11,22 @@ import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage
 class FakeSecureStoragePlatform extends FlutterSecureStoragePlatform {
   final Map<String, String> _values = {};
 
+  /// Every [write] call, in order, as `key` - lets a test assert a key was
+  /// written exactly once (e.g. to prove two concurrent migration attempts
+  /// were memoized into a single one) without caring about the final value,
+  /// which `_values` already covers.
+  final List<String> writeLog = [];
+
   /// Simulates the vault being unavailable (e.g. no Linux keyring/secret
   /// service running) - every [write] throws instead of persisting,
   /// matching what a real backend failure looks like to callers.
   bool failWrites = false;
+
+  /// Every [write] call attempted, whether it went on to throw
+  /// ([failWrites]) or succeed - unlike [writeLog], which only records
+  /// successful writes. Lets a test assert a durably-failing vault is only
+  /// ever attempted once per session, not once per [getAccounts] call.
+  int writeAttempts = 0;
 
   /// Installs a fresh fake as [FlutterSecureStoragePlatform.instance] and
   /// returns it, so tests can both use `FlutterSecureStorage()` normally and
@@ -33,9 +45,11 @@ class FakeSecureStoragePlatform extends FlutterSecureStoragePlatform {
     required String value,
     required Map<String, String> options,
   }) async {
+    writeAttempts++;
     if (failWrites) {
       throw PlatformException(code: 'unavailable', message: 'Secure storage backend unavailable');
     }
+    writeLog.add(key);
     _values[key] = value;
   }
 

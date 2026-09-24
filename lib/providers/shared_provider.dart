@@ -109,10 +109,13 @@ class SharedHelper {
   final SecureCredentialsStore secureCredentials;
   final SeerrCredentialsStore seerrCredentials;
 
-  /// Guards [_migrateCredentialsIfNeeded] within this instance's lifetime.
-  /// The real, cross-launch guard is the persisted
-  /// [SharedKeys._credentialsMigratedToSecureStorageKey] flag - this just
-  /// avoids re-checking that flag on every single call once we know it's set.
+  /// Guards [_migrateCredentialsIfNeeded] within this instance's lifetime -
+  /// set after exactly ONE attempt this session, success or failure (a
+  /// failed attempt is retried on the next app launch, via the persisted
+  /// [SharedKeys._credentialsMigratedToSecureStorageKey] flag staying
+  /// unset, never on the next call within the same session - a vault
+  /// that's durably unavailable would otherwise fail the same `save` and
+  /// rewrite SharedPreferences on every single [getAccounts] call).
   bool _migrationChecked = false;
 
   /// Same role as [_migrationChecked], for [_migrateSeerrCredentialsIfNeeded]
@@ -120,6 +123,21 @@ class SharedHelper {
   /// separate so a Seerr-migration failure never blocks the Jellyfin one
   /// (and vice versa) from being marked done.
   bool _seerrMigrationChecked = false;
+
+  /// Memoizes an in-flight [_migrateCredentialsIfNeeded] run so that two
+  /// [getAccounts] calls racing at startup (a very real scenario: the
+  /// account list can be read from more than one place while the app is
+  /// still initializing) await the SAME migration attempt instead of each
+  /// running their own full read-modify-write pass over
+  /// [SharedKeys._loginCredentialsKey] - the second pass would otherwise
+  /// read the list before the first pass's write landed, then overwrite
+  /// that write with its own conclusions once it finished. Cleared once
+  /// [_migrationChecked] is set, since every call after that short-circuits
+  /// before ever consulting this field again.
+  Future<void>? _migrationFuture;
+
+  /// Same role as [_migrationFuture], for [_migrateSeerrCredentialsIfNeeded].
+  Future<void>? _seerrMigrationFuture;
 
   /// Accounts (by [_accountKey]) whose last [_hydrateAccount] attempt hit a
   /// vault read error - a locked/absent keyring, a native backend crash,
@@ -271,12 +289,18 @@ class SharedHelper {
   /// One-time, idempotent move of every account's [CredentialsModel] out of
   /// the plaintext SharedPreferences blob and into [secureCredentials].
   ///
-  /// Runs at most once per install (guarded by a persisted flag, checked
-  /// once per process by [_migrationChecked]); a failure isn't recorded as
-  /// done, so it's retried on the next call instead of stranding plaintext
-  /// credentials permanently.
-  Future<void> _migrateCredentialsIfNeeded() async {
-    if (_migrationChecked) return;
+  /// Runs at most once per install (guarded by a persisted flag) AND at
+  /// most once per session regardless of outcome (guarded by
+  /// [_migrationChecked], set after this one attempt whether it succeeded
+  /// or not - see its doc). Concurrent callers within that one attempt
+  /// share [_migrationFuture] rather than each starting their own
+  /// read-modify-write pass over [SharedKeys._loginCredentialsKey].
+  Future<void> _migrateCredentialsIfNeeded() {
+    if (_migrationChecked) return Future.value();
+    return _migrationFuture ??= _runCredentialsMigration();
+  }
+
+  Future<void> _runCredentialsMigration() async {
     if (sharedPreferences.getBool(SharedKeys._credentialsMigratedToSecureStorageKey) ?? false) {
       _migrationChecked = true;
       return;
@@ -303,23 +327,29 @@ class SharedHelper {
         accounts.map((e) => jsonEncode(_stripCredentials(e))).toList(),
       );
       await sharedPreferences.setBool(SharedKeys._credentialsMigratedToSecureStorageKey, true);
-      _migrationChecked = true;
     } catch (e, stacktrace) {
-      log('Failed to migrate stored credentials to secure storage, will retry: $e\n$stacktrace');
+      log('Failed to migrate stored credentials to secure storage, will retry next launch: $e\n$stacktrace');
+    } finally {
+      // Set on failure too: this session's one attempt is spent either way
+      // - the persisted flag staying unset is what triggers a retry, on
+      // the next launch, not on the next call in this session.
+      _migrationChecked = true;
     }
   }
 
   /// One-time, idempotent move of every account's [SeerrCredentialsModel]
   /// (apiKey, sessionCookie, customHeaders) out of the plaintext
   /// SharedPreferences blob and into [seerrCredentials] - same policy as
-  /// [_migrateCredentialsIfNeeded] for Jellyfin, with one addition: order
-  /// matters per account. `save` then an immediate `read`-back is required
-  /// to match before that account's plaintext is stripped; a save that
-  /// silently didn't durably persist (vault unavailable, keyring locked,
-  /// ...) is caught by the mismatch/exception instead of being trusted
-  /// blindly, so a failure on one account never drops its credentials -
-  /// they're left untouched in SharedPreferences and retried on the next
-  /// call. Accounts without Seerr configured are left alone entirely.
+  /// [_migrateCredentialsIfNeeded] for Jellyfin (one attempt per install,
+  /// one attempt per session regardless of outcome, concurrent callers
+  /// share [_seerrMigrationFuture]), with one addition: order matters per
+  /// account. `save` then an immediate `read`-back is required to match
+  /// before that account's plaintext is stripped; a save that silently
+  /// didn't durably persist (vault unavailable, keyring locked, ...) is
+  /// caught by the mismatch/exception instead of being trusted blindly, so
+  /// a failure on one account never drops its credentials - they're left
+  /// untouched in SharedPreferences and retried on the next app launch.
+  /// Accounts without Seerr configured are left alone entirely.
   ///
   /// Deliberately does not touch [AccountModel.credentials] (the Jellyfin
   /// side, already handled by [_migrateCredentialsIfNeeded]) or reuse
@@ -327,8 +357,12 @@ class SharedHelper {
   /// strips (Jellyfin here already-stripped-or-not, Seerr via
   /// [_stripSeerrCredentials]) keeps this migration correct regardless of
   /// which of the two happens to run first in [getAccounts].
-  Future<void> _migrateSeerrCredentialsIfNeeded() async {
-    if (_seerrMigrationChecked) return;
+  Future<void> _migrateSeerrCredentialsIfNeeded() {
+    if (_seerrMigrationChecked) return Future.value();
+    return _seerrMigrationFuture ??= _runSeerrCredentialsMigration();
+  }
+
+  Future<void> _runSeerrCredentialsMigration() async {
     if (sharedPreferences.getBool(SharedKeys._seerrCredentialsMigratedToSecureStorageKey) ?? false) {
       _seerrMigrationChecked = true;
       return;
@@ -345,7 +379,8 @@ class SharedHelper {
     try {
       accounts = rawAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
     } catch (e, stacktrace) {
-      log('Failed to decode stored accounts for Seerr credentials migration, will retry: $e\n$stacktrace');
+      log('Failed to decode stored accounts for Seerr credentials migration, will retry next launch: $e\n$stacktrace');
+      _seerrMigrationChecked = true;
       return;
     }
 
@@ -371,7 +406,7 @@ class SharedHelper {
         updatedAccounts.add(_stripSeerrCredentials(account));
       } catch (e, stacktrace) {
         log('Failed to migrate Seerr credentials to secure storage for account '
-            '${account.credentials.serverId}:${account.id}, will retry: $e\n$stacktrace');
+            '${account.credentials.serverId}:${account.id}, will retry next launch: $e\n$stacktrace');
         allMigrated = false;
         updatedAccounts.add(account);
       }
@@ -384,8 +419,11 @@ class SharedHelper {
 
     if (allMigrated) {
       await sharedPreferences.setBool(SharedKeys._seerrCredentialsMigratedToSecureStorageKey, true);
-      _seerrMigrationChecked = true;
     }
+    // Set regardless of `allMigrated`: this session's one attempt is spent
+    // either way - a partial/total failure is retried on the next app
+    // launch (the persisted flag stays unset), not on the next call here.
+    _seerrMigrationChecked = true;
   }
 
   Future<AccountModel?> getActiveAccount() async {
