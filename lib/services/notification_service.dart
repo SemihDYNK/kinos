@@ -64,6 +64,15 @@ class NotificationService {
   }
 
   static Future<String?> getInitialNotificationPayload() async {
+    // `flutter_local_notifications_linux` ne l'implémente pas
+    // (`getNotificationAppLaunchDetails` lève `UnimplementedError`,
+    // visible dans les logs au démarrage) — la spécification D-Bus des
+    // notifications de bureau n'a pas d'équivalent à "lancé depuis une
+    // notification" au sens où Android/iOS/Windows l'exposent. `null` :
+    // même sémantique que "pas lancé depuis une notification" partout
+    // ailleurs, cible unique de ce client (cf. CLAUDE.md).
+    if (!kIsWeb && Platform.isLinux) return null;
+
     final details = await _plugin.getNotificationAppLaunchDetails();
     return details?.notificationResponse?.payload;
   }

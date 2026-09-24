@@ -2,7 +2,7 @@
 
 Kinos, fork de Fladder (client Jellyfin Flutter, GPL-3.0-only — cf.
 NOTICE pour l'attribution complète).
-Cible : Linux desktop uniquement — CachyOS / COSMIC / AMD RDNA2.
+Cible : Linux desktop uniquement — CachyOS / Ryoku (Arch + Hyprland) / AMD RDNA2.
 
 ## Règles de fork
 
@@ -17,9 +17,11 @@ chaque divergence coûte à chaque merge.
 
 ## Contraintes techniques
 
-- **Pas de HDR.** COSMIC n'implémente pas `wp-color-management-v1`, et Flutter
-  compose en SDR 8-bit. Le tonemapping libplacebo vers SDR est définitif.
-  Ne pas proposer de chemin passthrough.
+- **Pas de HDR.** Flutter compose en SDR 8-bit, quel que soit le compositeur
+  — même Hyprland, qui gère `wp-color-management-v1` dans ses versions
+  récentes, n'y change rien : la limite est en aval, pas côté protocole
+  Wayland. Le tonemapping libplacebo vers SDR est définitif. Ne pas
+  proposer de chemin passthrough.
 - **Moteur mpv obligatoire** sur Linux (`lib/wrappers/players/lib_mpv.dart`),
   jamais MDK. Vérifier que `gpu-next` reste actif.
 - Le `DeviceProfile` natif est volontairement permissif (direct play sans
