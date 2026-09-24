@@ -21,4 +21,18 @@ abstract class SeerrCredentialsModel with _$SeerrCredentialsModel {
   }
 
   factory SeerrCredentialsModel.fromJson(Map<String, dynamic> json) => _$SeerrCredentialsModelFromJson(json);
+
+  /// Overrides the generated toString (which would print [apiKey],
+  /// [sessionCookie] and [customHeaders] in clear) — declaring it directly
+  /// on this class, rather than the generated `_$SeerrCredentialsModel`
+  /// mixin, makes Dart's normal method resolution prefer this one. Presence
+  /// only, never the value: this is what ends up in logs, uncaught-error
+  /// reports and the Flutter DevTools widget inspector.
+  @override
+  String toString() {
+    String redacted(String value) => value.isEmpty ? '' : '<redacted>';
+    return 'SeerrCredentialsModel(serverUrl: $serverUrl, '
+        'apiKey: ${redacted(apiKey)}, sessionCookie: ${redacted(sessionCookie)}, '
+        'customHeaders: ${customHeaders.isEmpty ? '{}' : '<redacted>'})';
+  }
 }

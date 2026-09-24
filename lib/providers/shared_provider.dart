@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kinos/models/account_model.dart';
 import 'package:kinos/models/credentials_model.dart';
 import 'package:kinos/models/last_seen_notifications_model.dart';
+import 'package:kinos/models/seerr_credentials_model.dart';
 import 'package:kinos/models/settings/client_settings_model.dart';
 import 'package:kinos/models/settings/home_settings_model.dart';
 import 'package:kinos/models/settings/subtitle_settings_model.dart';
@@ -24,6 +25,7 @@ import 'package:kinos/providers/settings/video_player_settings_provider.dart';
 import 'package:kinos/providers/update_notifications_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/services/secure_credentials_store.dart';
+import 'package:kinos/services/seerr_credentials_store.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError();
@@ -86,6 +88,7 @@ class SharedKeys {
 
   static const String _loginCredentialsKey = 'loginCredentialsKey';
   static const String _credentialsMigratedToSecureStorageKey = 'credentialsMigratedToSecureStorageKey';
+  static const String _seerrCredentialsMigratedToSecureStorageKey = 'seerrCredentialsMigratedToSecureStorageKey';
   static const String _clientSettingsKey = 'clientSettings';
   static const String _homeSettingsKey = 'homeSettings';
   static const String _videoPlayerSettingsKey = 'videoPlayerSettings';
@@ -104,6 +107,7 @@ class SharedHelper {
   final Ref? ref;
   final SharedPreferences sharedPreferences;
   final SecureCredentialsStore secureCredentials;
+  final SeerrCredentialsStore seerrCredentials;
 
   /// Guards [_migrateCredentialsIfNeeded] within this instance's lifetime.
   /// The real, cross-launch guard is the persisted
@@ -111,10 +115,17 @@ class SharedHelper {
   /// avoids re-checking that flag on every single call once we know it's set.
   bool _migrationChecked = false;
 
+  /// Same role as [_migrationChecked], for [_migrateSeerrCredentialsIfNeeded]
+  /// / [SharedKeys._seerrCredentialsMigratedToSecureStorageKey] - kept
+  /// separate so a Seerr-migration failure never blocks the Jellyfin one
+  /// (and vice versa) from being marked done.
+  bool _seerrMigrationChecked = false;
+
   SharedHelper({
     this.ref,
     required this.sharedPreferences,
     this.secureCredentials = const SecureCredentialsStore(),
+    this.seerrCredentials = const SeerrCredentialsStore(),
   });
 
   Future<bool?> addAccount(AccountModel account) async {
@@ -160,24 +171,30 @@ class SharedHelper {
       return element.sameIdentity(account);
     });
     await secureCredentials.delete(account.credentials.serverId, account.id);
+    await seerrCredentials.delete(account.credentials.serverId, account.id);
     return (await saveAccounts(savedAccounts));
   }
 
   /// Reads the saved account list, with each account's real [CredentialsModel]
-  /// (server URL, token, deviceId, ...) rehydrated from secure storage.
+  /// (server URL, token, deviceId, ...) and [SeerrCredentialsModel] (apiKey,
+  /// sessionCookie) rehydrated from secure storage.
   ///
   /// SharedPreferences only ever holds the non-sensitive rest of the account
   /// (name, avatar, filters, ...) plus the `serverId` needed to look the
   /// credentials up - see [saveAccounts].
   Future<List<AccountModel>> getAccounts() async {
     await _migrateCredentialsIfNeeded();
+    await _migrateSeerrCredentialsIfNeeded();
 
     final savedAccounts = sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
     if (savedAccounts == null) return [];
 
     try {
       final accounts = savedAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
-      return Future.wait(accounts.map(_hydrateCredentials));
+      return Future.wait(accounts.map((account) async {
+        final hydrated = await _hydrateCredentials(account);
+        return _hydrateSeerrCredentials(hydrated);
+      }));
     } catch (_, stacktrace) {
       log(stacktrace.toString());
       return [];
@@ -191,6 +208,15 @@ class SharedHelper {
     // failing to log in with an empty token is easier to recover from than
     // an account silently disappearing from the list.
     return storedCredentials == null ? account : account.copyWith(credentials: storedCredentials);
+  }
+
+  /// Same as [_hydrateCredentials] for Seerr: no vault entry (never
+  /// configured, or cleared outside the app) leaves [AccountModel
+  /// .seerrCredentials] as whatever SharedPreferences already had - `null`
+  /// in the common case.
+  Future<AccountModel> _hydrateSeerrCredentials(AccountModel account) async {
+    final storedSeerrCredentials = await seerrCredentials.read(account.credentials.serverId, account.id);
+    return storedSeerrCredentials == null ? account : account.copyWith(seerrCredentials: storedSeerrCredentials);
   }
 
   /// One-time, idempotent move of every account's [CredentialsModel] out of
@@ -234,6 +260,85 @@ class SharedHelper {
     }
   }
 
+  /// One-time, idempotent move of every account's [SeerrCredentialsModel]
+  /// (apiKey, sessionCookie, customHeaders) out of the plaintext
+  /// SharedPreferences blob and into [seerrCredentials] - same policy as
+  /// [_migrateCredentialsIfNeeded] for Jellyfin, with one addition: order
+  /// matters per account. `save` then an immediate `read`-back is required
+  /// to match before that account's plaintext is stripped; a save that
+  /// silently didn't durably persist (vault unavailable, keyring locked,
+  /// ...) is caught by the mismatch/exception instead of being trusted
+  /// blindly, so a failure on one account never drops its credentials -
+  /// they're left untouched in SharedPreferences and retried on the next
+  /// call. Accounts without Seerr configured are left alone entirely.
+  ///
+  /// Deliberately does not touch [AccountModel.credentials] (the Jellyfin
+  /// side, already handled by [_migrateCredentialsIfNeeded]) or reuse
+  /// [_stripCredentials] for the write-back: composing the two independent
+  /// strips (Jellyfin here already-stripped-or-not, Seerr via
+  /// [_stripSeerrCredentials]) keeps this migration correct regardless of
+  /// which of the two happens to run first in [getAccounts].
+  Future<void> _migrateSeerrCredentialsIfNeeded() async {
+    if (_seerrMigrationChecked) return;
+    if (sharedPreferences.getBool(SharedKeys._seerrCredentialsMigratedToSecureStorageKey) ?? false) {
+      _seerrMigrationChecked = true;
+      return;
+    }
+
+    final rawAccounts = sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
+    if (rawAccounts == null || rawAccounts.isEmpty) {
+      await sharedPreferences.setBool(SharedKeys._seerrCredentialsMigratedToSecureStorageKey, true);
+      _seerrMigrationChecked = true;
+      return;
+    }
+
+    List<AccountModel> accounts;
+    try {
+      accounts = rawAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
+    } catch (e, stacktrace) {
+      log('Failed to decode stored accounts for Seerr credentials migration, will retry: $e\n$stacktrace');
+      return;
+    }
+
+    var allMigrated = true;
+    final updatedAccounts = <AccountModel>[];
+    for (final account in accounts) {
+      final seerr = account.seerrCredentials;
+      if (seerr == null || !seerr.isConfigured) {
+        updatedAccounts.add(account);
+        continue;
+      }
+
+      try {
+        await seerrCredentials.save(account.credentials.serverId, account.id, seerr);
+        final readBack = await seerrCredentials.read(account.credentials.serverId, account.id);
+        // Freezed equality is disabled project-wide (`build.yaml`,
+        // `freezed: equal: false`) - `readBack != seerr` would always be
+        // true (identity comparison) even for identical data, so the
+        // round-trip is checked via its JSON form instead.
+        if (readBack == null || jsonEncode(readBack.toJson()) != jsonEncode(seerr.toJson())) {
+          throw StateError('Vault read-back did not match what was just written.');
+        }
+        updatedAccounts.add(_stripSeerrCredentials(account));
+      } catch (e, stacktrace) {
+        log('Failed to migrate Seerr credentials to secure storage for account '
+            '${account.credentials.serverId}:${account.id}, will retry: $e\n$stacktrace');
+        allMigrated = false;
+        updatedAccounts.add(account);
+      }
+    }
+
+    await sharedPreferences.setStringList(
+      SharedKeys._loginCredentialsKey,
+      updatedAccounts.map((e) => jsonEncode(e)).toList(),
+    );
+
+    if (allMigrated) {
+      await sharedPreferences.setBool(SharedKeys._seerrCredentialsMigratedToSecureStorageKey, true);
+      _seerrMigrationChecked = true;
+    }
+  }
+
   Future<AccountModel?> getActiveAccount() async {
     try {
       final accounts = await getAccounts();
@@ -250,15 +355,25 @@ class SharedHelper {
   }
 
   /// Persists [accounts]: each one's real credentials go to
-  /// [secureCredentials] (keyed by `serverId:userId`), while SharedPreferences
-  /// only ever gets [_stripCredentials]'s placeholder in their place.
+  /// [secureCredentials] (keyed by `serverId:userId`) and, when Seerr is
+  /// configured, its real [SeerrCredentialsModel] goes to [seerrCredentials]
+  /// (keyed by `seerr:serverId:userId`) - while SharedPreferences only ever
+  /// gets [_stripCredentials]'s and [_stripSeerrCredentials]'s placeholders
+  /// in their place. An account whose Seerr credentials are no longer
+  /// configured (disconnected, or never set up) has its vault entry deleted
+  /// rather than an empty value written - nothing left to protect there.
   Future<bool?> saveAccounts(List<AccountModel> accounts) async {
     for (final account in accounts) {
       await secureCredentials.save(account.credentials.serverId, account.id, account.credentials);
+      if (account.seerrCredentials?.isConfigured == true) {
+        await seerrCredentials.save(account.credentials.serverId, account.id, account.seerrCredentials!);
+      } else {
+        await seerrCredentials.delete(account.credentials.serverId, account.id);
+      }
     }
     return sharedPreferences.setStringList(
       SharedKeys._loginCredentialsKey,
-      accounts.map((e) => jsonEncode(_stripCredentials(e))).toList(),
+      accounts.map((e) => jsonEncode(_stripSeerrCredentials(_stripCredentials(e)))).toList(),
     );
   }
 
@@ -268,6 +383,14 @@ class SharedHelper {
   AccountModel _stripCredentials(AccountModel account) => account.copyWith(
         credentials: CredentialsModel.internal(serverId: account.credentials.serverId),
       );
+
+  /// Blanks [AccountModel.seerrCredentials] entirely before an account is
+  /// written to SharedPreferences - unlike Jellyfin's [CredentialsModel],
+  /// nothing about it is needed to look the real value back up in
+  /// [seerrCredentials]: that lookup key comes from `credentials.serverId`
+  /// and `id`, both independent of this field.
+  AccountModel _stripSeerrCredentials(AccountModel account) =>
+      account.seerrCredentials == null ? account : account.copyWith(seerrCredentials: null);
 
   ClientSettingsModel get clientSettings {
     try {

@@ -29,11 +29,6 @@ mixin _$SeerrCredentialsModel {
 
   /// Serializes this SeerrCredentialsModel to a JSON map.
   Map<String, dynamic> toJson();
-
-  @override
-  String toString() {
-    return 'SeerrCredentialsModel(serverUrl: $serverUrl, apiKey: $apiKey, sessionCookie: $sessionCookie, customHeaders: $customHeaders)';
-  }
 }
 
 /// @nodoc
@@ -299,11 +294,6 @@ class _SeerrCredentialsModel extends SeerrCredentialsModel {
     return _$SeerrCredentialsModelToJson(
       this,
     );
-  }
-
-  @override
-  String toString() {
-    return 'SeerrCredentialsModel(serverUrl: $serverUrl, apiKey: $apiKey, sessionCookie: $sessionCookie, customHeaders: $customHeaders)';
   }
 }
 

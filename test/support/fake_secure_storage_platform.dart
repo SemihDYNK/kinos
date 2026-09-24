@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 
 /// In-memory [FlutterSecureStoragePlatform] for tests.
@@ -9,6 +10,11 @@ import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage
 /// against a real `FlutterSecureStorage()` without touching a platform.
 class FakeSecureStoragePlatform extends FlutterSecureStoragePlatform {
   final Map<String, String> _values = {};
+
+  /// Simulates the vault being unavailable (e.g. no Linux keyring/secret
+  /// service running) - every [write] throws instead of persisting,
+  /// matching what a real backend failure looks like to callers.
+  bool failWrites = false;
 
   /// Installs a fresh fake as [FlutterSecureStoragePlatform.instance] and
   /// returns it, so tests can both use `FlutterSecureStorage()` normally and
@@ -27,6 +33,9 @@ class FakeSecureStoragePlatform extends FlutterSecureStoragePlatform {
     required String value,
     required Map<String, String> options,
   }) async {
+    if (failWrites) {
+      throw PlatformException(code: 'unavailable', message: 'Secure storage backend unavailable');
+    }
     _values[key] = value;
   }
 
