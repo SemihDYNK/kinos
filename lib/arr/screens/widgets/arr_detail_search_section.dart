@@ -8,28 +8,50 @@ import 'package:kinos/arr/models/arr_media_detail.dart';
 import 'package:kinos/arr/models/arr_release.dart';
 import 'package:kinos/arr/providers/arr_search_providers.dart';
 import 'package:kinos/arr/screens/widgets/arr_release_table.dart';
-import 'package:kinos/arr/screens/widgets/arr_season_episode_picker.dart';
 import 'package:kinos/arr/services/arr_api_client.dart';
 import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme/app_theme.dart';
 
-enum _SeriesScope { whole, seasonOrEpisode }
+/// Point d'entrée externe de la recherche interactive — le bloc titre
+/// (série/film entier) et les lignes de `ArrSeasonSummaryList`
+/// (saison/épisode) appellent ces méthodes directement plutôt que de
+/// passer par un bouton interne à cette section, qui n'a donc plus de
+/// sélecteur de portée à elle : elle ne garde que l'état et l'affichage
+/// du tableau de résultats. Même style que `AnchoredPopoverController`.
+class ArrDetailSearchSectionController {
+  _ArrDetailSearchSectionState? _state;
+
+  void _attach(_ArrDetailSearchSectionState state) => _state = state;
+  void _detach(_ArrDetailSearchSectionState state) {
+    if (identical(_state, state)) _state = null;
+  }
+
+  void expandMovie() => _state?._expandMovie();
+  void expandSeries() => _state?._expandSeries();
+  void expandSeason(int seasonNumber) => _state?._expandSeason(seasonNumber);
+  void expandEpisode(ArrEpisode episode) => _state?._expandEpisode(episode);
+}
 
 /// Recherche interactive intégrée à la fiche détail — repliée par
-/// défaut, un bouton "Recherche interactive" la déplie. Sur la page, pas
-/// dans une modale : réutilise [ArrReleaseTable] telle quelle (titres
-/// cliquables, envoi au téléchargement, menu contextuel), pas de copie.
+/// défaut, un bouton "Recherche interactive" la déplie côté film (seule
+/// portée possible). Côté série, aucun bouton ici : la portée (série
+/// entière, saison, épisode) se choisit ailleurs sur la fiche — bloc
+/// titre et liste des saisons — via [controller]. Toujours la même
+/// [ArrReleaseTable] affichée, jamais de copie.
 ///
-/// Pour une série, la portée avant la recherche : série entière
-/// (recherche automatique — `POST /command SeriesSearch`, seule forme que
-/// l'API *Arr propose à cette échelle, pas de recherche interactive
-/// "toute la série") ou saison/épisode (recherche interactive via
-/// [ArrSeasonEpisodePicker], qui propose déjà les deux dans une seule
-/// vue).
+/// "Série entière" n'existe pas telle quelle côté API (`/api/v3/release`
+/// n'accepte que `episodeId` ou `seriesId`+`seasonNumber`) : [_expandSeries]
+/// fait un appel par saison surveillée, résultats fusionnés dans une
+/// seule table.
 class ArrDetailSearchSection extends ConsumerStatefulWidget {
   final ArrDetailEntry entry;
+  final ArrDetailSearchSectionController? controller;
 
-  const ArrDetailSearchSection({required this.entry, super.key});
+  const ArrDetailSearchSection({
+    required this.entry,
+    this.controller,
+    super.key,
+  });
 
   @override
   ConsumerState<ArrDetailSearchSection> createState() =>
@@ -39,10 +61,6 @@ class ArrDetailSearchSection extends ConsumerStatefulWidget {
 class _ArrDetailSearchSectionState
     extends ConsumerState<ArrDetailSearchSection> {
   bool _expanded = false;
-  _SeriesScope? _scope;
-
-  bool _episodesLoading = false;
-  List<ArrEpisode> _episodes = const [];
 
   bool _releaseSearched = false;
   bool _releasesLoading = false;
@@ -52,73 +70,39 @@ class _ArrDetailSearchSectionState
   String? _releaseSearchLabel;
   final Map<String, ArrGrabStatus> _grabStatuses = {};
 
-  bool _wholeSeriesSearching = false;
-
-  void _expand() {
-    setState(() => _expanded = true);
-    if (widget.entry.isMovie) _searchMovieReleases();
+  @override
+  void initState() {
+    super.initState();
+    widget.controller?._attach(this);
   }
 
-  Future<void> _searchMovieReleases() {
+  @override
+  void didUpdateWidget(covariant ArrDetailSearchSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._detach(this);
+      widget.controller?._attach(this);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller?._detach(this);
+    super.dispose();
+  }
+
+  void _expandMovie() {
+    setState(() => _expanded = true);
     final movie = widget.entry.movie!;
-    return _searchReleases(
+    _searchReleases(
       label:
           movie.year != null ? '${movie.title} (${movie.year})' : movie.title,
       run: () => ref.read(radarrClientProvider)!.releasesForMovie(movie.id),
     );
   }
 
-  void _selectScope(_SeriesScope scope) {
-    setState(() {
-      _scope = scope;
-      _releaseSearched = false;
-      _releases = const [];
-      _releasesError = null;
-      _grabStatuses.clear();
-    });
-    if (scope == _SeriesScope.seasonOrEpisode &&
-        _episodes.isEmpty &&
-        !_episodesLoading) {
-      _loadEpisodes();
-    }
-  }
-
-  void _backToScope() {
-    setState(() {
-      _scope = null;
-      _releaseSearched = false;
-      _releases = const [];
-      _releasesError = null;
-      _grabStatuses.clear();
-    });
-  }
-
-  void _backToPicker() {
-    setState(() {
-      _releaseSearched = false;
-      _releases = const [];
-      _releasesError = null;
-      _grabStatuses.clear();
-    });
-  }
-
-  Future<void> _loadEpisodes() async {
-    setState(() => _episodesLoading = true);
-    final sonarr = ref.read(sonarrClientProvider);
-    final result = sonarr == null
-        ? const ArrFailure<List<ArrEpisode>>(ArrApiError.unreachable)
-        : await sonarr.episodesForSeries(widget.entry.id);
-    if (!mounted) return;
-    setState(() {
-      _episodesLoading = false;
-      _episodes = switch (result) {
-        ArrSuccess(:final data) => data,
-        ArrFailure() => const [],
-      };
-    });
-  }
-
-  void _searchSeason(int seasonNumber) {
+  void _expandSeason(int seasonNumber) {
+    setState(() => _expanded = true);
     final series = widget.entry.series!;
     _searchReleases(
       label: '${series.title} — Saison $seasonNumber',
@@ -128,13 +112,72 @@ class _ArrDetailSearchSectionState
     );
   }
 
-  void _searchEpisode(ArrEpisode episode) {
+  void _expandEpisode(ArrEpisode episode) {
+    setState(() => _expanded = true);
     final series = widget.entry.series!;
     _searchReleases(
       label:
           '${series.title} — S${episode.seasonNumber}E${episode.episodeNumber}',
       run: () => ref.read(sonarrClientProvider)!.releasesForEpisode(episode.id),
     );
+  }
+
+  /// Fan-out par saison surveillée, résultats fusionnés — aucune portée
+  /// "série entière" côté API, cf. le commentaire de classe.
+  Future<void> _expandSeries() async {
+    final series = widget.entry.series!;
+    final seasons =
+        series.seasons.where((s) => s.monitored).toList()
+          ..sort((a, b) => a.seasonNumber.compareTo(b.seasonNumber));
+    setState(() {
+      _expanded = true;
+      _releaseSearched = true;
+      _releasesLoading = true;
+      _releasesError = null;
+      _releases = const [];
+      _releaseSearchLabel = '${series.title} — toutes les saisons surveillées';
+      _grabStatuses.clear();
+    });
+    if (seasons.isEmpty) {
+      if (mounted) setState(() => _releasesLoading = false);
+      return;
+    }
+    final client = ref.read(sonarrClientProvider);
+    if (client == null) {
+      if (mounted) {
+        setState(() {
+          _releasesLoading = false;
+          _releasesError = ArrApiError.unreachable;
+          _releasesErrorDetail = 'Service non configuré';
+        });
+      }
+      return;
+    }
+    final results = await Future.wait(
+        seasons.map((s) => client.releasesForSeason(series.id, s.seasonNumber)));
+    if (!mounted) return;
+    final merged = <ArrRelease>[];
+    ArrApiError? lastError;
+    String? lastDetail;
+    for (final result in results) {
+      switch (result) {
+        case ArrSuccess(:final data):
+          merged.addAll(data);
+        case ArrFailure(:final error, :final detail):
+          lastError = error;
+          lastDetail = detail;
+      }
+    }
+    setState(() {
+      _releasesLoading = false;
+      _releases = merged;
+      // Erreur seulement si aucune saison n'a renvoyé de résultat — un
+      // échec isolé ne doit pas cacher les résultats des autres.
+      if (merged.isEmpty && lastError != null) {
+        _releasesError = lastError;
+        _releasesErrorDetail = lastDetail;
+      }
+    });
   }
 
   Future<void> _searchReleases({
@@ -183,22 +226,6 @@ class _ArrDetailSearchSectionState
     KinosSnack.show(message, context: context);
   }
 
-  Future<void> _searchWholeSeries() async {
-    setState(() => _wholeSeriesSearching = true);
-    final result = await ref
-        .read(sonarrClientProvider)
-        ?.triggerSeriesSearch(widget.entry.id);
-    if (!mounted) return;
-    setState(() => _wholeSeriesSearching = false);
-    final message = switch (result) {
-      ArrSuccess() => 'Recherche automatique lancée pour toute la série.',
-      ArrFailure(:final detail) =>
-        'Échec du lancement${detail != null ? ' — $detail' : ''}',
-      null => 'Service non configuré.',
-    };
-    if (mounted) KinosSnack.show(message, context: context);
-  }
-
   String _errorMessage(ArrApiError error, String? detail) {
     final base = switch (error) {
       ArrApiError.unreachable => 'Serveur injoignable.',
@@ -213,12 +240,15 @@ class _ArrDetailSearchSectionState
   @override
   Widget build(BuildContext context) {
     if (!_expanded) {
+      // Côté série, aucun bouton ici : la portée se choisit depuis le
+      // bloc titre ou la liste des saisons (cf. commentaire de classe).
+      if (!widget.entry.isMovie) return const SizedBox.shrink();
       return FocusRing(
         borderRadius: AppRadii.controlBorder,
-        onActivate: _expand,
+        onActivate: _expandMovie,
         child: ExcludeFocus(
           child: OutlinedButton.icon(
-            onPressed: _expand,
+            onPressed: _expandMovie,
             icon: const Icon(Icons.search_rounded),
             label: const Text('Recherche interactive'),
           ),
@@ -229,116 +259,30 @@ class _ArrDetailSearchSectionState
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('Recherche interactive',
-            style: Theme.of(context).textTheme.headlineSmall),
+        Row(
+          children: [
+            Text('Recherche interactive',
+                style: Theme.of(context).textTheme.headlineSmall),
+            if (_releaseSearchLabel != null) ...[
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  _releaseSearchLabel!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ],
+        ),
         const SizedBox(height: AppSpacing.sm),
-        if (widget.entry.isMovie)
-          _buildReleaseSection(context)
-        else
-          _buildSeriesSection(context),
-      ],
-    );
-  }
-
-  Widget _buildSeriesSection(BuildContext context) {
-    if (_scope == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        spacing: AppSpacing.xs,
-        children: [
-          Text('Portée de la recherche',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppColors.textSecondary)),
-          FocusRing(
-            borderRadius: AppRadii.controlBorder,
-            onActivate: () => _selectScope(_SeriesScope.whole),
-            child: ExcludeFocus(
-              child: OutlinedButton(
-                onPressed: () => _selectScope(_SeriesScope.whole),
-                child: const Text('Série entière (recherche automatique)'),
-              ),
-            ),
-          ),
-          FocusRing(
-            borderRadius: AppRadii.controlBorder,
-            onActivate: () => _selectScope(_SeriesScope.seasonOrEpisode),
-            child: ExcludeFocus(
-              child: OutlinedButton(
-                onPressed: () => _selectScope(_SeriesScope.seasonOrEpisode),
-                child: const Text('Une saison ou un épisode'),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-    if (_scope == _SeriesScope.whole) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _BackRow(onBack: _backToScope),
-          const SizedBox(height: AppSpacing.sm),
-          FocusRing(
-            borderRadius: AppRadii.controlBorder,
-            onActivate: _wholeSeriesSearching ? null : _searchWholeSeries,
-            child: ExcludeFocus(
-              child: FilledButton.icon(
-                onPressed: _wholeSeriesSearching ? null : _searchWholeSeries,
-                icon: _wholeSeriesSearching
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.search_rounded),
-                label: const Text('Lancer la recherche automatique'),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-    // _SeriesScope.seasonOrEpisode
-    if (_releaseSearched) return _buildReleaseSection(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _BackRow(onBack: _backToScope),
-        const SizedBox(height: AppSpacing.sm),
-        if (_episodesLoading)
-          const _LoadingState(label: 'Chargement des épisodes…')
-        else if (_episodes.isEmpty)
-          const _HintState(label: 'Aucun épisode trouvé pour cette série.')
-        else
-          ArrSeasonEpisodePicker(
-            episodes: _episodes,
-            onSearchSeason: _searchSeason,
-            onSearchEpisode: _searchEpisode,
-          ),
-      ],
-    );
-  }
-
-  Widget _buildReleaseSection(BuildContext context) {
-    final showBack = !widget.entry.isMovie;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (showBack)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _BackRow(
-              onBack: _backToPicker,
-              label: _releaseSearchLabel,
-            ),
-          ),
-        if (_releasesLoading)
+        if (!_releaseSearched)
+          const SizedBox.shrink()
+        else if (_releasesLoading)
           const _LoadingState(
               label: 'Recherche auprès des indexeurs (jusqu\'à 30 secondes)…')
         else if (_releasesError != null)
@@ -352,45 +296,6 @@ class _ArrDetailSearchSectionState
             grabStatuses: _grabStatuses,
             onGrab: _grab,
           ),
-      ],
-    );
-  }
-}
-
-class _BackRow extends StatelessWidget {
-  final VoidCallback onBack;
-  final String? label;
-  const _BackRow({required this.onBack, this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        FocusRing(
-          borderRadius: AppRadii.controlBorder,
-          onActivate: onBack,
-          child: ExcludeFocus(
-            child: Tooltip(
-              message: 'Changer de portée',
-              child: IconButton(
-                onPressed: onBack,
-                icon: const Icon(Icons.arrow_back_rounded),
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-        ),
-        if (label != null) ...[
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              label!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ],
       ],
     );
   }

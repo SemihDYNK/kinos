@@ -60,8 +60,9 @@ class ArrRootFolder {
 
 /// Une saison d'une série (`series.seasons[]`, imbriqué dans `GET
 /// /api/v3/series/{id}`) — épisodes présents/total et surveillance,
-/// affichés tels quels dans la fiche détail (pas un sélecteur, cf.
-/// `ArrSeasonEpisodePicker` pour la recherche interactive).
+/// utilisés par l'en-tête dépliable de `ArrSeasonSummaryList` sur la
+/// fiche détail (le comptage seul distingue une saison complète d'une
+/// incomplète sans avoir à la déplier).
 class ArrSeasonSummary {
   final int seasonNumber;
   final bool monitored;

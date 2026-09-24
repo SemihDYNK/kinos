@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:kinos/arr/models/arr_library_item.dart';
 import 'package:kinos/arr/models/arr_media_detail.dart';
 import 'package:kinos/arr/models/arr_service.dart';
 import 'package:kinos/arr/providers/arr_search_providers.dart';
@@ -201,4 +202,22 @@ final arrRootFoldersProvider = FutureProvider.family
   };
   if (folders.isNotEmpty) ref.keepAlive();
   return folders;
+});
+
+/// Épisodes d'une série — `.family<int seriesId>.autoDispose`, avec
+/// `keepAlive` une fois chargés (même principe que
+/// [arrQualityProfilesProvider]) : sert à la fois au dépliage de saison
+/// (affichage) et à la résolution episodeId -> [ArrEpisode] pour la
+/// recherche interactive scopée à un épisode. Remplace le chargement ad
+/// hoc qui vivait auparavant dans `ArrDetailSearchSection`.
+final arrSeriesEpisodesProvider = FutureProvider.family
+    .autoDispose<List<ArrEpisode>, int>((ref, seriesId) async {
+  final result =
+      await ref.read(sonarrClientProvider)?.episodesForSeries(seriesId);
+  final episodes = switch (result) {
+    ArrSuccess(:final data) => data,
+    ArrFailure() || null => const <ArrEpisode>[],
+  };
+  if (episodes.isNotEmpty) ref.keepAlive();
+  return episodes;
 });

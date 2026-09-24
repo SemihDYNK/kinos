@@ -21,6 +21,26 @@ class ArrLibraryEntry {
   String? get posterUrl => movie?.posterUrl ?? series?.posterUrl;
   bool get monitored => movie?.monitored ?? series?.monitored ?? false;
 
+  Map<String, dynamic> get _raw => movie?.raw ?? series!.raw;
+
+  /// Identifiants de fournisseurs externes, tels que Radarr/Sonarr les
+  /// exposent au premier niveau de la ressource brute — appariement
+  /// exact avec Jellyfin (`OverviewModel.tmdbId`/`imdbId`/`tvdbId`, cf.
+  /// `arr_jellyfin_dedup.dart`), prioritaire sur tout rapprochement de
+  /// titre. Radarr porte `tmdbId` (entier) et souvent `imdbId` ; Sonarr
+  /// n'a pas d'équivalent TMDB natif (métadonnées TheTVDB) mais porte
+  /// `tvdbId` et souvent `imdbId` — les trois canaux sont donc utiles
+  /// selon le type d'entrée, jamais tous renseignés à la fois.
+  String? get tmdbId =>
+      _raw['tmdbId'] is int ? (_raw['tmdbId'] as int).toString() : null;
+  String? get imdbId {
+    final value = _raw['imdbId'];
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  String? get tvdbId =>
+      _raw['tvdbId'] is int ? (_raw['tvdbId'] as int).toString() : null;
+
   /// Un fichier existe (film) ou au moins un épisode est présent (série) —
   /// sans être forcément complet, cf. [isComplete].
   bool get hasContent =>

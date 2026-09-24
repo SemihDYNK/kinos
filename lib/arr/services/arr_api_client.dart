@@ -4,6 +4,7 @@ import 'dart:developer';
 
 import 'package:http/http.dart' as http;
 
+import 'package:kinos/arr/models/arr_calendar_entry.dart';
 import 'package:kinos/arr/models/arr_library_item.dart';
 import 'package:kinos/arr/models/arr_media_detail.dart';
 import 'package:kinos/arr/models/arr_queue_item.dart';
@@ -619,6 +620,50 @@ class RadarrApiClient extends ArrApiClient {
             'name': 'MoviesSearch',
             'movieIds': [id]
           }));
+
+  /// `GET /api/v3/calendar` avec `start`/`end` en ISO 8601 — sorties
+  /// prévues/passées sur la période, pas de pagination (l'API renvoie
+  /// tout d'un coup). Volatile, aucune table Drift : consommé tel quel
+  /// par [ArrCalendarEntry.fromRadarrJson].
+  Future<ArrResult<List<ArrCalendarEntry>>> fetchCalendar(
+      DateTime start, DateTime end) async {
+    final result = await get('/api/v3/calendar', query: {
+      'start': start.toIso8601String(),
+      'end': end.toIso8601String(),
+    });
+    return switch (result) {
+      ArrSuccess(:final data) when data is List => ArrSuccess(data
+          .whereType<Map<String, dynamic>>()
+          .map((json) => ArrCalendarEntry.fromRadarrJson(json,
+              baseUrl: baseUrl, apiKey: apiKey))
+          .toList()),
+      ArrSuccess() =>
+        const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// Bascule la surveillance depuis une entrée de calendrier, qui ne
+  /// porte pas le JSON brut complet qu'exige un `PUT` — relit la
+  /// ressource complète puis renvoie le correctif, même principe que
+  /// [setMovieMonitored] mais sans dépendre d'un [ArrMovie] déjà en
+  /// mémoire.
+  Future<ArrResult<void>> setMovieMonitoredById(
+      int id, bool monitored) async {
+    final current = await get('/api/v3/movie/$id');
+    return switch (current) {
+      ArrSuccess(:final data) when data is Map => _asVoid(() => put(
+          '/api/v3/movie/$id',
+          body: {
+            ...Map<String, dynamic>.from(data),
+            'monitored': monitored,
+          })),
+      ArrSuccess() =>
+        Future.value(const ArrFailure(ArrApiError.invalidResponse)),
+      ArrFailure(:final error, :final detail) =>
+        Future.value(ArrFailure(error, detail)),
+    };
+  }
 }
 
 class SonarrApiClient extends ArrApiClient {
@@ -728,6 +773,72 @@ class SonarrApiClient extends ArrApiClient {
   /// recherche automatique de tous les épisodes manquants surveillés.
   Future<ArrResult<void>> triggerSeriesSearch(int id) => _asVoid(() =>
       post('/api/v3/command', body: {'name': 'SeriesSearch', 'seriesId': id}));
+
+  /// `POST /api/v3/command` `{name: "SeasonSearch", ...}` — recherche
+  /// automatique bornée à une saison, utilisée par le menu contextuel de
+  /// son en-tête sur la fiche détail.
+  Future<ArrResult<void>> triggerSeasonSearch(
+          int seriesId, int seasonNumber) =>
+      _asVoid(() => post('/api/v3/command', body: {
+            'name': 'SeasonSearch',
+            'seriesId': seriesId,
+            'seasonNumber': seasonNumber,
+          }));
+
+  /// `POST /api/v3/command` `{name: "EpisodeSearch", episodeIds: [id]}` —
+  /// recherche automatique bornée à un épisode, utilisée par le menu
+  /// contextuel de sa ligne (fiche détail et calendrier).
+  Future<ArrResult<void>> triggerEpisodeSearch(int episodeId) =>
+      _asVoid(() => post('/api/v3/command', body: {
+            'name': 'EpisodeSearch',
+            'episodeIds': [episodeId],
+          }));
+
+  /// `GET /api/v3/calendar` avec `start`, `end`, `includeEpisodeFile=true`
+  /// et `includeSeries=true` — ce dernier n'est pas demandé explicitement
+  /// mais nécessaire : sans lui l'entrée ne porte que le titre d'épisode,
+  /// ni le titre de série ni son affiche (`series` imbriquée). Volatile,
+  /// aucune table Drift.
+  Future<ArrResult<List<ArrCalendarEntry>>> fetchCalendar(
+      DateTime start, DateTime end) async {
+    final result = await get('/api/v3/calendar', query: {
+      'start': start.toIso8601String(),
+      'end': end.toIso8601String(),
+      'includeEpisodeFile': 'true',
+      'includeSeries': 'true',
+    });
+    return switch (result) {
+      ArrSuccess(:final data) when data is List => ArrSuccess(data
+          .whereType<Map<String, dynamic>>()
+          .map((json) => ArrCalendarEntry.fromSonarrJson(json,
+              baseUrl: baseUrl, apiKey: apiKey))
+          .toList()),
+      ArrSuccess() =>
+        const ArrFailure(ArrApiError.invalidResponse, 'Réponse inattendue'),
+      ArrFailure(:final error, :final detail) => ArrFailure(error, detail),
+    };
+  }
+
+  /// Même principe que [RadarrApiClient.setMovieMonitoredById] : une
+  /// entrée de calendrier Sonarr est une ressource *épisode*, elle ne
+  /// porte pas le JSON *série* complet qu'exige un `PUT` — relit la
+  /// série puis renvoie le correctif.
+  Future<ArrResult<void>> setSeriesMonitoredById(
+      int id, bool monitored) async {
+    final current = await get('/api/v3/series/$id');
+    return switch (current) {
+      ArrSuccess(:final data) when data is Map => _asVoid(() => put(
+          '/api/v3/series/$id',
+          body: {
+            ...Map<String, dynamic>.from(data),
+            'monitored': monitored,
+          })),
+      ArrSuccess() =>
+        Future.value(const ArrFailure(ArrApiError.invalidResponse)),
+      ArrFailure(:final error, :final detail) =>
+        Future.value(ArrFailure(error, detail)),
+    };
+  }
 }
 
 /// Reconstruit un chemin sous un nouveau dossier racine en gardant le nom

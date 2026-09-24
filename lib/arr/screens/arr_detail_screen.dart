@@ -6,10 +6,12 @@ import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
+import 'package:kinos/arr/models/arr_library_item.dart';
 import 'package:kinos/arr/models/arr_media_detail.dart';
 import 'package:kinos/arr/models/arr_service.dart';
 import 'package:kinos/arr/providers/arr_detail_providers.dart';
 import 'package:kinos/arr/providers/arr_jellyfin_link_provider.dart';
+import 'package:kinos/arr/providers/arr_search_providers.dart';
 import 'package:kinos/arr/screens/widgets/arr_detail_edit_dialog.dart';
 import 'package:kinos/arr/screens/widgets/arr_detail_search_section.dart';
 import 'package:kinos/arr/screens/widgets/arr_season_summary_list.dart';
@@ -39,7 +41,24 @@ class ArrDetailScreen extends ConsumerStatefulWidget {
   final ArrService service;
   final int id;
 
-  const ArrDetailScreen({required this.service, required this.id, super.key});
+  /// Déplie la recherche interactive à l'ouverture — film entier, ou
+  /// série entière si [initialSearchEpisodeId] est absent. Utilisé par
+  /// le menu contextuel du calendrier ("Recherche interactive" pousse
+  /// cette route plutôt que de dupliquer `ArrReleaseTable` ailleurs).
+  final bool autoExpandSearch;
+
+  /// Scope la recherche interactive à cet épisode dès l'ouverture — id
+  /// épisode Sonarr d'une entrée de calendrier précise. Implique
+  /// [autoExpandSearch].
+  final int? initialSearchEpisodeId;
+
+  const ArrDetailScreen({
+    required this.service,
+    required this.id,
+    this.autoExpandSearch = false,
+    this.initialSearchEpisodeId,
+    super.key,
+  });
 
   @override
   ConsumerState<ArrDetailScreen> createState() => _ArrDetailScreenState();
@@ -47,6 +66,8 @@ class ArrDetailScreen extends ConsumerStatefulWidget {
 
 class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
   final _menuAnchorKey = GlobalKey();
+  final _searchController = ArrDetailSearchSectionController();
+  bool _autoExpandConsumed = false;
 
   ArrDetailKey get _key => (service: widget.service, id: widget.id);
 
@@ -148,8 +169,16 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
           onTap: () => _runAction(notifier.triggerSearch,
               failureContext: 'Recherche',
               successMessage: 'Recherche automatique lancée.'),
-          child:
-              const _MenuLabel(icon: Icons.search_rounded, label: 'Rechercher'),
+          child: const _MenuLabel(
+              icon: Icons.search_rounded, label: 'Recherche automatique'),
+        ),
+        PopupMenuItem(
+          onTap: () => entry.isMovie
+              ? _searchController.expandMovie()
+              : _searchController.expandSeries(),
+          child: const _MenuLabel(
+              icon: Icons.manage_search_rounded,
+              label: 'Recherche interactive'),
         ),
         PopupMenuItem(
           onTap: () => _showEdit(context, entry),
@@ -172,6 +201,38 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
         ],
       ],
     );
+  }
+
+  /// Une seule fois par ouverture d'écran (`_autoExpandConsumed`) : une
+  /// fois l'entrée chargée, déplie la recherche interactive selon les
+  /// paramètres de route (cf. `ArrCalendarScreen._openInteractiveSearch`)
+  /// — un post-frame callback laisse `ArrDetailSearchSection` s'attacher
+  /// au contrôleur avant qu'on l'appelle.
+  void _maybeAutoExpandSearch(ArrDetailEntry entry) {
+    if (!widget.autoExpandSearch || _autoExpandConsumed) return;
+    _autoExpandConsumed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      if (entry.isMovie) {
+        _searchController.expandMovie();
+        return;
+      }
+      final episodeId = widget.initialSearchEpisodeId;
+      if (episodeId == null) {
+        _searchController.expandSeries();
+        return;
+      }
+      final episodes =
+          await ref.read(arrSeriesEpisodesProvider(entry.id).future);
+      if (!mounted) return;
+      final episode =
+          episodes.where((e) => e.id == episodeId).firstOrNull;
+      if (episode != null) {
+        _searchController.expandEpisode(episode);
+      } else {
+        _searchController.expandSeries();
+      }
+    });
   }
 
   Offset _menuAnchor() {
@@ -260,10 +321,12 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
         ],
       );
     }
+    _maybeAutoExpandSearch(state.entry!);
     return _ArrDetailContent(
       entry: state.entry!,
       service: widget.service,
       menuAnchorKey: _menuAnchorKey,
+      searchController: _searchController,
       onToggleMonitored: () => _runAction(
           ref.read(arrDetailProvider(_key).notifier).toggleMonitored,
           failureContext: 'Surveillance'),
@@ -271,10 +334,25 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
           ref.read(arrDetailProvider(_key).notifier).triggerSearch,
           failureContext: 'Recherche',
           successMessage: 'Recherche automatique lancée.'),
+      onInteractiveSearch: () => _searchController.expandSeries(),
       onEdit: (entry) => _showEdit(context, entry),
       onRemove: (entry) => _confirmRemove(context, entry),
       onShowMenu: (position, entry, jellyfinMatch) =>
           _showActionMenu(context, position, entry, jellyfinMatch),
+      onSearchSeason: (seasonNumber, interactive) => interactive
+          ? _searchController.expandSeason(seasonNumber)
+          : _runAction(
+              () => ref
+                  .read(sonarrClientProvider)!
+                  .triggerSeasonSearch(state.entry!.id, seasonNumber),
+              failureContext: 'Recherche',
+              successMessage: 'Recherche automatique lancée.'),
+      onSearchEpisode: (episode, interactive) => interactive
+          ? _searchController.expandEpisode(episode)
+          : _runAction(
+              () => ref.read(sonarrClientProvider)!.triggerEpisodeSearch(episode.id),
+              failureContext: 'Recherche',
+              successMessage: 'Recherche automatique lancée.'),
     );
   }
 }
@@ -283,23 +361,31 @@ class _ArrDetailContent extends ConsumerWidget {
   final ArrDetailEntry entry;
   final ArrService service;
   final GlobalKey menuAnchorKey;
+  final ArrDetailSearchSectionController searchController;
   final VoidCallback onToggleMonitored;
   final VoidCallback onSearch;
+  final VoidCallback onInteractiveSearch;
   final void Function(ArrDetailEntry entry) onEdit;
   final void Function(ArrDetailEntry entry) onRemove;
   final void Function(
           Offset position, ArrDetailEntry entry, ArrJellyfinLinkMatch? match)
       onShowMenu;
+  final void Function(int seasonNumber, bool interactive) onSearchSeason;
+  final void Function(ArrEpisode episode, bool interactive) onSearchEpisode;
 
   const _ArrDetailContent({
     required this.entry,
     required this.service,
     required this.menuAnchorKey,
+    required this.searchController,
     required this.onToggleMonitored,
     required this.onSearch,
+    required this.onInteractiveSearch,
     required this.onEdit,
     required this.onRemove,
     required this.onShowMenu,
+    required this.onSearchSeason,
+    required this.onSearchEpisode,
   });
 
   static const _minTitleHeight = 560.0;
@@ -356,6 +442,7 @@ class _ArrDetailContent extends ConsumerWidget {
                         jellyfinMatch: jellyfinMatch,
                         onToggleMonitored: onToggleMonitored,
                         onSearch: onSearch,
+                        onInteractiveSearch: onInteractiveSearch,
                         onEdit: () => onEdit(entry),
                         onRemove: () => onRemove(entry),
                         onShowMenu: (position) =>
@@ -367,8 +454,12 @@ class _ArrDetailContent extends ConsumerWidget {
                           horizontal: AppSpacing.screenPadding),
                       sliver: SliverToBoxAdapter(
                         child: _DetailBody(
-                            entry: entry,
-                            qualityProfileName: qualityProfileName),
+                          entry: entry,
+                          qualityProfileName: qualityProfileName,
+                          searchController: searchController,
+                          onSearchSeason: onSearchSeason,
+                          onSearchEpisode: onSearchEpisode,
+                        ),
                       ),
                     ),
                   ],
@@ -432,6 +523,7 @@ class _TitleBlock extends StatelessWidget {
   final ArrJellyfinLinkMatch? jellyfinMatch;
   final VoidCallback onToggleMonitored;
   final VoidCallback onSearch;
+  final VoidCallback onInteractiveSearch;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
   final void Function(Offset position) onShowMenu;
@@ -446,6 +538,7 @@ class _TitleBlock extends StatelessWidget {
     required this.jellyfinMatch,
     required this.onToggleMonitored,
     required this.onSearch,
+    required this.onInteractiveSearch,
     required this.onEdit,
     required this.onRemove,
     required this.onShowMenu,
@@ -568,6 +661,23 @@ class _TitleBlock extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (!entry.isMovie) ...[
+                        const SizedBox(width: AppSpacing.xxs),
+                        FocusRing(
+                          borderRadius: AppRadii.controlBorder,
+                          onActivate: onInteractiveSearch,
+                          child: ExcludeFocus(
+                            child: Tooltip(
+                              message: 'Recherche interactive (série entière)',
+                              child: IconButton.outlined(
+                                style: secondaryButtonStyle,
+                                onPressed: onInteractiveSearch,
+                                icon: const Icon(Icons.manage_search_rounded),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(width: AppSpacing.xxs),
                       FocusRing(
                         borderRadius: AppRadii.controlBorder,
@@ -635,14 +745,27 @@ class _TitleBlock extends StatelessWidget {
 /// Corps de la fiche, sous le bandeau : résumé, informations Arr
 /// (profil, dossier, surveillance, taille, fichier présent) et — série —
 /// la liste des saisons, puis la recherche interactive.
-class _DetailBody extends StatelessWidget {
+class _DetailBody extends ConsumerWidget {
   final ArrDetailEntry entry;
   final String? qualityProfileName;
+  final ArrDetailSearchSectionController searchController;
+  final void Function(int seasonNumber, bool interactive) onSearchSeason;
+  final void Function(ArrEpisode episode, bool interactive) onSearchEpisode;
 
-  const _DetailBody({required this.entry, required this.qualityProfileName});
+  const _DetailBody({
+    required this.entry,
+    required this.qualityProfileName,
+    required this.searchController,
+    required this.onSearchSeason,
+    required this.onSearchEpisode,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final episodes = entry.isMovie
+        ? const <ArrEpisode>[]
+        : ref.watch(arrSeriesEpisodesProvider(entry.id)).valueOrNull ??
+            const <ArrEpisode>[];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -660,10 +783,17 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           Text('Saisons', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: AppSpacing.sm),
-          ArrSeasonSummaryList(seasons: entry.series!.seasons),
+          ArrSeasonSummaryList(
+            seasons: entry.series!.seasons,
+            episodes: episodes,
+            onInteractiveSearchSeason: (n) => onSearchSeason(n, true),
+            onAutoSearchSeason: (n) => onSearchSeason(n, false),
+            onInteractiveSearchEpisode: (e) => onSearchEpisode(e, true),
+            onAutoSearchEpisode: (e) => onSearchEpisode(e, false),
+          ),
         ],
         const SizedBox(height: AppSpacing.lg),
-        ArrDetailSearchSection(entry: entry),
+        ArrDetailSearchSection(entry: entry, controller: searchController),
       ],
     );
   }

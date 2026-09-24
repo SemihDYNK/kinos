@@ -175,7 +175,8 @@ class ArrSeries {
 }
 
 /// Épisode d'une série Sonarr (`GET /api/v3/episode?seriesId=`) — sert au
-/// sélecteur saison/épisode une fois la série choisie.
+/// sélecteur saison/épisode une fois la série choisie, et au dépliage de
+/// saison sur la fiche détail (présence de fichier + date de diffusion).
 class ArrEpisode {
   final int id;
   final int seriesId;
@@ -183,13 +184,28 @@ class ArrEpisode {
   final int episodeNumber;
   final String title;
 
+  /// Identifiant du fichier déjà téléchargé pour cet épisode — `null` ou
+  /// `0` si absent. Source de vérité pour "présent/manquant" (pas le
+  /// booléen `hasFile`, cf. la consigne calendrier : `episodeFileId`
+  /// reste fiable même sur les payloads qui n'exposent pas `hasFile`).
+  final int? episodeFileId;
+
+  /// Date de diffusion en UTC telle que renvoyée par Sonarr — toujours
+  /// consommée via `.toLocal()` côté affichage, jamais montrée telle
+  /// quelle.
+  final DateTime? airDateUtc;
+
   const ArrEpisode({
     required this.id,
     required this.seriesId,
     required this.seasonNumber,
     required this.episodeNumber,
     required this.title,
+    this.episodeFileId,
+    this.airDateUtc,
   });
+
+  bool get hasFile => episodeFileId != null && episodeFileId != 0;
 
   factory ArrEpisode.fromJson(Map<String, dynamic> json) => ArrEpisode(
         id: json['id'] as int? ?? 0,
@@ -197,5 +213,10 @@ class ArrEpisode {
         seasonNumber: json['seasonNumber'] as int? ?? 0,
         episodeNumber: json['episodeNumber'] as int? ?? 0,
         title: json['title'] as String? ?? '',
+        episodeFileId: json['episodeFileId'] as int?,
+        airDateUtc: switch (json['airDateUtc']) {
+          String value => DateTime.tryParse(value),
+          _ => null,
+        },
       );
 }

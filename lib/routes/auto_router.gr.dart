@@ -85,11 +85,19 @@ class ArrDetailRoute extends _i36.PageRouteInfo<ArrDetailRouteArgs> {
   ArrDetailRoute({
     required _i37.ArrService service,
     required int id,
+    bool autoExpandSearch = false,
+    int? initialSearchEpisodeId,
     _i38.Key? key,
     List<_i36.PageRouteInfo>? children,
   }) : super(
           ArrDetailRoute.name,
-          args: ArrDetailRouteArgs(service: service, id: id, key: key),
+          args: ArrDetailRouteArgs(
+            service: service,
+            id: id,
+            autoExpandSearch: autoExpandSearch,
+            initialSearchEpisodeId: initialSearchEpisodeId,
+            key: key,
+          ),
           initialChildren: children,
         );
 
@@ -102,6 +110,8 @@ class ArrDetailRoute extends _i36.PageRouteInfo<ArrDetailRouteArgs> {
       return _i2.ArrDetailScreen(
         service: args.service,
         id: args.id,
+        autoExpandSearch: args.autoExpandSearch,
+        initialSearchEpisodeId: args.initialSearchEpisodeId,
         key: args.key,
       );
     },
@@ -109,28 +119,47 @@ class ArrDetailRoute extends _i36.PageRouteInfo<ArrDetailRouteArgs> {
 }
 
 class ArrDetailRouteArgs {
-  const ArrDetailRouteArgs({required this.service, required this.id, this.key});
+  const ArrDetailRouteArgs({
+    required this.service,
+    required this.id,
+    this.autoExpandSearch = false,
+    this.initialSearchEpisodeId,
+    this.key,
+  });
 
   final _i37.ArrService service;
 
   final int id;
 
+  final bool autoExpandSearch;
+
+  final int? initialSearchEpisodeId;
+
   final _i38.Key? key;
 
   @override
   String toString() {
-    return 'ArrDetailRouteArgs{service: $service, id: $id, key: $key}';
+    return 'ArrDetailRouteArgs{service: $service, id: $id, autoExpandSearch: $autoExpandSearch, initialSearchEpisodeId: $initialSearchEpisodeId, key: $key}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! ArrDetailRouteArgs) return false;
-    return service == other.service && id == other.id && key == other.key;
+    return service == other.service &&
+        id == other.id &&
+        autoExpandSearch == other.autoExpandSearch &&
+        initialSearchEpisodeId == other.initialSearchEpisodeId &&
+        key == other.key;
   }
 
   @override
-  int get hashCode => service.hashCode ^ id.hashCode ^ key.hashCode;
+  int get hashCode =>
+      service.hashCode ^
+      id.hashCode ^
+      autoExpandSearch.hashCode ^
+      initialSearchEpisodeId.hashCode ^
+      key.hashCode;
 }
 
 /// generated route for
