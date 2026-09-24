@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as path;
 
+import 'package:kinos/bootstrap/startup_trace.dart';
+
 /// Ancien identifiant d'application (`linux/CMakeLists.txt` avant le
 /// renommage en Kinos) — sert uniquement à la migration ci-dessous, plus
 /// nulle part ailleurs dans le code.
@@ -77,20 +79,80 @@ Future<void> _copyDirectoryContents(
 /// faire les aurait rendus invisibles à la nouvelle identité.
 const String legacySecureStorageAccount = '$legacyApplicationId.secureStorage';
 
+/// Délai maximal accordé à `secret-tool lookup` avant d'abandonner la
+/// migration — une migration best-effort ne doit jamais retarder le
+/// démarrage. Constaté en réel (diagnostic écran noir sous Hyprland/
+/// Ryoku) : `secret-tool` peut rester bloqué indéfiniment si sa
+/// recherche croise une collection libsecret verrouillée dont personne
+/// ne répond à la demande de déverrouillage (un `SystemPrompter`
+/// enregistré mais qui n'aboutit jamais) — ni une erreur, ni une
+/// absence de `secret-tool`, juste un silence permanent, donc rien
+/// qu'un simple `try/catch` puisse intercepter.
+const _secretToolTimeout = Duration(seconds: 3);
+
 /// Signature de `Process.run`, injectable pour les tests — pas de nouvelle
 /// dépendance, juste de quoi remplacer l'appel réel par un faux.
 typedef ProcessRunner = Future<ProcessResult> Function(
     String executable, List<String> arguments);
+
+/// Signature de `Process.start`, injectable pour les tests — même
+/// principe que [ProcessRunner], mais expose le [Process] en cours pour
+/// pouvoir le tuer si [_secretToolTimeout] expire : `Process.run` ne
+/// rend la main qu'une fois le processus déjà terminé, donc impossible
+/// à interrompre depuis un simple `Future.timeout` sans laisser le
+/// processus tourner en arrière-plan. C'est ce qui s'est produit
+/// pendant le diagnostic : plusieurs `secret-tool` accumulés,
+/// silencieusement bloqués, après plusieurs lancements successifs de
+/// l'application — `Future.timeout` seul aurait arrêté d'attendre côté
+/// Dart sans jamais arrêter le processus lui-même.
+typedef ProcessStarter = Future<Process> Function(
+    String executable, List<String> arguments);
+
+/// Lance [executable] et attend sa fin au plus [_secretToolTimeout] —
+/// au-delà, tue le processus au lieu de se contenter d'abandonner
+/// l'attente (cf. [ProcessStarter]). Utilisée uniquement comme
+/// implémentation par défaut de `runProcess` ci-dessous : un
+/// `ProcessRunner` de test injecté directement (cf.
+/// `legacy_migration_test.dart`) la court-circuite entièrement, aucun
+/// changement de surface pour les tests existants.
+Future<ProcessResult> _runWithTimeout(
+    ProcessStarter start, String executable, List<String> arguments) async {
+  final process = await start(executable, arguments);
+  final stdoutFuture = process.stdout.transform(utf8.decoder).join();
+  final stderrFuture = process.stderr.transform(utf8.decoder).join();
+
+  var timedOut = false;
+  final exitCode = await process.exitCode.timeout(_secretToolTimeout,
+      onTimeout: () {
+    timedOut = true;
+    process.kill();
+    return -1;
+  });
+
+  if (timedOut) {
+    // Cas explicitement demandé à rester visible plutôt que silencieux
+    // — distinct de "secret-tool a répondu, mais rien trouvé" (code non
+    // nul, tracé plus bas comme les autres cas).
+    traceStartup('migrateLegacySecureStorage: secret-tool a dépassé '
+        '${_secretToolTimeout.inSeconds}s — processus tué, migration '
+        'abandonnée sans bloquer le démarrage');
+  }
+
+  return ProcessResult(
+      process.pid, exitCode, await stdoutFuture, await stderrFuture);
+}
 
 /// Best-effort : récupère les secrets stockés sous l'ancien identifiant
 /// via `secret-tool` (paquet `libsecret-tools`, généralement présent sur
 /// les environnements GNOME/KDE mais pas garanti) et les réécrit via
 /// l'API `flutter_secure_storage` normale — qui les stockera désormais
 /// sous le nouveau schéma. Si `secret-tool` est absent, si le trousseau
-/// est verrouillé, ou si la réponse est illisible : abandon silencieux,
-/// l'utilisateur redemande une authentification comme à un premier
-/// lancement normal — jamais de plantage, jamais de comportement
-/// surprenant pour un cas qu'on ne peut pas garantir.
+/// est verrouillé, si la réponse est illisible, ou si l'appel dépasse
+/// [_secretToolTimeout] : abandon silencieux (hors l'expiration
+/// elle-même, tracée, cf. [_runWithTimeout]), l'utilisateur redemande
+/// une authentification comme à un premier lancement normal — jamais de
+/// plantage, jamais de blocage, jamais de comportement surprenant pour
+/// un cas qu'on ne peut pas garantir.
 ///
 /// Ne touche à rien si le nouveau stockage contient déjà des données
 /// (migration déjà faite, ou compte déjà réauthentifié) : jamais
@@ -98,6 +160,11 @@ typedef ProcessRunner = Future<ProcessResult> Function(
 Future<void> migrateLegacySecureStorage({
   FlutterSecureStorage? storage,
   ProcessRunner? runProcess,
+  // Injectable séparément de [runProcess] (cf. [ProcessStarter]) : c'est
+  // ce paramètre-ci, jamais `runProcess`, qui laisse un test exercer le
+  // vrai comportement d'expiration/mise à mort de [_runWithTimeout]
+  // plutôt que le contourner avec un `ProcessResult` tout prêt.
+  ProcessStarter? processStarter,
 }) async {
   if (kIsWeb || !Platform.isLinux) return;
   final secureStorage = storage ?? const FlutterSecureStorage();
@@ -109,7 +176,9 @@ Future<void> migrateLegacySecureStorage({
     return;
   }
 
-  final run = runProcess ?? Process.run;
+  final run = runProcess ??
+      (exe, args) =>
+          _runWithTimeout(processStarter ?? Process.start, exe, args);
   Map<String, dynamic> data;
   try {
     final result = await run(

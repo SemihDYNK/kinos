@@ -161,5 +161,54 @@ void main() {
         'arr:radarr': '{"apiKey":"def"}',
       });
     });
+
+    test(
+        'a secret-tool that never responds is killed, not left running '
+        '— the black-screen regression on Hyprland/Ryoku', () async {
+      const storage = FlutterSecureStorage();
+      late int hangingPid;
+
+      await migrateLegacySecureStorage(
+        storage: storage,
+        // `runProcess` (au-dessus) court-circuite `_runWithTimeout` —
+        // c'est justement ce qu'on veut exercer ici, donc `processStarter`
+        // à la place : un vrai processus, pour vérifier le comportement
+        // réel du système d'exploitation (le signal envoyé, pas
+        // seulement l'abandon de l'attente côté Dart).
+        processStarter: (exe, args) async {
+          final process = await Process.start('sleep', ['30']);
+          hangingPid = process.pid;
+          return process;
+        },
+      );
+
+      // Le process doit avoir été tué, pas seulement abandonné : c'est
+      // précisément ce qu'un `Future.timeout` seul, sans tuer le
+      // process, ne fait pas — et qui a laissé neuf `secret-tool`
+      // accumulés, toujours bloqués, pendant le diagnostic réel.
+      var alive = true;
+      for (var i = 0; i < 30 && alive; i++) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        alive = Process.killPid(hangingPid, ProcessSignal.sigcont);
+      }
+      expect(alive, isFalse,
+          reason:
+              'le processus expiré doit être tué, pas laissé orphelin');
+    }, timeout: const Timeout(Duration(seconds: 15)));
+
+    test('a secret-tool that responds in time is not affected by the timeout',
+        () async {
+      const storage = FlutterSecureStorage();
+      final blob = jsonEncode({'server-1:user-1': '{"token":"abc"}'});
+
+      await migrateLegacySecureStorage(
+        storage: storage,
+        // `blob` en argument direct (pas via un shell) : aucun souci
+        // d'échappement pour son JSON (accolades, guillemets).
+        processStarter: (exe, args) => Process.start('printf', ['%s', blob]),
+      );
+
+      expect(fakePlatform.values, {'server-1:user-1': '{"token":"abc"}'});
+    });
   });
 }
