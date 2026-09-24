@@ -9,10 +9,11 @@ enum PlaybackQueueEventType { start, progress, stop }
 /// Outbox of playback session reports (start/progress/stop) that still need
 /// to reach the Jellyfin server.
 ///
-/// Reporting these events to the server is currently fire-and-forget: if the
-/// network is unavailable when a report is sent, it is silently lost. This
-/// table lets a future retry worker persist pending reports and drain them
-/// once connectivity returns, instead of dropping them.
+/// Reporting these events used to be fire-and-forget: if the network was
+/// unavailable when a report was sent, it was silently lost. This table
+/// lets `PlaybackReportQueueWorker` (`playback_report_queue_provider.dart`)
+/// persist pending reports and drain them once connectivity returns,
+/// instead of dropping them.
 @TableIndex(name: 'playback_queue_user_item', columns: {#userId, #itemId})
 @TableIndex(name: 'playback_queue_pending', columns: {#attempts, #createdAt})
 @DataClassName('PlaybackQueueEntry')

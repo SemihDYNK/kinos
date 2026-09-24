@@ -35,13 +35,14 @@ enum RecommendationEntrySource { jellyfin, arr }
 /// Version figée d'une entrée de rangée de recommandation, assez
 /// complète pour être réaffichée sans aucun accès réseau — jaquette et
 /// navigation reconstruites depuis le seul id (cf. le commentaire sur
-/// [jellyfinItemId]), justification déjà traduite. Sert de repli
-/// affiché le temps qu'un nouveau calcul aboutisse en arrière-plan (écrit
-/// et lu via `AppDatabase.replaceRecommendationCache`/
-/// `getRecommendationCache`, `database_item.dart` — le branchement sur
-/// `recommendationResultProvider` et les rangées d'accueil reste à
-/// faire), jamais de source de vérité : entièrement remplacée à chaque
-/// calcul réussi, jamais mise à jour ligne à ligne.
+/// [jellyfinItemId]), justification déjà traduite. Sert de repli affiché
+/// le temps qu'un nouveau calcul aboutisse en arrière-plan (écrit et lu
+/// via `AppDatabase.replaceRecommendationCache`/`getRecommendationCache`,
+/// `database_item.dart`, branché sur `recommendationResultProvider` et
+/// les rangées d'accueil — `recommendation_providers.dart`,
+/// `recommendation_row_section.dart`), jamais de source de vérité :
+/// entièrement remplacée à chaque calcul réussi, jamais mise à jour ligne
+/// à ligne.
 ///
 /// Scope utilisateur explicite ([userId], colonne, pas une valeur
 /// implicite lue depuis `AppDatabase.userId`) : ce cache est strictement
