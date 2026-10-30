@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -32,7 +33,7 @@ void showAudioQueueDialog(
     useRootNavigator: true,
     context: context,
     builder: (context) {
-      return Dialog(
+      return GlassDialog(
         child: AudioQueueDialog(
           onSectionReorder: onSectionReorder,
           playSelected: playSelected,
@@ -111,7 +112,7 @@ class _AudioQueueDialogBodyState extends ConsumerState<_AudioQueueDialogBody> {
       },
     );
 
-    await showMenu(
+    await showGlassMenu(
       context: context,
       position: RelativeRect.fromLTRB(
         globalPosition.dx,

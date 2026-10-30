@@ -13,6 +13,7 @@ import 'package:kinos/arr/services/qbittorrent_api_client.dart';
 import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
 import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/app_page_header.dart';
 
 /// Réglages Radarr et Sonarr — URL, clé API, test de connexion, pour
 /// chaque service séparément. Route enfant de l'écran Réglages.
@@ -34,10 +35,7 @@ class ArrSettingsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Radarr et Sonarr',
-                    style: Theme.of(context).textTheme.displaySmall,
-                  ),
+                  const AppPageHeader(title: 'Radarr et Sonarr'),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     "URL et clé API de chaque service, pour la recherche interactive. "

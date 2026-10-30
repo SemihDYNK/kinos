@@ -1,3 +1,4 @@
+import 'package:kinos/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,12 +10,13 @@ class SettingsLabelDivider extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xxs, vertical: AppSpacing.xs),
       child: Text(
         label,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
+              color: AppColors.textPrimary,
             ),
       ),
     );

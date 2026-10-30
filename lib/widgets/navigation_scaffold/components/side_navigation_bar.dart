@@ -1,26 +1,29 @@
-import 'package:flutter/foundation.dart';
+import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/screens/shared/kinos_icon.dart';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/models/account_model.dart';
-import 'package:kinos/models/item_base_model.dart';
-import 'package:kinos/models/library_filter_model.dart';
+import 'package:kinos/models/view_model.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/providers/views_provider.dart';
 import 'package:kinos/models/media_playback_model.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
+import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/routes/auto_router.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/shared/user_icon.dart';
-import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/navigation_body.dart';
-import 'package:kinos/widgets/shared/custom_tooltip.dart';
 
 /// Cible d'échappement clavier depuis le contenu : GridFocusTraveler et
 /// FocusRow y renvoient le focus quand on sort par la gauche (flèche
@@ -44,9 +47,6 @@ final sideBarForceCollapsedProvider = Provider<bool>((ref) {
   return state != VideoPlayerState.disposed;
 });
 
-const _collapsedWidth = 64.0;
-const _expandedWidth = 240.0;
-
 class _RailDestination {
   final String label;
   final IconData icon;
@@ -66,10 +66,8 @@ class _RailDestination {
 ///
 /// Ce n'est pas une colonne séparée : le contenu est peint plein cadre en
 /// dessous ([AdaptiveLayout] y reporte la largeur courante via
-/// `sideBarWidth`, ce qui permet à des fonds teintés comme celui du tableau
-/// de bord de s'arrêter avant elle), et la barre elle-même est peinte
-/// par-dessus dans un [Positioned.fill] séparé. Fond `AppColors.background`
-/// pur — jamais teinté (cf. CLAUDE.md § Bandeau teinté).
+/// `sideBarWidth` réserve l'espace des commandes du contenu). La capsule
+/// graphite flotte sur le fond plein cadre, sans colonne opaque derrière.
 class SideNavigationRail extends ConsumerWidget {
   final Widget child;
   const SideNavigationRail({required this.child, super.key});
@@ -77,9 +75,6 @@ class SideNavigationRail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textDirection = Directionality.of(context);
-    final isRtl = textDirection == TextDirection.rtl;
-    final tooltipPosition =
-        isRtl ? TooltipPosition.left : TooltipPosition.right;
 
     final persistedExpanded = ref
         .watch(clientSettingsProvider.select((value) => value.expandSideBar));
@@ -95,10 +90,7 @@ class SideNavigationRail extends ConsumerWidget {
     ).resolve(textDirection);
     final startInset = directionalPadding.left;
 
-    // -0.1 : évite un liseré d'un pixel entre le contenu et la barre à
-    // certaines échelles d'écran (arrondi de layout).
-    final width =
-        (expanded ? _expandedWidth : _collapsedWidth) + startInset - 0.1;
+    final layout = AdaptiveLayout.of(context);
 
     final fullScreenChildRoute =
         fullScreenRoutes.contains(context.router.current.name);
@@ -110,6 +102,12 @@ class SideNavigationRail extends ConsumerWidget {
     final destinations = _railDestinations(
       context: context,
       seerrAvailable: seerrAvailable,
+      views: ref
+          .watch(viewsProvider)
+          .views
+          .where((view) => {CollectionType.movies, CollectionType.tvshows}
+              .contains(view.collectionType))
+          .toList(),
     );
     // navBarNode doit toujours pouvoir reprendre le focus : rattaché à
     // l'item actif, ou au premier par défaut si aucun ne correspond à la
@@ -118,142 +116,242 @@ class SideNavigationRail extends ConsumerWidget {
         .indexWhere((d) => d.selected)
         .clamp(0, destinations.length - 1);
 
-    return Stack(
-      children: [
-        AdaptiveLayout(
-          data: AdaptiveLayout.of(context).copyWith(sideBarWidth: width),
-          child: child,
-        ),
-        Positioned.fill(
-          child: Align(
-            alignment: AlignmentDirectional.topStart,
-            child: AnimatedOpacity(
-              duration: AppDurations.pageTransition,
-              opacity: fullScreenChildRoute ? 0 : 1,
-              child: IgnorePointer(
-                ignoring: fullScreenChildRoute,
-                child: FocusTraversalGroup(
-                  policy: _RailTraversalPolicy(),
-                  child: AnimatedContainer(
-                    duration: AppDurations.pageTransition,
-                    curve: Curves.easeOutCubic,
-                    width: width,
-                    color: AppColors.background,
-                    padding: EdgeInsetsDirectional.only(
-                      start: startInset,
-                      top: directionalPadding.top > 0
-                          ? directionalPadding.top
-                          : AppSpacing.xs,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xs,
-                              vertical: AppSpacing.xs),
-                          child: FocusRing(
-                            borderRadius: AppRadii.controlBorder,
-                            onActivate: () => ref
-                                .read(clientSettingsProvider.notifier)
-                                .toggleSideBar(),
-                            child: _RailRow(
-                              icon: expanded
-                                  ? IconsaxPlusLinear.sidebar_left
-                                  : IconsaxPlusLinear.menu,
-                              expanded: false,
-                              label: '',
-                              selected: false,
-                            ),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: expanded ? 1 : 0),
+      duration: !AppMotion.enabled(context)
+          ? Duration.zero
+          : expanded
+              ? AppDurations.navigationExpand
+              : AppDurations.navigationCollapse,
+      curve: AppMotion.navigationReveal,
+      child: child,
+      builder: (context, progress, content) {
+        final animatedWidth = AppNavigation.collapsedWidth +
+            (AppNavigation.expandedWidth - AppNavigation.collapsedWidth) *
+                progress +
+            startInset +
+            AppNavigation.inset * 2;
+        return Stack(
+          children: [
+            AdaptiveLayout(
+              data: layout.copyWith(sideBarWidth: animatedWidth),
+              child: content!,
+            ),
+            Positioned.fill(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: AnimatedOpacity(
+                  duration: !AppMotion.enabled(context)
+                      ? Duration.zero
+                      : AppDurations.pageTransition,
+                  opacity: fullScreenChildRoute ? 0 : 1,
+                  child: IgnorePointer(
+                    ignoring: fullScreenChildRoute,
+                    child: FocusTraversalGroup(
+                      policy: _RailTraversalPolicy(),
+                      child: SizedBox(
+                        width: animatedWidth,
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.only(
+                            start: startInset + AppNavigation.inset,
+                            end: AppNavigation.inset,
+                            top: directionalPadding.top + AppNavigation.inset,
+                            bottom:
+                                directionalPadding.bottom + AppNavigation.inset,
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        for (var i = 0; i < destinations.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.xs, vertical: 2),
-                            child: CustomTooltip(
-                              position: tooltipPosition,
-                              tooltipContent: expanded
-                                  ? null
-                                  : _TooltipBubble(
-                                      label: destinations[i].label),
-                              child: FocusRing(
-                                borderRadius: AppRadii.controlBorder,
-                                focusNode:
-                                    i == navBarNodeIndex ? navBarNode : null,
-                                onActivate: destinations[i].onTap,
-                                child: _RailRow(
-                                  icon: destinations[i].selected
-                                      ? destinations[i].selectedIcon
-                                      : destinations[i].icon,
-                                  label: destinations[i].label,
-                                  selected: destinations[i].selected,
-                                  expanded: expanded,
+                          child: ClipRRect(
+                            borderRadius: AppNavigation.border,
+                            child: BackdropFilter(
+                              enabled: !MediaQuery.highContrastOf(context),
+                              filter: ui.ImageFilter.blur(
+                                  sigmaX: AppNavigation.blurSigma,
+                                  sigmaY: AppNavigation.blurSigma),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: MediaQuery.highContrastOf(context)
+                                      ? AppColors.surface
+                                      : AppNavigation.surface,
+                                  borderRadius: AppNavigation.border,
+                                  border: Border.all(
+                                      color: AppNavigation.glassBorder,
+                                      width: AppNavigation.borderWidth),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: AppSpacing.xs),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.xs,
+                                            vertical: AppSpacing.xs),
+                                        child: FocusRing(
+                                          borderRadius: AppNavigation.selection,
+                                          onActivate: () {
+                                            ref
+                                                .read(catalogScopeProvider
+                                                    .notifier)
+                                                .state = allCatalog;
+                                            context.router.navigate(
+                                                const DashboardRoute());
+                                          },
+                                          child: SizedBox(
+                                            height: AppNavigation.rowHeight,
+                                            child: Center(
+                                                child: AnimatedSwitcher(
+                                                    duration: AppMotion.enabled(
+                                                            context)
+                                                        ? AppDurations
+                                                            .navigationSelection
+                                                        : Duration.zero,
+                                                    child: expanded
+                                                        ? const KinosWordmark()
+                                                        : const KinosIcon(
+                                                            size: AppBrand
+                                                                .markSize))),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.xs,
+                                            vertical: AppSpacing.xxs),
+                                        child: _RailHint(
+                                          message: expanded
+                                              ? 'Réduire la barre'
+                                              : 'Déployer la barre',
+                                          child: FocusRing(
+                                            borderRadius:
+                                                AppNavigation.selection,
+                                            onActivate: () => ref
+                                                .read(clientSettingsProvider
+                                                    .notifier)
+                                                .toggleSideBar(),
+                                            child: _RailRow(
+                                              icon: expanded
+                                                  ? Icons.chevron_left
+                                                  : Icons.chevron_right,
+                                              label: expanded
+                                                  ? 'Réduire'
+                                                  : 'Déployer',
+                                              selected: false,
+                                              expansion: progress,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const _RailDivider(),
+                                      Flexible(
+                                          child: SingleChildScrollView(
+                                              child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          for (var i = 0;
+                                              i < destinations.length;
+                                              i++)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: AppSpacing.xs,
+                                                      vertical: 2),
+                                              child: _RailHint(
+                                                message: destinations[i].label,
+                                                child: Semantics(
+                                                  label: destinations[i].label,
+                                                  selected:
+                                                      destinations[i].selected,
+                                                  button: true,
+                                                  child: FocusRing(
+                                                    borderRadius:
+                                                        AppNavigation.selection,
+                                                    focusNode:
+                                                        i == navBarNodeIndex
+                                                            ? navBarNode
+                                                            : null,
+                                                    onActivate:
+                                                        destinations[i].onTap,
+                                                    child: _RailRow(
+                                                      icon: destinations[i]
+                                                              .selected
+                                                          ? destinations[i]
+                                                              .selectedIcon
+                                                          : destinations[i]
+                                                              .icon,
+                                                      label:
+                                                          destinations[i].label,
+                                                      selected: destinations[i]
+                                                          .selected,
+                                                      expansion: progress,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ))),
+                                      const _RailDivider(),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.xs,
+                                            vertical: 2),
+                                        child: _RailHint(
+                                          message: context.localized.settings,
+                                          child: FocusRing(
+                                            borderRadius:
+                                                AppNavigation.selection,
+                                            onActivate: () =>
+                                                _openSettings(context),
+                                            child: _RailRow(
+                                              icon: AppIcons.settings,
+                                              label: context.localized.settings,
+                                              selected: context
+                                                  .router.current.name
+                                                  .contains('Settings'),
+                                              expansion: progress,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            AppSpacing.xs,
+                                            AppSpacing.sm,
+                                            AppSpacing.xs,
+                                            AppSpacing.sm),
+                                        child: _RailHint(
+                                          message: context.localized.switchUser,
+                                          child: FocusRing(
+                                            borderRadius:
+                                                AppNavigation.selection,
+                                            onActivate: () =>
+                                                _switchProfile(context, ref),
+                                            child: _ProfileRow(
+                                                user: user,
+                                                expansion: progress),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        const Spacer(),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(AppSpacing.xs,
-                              AppSpacing.sm, AppSpacing.xs, AppSpacing.sm),
-                          child: CustomTooltip(
-                            position: tooltipPosition,
-                            tooltipContent: expanded
-                                ? null
-                                : _TooltipBubble(
-                                    label: context.localized.switchUser),
-                            child: FocusRing(
-                              borderRadius: AppRadii.controlBorder,
-                              onActivate: () => _switchProfile(context, ref),
-                              child:
-                                  _ProfileRow(user: user, expanded: expanded),
-                            ),
-                          ),
                         ),
-                        // Séparateur : les réglages ne sont pas une
-                        // destination de navigation comme les autres, d'où
-                        // le trait plutôt qu'un simple espacement.
-                        const Padding(
-                          padding: EdgeInsetsDirectional.symmetric(
-                              horizontal: AppSpacing.sm),
-                          child: Divider(
-                              height: AppSpacing.sm,
-                              thickness: 1,
-                              color: AppColors.border),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xs, vertical: 2),
-                          child: CustomTooltip(
-                            position: tooltipPosition,
-                            tooltipContent: expanded
-                                ? null
-                                : _TooltipBubble(
-                                    label: context.localized.settings),
-                            child: FocusRing(
-                              borderRadius: AppRadii.controlBorder,
-                              onActivate: () => _openSettings(context),
-                              child: _RailRow(
-                                icon: IconsaxPlusLinear.setting_2,
-                                label: context.localized.settings,
-                                selected: context.router.current.name
-                                    .contains('Settings'),
-                                expanded: expanded,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -265,90 +363,41 @@ class SideNavigationRail extends ConsumerWidget {
     }
   }
 
-  /// Accueil, Films, Séries, Recherche, Découverte, Demandes, Arr — dans
-  /// cet ordre. Découverte et Demandes n'apparaissent que si utilisables
-  /// (Jellyseerr configuré) : les montrer sans condition mène vers un
-  /// écran cassé. Arr, elle, reste toujours visible même sans aucun
-  /// service *Arr configuré — c'est par elle qu'on les configure, la
-  /// masquer la rendrait inatteignable.
+  /// Bibliothèques du serveur, puis Demandes et Arr. Les accueils sont en haut.
   List<_RailDestination> _railDestinations({
     required BuildContext context,
     required bool seerrAvailable,
+    required List<ViewModel> views,
   }) {
-    final args = context.router.current.args;
-    final activeTypes = args is LibrarySearchRouteArgs
-        ? (args.types?.entries
-                .where((e) => e.value)
-                .map((e) => e.key)
-                .toSet() ??
-            const <KinosItemType>{})
-        : const <KinosItemType>{};
-    final isLibrarySearch = args is LibrarySearchRouteArgs;
     final currentRouteName = context.router.current.name;
-
+    final args = context.router.current.args;
     return [
-      _RailDestination(
-        label: context.localized.home,
-        icon: IconsaxPlusLinear.home_1,
-        selectedIcon: IconsaxPlusBold.home_1,
-        selected: currentRouteName == DashboardRoute.name,
-        onTap: () => context.router.navigate(const DashboardRoute()),
-      ),
-      _RailDestination(
-        label: context.localized.mediaTypeMovie(2),
-        // Pas de clap de cinéma dans iconsax_plus (seule bibliothèque
-        // d'icônes du projet) : le plus proche disponible, distinct d'un
-        // écran de télévision.
-        icon: IconsaxPlusLinear.video_play,
-        selectedIcon: IconsaxPlusBold.video_play,
-        selected: setEquals(activeTypes, const {KinosItemType.movie}),
-        onTap: () => context.router.navigate(
-          LibrarySearchRoute().withFilter(
-            const LibraryFilterModel(
-                types: {KinosItemType.movie: true}, recursive: true),
-          ),
-        ),
-      ),
-      _RailDestination(
-        label: context.localized.mediaTypeSeries(2),
-        icon: IconsaxPlusLinear.monitor,
-        selectedIcon: IconsaxPlusBold.monitor,
-        selected: setEquals(activeTypes, const {KinosItemType.series}),
-        onTap: () => context.router.navigate(
-          LibrarySearchRoute().withFilter(
-            const LibraryFilterModel(
-                types: {KinosItemType.series: true}, recursive: true),
-          ),
-        ),
-      ),
-      _RailDestination(
-        label: context.localized.search,
-        icon: IconsaxPlusLinear.search_normal_1,
-        selectedIcon: IconsaxPlusBold.search_normal_1,
-        selected: isLibrarySearch && activeTypes.isEmpty,
-        onTap: () => context.router.navigate(LibrarySearchRoute()),
-      ),
-      if (seerrAvailable)
+      for (final view in views)
         _RailDestination(
-          label: 'Découverte',
-          icon: IconsaxPlusLinear.discover,
-          selectedIcon: IconsaxPlusBold.discover,
-          selected: currentRouteName == SeerrSearchRoute.name,
-          onTap: () => context.router
-              .navigate(SeerrSearchRoute(mode: SeerrSearchMode.search)),
+          label: view.name,
+          icon: view.collectionType == CollectionType.movies
+              ? AppIcons.films
+              : AppIcons.series,
+          selectedIcon: view.collectionType == CollectionType.movies
+              ? AppIcons.filmsSelected
+              : AppIcons.seriesSelected,
+          selected: currentRouteName == LibrarySearchRoute.name &&
+              args is LibrarySearchRouteArgs &&
+              (args.parentId?.contains(view.id) ?? false),
+          onTap: () => view.navigateToView(context),
         ),
       if (seerrAvailable)
         _RailDestination(
           label: 'Demandes',
-          icon: IconsaxPlusLinear.send_2,
-          selectedIcon: IconsaxPlusBold.send_2,
+          icon: AppIcons.requests,
+          selectedIcon: AppIcons.requestsSelected,
           selected: currentRouteName == SeerrRoute.name,
           onTap: () => context.router.navigate(const SeerrRoute()),
         ),
       _RailDestination(
         label: 'Arr',
-        icon: IconsaxPlusLinear.chart_3,
-        selectedIcon: IconsaxPlusBold.chart_3,
+        icon: AppIcons.activity,
+        selectedIcon: AppIcons.activitySelected,
         selected: currentRouteName.startsWith('Arr'),
         onTap: () => context.router.push(const ArrHomeRoute()),
       ),
@@ -361,31 +410,56 @@ class SideNavigationRail extends ConsumerWidget {
   }
 }
 
-class _TooltipBubble extends StatelessWidget {
-  final String label;
-  const _TooltipBubble({required this.label});
+class _RailDivider extends StatelessWidget {
+  const _RailDivider();
 
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
-        borderRadius: AppRadii.controlBorder,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-        child: Text(
-          label,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: AppColors.textPrimary),
-        ),
-      ),
-    );
+  Widget build(BuildContext context) => const Divider(
+        height: AppSpacing.lg,
+        thickness: AppNavigation.borderWidth,
+        indent: AppSpacing.md,
+        endIndent: AppSpacing.md,
+        color: AppNavigation.glassBorder,
+      );
+}
+
+/// Le même libellé est disponible à la souris, au clavier et au lecteur d'écran.
+class _RailHint extends StatefulWidget {
+  const _RailHint({required this.message, required this.child});
+  final String message;
+  final Widget child;
+
+  @override
+  State<_RailHint> createState() => _RailHintState();
+}
+
+class _RailHintState extends State<_RailHint> {
+  final _tooltip = GlobalKey<TooltipState>();
+  final _focus = FocusNode(canRequestFocus: false);
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        focusNode: _focus,
+        onFocusChange: (focused) {
+          if (focused) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _focus.hasFocus) {
+                _tooltip.currentState?.ensureTooltipVisible();
+              }
+            });
+          } else {
+            Tooltip.dismissAllToolTips();
+          }
+        },
+        child: Tooltip(
+            key: _tooltip, message: widget.message, child: widget.child),
+      );
 }
 
 /// Icône (+ libellé en mode déplié) d'un item de la barre. L'indicateur
@@ -396,91 +470,124 @@ class _RailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool selected;
-  final bool expanded;
-  const _RailRow({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.expanded,
-  });
+  final double expansion;
+  const _RailRow(
+      {required this.icon,
+      required this.label,
+      required this.selected,
+      required this.expansion});
 
   @override
   Widget build(BuildContext context) {
     final foreground =
         selected ? AppColors.textPrimary : AppColors.textSecondary;
-    return Container(
-      height: 44,
-      decoration: BoxDecoration(
-        color: selected ? AppColors.surfaceHigh : Colors.transparent,
-        borderRadius: AppRadii.controlBorder,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+          minHeight: AppNavigation.rowHeight * context.tokens.density.scale),
+      child: AnimatedContainer(
+        duration: AppMotion.enabled(context)
+            ? AppDurations.navigationSelection
+            : Duration.zero,
+        curve: AppMotion.navigationReveal,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.surfaceHover : Colors.transparent,
+          borderRadius: AppNavigation.selection,
+        ),
+        padding: const EdgeInsets.all(AppSpacing.xs),
+        child: Row(children: [
+          SizedBox(
+              width: AppNavigation.collapsedWidth -
+                  AppSpacing.xs * 4 -
+                  FocusRing.boxInset(context),
+              child: Center(
+                  child: Icon(icon,
+                      color: foreground, size: AppNavigation.iconSize))),
+          _RailLabel(label: label, expansion: expansion, color: foreground),
+        ]),
       ),
-      child: expanded
-          ? Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-              child: Row(
-                children: [
-                  Container(
-                    width: 3,
-                    height: selected ? 20 : 0,
-                    decoration: BoxDecoration(
-                      color: AppColors.textPrimary,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Icon(icon, color: foreground, size: 22),
-                  if (label.isNotEmpty) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: foreground),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            )
-          : Center(child: Icon(icon, color: foreground, size: 22)),
     );
+  }
+}
+
+class _RailLabel extends StatelessWidget {
+  const _RailLabel(
+      {required this.label,
+      required this.expansion,
+      required this.color,
+      this.maxLines = 2});
+  final String label;
+  final double expansion;
+  final Color color;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final reveal =
+        AppMotion.navigationLabels.transform(expansion.clamp(0.0, 1.0));
+    return Expanded(
+        child: expansion == 0
+            ? const SizedBox.shrink()
+            : ClipRect(
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  heightFactor: expansion,
+                  child: OverflowBox(
+                    alignment: AlignmentDirectional.centerStart,
+                    fit: OverflowBoxFit.deferToChild,
+                    minWidth: AppNavigation.expandedWidth -
+                        AppNavigation.collapsedWidth,
+                    maxWidth: AppNavigation.expandedWidth -
+                        AppNavigation.collapsedWidth,
+                    child: Opacity(
+                        opacity: reveal,
+                        child: Transform.translate(
+                          offset: Offset(
+                              (Directionality.of(context) == TextDirection.rtl
+                                      ? -1
+                                      : 1) *
+                                  AppSpacing.xs *
+                                  (1 - reveal),
+                              0),
+                          child: Padding(
+                              padding: const EdgeInsetsDirectional.only(
+                                  start: AppSpacing.sm),
+                              child: Text(label,
+                                  maxLines: maxLines,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(color: color))),
+                        )),
+                  ),
+                ),
+              ));
   }
 }
 
 class _ProfileRow extends StatelessWidget {
   final AccountModel? user;
-  final bool expanded;
-  const _ProfileRow({required this.user, required this.expanded});
+  final double expansion;
+  const _ProfileRow({required this.user, required this.expansion});
 
   @override
-  Widget build(BuildContext context) {
-    final avatar = SizedBox.square(
-      dimension: 32,
-      child: UserIcon(user: user, cornerRadius: AppRadii.control),
-    );
-    if (!expanded) return Center(child: avatar);
-    return Row(
-      children: [
-        avatar,
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            user?.name ?? '',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: AppColors.textPrimary),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Row(children: [
+        SizedBox(
+            width: AppNavigation.collapsedWidth -
+                AppSpacing.xs * 2 -
+                FocusRing.boxInset(context),
+            child: Center(
+                child: SizedBox.square(
+              dimension: AppNavigation.avatarSize,
+              child: UserIcon(
+                  user: user, cornerRadius: AppNavigation.avatarSize / 2),
+            ))),
+        _RailLabel(
+            label: user?.name ?? '',
+            expansion: expansion,
+            color: AppColors.textPrimary,
+            maxLines: 1),
+      ]);
 }
 
 /// Parcours haut/bas au clavier au sein de la barre, et sortie vers le

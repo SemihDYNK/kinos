@@ -68,12 +68,14 @@ class OutlinedTextField extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _OutlinedTextFieldState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _OutlinedTextFieldState();
 }
 
 class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
   late final bool _ownsController = widget.controller == null;
-  late final TextEditingController controller = widget.controller ?? TextEditingController();
+  late final TextEditingController controller =
+      widget.controller ?? TextEditingController();
   late final bool _ownsTextFocus = widget.focusNode == null;
   late final FocusNode _textFocus = widget.focusNode ?? FocusNode();
   late final FocusNode _wrapperFocus = FocusNode()
@@ -112,8 +114,13 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
   }
 
   Color getColor() {
-    if (widget.errorText != null) return Theme.of(context).colorScheme.errorContainer;
-    return Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35);
+    if (widget.errorText != null) {
+      return Theme.of(context).colorScheme.errorContainer;
+    }
+    return Theme.of(context)
+        .colorScheme
+        .surfaceContainerHighest
+        .withValues(alpha: 0.35);
   }
 
   @override
@@ -121,8 +128,10 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final useCustomKeyboard = AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad &&
-          ref.read(clientSettingsProvider.select((value) => !value.useSystemIME));
+      final useCustomKeyboard = AdaptiveLayout.inputDeviceOf(context) ==
+              InputDevice.dPad &&
+          ref.read(
+              clientSettingsProvider.select((value) => !value.useSystemIME));
       if (widget.autoFocus) {
         if (useCustomKeyboard) {
           _wrapperFocus.requestFocus();
@@ -135,9 +144,12 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
 
   @override
   Widget build(BuildContext context) {
-    final isPasswordField = widget.keyboardType == TextInputType.visiblePassword;
-    final useCustomKeyboard = AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad &&
-        ref.watch(clientSettingsProvider.select((value) => !value.useSystemIME));
+    final isPasswordField =
+        widget.keyboardType == TextInputType.visiblePassword;
+    final useCustomKeyboard =
+        AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad &&
+            ref.watch(
+                clientSettingsProvider.select((value) => !value.useSystemIME));
 
     final textField = TextField(
       controller: controller,
@@ -151,7 +163,9 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
       onSubmitted: widget.onSubmitted != null
           ? (value) {
               widget.onSubmitted?.call(value);
-              if (AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad) return;
+              if (AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad) {
+                return;
+              }
               Future.microtask(() async {
                 await Future.delayed(const Duration(milliseconds: 125));
                 _wrapperFocus.requestFocus();
@@ -165,31 +179,41 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
       inputFormatters: widget.inputFormatters,
       textAlign: widget.textAlign,
       canRequestFocus: true,
-      decoration: widget.decoration ??
-          InputDecoration(
-            border: InputBorder.none,
-            filled: widget.fillColor != null,
-            fillColor: widget.fillColor,
-            labelText: widget.label,
-            suffix: widget.suffix != null
-                ? Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: Text(widget.suffix!),
-                  )
-                : null,
-            hintText: widget.placeHolder,
-            // errorText: widget.errorText,
-            suffixIcon: isPasswordField
-                ? InkWell(
-                    onTap: _toggle,
-                    borderRadius: BorderRadius.circular(5),
-                    child: Icon(
-                      _obscureText ? Icons.visibility : Icons.visibility_off,
-                      size: 16.0,
-                    ),
-                  )
-                : null,
-          ),
+      decoration: (widget.decoration ??
+              InputDecoration(
+                border: InputBorder.none,
+                filled: widget.fillColor != null,
+                fillColor: widget.fillColor,
+                labelText: widget.label,
+                suffix: widget.suffix != null
+                    ? Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Text(widget.suffix!),
+                      )
+                    : null,
+                hintText: widget.placeHolder,
+                // errorText: widget.errorText,
+                suffixIcon: isPasswordField
+                    ? InkWell(
+                        onTap: _toggle,
+                        borderRadius: BorderRadius.circular(5),
+                        child: Icon(
+                          _obscureText
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          size: 16.0,
+                        ),
+                      )
+                    : null,
+              ))
+          .copyWith(
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        disabledBorder: InputBorder.none,
+        errorBorder: InputBorder.none,
+        focusedErrorBorder: InputBorder.none,
+      ),
     );
 
     return Column(
@@ -197,11 +221,15 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
         AnimatedContainer(
           duration: const Duration(milliseconds: 175),
           decoration: BoxDecoration(
-            color: widget.decoration == null ? widget.fillColor ?? getColor() : null,
+            color: widget.decoration == null
+                ? widget.fillColor ?? getColor()
+                : null,
             borderRadius: KinosTheme.smallShape.borderRadius,
             border: BoxBorder.all(
               width: 2,
-              color: hasFocus || keyboardFocus ? Theme.of(context).colorScheme.primaryFixed : Colors.transparent,
+              color: hasFocus || keyboardFocus
+                  ? Theme.of(context).colorScheme.primaryFixed
+                  : Colors.transparent,
             ),
           ),
           child: Padding(
@@ -211,8 +239,12 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
               child: KeyboardListener(
                 focusNode: _wrapperFocus,
                 onKeyEvent: (KeyEvent event) async {
-                  if (keyboardFocus || AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad) return;
-                  if (event is KeyDownEvent && acceptKeys.contains(event.logicalKey)) {
+                  if (keyboardFocus ||
+                      AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad) {
+                    return;
+                  }
+                  if (event is KeyDownEvent &&
+                      acceptKeys.contains(event.logicalKey)) {
                     if (_textFocus.hasFocus) {
                       _wrapperFocus.requestFocus();
                     } else if (_wrapperFocus.hasFocus) {
@@ -252,10 +284,8 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
               alignment: Alignment.centerLeft,
               child: Text(
                 widget.subLabel!,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ),
           ),
@@ -265,8 +295,10 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     widget.errorText ?? "",
-                    style:
-                        Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.error),
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelMedium
+                        ?.copyWith(color: Theme.of(context).colorScheme.error),
                   ),
                 )
               : Container(),

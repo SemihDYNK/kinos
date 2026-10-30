@@ -1,8 +1,8 @@
 # Kinos — accueil cinéma éditorial
 
 Date : 27 octobre 2026.
-Statut : direction visuelle approuvée en conversation ; spécification à relire
-avant le plan d’implémentation.
+Statut : direction et spécification approuvées ; intégration locale réalisée,
+preuves et limites dans `2026-10-27-kinos-accueil-validation.md`.
 
 ## Intention et référence
 
@@ -25,6 +25,42 @@ Corrections explicitement demandées, prioritaires sur les pixels de la maquette
 
 ## Premier lot et limites
 
+### Direction commune à toute l’application
+
+Extension demandée après validation de la maquette de barre latérale :
+appliquer les principes de cette navigation à l’ensemble de Kinos, avec une
+adaptation à la fonction de chaque surface. La référence complémentaire est
+`references/kinos-navigation-graphite.png`.
+
+- Surfaces graphite neutres, formes douces et arrondis cohérents par famille
+  de composants ; pas de pilule systématique pour chaque élément.
+- Navigation flottante, sélection arrondie distincte du focus blanc, icônes
+  d’un même vocabulaire et libellés accessibles à la souris et au clavier.
+- Boutons, champs, menus contextuels, fenêtres et panneaux avec les mêmes
+  niveaux de surface et les mêmes états de survol, pression et désactivation.
+- Transitions courtes, interrompables et sans rebond décoratif ; variantes
+  adaptées au mouvement réduit. Les commandes répondent immédiatement.
+- Aucun effet de verre coloré ou flou permanent pour imiter une autre
+  plateforme. La barre latérale reste neutre ; la teinte de film reste
+  confinée à la zone déjà définie sur l’accueil.
+- Le titre condensé monumental appartient aux bandeaux cinéma. Réglages,
+  tableaux, filtres et listes gardent Inter et une hiérarchie fonctionnelle.
+- Les affiches restent des images 2:3, les vignettes des images 16:9 ; les
+  formes douces des contrôles ne dictent pas celles des médias.
+
+L’inspiration Apple porte sur la cohérence, la profondeur, la précision des
+contrôles et la continuité des interactions. Conserver les conventions Linux,
+les contrôles de fenêtre, les raccourcis et les cibles clavier du projet.
+Ne pas importer de composants Apple, de SF Symbols ou de polices système
+Apple pour reproduire la maquette.
+
+Ordre de déploiement : (1) accueil et navigation, avec jetons partagés sans
+restylage global implicite ; (2) bibliothèque/recherche et fiches ;
+(3) réglages, profils, Arr et Seerr ; (4) contrôles et overlays du lecteur.
+Chaque lot étend les composants communs et vérifie ses états réels avant
+généralisation. Cette décision élargit la direction visuelle globale, pas
+le périmètre de code du premier lot.
+
 Ce lot porte sur l’accueil, ses cartes et les éléments de navigation qui
 l’encadrent. Les fiches détaillées, la bibliothèque complète, les réglages,
 Arr et le lecteur feront l’objet de lots suivants.
@@ -45,6 +81,13 @@ Pas de modification des moteurs vidéo, du profil de lecture ou du stockage.
 Conserver `SideNavigationRail`, son repli/dépli et ses destinations. État actif,
 survol et focus doivent rester distincts. Les icônes de la barre repliée ont
 des libellés accessibles et des infobulles affichables au focus.
+
+Appliquer la maquette de rail flottant graphite : retrait du bord de fenêtre,
+conteneur arrondi, sélection douce et icônes alignées. Conserver le repli/dépli
+explicite existant, sans expansion automatique au seul survol. Le gutter reste
+neutre ; réserver sa largeur entière lors du calcul de `sideBarWidth`.
+Les rayons, retraits et états du rail sont des jetons sémantiques, pas des
+valeurs locales ajoutées au widget.
 
 Le profil du bas demeure le point d’accès au changement d’utilisateur.
 L’en-tête desktop ne doit afficher aucun second avatar. Vérifier le chemin
@@ -166,3 +209,14 @@ Analyse statique sans nouvelle régression et vérification du formatage ciblé.
 Succès : titre expressif lisible, couleur liée au bon film et limitée à sa zone,
 formats classiques exacts, un seul avatar, fonctions et rangées préservées,
 aucun débordement ni action inaccessible dans la matrice.
+
+## Précision finale sur le lecteur
+
+Après examen des planches complètes, l’utilisateur a expressément conservé la
+**disposition actuelle des boutons du lecteur**. La planche de lecteur reste
+une référence de finition, pas de placement. L’intégration de ce lot conserve
+l’arbre des groupes, leurs positions, actions et raccourcis ; seul le thème des
+boutons et des indicateurs change. L’extension du thème commun aux champs,
+menus, dialogues et titres de fiches répond à la demande d’appliquer ce langage
+à toute l’application ; elle ne crée aucune des options illustratives des
+maquettes.

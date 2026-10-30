@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -48,7 +49,7 @@ class _PassCodeInputState extends ConsumerState<PassCodeInput> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return GlassAlertDialog(
       scrollable: true,
       content: Column(
         mainAxisSize: MainAxisSize.min,

@@ -65,10 +65,13 @@ repli `#141414` en cas d'échec.
 
 La barre latérale n'est pas une colonne séparée : c'est un calque
 semi-transparent posé par-dessus un contenu plein cadre
-(`SideNavigationRail`). Tout fond teinté doit donc s'arrêter *avant* sa
-largeur (`AdaptiveLayout.of(context).sideBarWidth`), sans quoi il
-transparaît sous elle — c'est la cause du débordement observé une première
-fois. La barre latérale et les grilles de jaquettes ne se teignent jamais.
+(`SideNavigationRail`). Depuis la validation utilisateur du 27 octobre 2026,
+la bannière et son fond teinté passent volontairement derrière la navigation,
+jusqu'au bord de la fenêtre. Aucun fond noir rectangulaire derrière la capsule.
+Seule la capsule garde son matériau graphite translucide et dépoli : le flou
+est découpé à ses contours, jamais appliqué au bandeau. La largeur
+`AdaptiveLayout.of(context).sideBarWidth` réserve l'espace des textes et actions,
+pas celui de l'image ou du dégradé. Les grilles de jaquettes restent neutres.
 
 Ne se teignent jamais non plus : anneau de focus, bouton de lecture
 principal, barres de progression.
@@ -91,6 +94,8 @@ l'image.
 - Les rapports de lecture passent par `playback_queue`, jamais en appel direct.
 - Les secrets vont dans `flutter_secure_storage`, jamais dans SharedPreferences.
 - Répondre en français.
+- Retouches UI : privilégier le rechargement à chaud Flutter sur l’instance
+  ouverte (`flutter attach` si nécessaire), sans relancer Kinos à chaque retouche.
 
 ## Périmètre
 
@@ -109,20 +114,24 @@ même titre que Jellyfin et Arr — jamais dans `SharedPreferences`.
 ## Reste à faire
 
 Module Arr, réécriture UI (langage visuel du projet) et renommage
-Fladder → Kinos (package, identité, icônes) sont livrés. Reste côté
-Arr : vue qBittorrent dédiée (client et identifiants déjà en place,
-seule la vue manque). La blocklist Arr est abandonnée, hors périmètre.
+Fladder → Kinos (package, identité, icônes) sont livrés.
+La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
+Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 
-Feuille de route, dans cet ordre :
+Feuille de route, priorité validée le 29 octobre 2026 :
 
-- [ ] Lot Seerr : découverte hors catalogue
+- [ ] Stabilisation de Kinos normal : fluidité, navigation, lecteur et
+      validation Seerr sur les vrais serveurs
 - [ ] AniList : mapping d'identifiants d'abord
 - [ ] Import Letterboxd : alimente le profil de goût, jamais les
       candidats recommandés
 - [ ] Mode salon (double densité, déjà porté par le thème — reste
-      l'activation/bascule de bout en bout)
+      l'activation/bascule de bout en bout), après stabilisation, AniList
+      et Letterboxd
+- [ ] Version distribuable propre, en toute fin : validation globale,
+      rangement des modifications, traductions, sécurité et licences
 
-En attente :
+En attente pour la version distribuable finale :
 
 - [ ] 9 messages en français non traduits dans les autres langues
 - [ ] Relecture du `NOTICE` avant publication

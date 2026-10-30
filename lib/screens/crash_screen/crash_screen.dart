@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,7 +23,7 @@ class CrashScreen extends ConsumerWidget {
     final selectedType = ref.watch(_selectedWarningProvider);
     final crashLogs =
         ref.watch(crashLogProvider).where((value) => selectedType == null ? true : value.type == selectedType);
-    return Dialog.fullscreen(
+    return GlassDialog.fullscreen(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

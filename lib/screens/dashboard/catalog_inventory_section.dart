@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kinos/models/item_base_model.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,8 +10,7 @@ import 'package:kinos/theme/app_theme.dart';
 /// Inventaire du catalogue — filtres/tris purs, sans scoring (cf. spec
 /// du lot graines/inventaire). Une rangée `SingleRowSection` par
 /// catégorie non vide, dans un ordre fixe : bien notés -> genres étroits
-/// -> décennies -> longs métrages. Même titre pour toutes (rupture de
-/// registre typographique, cf. `AppTypography.catalogSectionTitle`) —
+/// -> décennies -> longs métrages. Même style de titre pour toutes —
 /// pas de scoring, jamais de justification au survol (contrairement aux
 /// rangées "Pour vous"/par graine).
 ///
@@ -23,6 +23,7 @@ import 'package:kinos/theme/app_theme.dart';
 /// calcul complet des recommandations.
 class CatalogInventorySection extends ConsumerWidget {
   final EdgeInsets contentPadding;
+  final KinosItemType? mediaType;
 
   /// Catégorie par catégorie : reflète l'activation de
   /// [HomeRowType.catalogWellRated]/[.catalogNarrowGenres]/
@@ -37,6 +38,7 @@ class CatalogInventorySection extends ConsumerWidget {
 
   const CatalogInventorySection({
     required this.contentPadding,
+    this.mediaType,
     this.showWellRated = true,
     this.showNarrowGenres = true,
     this.showDecades = true,
@@ -51,61 +53,33 @@ class CatalogInventorySection extends ConsumerWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    return SliverMainAxisGroup(
-      slivers: [
-        if (showWellRated) ...[
-          SliverPadding(
-            padding: const EdgeInsets.only(top: AppSpacing.xl),
-            sliver: SingleRowSection(
-              title: 'Films bien notés',
-              items: result.wellRatedMovies,
-              contentPadding: contentPadding,
-              titleStyle: AppTypography.catalogSectionTitle,
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.only(top: AppSpacing.xl),
-            sliver: SingleRowSection(
-              title: 'Séries bien notées',
-              items: result.wellRatedSeries,
-              contentPadding: contentPadding,
-              titleStyle: AppTypography.catalogSectionTitle,
-            ),
-          ),
-        ],
-        if (showNarrowGenres)
-          for (final entry in result.narrowGenres.entries)
-            SliverPadding(
-              padding: const EdgeInsets.only(top: AppSpacing.xl),
-              sliver: SingleRowSection(
-                title: entry.key,
-                items: entry.value,
-                contentPadding: contentPadding,
-                titleStyle: AppTypography.catalogSectionTitle,
-              ),
-            ),
-        if (showDecades)
-          for (final entry in result.decades.entries)
-            SliverPadding(
-              padding: const EdgeInsets.only(top: AppSpacing.xl),
-              sliver: SingleRowSection(
-                title: 'Les ${entry.key}s',
-                items: entry.value,
-                contentPadding: contentPadding,
-                titleStyle: AppTypography.catalogSectionTitle,
-              ),
-            ),
-        if (showLongFilms)
-          SliverPadding(
-            padding: const EdgeInsets.only(top: AppSpacing.xl),
-            sliver: SingleRowSection(
-              title: 'Plus de 2h30',
-              items: result.longFilms,
-              contentPadding: contentPadding,
-              titleStyle: AppTypography.catalogSectionTitle,
-            ),
-          ),
-      ],
-    );
+    Widget row(String title, List<ItemBaseModel> items) {
+      final visible = mediaType == null
+          ? items
+          : items.where((item) => item.type == mediaType).toList();
+      if (visible.isEmpty) {
+        return const SliverToBoxAdapter(child: SizedBox.shrink());
+      }
+      return SliverPadding(
+        padding: const EdgeInsets.only(top: AppSpacing.xl),
+        sliver: SingleRowSection(
+            title: title, items: visible, contentPadding: contentPadding),
+      );
+    }
+
+    return SliverMainAxisGroup(slivers: [
+      if (showWellRated && mediaType != KinosItemType.series)
+        row('Films bien notés', result.wellRatedMovies),
+      if (showWellRated && mediaType != KinosItemType.movie)
+        row('Séries bien notées', result.wellRatedSeries),
+      if (showNarrowGenres)
+        for (final entry in result.narrowGenres.entries)
+          row(entry.key, entry.value),
+      if (showDecades)
+        for (final entry in result.decades.entries)
+          row('Les ${entry.key}s', entry.value),
+      if (showLongFilms && mediaType != KinosItemType.series)
+        row('Plus de 2h30', result.longFilms),
+    ]);
   }
 }

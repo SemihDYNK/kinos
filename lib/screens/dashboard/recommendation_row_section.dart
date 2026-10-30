@@ -216,6 +216,8 @@ final _cachedRecommendationTilesProvider = FutureProvider.autoDispose
       if (itemId == null) continue;
       tiles.add(RecommendationTile.cachedJellyfin(
         itemId: itemId,
+        isMovie: row.jellyfinItemType != 'series',
+        year: row.year,
         title: row.title,
         image: ImageData(
           path: imageUtility.getItemsImageUrl(itemId),
@@ -231,6 +233,7 @@ final _cachedRecommendationTilesProvider = FutureProvider.autoDispose
       tiles.add(RecommendationTile.cachedArr(
         title: row.title,
         arrId: arrId,
+        year: row.year,
         isMovie: row.arrService == 'radarr',
         posterUrl: arrNativePosterUrl(arrId, baseUrl: credentials.baseUrl),
         apiKey: credentials.apiKey,

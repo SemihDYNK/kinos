@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,7 +44,7 @@ class _ControlUserCreateState extends ConsumerState<ControlUserCreate> {
   @override
   Widget build(BuildContext context) {
     final viewModels = ref.watch(viewsProvider.select((value) => value.views));
-    return Dialog(
+    return GlassDialog(
       backgroundColor: Theme.of(context).colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(8.0),

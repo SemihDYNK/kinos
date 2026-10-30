@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:iconsax_plus/iconsax_plus.dart';
@@ -59,7 +60,7 @@ class AccessSchedulesEditor extends StatelessWidget {
                   showDialog(
                     context: context,
                     builder: (context) {
-                      return AlertDialog(
+                      return GlassAlertDialog(
                         title: Text(context.localized.addAccessSchedule),
                         content: StatefulBuilder(builder: (context, setState) {
                           return ConstrainedBox(
@@ -251,7 +252,7 @@ class TagsEditor extends StatelessWidget {
                     context: context,
                     builder: (context) {
                       TextEditingController tagController = TextEditingController();
-                      return AlertDialog(
+                      return GlassAlertDialog(
                         title: Text(context.localized.addTag),
                         content: SizedBox(
                           height: 75,

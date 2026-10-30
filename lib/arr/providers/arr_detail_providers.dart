@@ -1,3 +1,4 @@
+import 'package:kinos/arr/providers/arr_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/arr/models/arr_library_item.dart';
@@ -49,7 +50,15 @@ class ArrDetailState {
 /// mémoire pour la session.
 final arrDetailProvider = StateNotifierProvider.family
     .autoDispose<ArrDetailNotifier, ArrDetailState, ArrDetailKey>(
-  (ref, key) => ArrDetailNotifier(ref, key.service, key.id),
+  (ref, key) {
+    // Reprendre le chargement quand le coffre fournit le client, ou que le profil change.
+    if (key.service == ArrService.radarr) {
+      ref.watch(radarrClientProvider);
+    } else {
+      ref.watch(sonarrClientProvider);
+    }
+    return ArrDetailNotifier(ref, key.service, key.id);
+  },
 );
 
 class ArrDetailNotifier extends StateNotifier<ArrDetailState> {
@@ -71,6 +80,7 @@ class ArrDetailNotifier extends StateNotifier<ArrDetailState> {
     };
     if (!mounted) return;
     if (result == null) {
+      if (ref.read(arrCredentialsProvider(service)).isLoading) return;
       state = state.copyWith(
         loading: false,
         error: ArrApiError.unreachable,

@@ -34,3 +34,10 @@ Kinos fork
 ----------
 Changes and additions in this fork are likewise licensed under
 GPL-3.0-only, consistent with the terms of the upstream license.
+
+Bundled display font
+--------------------
+Barlow Condensed — Copyright 2017 The Barlow Project Authors.
+Source: https://github.com/google/fonts/tree/main/ofl/barlowcondensed
+License: SIL Open Font License, Version 1.1.
+The complete font license is bundled at assets/fonts/barlow_condensed/OFL.txt.

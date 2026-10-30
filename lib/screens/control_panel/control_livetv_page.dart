@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -134,7 +135,7 @@ class ControlLiveTvPage extends ConsumerWidget {
   Future<void> _deleteTunerHost(BuildContext context, WidgetRef ref, TunerHostInfo tunerHost) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         title: Text(context.localized.deleteTunerHost),
         content: Text(context.localized.deleteTunerHostConfirm(tunerHost.friendlyName ?? tunerHost.url ?? '')),
         actions: [
@@ -184,7 +185,7 @@ class ControlLiveTvPage extends ConsumerWidget {
   Future<void> _deleteListingProvider(BuildContext context, WidgetRef ref, ListingsProviderInfo provider) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         title: Text(context.localized.deleteEpgProvider),
         content: Text(context.localized.deleteEpgProviderConfirm),
         actions: [

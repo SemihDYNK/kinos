@@ -234,6 +234,11 @@ flutter:
     - assets/
 
   fonts:
+    - family: BarlowCondensed
+      fonts:
+        - asset: assets/fonts/barlow_condensed/BarlowCondensed-Bold.ttf
+          weight: 700
+
     - family: Inter
       fonts:
         - asset: assets/fonts/inter/Inter-VariableFont_opsz_wght.ttf

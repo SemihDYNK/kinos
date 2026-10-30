@@ -8,15 +8,18 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/providers/settings/video_player_settings_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 class VideoPlayerSpeedIndicator extends ConsumerStatefulWidget {
   const VideoPlayerSpeedIndicator({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _VideoPlayerSpeedIndicatorState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _VideoPlayerSpeedIndicatorState();
 }
 
-class _VideoPlayerSpeedIndicatorState extends ConsumerState<VideoPlayerSpeedIndicator> {
+class _VideoPlayerSpeedIndicatorState
+    extends ConsumerState<VideoPlayerSpeedIndicator> {
   late double currentSpeed = ref.read(playbackRateProvider);
 
   bool showIndicator = false;
@@ -47,32 +50,34 @@ class _VideoPlayerSpeedIndicatorState extends ConsumerState<VideoPlayerSpeedIndi
     );
     return IgnorePointer(
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 250),
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : AppDurations.pageTransition,
         opacity: showIndicator ? 1 : 0,
         child: Center(
           child: Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(16),
+            decoration: const BoxDecoration(
+              color: AppPlayerStyle.surface,
+              borderRadius: AppRadii.sheetBorder,
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                spacing: 12,
+                spacing: AppSpacing.sm,
                 children: [
                   Transform.rotate(
                     angle: currentSpeed < 1 ? pi : 0,
                     child: Icon(
                       speedIcon(currentSpeed),
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   Text(
                     context.localized.speedIndicator(currentSpeed),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
-                    ),
+                          color: AppColors.textPrimary,
+                        ),
                   ),
                 ],
               ),

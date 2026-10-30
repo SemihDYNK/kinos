@@ -1,27 +1,30 @@
+import 'package:kinos/widgets/shared/page_motion.dart';
 import 'dart:async';
+import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
+import 'package:kinos/screens/dashboard/catalog_home_screen.dart';
 
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sliver_tools/sliver_tools.dart';
 
 import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/settings/home_row_model.dart';
 import 'package:kinos/providers/dashboard_mode_provider.dart';
 import 'package:kinos/providers/dashboard_provider.dart';
+import 'package:kinos/providers/dashboard/hero_items_provider.dart';
 import 'package:kinos/providers/settings/home_rows_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/views_provider.dart';
-import 'package:kinos/screens/dashboard/continue_watching_section.dart';
-import 'package:kinos/screens/dashboard/hero_carousel.dart';
+import 'package:kinos/screens/dashboard/home_hero_section.dart';
 import 'package:kinos/screens/dashboard/home_row_section.dart';
 import 'package:kinos/screens/dashboard/music_dashboard_screen.dart';
 import 'package:kinos/screens/dashboard/catalog_inventory_section.dart';
 import 'package:kinos/screens/dashboard/recently_added_section.dart';
 import 'package:kinos/screens/dashboard/recommendation_row_section.dart';
 import 'package:kinos/screens/dashboard/seed_row_section.dart';
+import 'package:kinos/screens/dashboard/seerr_discovery_section.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/home_screen.dart';
 import 'package:kinos/screens/shared/nested_scaffold.dart';
@@ -29,7 +32,6 @@ import 'package:kinos/screens/shared/nested_sliver_appbar.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/sliver_list_padding.dart';
-import 'package:kinos/widgets/shared/fading_hero_backdrop.dart';
 import 'package:kinos/widgets/shared/pull_to_refresh.dart';
 
 /// Types de collection dans le périmètre du projet — films et séries
@@ -57,11 +59,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
 
-  // Diapo affichée par HeroCarousel — reportée ici via son callback pour
-  // que FadingHeroBackdrop (posé derrière lui ET "Continuer à regarder")
-  // suive la même image, sans dupliquer l'état de rotation à deux endroits.
-  ItemBaseModel? _heroCurrent;
-
   @override
   void initState() {
     super.initState();
@@ -84,25 +81,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
-  /// Films et séries non vus des ajouts récents, dédoublonnés, 8 max.
-  List<ItemBaseModel> _heroCandidates(List<ItemBaseModel> recentlyAdded) {
-    final seen = <String>{};
-    final candidates = <ItemBaseModel>[];
-    for (final item in recentlyAdded) {
-      if (item.type != KinosItemType.movie &&
-          item.type != KinosItemType.series) {
-        continue;
-      }
-      if (!item.unWatched) continue;
-      if (!seen.add(item.id)) continue;
-      candidates.add(item);
-      if (candidates.length >= 8) break;
-    }
-    return candidates;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final scope = ref.watch(catalogScopeProvider);
+    final index = scope == allCatalog
+        ? 0
+        : scope.kind == BaseItemKind.movie
+            ? 1
+            : 2;
+    return CatalogPageMotion(
+        index: index,
+        child: scope == allCatalog
+            ? _buildDashboard(context)
+            : CatalogHomeScreen(scope: scope));
+  }
+
+  Widget _buildDashboard(BuildContext context) {
     if (ref.watch(musicDashboardModeProvider)) {
       return const MusicDashboardScreen();
     }
@@ -114,16 +108,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // même valeur pour rester alignés verticalement avec lui.
     final padding = AdaptiveLayout.adaptivePadding(context,
         horizontalPadding: AppSpacing.screenPadding);
-    // `padding` inclut déjà la largeur de la barre latérale (cf.
-    // AdaptiveLayout.adaptivePadding) : la barre latérale n'est pas une
-    // colonne séparée, c'est un calque semi-transparent posé par-dessus un
-    // contenu plein cadre (SideNavigationRail). Le fond teinté ci-dessous
-    // doit donc s'arrêter *avant* cette largeur, sans quoi il transparaît
-    // sous elle — d'où la fuite. On sépare : `sideBarInset` appliqué une
-    // fois par le wrapper du fond, `innerPadding` (sans lui) pour le
-    // contenu qui vit à l'intérieur de ce même wrapper.
-    final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
-    final innerPadding = padding.copyWith(left: padding.left - sideBarInset);
     final dashboardData = ref.watch(dashboardProvider);
     final views = ref.watch(viewsProvider);
     final allRows = ref.watch(homeRowsProvider);
@@ -151,6 +135,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             row.type != HomeRowType.forYou &&
             row.type != HomeRowType.setAside &&
             row.type != HomeRowType.tasteSeeds &&
+            row.type != HomeRowType.seerrDiscovery &&
             row.type != HomeRowType.catalogWellRated &&
             row.type != HomeRowType.catalogNarrowGenres &&
             row.type != HomeRowType.catalogDecades &&
@@ -163,25 +148,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .expand((view) => view.recentlyAdded)
         .toList();
 
-    final heroItems = _heroCandidates(recentlyAdded);
-    final density = context.tokens.density;
-    // Diapo réellement affichée par HeroCarousel une fois montée
-    // (`_heroCurrent`, reporté par son callback) ; en repli, la première
-    // diapo, pour ne pas laisser le fond nu le temps du premier frame.
-    final heroDisplayItem = _heroCurrent ?? heroItems.firstOrNull;
-    final heroImage = heroDisplayItem?.getPosters?.randomBackDrop ??
-        heroDisplayItem?.getPosters?.primary;
-    // `holdUntil` (hauteur minimale du carrousel, 560-640px) reste plus
-    // court que sur le bandeau film/série (680-760px), pour une zone de
-    // fondu (`backdropHeight` ci-dessous) elle aussi plus courte
-    // (900-1000px contre 1200-1300px) : les distances par défaut de
-    // FadingHeroBackdrop (200 + 150 = 350px) y feraient déborder la
-    // dissolution au-delà de `backdropHeight` (560/640 + 350 = 910/990,
-    // à peine sous 900/1000 — trop juste). Réduites ici pour que la
-    // dissolution reste confortablement dans `backdropHeight`.
-    final heroRampDistance = density == AppDensity.couch ? 180.0 : 160.0;
-    final heroResolveDistance = density == AppDensity.couch ? 140.0 : 120.0;
-
+    final heroItems =
+        ref.watch(heroItemsProvider).asData?.value ?? const <ItemBaseModel>[];
     // resumeVideo d'abord (déjà en cours), puis nextUp — dédoublonnés.
     final seenContinue = <String>{};
     final continueWatching = [
@@ -198,82 +166,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           controller: AdaptiveLayout.scrollOf(context, HomeTabs.dashboard),
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            const DefaultSliverTopBadding(),
+            // Sur desktop, le bandeau passe derrière le chrome translucide.
+            // Sans bandeau, conserver l'espace de sécurité pour les rangées.
+            if (heroItems.isEmpty || !AdaptiveLayout.isDesktop(context))
+              const DefaultSliverTopBadding(),
             if (AdaptiveLayout.viewSizeOf(context) == ViewSize.phone)
               NestedSliverAppBar(
                 route: LibrarySearchRoute(),
                 parent: context,
               ),
-            // Fond de la zone bandeau + "Continuer à regarder" : même
-            // principe que MediaDetailScaffold (FadingHeroBackdrop) —
-            // l'image continue derrière "Continuer à regarder" et se
-            // dissout sous un voile, plutôt que de s'arrêter net à la
-            // hauteur du carrousel. SliverStack (sliver_tools) superpose,
-            // dans le même espace de défilement :
-            // - FadingHeroBackdrop, épinglé en haut sur `backdropHeight`
-            //   (positionné via SliverPositioned, hors du calcul de taille
-            //   du groupe) ;
-            // - HeroCarousel puis "Continuer à regarder", qui déterminent
-            //   la taille réelle du groupe.
-            // L'image reste pleinement nette sur toute la hauteur du
-            // carrousel (`holdUntil: HeroCarousel.minHeightFor`, posé
-            // par-dessus elle — la seule hauteur de contenu garantie ici,
-            // "Continuer à regarder" pouvant être vide) ; le voile ne
-            // commence qu'après, et se dissout entièrement (jamais un
-            // aplat de substitution — une seule surface peinte au final,
-            // celle de la page). Inséré à `sideBarInset` : la barre
-            // latérale reste sur AppColors.background pur, jamais teintée.
-            SliverPadding(
-              padding: EdgeInsetsDirectional.only(start: sideBarInset),
-              sliver: heroItems.isEmpty
-                  ? ContinueWatchingSection(
-                      items: continueWatching,
-                      contentPadding: innerPadding,
-                    )
-                  : SliverStack(
-                      children: [
-                        SliverPositioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: density == AppDensity.couch ? 1000.0 : 900.0,
-                          child: FadingHeroBackdrop(
-                            image: heroImage,
-                            heroTint: context.tokens.heroTint,
-                            holdUntil: HeroCarousel.minHeightFor(density),
-                            rampDistance: heroRampDistance,
-                            resolveDistance: heroResolveDistance,
-                          ),
-                        ),
-                        SliverMainAxisGroup(
-                          slivers: [
-                            // Pleine largeur, jusqu'aux bords : pas de
-                            // SliverPadding ici, contrairement au reste de
-                            // la page. L'alignement de son contenu
-                            // (sur-titre, titre, etc.) avec les titres de
-                            // section en dessous vient uniquement du
-                            // padding interne du bandeau
-                            // (AppSpacing.screenPadding), pas d'un padding
-                            // externe superposé.
-                            SliverToBoxAdapter(
-                              child: HeroCarousel(
-                                items: heroItems,
-                                onCurrentChanged: (item) =>
-                                    setState(() => _heroCurrent = item),
-                              ),
-                            ),
-                            SliverPadding(
-                              padding:
-                                  const EdgeInsets.only(top: AppSpacing.xl),
-                              sliver: ContinueWatchingSection(
-                                items: continueWatching,
-                                contentPadding: innerPadding,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+            HomeHeroSection(
+              heroItems: heroItems,
+              resumeItems: continueWatching,
+              contentPadding: padding,
             ),
             // Entre "Continuer à regarder" et "Ajouts récents" (cf. spec)
             // — en dehors du SliverStack/FadingHeroBackdrop ci-dessus,
@@ -303,6 +208,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 padding: const EdgeInsets.only(top: AppSpacing.xl),
                 sliver: TasteSeedRowsSection(contentPadding: padding),
               ),
+            for (final row in enabledRows
+                .where((row) => row.type == HomeRowType.seerrDiscovery)
+                .take(1))
+              SeerrDiscoverySection(
+                  key: ValueKey(row.id), row: row, contentPadding: padding),
             SliverPadding(
               padding: const EdgeInsets.only(top: AppSpacing.xl),
               sliver: CatalogInventorySection(

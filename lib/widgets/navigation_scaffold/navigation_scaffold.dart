@@ -12,6 +12,7 @@ import 'package:kinos/providers/window_title_provider.dart';
 import 'package:kinos/routes/auto_router.dart';
 import 'package:kinos/screens/home_screen.dart';
 import 'package:kinos/screens/shared/animated_fade_size.dart';
+import 'package:kinos/screens/shared/startup_home.dart';
 import 'package:kinos/screens/shared/nested_bottom_appbar.dart';
 import 'package:kinos/screens/video_player/audio_player_full_screen.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
@@ -52,11 +53,16 @@ class _NavigationScaffoldState extends ConsumerState<NavigationScaffold> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((value) {
-      ref.read(viewsProvider.notifier).fetchViews();
+    WidgetsBinding.instance.addPostFrameCallback((value) async {
+      if (!mounted) return;
+      ref.read(startupHomeProvider.future).ignore();
       context.router.addListener(() {
         _key.currentState?.closeDrawer();
       });
+      // Give the destination's first builds a frame before starting the reveal.
+      WidgetsBinding.instance.ensureVisualUpdate();
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) ref.read(startupPageReadyProvider.notifier).state = true;
     });
   }
 

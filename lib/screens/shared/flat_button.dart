@@ -7,6 +7,7 @@ import 'package:kinos/theme.dart';
 class FlatButton extends ConsumerWidget {
   final Widget? child;
   final bool autoFocus;
+  final bool canRequestFocus;
   final FocusNode? focusNode;
   final Function(bool value)? onFocusChange;
   final Function()? onTap;
@@ -24,6 +25,7 @@ class FlatButton extends ConsumerWidget {
     this.onFocusChange,
     this.focusNode,
     this.autoFocus = false,
+    this.canRequestFocus = true,
     this.onTap,
     this.onLongPress,
     this.onDoubleTap,
@@ -56,6 +58,7 @@ class FlatButton extends ConsumerWidget {
             elevation: 0,
             child: InkWell(
               autofocus: autoFocus,
+              canRequestFocus: canRequestFocus,
               focusNode: focusNode,
               onTap: onTap,
               onLongPress: onLongPress,

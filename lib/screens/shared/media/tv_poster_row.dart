@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -314,7 +315,7 @@ class _TVPosterItem extends ConsumerWidget {
       BuildContext context, WidgetRef ref, Offset globalPos) async {
     final position = RelativeRect.fromLTRB(
         globalPos.dx, globalPos.dy, globalPos.dx, globalPos.dy);
-    await showMenu(
+    await showGlassMenu(
       context: context,
       position: position,
       items: poster

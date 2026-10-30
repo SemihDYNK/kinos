@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
@@ -120,7 +121,7 @@ class _CarouselBannerState extends ConsumerState<CarouselBanner> {
                                                   localPosition.dy);
                                           final poster = widget.items[index];
 
-                                          await showMenu(
+                                          await showGlassMenu(
                                             context: context,
                                             position: position,
                                             items: poster

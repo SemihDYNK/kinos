@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
@@ -33,7 +34,7 @@ class PlaybackDialogue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
+    return GlassDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

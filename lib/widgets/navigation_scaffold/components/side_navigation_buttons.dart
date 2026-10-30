@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
@@ -149,7 +150,7 @@ class SideNavigationButtons extends ConsumerWidget {
                           ),
                         ),
                   position: tooltipPosition,
-                  child: PopupMenuButton(
+                  child: GlassPopupMenuButton(
                     iconColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                     padding: EdgeInsets.zero,
                     tooltip: "",

@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:kinos/models/syncing/transcode_music_download_model.dart';
@@ -15,7 +16,7 @@ Future<void> showTranscodeMusicSettingsPopup({
   await showDialog(
     context: context,
     builder: (context) {
-      return Dialog(
+      return GlassDialog(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: TranscodeMusicSettingsPopup(

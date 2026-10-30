@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,10 +9,11 @@ import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 
-Future<void> showItemContextMenu(
-    BuildContext context, WidgetRef ref, Offset globalPos, List<ItemAction> actions) async {
-  final position = RelativeRect.fromLTRB(globalPos.dx, globalPos.dy, globalPos.dx, globalPos.dy);
-  await showMenu(
+Future<void> showItemContextMenu(BuildContext context, WidgetRef ref,
+    Offset globalPos, List<ItemAction> actions) async {
+  final position = RelativeRect.fromLTRB(
+      globalPos.dx, globalPos.dy, globalPos.dx, globalPos.dy);
+  await showGlassMenu(
     context: context,
     position: position,
     items: actions.popupMenuItems(useIcons: true),
@@ -42,11 +44,9 @@ Future<void> showBottomSheetPill({
           maxHeight: MediaQuery.sizeOf(context).height * 0.85,
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8).add(MediaQuery.paddingOf(context)),
-          child: Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: KinosTheme.largeShape.borderRadius,
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 8)
+              .add(MediaQuery.paddingOf(context)),
+          child: FrostedSurface(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -71,7 +71,8 @@ Future<void> showBottomSheetPill({
                     children: [
                       if (item != null) ...{
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12).copyWith(top: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12)
+                              .copyWith(top: 8),
                           child: ItemBottomSheetPreview(item: item),
                         ),
                         const Divider(),

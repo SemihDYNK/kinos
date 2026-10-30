@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 import 'package:async/async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,10 +16,12 @@ class VideoPlayerScreenshotIndicator extends ConsumerStatefulWidget {
   const VideoPlayerScreenshotIndicator({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => VideoPlayerScreenshotIndicatorState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      VideoPlayerScreenshotIndicatorState();
 }
 
-class VideoPlayerScreenshotIndicatorState extends ConsumerState<VideoPlayerScreenshotIndicator> {
+class VideoPlayerScreenshotIndicatorState
+    extends ConsumerState<VideoPlayerScreenshotIndicator> {
   RestartableTimer? timer;
 
   bool visible = false;
@@ -41,7 +44,8 @@ class VideoPlayerScreenshotIndicatorState extends ConsumerState<VideoPlayerScree
       final playbackModel = ref.watch(playBackModel);
       final player = ref.watch(videoPlayerProvider);
       final selectedSubs = playbackModel?.mediaStreams?.currentSubStream;
-      final noSubsModel = await playbackModel?.setSubtitle(SubStreamModel.no(), player);
+      final noSubsModel =
+          await playbackModel?.setSubtitle(SubStreamModel.no(), player);
 
       ref.read(playBackModel.notifier).update((state) => noSubsModel);
 
@@ -51,7 +55,8 @@ class VideoPlayerScreenshotIndicatorState extends ConsumerState<VideoPlayerScree
 
       result = await ref.read(videoPlayerProvider.notifier).takeScreenshot();
 
-      final restoredModel = await playbackModel?.setSubtitle(selectedSubs, player);
+      final restoredModel =
+          await playbackModel?.setSubtitle(selectedSubs, player);
       ref.read(playBackModel.notifier).update((state) => restoredModel);
 
       if (restoredModel != null) {
@@ -62,7 +67,8 @@ class VideoPlayerScreenshotIndicatorState extends ConsumerState<VideoPlayerScree
     }
 
     if (timer == null) {
-      timer = RestartableTimer(const Duration(milliseconds: 500), () => onTimerEnd());
+      timer = RestartableTimer(
+          const Duration(milliseconds: 500), () => onTimerEnd());
     } else {
       timer?.reset();
     }
@@ -79,7 +85,8 @@ class VideoPlayerScreenshotIndicatorState extends ConsumerState<VideoPlayerScree
     return InputHandler<VideoHotKeys>(
       autoFocus: false,
       listenRawKeyboard: true,
-      keyMap: ref.watch(videoPlayerSettingsProvider.select((value) => value.currentShortcuts)),
+      keyMap: ref.watch(videoPlayerSettingsProvider
+          .select((value) => value.currentShortcuts)),
       keyMapResult: (result) => _onKey(result),
       child: IgnorePointer(
         child: AnimatedOpacity(
@@ -87,12 +94,12 @@ class VideoPlayerScreenshotIndicatorState extends ConsumerState<VideoPlayerScree
           opacity: visible ? 1 : 0,
           child: Center(
             child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(16),
+              decoration: const BoxDecoration(
+                color: AppPlayerStyle.surface,
+                borderRadius: AppRadii.sheetBorder,
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   spacing: 8.0,

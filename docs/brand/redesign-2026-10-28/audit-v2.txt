@@ -1,0 +1,42 @@
+
+=== a-symbol-v2.svg  (276 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 15
+margins L20.0 R17.0 T15.0 B15.0 · bbox fill 0.755
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== a-wordmark-v2.svg  (2382 bytes)
+viewBox 0 0 949 256 · aspect 3.707 (horizontal)
+colours 1: #111111 · gradients 0 · anchors 111
+margins L20.0 R20.1 T15.0 B15.0 · bbox fill 0.845
+▲ WARN [near-miss-angle] 2 straight edge(s) are 0.3–3° off a clean angle — they read as mistakes. Snap them: 58.2° (→60°) len 94.3 at (395,26); 58.1° (→60°) len 87.8 at (464,230). (Expected — and fine — for type set on a curve or deliberately rotated elements.)
+production-readiness score: 92/100 (heuristic)
+
+=== b-symbol-v2.svg  (208 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 15
+margins L24.0 R24.0 T28.0 B28.0 · bbox fill 0.635
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== b-wordmark-v2.svg  (2438 bytes)
+viewBox 0 0 721 256 · aspect 2.816 (horizontal)
+colours 1: #111111 · gradients 0 · anchors 121
+margins L28.0 R20.0 T23.7 B23.7 · bbox fill 0.761
+▲ WARN [near-miss-angle] 2 straight edge(s) are 0.3–3° off a clean angle — they read as mistakes. Snap them: 72.2° (→75°) len 118.4 at (395,227); 72.1° (→75°) len 118.5 at (363,29). (Expected — and fine — for type set on a curve or deliberately rotated elements.)
+production-readiness score: 92/100 (heuristic)
+
+=== c-symbol-v2.svg  (283 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 16
+margins L25.0 R25.0 T24.0 B26.0 · bbox fill 0.648
+▲ WARN [near-miss-angle] 1 straight edge(s) are 0.3–3° off a clean angle — they read as mistakes. Snap them: 44.1° (→45°) len 86.3 at (231,230). (Expected — and fine — for type set on a curve or deliberately rotated elements.)
+production-readiness score: 92/100 (heuristic)
+
+=== c-wordmark-v2.svg  (2358 bytes)
+viewBox 0 0 836 256 · aspect 3.266 (horizontal)
+colours 1: #111111 · gradients 0 · anchors 109
+margins L20.0 R20.2 T23.3 B22.3 · bbox fill 0.783
+▲ WARN [near-miss-angle] 1 straight edge(s) are 0.3–3° off a clean angle — they read as mistakes. Snap them: 44.1° (→45°) len 86.3 at (226,230). (Expected — and fine — for type set on a curve or deliberately rotated elements.)
+production-readiness score: 92/100 (heuristic)

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -7,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/providers/items/item_details_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
-import 'package:kinos/util/kinos_image.dart';
+import 'package:kinos/screens/shared/media_navigation.dart';
 
 @RoutePage()
 class DetailsScreen extends ConsumerStatefulWidget {
@@ -34,7 +33,7 @@ class _DetailsScreenState extends ConsumerState<DetailsScreen> {
   @override
   void didUpdateWidget(covariant DetailsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (kIsWeb) {
+    if (oldWidget.id != widget.id || oldWidget.item != widget.item) {
       updateWidget();
     }
   }
@@ -42,18 +41,26 @@ class _DetailsScreenState extends ConsumerState<DetailsScreen> {
   @override
   void initState() {
     super.initState();
-    updateWidget();
+    if (widget.item != null) {
+      currentWidget = widget.item!.detailScreenWidget;
+    } else {
+      updateWidget();
+    }
   }
 
   Future<void> updateWidget() async {
+    final requestedId = widget.id;
     Future.microtask(() async {
+      if (!mounted) return;
       if (widget.item != null) {
         setState(() {
           currentWidget = widget.item!.detailScreenWidget;
         });
       } else {
-        final response = await ref.read(itemDetailsProvider.notifier).fetchDetails(widget.id);
-        if (context.mounted) {
+        final response = await ref
+            .read(itemDetailsProvider.notifier)
+            .fetchDetails(widget.id);
+        if (context.mounted && widget.id == requestedId) {
           if (response != null) {
             setState(() {
               currentWidget = response.detailScreenWidget;
@@ -68,25 +75,6 @@ class _DetailsScreenState extends ConsumerState<DetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      key: Key(widget.id),
-      children: [
-        Hero(
-          tag: widget.tag ?? UniqueKey(),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 1.0),
-            ),
-            //Small offset to match detailscaffold
-            child: Transform.translate(
-                offset: const Offset(0, -5), child: KinosImage(image: widget.item?.getPosters?.primary)),
-          ),
-        ),
-        AnimatedSwitcher(
-          duration: const Duration(seconds: 1),
-          child: currentWidget,
-        )
-      ],
-    );
+    return MediaNavigationScope(tag: widget.tag, child: currentWidget);
   }
 }

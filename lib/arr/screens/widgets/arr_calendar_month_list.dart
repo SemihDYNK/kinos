@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -83,7 +84,7 @@ class _ArrCalendarMonthListState extends State<ArrCalendarMonthList> {
       BuildContext context, Offset globalPosition, ArrCalendarEntry entry) {
     final position = RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy,
         globalPosition.dx, globalPosition.dy);
-    showMenu<void>(
+    showGlassMenu<void>(
       context: context,
       position: position,
       items: [

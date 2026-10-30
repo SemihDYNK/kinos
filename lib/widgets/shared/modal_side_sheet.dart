@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:kinos/theme.dart';
@@ -25,7 +26,9 @@ Future<void> showModalSideSheet(
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final isRtl = Directionality.of(context) == TextDirection.rtl;
       return SlideTransition(
-        position: Tween(begin: Offset(isRtl ? -1 : 1, 0), end: const Offset(0, 0)).animate(
+        position:
+            Tween(begin: Offset(isRtl ? -1 : 1, 0), end: const Offset(0, 0))
+                .animate(
           animation,
         ),
         child: child,
@@ -36,7 +39,8 @@ Future<void> showModalSideSheet(
         alignment: AlignmentDirectional.centerEnd,
         child: Padding(
           padding: const EdgeInsets.all(16.0).copyWith(
-            top: MediaQuery.paddingOf(context).top + AdaptiveLayout.of(context).topBarHeight,
+            top: MediaQuery.paddingOf(context).top +
+                AdaptiveLayout.of(context).topBarHeight,
           ),
           child: Sheet(
             header: header,
@@ -75,22 +79,23 @@ class Sheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final size = mediaQuery.size;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final directionalPadding = EdgeInsetsDirectional.fromSTEB(
       mediaQuery.padding.left,
       mediaQuery.padding.top,
       mediaQuery.padding.right,
       mediaQuery.padding.bottom,
     );
-    final resolvedPadding = directionalPadding.copyWith(start: 0, top: 0).resolve(Directionality.of(context));
+    final resolvedPadding = directionalPadding
+        .copyWith(start: 0, top: 0)
+        .resolve(Directionality.of(context));
 
     return MediaQuery(
       data: mediaQuery.copyWith(padding: resolvedPadding),
-      child: Material(
-        elevation: 1,
-        color: colorScheme.surface,
-        surfaceTintColor: colorScheme.onSurface,
+      child: FrostedSurface(
+          child: Material(
+        elevation: 0,
+        color: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         borderRadius: KinosTheme.largeShape.borderRadius,
         child: Padding(
           padding: resolvedPadding,
@@ -112,7 +117,7 @@ class Sheet extends StatelessWidget {
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -128,10 +133,8 @@ class Sheet extends StatelessWidget {
           if (header != null)
             Expanded(
               child: Material(
-                textStyle: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
                 color: Colors.transparent,
                 child: header!,
               ),

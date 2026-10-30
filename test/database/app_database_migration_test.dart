@@ -8,6 +8,8 @@ import 'package:kinos/models/syncing/database_item.dart';
 
 import '../drift_generated/schema.dart';
 import '../drift_generated/schema_v1.dart' as v1;
+import '../drift_generated/schema_v2.dart' as v2;
+import '../drift_generated/schema_v3.dart' as v3;
 
 /// Exposes the [Ref] backing a [ProviderContainer], since [AppDatabase]
 /// takes a [Ref] (it reads the active user id off [userProvider] for its
@@ -24,7 +26,8 @@ void main() {
   final verifier = SchemaVerifier(GeneratedHelper());
 
   group('AppDatabase migrations', () {
-    test('v1 -> v2 arrives at the schema declared by AppDatabase today', () async {
+    test('v1 -> v2 arrives at the schema declared by AppDatabase today',
+        () async {
       final connection = await verifier.startAt(1);
       final db = AppDatabase(_fakeRef(), connection);
       await verifier.migrateAndValidate(db, 2);
@@ -59,7 +62,9 @@ void main() {
       await migratedDb.close();
     });
 
-    test('v1 -> v2 creates empty playback_queue, palette_cache and settings tables', () async {
+    test(
+        'v1 -> v2 creates empty playback_queue, palette_cache and settings tables',
+        () async {
       final connection = await verifier.startAt(1);
       final db = AppDatabase(_fakeRef(), connection);
       await verifier.migrateAndValidate(db, 2);
@@ -71,14 +76,16 @@ void main() {
       await db.close();
     });
 
-    test('v2 -> v3 arrives at the schema declared by AppDatabase today', () async {
+    test('v2 -> v3 arrives at the schema declared by AppDatabase today',
+        () async {
       final connection = await verifier.startAt(2);
       final db = AppDatabase(_fakeRef(), connection);
       await verifier.migrateAndValidate(db, 3);
       await db.close();
     });
 
-    test('v2 -> v3 creates an empty recommendation_cache_entries table', () async {
+    test('v2 -> v3 creates an empty recommendation_cache_entries table',
+        () async {
       final connection = await verifier.startAt(2);
       final db = AppDatabase(_fakeRef(), connection);
       await verifier.migrateAndValidate(db, 3);
@@ -87,6 +94,29 @@ void main() {
 
       await db.close();
     });
+
+    for (final version in [1, 2, 3]) {
+      test('v$version -> v4 adds discovery cache and preserves existing data',
+          () async {
+        final schema = await verifier.schemaAt(version);
+        final GeneratedDatabase old = switch (version) {
+          1 => v1.DatabaseAtV1(schema.newConnection()),
+          2 => v2.DatabaseAtV2(schema.newConnection()),
+          _ => v3.DatabaseAtV3(schema.newConnection()),
+        };
+        await old.customStatement(
+          'INSERT INTO database_items (user_id, id, sort_name) VALUES (?, ?, ?)',
+          ['profile', 'existing', 'Preserved'],
+        );
+        await old.close();
+        final db = AppDatabase(_fakeRef(), schema.newConnection());
+        await verifier.migrateAndValidate(db, 4);
+        expect(await db.select(db.discoveryCacheEntries).get(), isEmpty);
+        final rows = await db.select(db.databaseItems).get();
+        expect(rows.single.sortName, 'Preserved');
+        await db.close();
+      });
+    }
 
     test('a fresh install (onCreate) can read/write all four tables', () async {
       final db = AppDatabase(_fakeRef(), NativeDatabase.memory());
@@ -111,7 +141,8 @@ void main() {
       expect((await db.getPalette('item-1'))?.argb, 0xFF112233);
 
       await db.setSetting('brightness', '0.8', scope: 'display-1');
-      expect((await db.getSetting('brightness', scope: 'display-1'))?.value, '0.8');
+      expect((await db.getSetting('brightness', scope: 'display-1'))?.value,
+          '0.8');
       expect(await db.getSetting('brightness', scope: 'display-2'), isNull);
     });
   });
@@ -136,7 +167,8 @@ void main() {
           title: title,
         );
 
-    test('replaceRecommendationCache stores entries in position order', () async {
+    test('replaceRecommendationCache stores entries in position order',
+        () async {
       await db.replaceRecommendationCache(
         userId: 'user-1',
         rowKind: RecommendationRowKind.forYou,
@@ -267,8 +299,7 @@ void main() {
       expect(rows, isEmpty);
     });
 
-    test('maxAge is configurable, not hardcoded to the default week',
-        () async {
+    test('maxAge is configurable, not hardcoded to the default week', () async {
       final now = DateTime(2025, 6, 15);
       await db.into(db.recommendationCacheEntries).insert(
             entry('user-1', 0).copyWith(
@@ -293,9 +324,7 @@ void main() {
       await db.replaceRecommendationCache(
         userId: 'user-1',
         rowKind: RecommendationRowKind.setAside,
-        entries: [
-          entry('user-1', 0, rowKind: RecommendationRowKind.setAside)
-        ],
+        entries: [entry('user-1', 0, rowKind: RecommendationRowKind.setAside)],
       );
 
       final rows = await db

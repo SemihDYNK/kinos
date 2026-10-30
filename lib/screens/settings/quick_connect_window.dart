@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/login/widgets/login_icon.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
@@ -30,7 +31,7 @@ class _QuickConnectDialogState extends ConsumerState<QuickConnectDialog> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
-    return AlertDialog(
+    return GlassAlertDialog(
       title: Text(
         context.localized.quickConnectTitle,
         textAlign: TextAlign.center,

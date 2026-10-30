@@ -2864,5 +2864,22 @@
   },
   "leanBackModeTitle": "Lean-back Mode",
   "leanBackModeDesc": "Enable lean-back mode on Android devices, even if the device reports back as false.",
-  "leanBackModeInfo": "Lean-back mode is re-enabled by default on AndroidTV devices. Toggling this option on non-AndroidTV devices may cause unexpected behavior."
+  "leanBackModeInfo": "Lean-back mode is re-enabled by default on AndroidTV devices. Toggling this option on non-AndroidTV devices may cause unexpected behavior.",
+  "discoveryRowTitle": "To discover",
+  "discoveryRowSubtitle": "Outside your library · Request on Seerr",
+  "discoveryToRequest": "To request",
+  "discoveryCacheDays": "Discovery cache: {days} days",
+  "@discoveryCacheDays": {"placeholders": {"days": {"type": "int"}}},
+  "discoveryShortcuts": "← →: scroll · Enter: open · Shift+F10: menu",
+  "discoveryMoviesTitle": "Movies to discover",
+  "discoverySeriesTitle": "Series to discover",
+  "discoveryScrollPrevious": "Scroll left",
+  "discoveryScrollNext": "Scroll right",
+  "managementRequestsTitle": "Requests",
+  "managementRequestsSubtitle": "Follow recent requests on your server",
+  "managementRequestedBy": "Requested by",
+  "managementSearchRequests": "Search requests…",
+  "managementApplication": "Application",
+  "managementSearchLibrary": "Search the library…",
+  "managementStatus": "Status"
 }

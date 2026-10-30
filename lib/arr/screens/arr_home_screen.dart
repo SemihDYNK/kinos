@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -12,6 +13,7 @@ import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/shared/chips/filter_button.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/app_page_header.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 
 enum _ArrTab { library, queue, calendar }
@@ -37,7 +39,6 @@ class _ArrHomeScreenState extends ConsumerState<ArrHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
     final radarrConfigured = ref
             .watch(arrCredentialsProvider(ArrService.radarr))
             .valueOrNull
@@ -64,7 +65,7 @@ class _ArrHomeScreenState extends ConsumerState<ArrHomeScreen> {
       child: ColoredBox(
         color: AppColors.background,
         child: Padding(
-          padding: EdgeInsetsDirectional.only(start: sideBarInset),
+          padding: EdgeInsets.zero,
           child: available.isEmpty
               ? const _ArrInvite()
               : _ArrHomeContent(
@@ -98,94 +99,89 @@ class _ArrHomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Text('Arr', style: Theme.of(context).textTheme.displaySmall),
-              const Spacer(),
-              FocusRing(
-                borderRadius: AppRadii.controlBorder,
-                onActivate: () => context.router.push(const ArrSearchRoute()),
-                child: ExcludeFocus(
-                  child: Tooltip(
-                    message: 'Recherche interactive',
-                    child: IconButton(
-                      onPressed: () =>
-                          context.router.push(const ArrSearchRoute()),
-                      icon: const Icon(Icons.search_rounded),
-                      color: AppColors.textSecondary,
-                    ),
+    final padding = EdgeInsets.fromLTRB(
+        AdaptiveLayout.of(context).sideBarWidth + AppSpacing.screenPadding,
+        AdaptiveLayout.of(context).topBarHeight + AppSpacing.lg,
+        AppSpacing.screenPadding,
+        AppSpacing.lg);
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('Arr', style: AppTypography.sectionTitle),
+            const SizedBox(width: AppSpacing.lg),
+            if (availableServices.length > 1)
+              FrostedSurface(
+                  borderRadius: AppRadii.controlBorder,
+                  child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.xxs),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        for (final service in availableServices)
+                          FilterButton(
+                              isSelected: service == selectedService,
+                              label: Text(service.label),
+                              onPressed: () => onSelectService(service))
+                      ]))),
+            const Spacer(),
+            FocusRing(
+              borderRadius: AppRadii.controlBorder,
+              onActivate: () => context.router.push(const ArrSearchRoute()),
+              child: ExcludeFocus(
+                child: Tooltip(
+                  message: 'Recherche interactive',
+                  child: IconButton(
+                    onPressed: () =>
+                        context.router.push(const ArrSearchRoute()),
+                    icon: const Icon(Icons.search_rounded),
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ),
-              FocusRing(
-                borderRadius: AppRadii.controlBorder,
-                onActivate: () => context.router.push(const ArrSettingsRoute()),
-                child: ExcludeFocus(
-                  child: Tooltip(
-                    message: 'Réglages Radarr / Sonarr',
-                    child: IconButton(
-                      onPressed: () =>
-                          context.router.push(const ArrSettingsRoute()),
-                      icon: const Icon(Icons.settings_outlined),
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (availableServices.length > 1) ...[
-            Row(
-              spacing: AppSpacing.xxs,
-              children: [
-                for (final service in availableServices)
-                  FilterButton(
-                    isSelected: service == selectedService,
-                    label: Text(service.label),
-                    onPressed: () => onSelectService(service),
-                  ),
-              ],
             ),
-            const SizedBox(height: AppSpacing.md),
+            FocusRing(
+              borderRadius: AppRadii.controlBorder,
+              onActivate: () => context.router.push(const ArrSettingsRoute()),
+              child: ExcludeFocus(
+                child: Tooltip(
+                  message: 'Réglages Radarr / Sonarr',
+                  child: IconButton(
+                    onPressed: () =>
+                        context.router.push(const ArrSettingsRoute()),
+                    icon: const Icon(Icons.settings_outlined),
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
           ],
-          _ArrTabStrip(tab: tab, onSelectTab: onSelectTab),
-          const SizedBox(height: AppSpacing.md),
-          // Le défilement est décidé par le contenu de chaque onglet, pas
-          // ici : la grille Bibliothèque est virtualisée (GridView.builder)
-          // et a besoin d'une hauteur bornée pour gérer son propre
-          // défilement — l'envelopper dans un SingleChildScrollView comme
-          // les deux autres onglets construirait toutes ses jaquettes d'un
-          // coup et annulerait la virtualisation.
-          Expanded(
-            child: switch (tab) {
-              _ArrTab.library => ArrLibraryScreen(
-                  key: ValueKey(selectedService),
-                  service: selectedService,
-                ),
-              _ArrTab.queue => SingleChildScrollView(
-                  child: ArrQueueScreen(
-                    key: ValueKey(selectedService),
-                    service: selectedService,
-                  ),
-                ),
-              _ArrTab.calendar => SingleChildScrollView(
-                  child: ArrCalendarScreen(
-                    key: ValueKey(selectedService),
-                    service: selectedService,
-                  ),
-                ),
-            },
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _ArrTabStrip(tab: tab, onSelectTab: onSelectTab),
+        const SizedBox(height: AppSpacing.md),
+      ],
     );
+    return switch (tab) {
+      _ArrTab.library => ArrLibraryScreen(
+          key: ValueKey(selectedService),
+          service: selectedService,
+          header: header,
+          contentPadding: padding),
+      _ArrTab.queue => SingleChildScrollView(
+          padding: padding,
+          child: Column(children: [
+            header,
+            ArrQueueScreen(
+                key: ValueKey(selectedService), service: selectedService)
+          ])),
+      _ArrTab.calendar => SingleChildScrollView(
+          padding: padding,
+          child: Column(children: [
+            header,
+            ArrCalendarScreen(
+                key: ValueKey(selectedService), service: selectedService)
+          ])),
+    };
   }
 }
 
@@ -204,9 +200,10 @@ class _ArrTabStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
+          border: Border(bottom: BorderSide(color: AppColors.border))),
+      child: Wrap(
+        spacing: AppSpacing.xxs,
+        runSpacing: AppSpacing.xxs,
         children: [
           _ArrTabButton(
             label: 'Bibliothèque',
@@ -244,20 +241,21 @@ class _ArrTabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = selected ? AppColors.textPrimary : AppColors.textSecondary;
     return FocusRing(
+      borderRadius: AppRadii.controlBorder,
       onActivate: onTap,
       child: ExcludeFocus(
         child: InkWell(
           onTap: onTap,
+          borderRadius: AppRadii.controlBorder,
           child: Container(
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(
-                  color: selected ? AppColors.textPrimary : Colors.transparent,
-                  width: 2,
-                ),
-              ),
+                  bottom: BorderSide(
+                      color:
+                          selected ? AppColors.textPrimary : Colors.transparent,
+                      width: AppTopNavigation.indicatorHeight)),
             ),
             child: Text(
               label,
@@ -284,7 +282,7 @@ class _ArrInvite extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Arr', style: Theme.of(context).textTheme.displaySmall),
+          const Expanded(child: AppPageHeader(title: 'Arr')),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Configurez Radarr et/ou Sonarr pour activer la file d\'attente, '

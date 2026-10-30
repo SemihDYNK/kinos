@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -85,7 +86,7 @@ class _EditImageContentState extends ConsumerState<EditImageContent> {
       Future<void> showDeleteDialog() async {
         await showDialog(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (context) => GlassAlertDialog(
             title: const Text("Delete image"),
             content: const Text("Deleting is permanent are you sure?"),
             actions: [

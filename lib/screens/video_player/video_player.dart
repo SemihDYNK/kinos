@@ -26,10 +26,12 @@ class VideoPlayer extends ConsumerStatefulWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _VideoPlayerState();
 }
 
-class _VideoPlayerState extends ConsumerState<VideoPlayer> with WidgetsBindingObserver {
+class _VideoPlayerState extends ConsumerState<VideoPlayer>
+    with WidgetsBindingObserver {
   double lastScale = 0.0;
 
   bool errorPlaying = false;
+  Animation<double>? _expansionAnimation;
 
   late PlaybackModel? currentPlaybackModel = ref.read(playBackModel);
 
@@ -46,6 +48,7 @@ class _VideoPlayerState extends ConsumerState<VideoPlayer> with WidgetsBindingOb
 
   @override
   void dispose() {
+    _expansionAnimation?.removeStatusListener(_onExpansionStatus);
     WidgetsBinding.instance.removeObserver(this);
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     super.dispose();
@@ -56,21 +59,47 @@ class _VideoPlayerState extends ConsumerState<VideoPlayer> with WidgetsBindingOb
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(() {
-      ref.read(mediaPlaybackProvider.notifier).update((state) => state.copyWith(state: VideoPlayerState.fullScreen));
-      final orientations = ref.read(videoPlayerSettingsProvider.select((value) => value.allowedOrientations));
-      SystemChrome.setPreferredOrientations(
-          orientations?.isNotEmpty == true ? orientations!.toList() : DeviceOrientation.values);
-      return ref.read(videoPlayerSettingsProvider.notifier).setSavedBrightness();
+      if (!mounted) return;
+      final animation = ModalRoute.of(context)?.animation;
+      if (ref.read(mediaPlaybackProvider).state == VideoPlayerState.minimized &&
+          animation != null &&
+          animation.status != AnimationStatus.completed) {
+        // Keep the source Hero alive until the video has finished expanding.
+        _expansionAnimation = animation;
+        animation.addStatusListener(_onExpansionStatus);
+      } else {
+        _onExpansionStatus(AnimationStatus.completed);
+      }
+      final orientations = ref.read(videoPlayerSettingsProvider
+          .select((value) => value.allowedOrientations));
+      SystemChrome.setPreferredOrientations(orientations?.isNotEmpty == true
+          ? orientations!.toList()
+          : DeviceOrientation.values);
+      return ref
+          .read(videoPlayerSettingsProvider.notifier)
+          .setSavedBrightness();
     });
+  }
+
+  void _onExpansionStatus(AnimationStatus status) {
+    if (!mounted || status != AnimationStatus.completed) return;
+    _expansionAnimation?.removeStatusListener(_onExpansionStatus);
+    _expansionAnimation = null;
+    ref
+        .read(mediaPlaybackProvider.notifier)
+        .update((state) => state.copyWith(state: VideoPlayerState.fullScreen));
   }
 
   @override
   Widget build(BuildContext context) {
-    final fillScreen = ref.watch(videoPlayerSettingsProvider.select((value) => value.fillScreen));
-    final videoFit = ref.watch(videoPlayerSettingsProvider.select((value) => value.videoFit));
+    final fillScreen = ref
+        .watch(videoPlayerSettingsProvider.select((value) => value.fillScreen));
+    final videoFit = ref
+        .watch(videoPlayerSettingsProvider.select((value) => value.videoFit));
     final padding = MediaQuery.of(context).padding;
 
-    final playerController = ref.watch(videoPlayerProvider.select((value) => value));
+    final playerController =
+        ref.watch(videoPlayerProvider.select((value) => value));
 
     //Watch playbackModel type changes to switch between normal players
     ref.listen(
@@ -90,16 +119,24 @@ class _VideoPlayerState extends ConsumerState<VideoPlayer> with WidgetsBindingOb
       videoPlayerSettingsProvider.select((value) => value.allowedOrientations),
       (previous, next) {
         if (previous != next) {
-          SystemChrome.setPreferredOrientations(next?.isNotEmpty == true ? next!.toList() : DeviceOrientation.values);
+          SystemChrome.setPreferredOrientations(next?.isNotEmpty == true
+              ? next!.toList()
+              : DeviceOrientation.values);
         }
       },
     );
 
     final player = Padding(
-      padding: fillScreen ? EdgeInsets.zero : EdgeInsets.only(left: padding.left, right: padding.right),
+      padding: fillScreen
+          ? EdgeInsets.zero
+          : EdgeInsets.only(left: padding.left, right: padding.right),
       child: playerController.videoWidget(
         const Key("VideoPlayer"),
-        fillScreen ? (MediaQuery.of(context).orientation == Orientation.portrait ? videoFit : BoxFit.cover) : videoFit,
+        fillScreen
+            ? (MediaQuery.of(context).orientation == Orientation.portrait
+                ? videoFit
+                : BoxFit.cover)
+            : videoFit,
       ),
     );
 
@@ -116,14 +153,20 @@ class _VideoPlayerState extends ConsumerState<VideoPlayer> with WidgetsBindingOb
               },
               onScaleEnd: (details) {
                 if (lastScale < 1.0) {
-                  ref.read(videoPlayerSettingsProvider.notifier).setFillScreen(false, context: context);
+                  ref
+                      .read(videoPlayerSettingsProvider.notifier)
+                      .setFillScreen(false, context: context);
                 } else if (lastScale > 1.0) {
-                  ref.read(videoPlayerSettingsProvider.notifier).setFillScreen(true, context: context);
+                  ref
+                      .read(videoPlayerSettingsProvider.notifier)
+                      .setFillScreen(true, context: context);
                 }
                 lastScale = 0.0;
               },
               child: Stack(children: [
-                if (!kIsWeb && ref.watch(videoPlayerSettingsProvider.select((value) => value.ambientBlur)))
+                if (!kIsWeb &&
+                    ref.watch(videoPlayerSettingsProvider
+                        .select((value) => value.ambientBlur)))
                   AmbientBlur(
                     child: playerController.videoWidget(
                           const Key("VideoPlayerBlur"),

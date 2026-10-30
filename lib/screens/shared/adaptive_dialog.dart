@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
@@ -20,7 +21,7 @@ Future<void> showDialogAdaptive({
       useSafeArea: false,
       builder: (context) => Padding(
         padding: MediaQuery.paddingOf(context),
-        child: Dialog(
+        child: GlassDialog(
           backgroundColor: backgroundColor,
           shape: shape,
           child: builder(context),
@@ -31,7 +32,7 @@ Future<void> showDialogAdaptive({
     return showDialog(
       context: context,
       useSafeArea: false,
-      builder: (context) => Dialog.fullscreen(
+      builder: (context) => GlassDialog.fullscreen(
         backgroundColor: backgroundColor,
         child: Padding(
           padding: MediaQuery.paddingOf(context),

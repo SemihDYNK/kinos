@@ -1,3 +1,5 @@
+import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -151,14 +153,14 @@ class FloatingPlayerBarActionsRow extends StatelessWidget {
             child: IconButton.filledTonal(
               onPressed: onPlayPause,
               icon: playbackInfo.playing
-                  ? const Icon(Icons.pause_rounded)
-                  : const Icon(Icons.play_arrow_rounded),
+                  ? const Icon(AppIcons.pause)
+                  : const Icon(AppIcons.play),
             ),
           ),
         ),
         Flexible(
           child: OverflowView.flexible(
-            builder: (context, remainingItemCount) => PopupMenuButton(
+            builder: (context, remainingItemCount) => GlassPopupMenuButton(
               iconColor: Theme.of(context)
                   .colorScheme
                   .onSurface

@@ -1,7 +1,8 @@
+import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/models/book_model.dart';
 import 'package:kinos/models/item_base_model.dart';
@@ -79,7 +80,7 @@ class PosterListItem extends ConsumerWidget {
                 Offset localPosition = details.globalPosition;
                 RelativeRect position =
                     RelativeRect.fromLTRB(localPosition.dx, localPosition.dy, localPosition.dx, localPosition.dy);
-                await showMenu(
+                await showGlassMenu(
                   context: context,
                   position: position,
                   items: poster
@@ -186,13 +187,13 @@ class PosterListItem extends ConsumerWidget {
                           ),
                       if (poster.userData.isFavourite)
                         const Icon(
-                          IconsaxPlusBold.heart,
+                          AppIcons.favouriteSelected,
                           color: Colors.red,
                         ),
                       if (AdaptiveLayout.of(context).isDesktop)
                         Tooltip(
                           message: context.localized.options,
-                          child: PopupMenuButton(
+                          child: GlassPopupMenuButton(
                             tooltip: context.localized.options,
                             icon: const Icon(
                               Icons.more_vert,

@@ -2349,6 +2349,323 @@ class RecommendationCacheEntriesCompanion
   }
 }
 
+class $DiscoveryCacheEntriesTable extends DiscoveryCacheEntries
+    with TableInfo<$DiscoveryCacheEntriesTable, DiscoveryCacheEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DiscoveryCacheEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
+  @override
+  late final GeneratedColumn<String> scope = GeneratedColumn<String>(
+      'scope', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _cacheKeyMeta =
+      const VerificationMeta('cacheKey');
+  @override
+  late final GeneratedColumn<String> cacheKey = GeneratedColumn<String>(
+      'cache_key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _payloadMeta =
+      const VerificationMeta('payload');
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+      'payload', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _capturedAtMeta =
+      const VerificationMeta('capturedAt');
+  @override
+  late final GeneratedColumn<DateTime> capturedAt = GeneratedColumn<DateTime>(
+      'captured_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _expiresAtMeta =
+      const VerificationMeta('expiresAt');
+  @override
+  late final GeneratedColumn<DateTime> expiresAt = GeneratedColumn<DateTime>(
+      'expires_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [scope, cacheKey, payload, capturedAt, expiresAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'discovery_cache_entries';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<DiscoveryCacheEntry> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('scope')) {
+      context.handle(
+          _scopeMeta, scope.isAcceptableOrUnknown(data['scope']!, _scopeMeta));
+    } else if (isInserting) {
+      context.missing(_scopeMeta);
+    }
+    if (data.containsKey('cache_key')) {
+      context.handle(_cacheKeyMeta,
+          cacheKey.isAcceptableOrUnknown(data['cache_key']!, _cacheKeyMeta));
+    } else if (isInserting) {
+      context.missing(_cacheKeyMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(_payloadMeta,
+          payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta));
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    if (data.containsKey('captured_at')) {
+      context.handle(
+          _capturedAtMeta,
+          capturedAt.isAcceptableOrUnknown(
+              data['captured_at']!, _capturedAtMeta));
+    } else if (isInserting) {
+      context.missing(_capturedAtMeta);
+    }
+    if (data.containsKey('expires_at')) {
+      context.handle(_expiresAtMeta,
+          expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta));
+    } else if (isInserting) {
+      context.missing(_expiresAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {scope, cacheKey};
+  @override
+  DiscoveryCacheEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DiscoveryCacheEntry(
+      scope: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}scope'])!,
+      cacheKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}cache_key'])!,
+      payload: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}payload'])!,
+      capturedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}captured_at'])!,
+      expiresAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}expires_at'])!,
+    );
+  }
+
+  @override
+  $DiscoveryCacheEntriesTable createAlias(String alias) {
+    return $DiscoveryCacheEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class DiscoveryCacheEntry extends DataClass
+    implements Insertable<DiscoveryCacheEntry> {
+  final String scope;
+  final String cacheKey;
+  final String payload;
+  final DateTime capturedAt;
+  final DateTime expiresAt;
+  const DiscoveryCacheEntry(
+      {required this.scope,
+      required this.cacheKey,
+      required this.payload,
+      required this.capturedAt,
+      required this.expiresAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['scope'] = Variable<String>(scope);
+    map['cache_key'] = Variable<String>(cacheKey);
+    map['payload'] = Variable<String>(payload);
+    map['captured_at'] = Variable<DateTime>(capturedAt);
+    map['expires_at'] = Variable<DateTime>(expiresAt);
+    return map;
+  }
+
+  DiscoveryCacheEntriesCompanion toCompanion(bool nullToAbsent) {
+    return DiscoveryCacheEntriesCompanion(
+      scope: Value(scope),
+      cacheKey: Value(cacheKey),
+      payload: Value(payload),
+      capturedAt: Value(capturedAt),
+      expiresAt: Value(expiresAt),
+    );
+  }
+
+  factory DiscoveryCacheEntry.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DiscoveryCacheEntry(
+      scope: serializer.fromJson<String>(json['scope']),
+      cacheKey: serializer.fromJson<String>(json['cacheKey']),
+      payload: serializer.fromJson<String>(json['payload']),
+      capturedAt: serializer.fromJson<DateTime>(json['capturedAt']),
+      expiresAt: serializer.fromJson<DateTime>(json['expiresAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'scope': serializer.toJson<String>(scope),
+      'cacheKey': serializer.toJson<String>(cacheKey),
+      'payload': serializer.toJson<String>(payload),
+      'capturedAt': serializer.toJson<DateTime>(capturedAt),
+      'expiresAt': serializer.toJson<DateTime>(expiresAt),
+    };
+  }
+
+  DiscoveryCacheEntry copyWith(
+          {String? scope,
+          String? cacheKey,
+          String? payload,
+          DateTime? capturedAt,
+          DateTime? expiresAt}) =>
+      DiscoveryCacheEntry(
+        scope: scope ?? this.scope,
+        cacheKey: cacheKey ?? this.cacheKey,
+        payload: payload ?? this.payload,
+        capturedAt: capturedAt ?? this.capturedAt,
+        expiresAt: expiresAt ?? this.expiresAt,
+      );
+  DiscoveryCacheEntry copyWithCompanion(DiscoveryCacheEntriesCompanion data) {
+    return DiscoveryCacheEntry(
+      scope: data.scope.present ? data.scope.value : this.scope,
+      cacheKey: data.cacheKey.present ? data.cacheKey.value : this.cacheKey,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      capturedAt:
+          data.capturedAt.present ? data.capturedAt.value : this.capturedAt,
+      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DiscoveryCacheEntry(')
+          ..write('scope: $scope, ')
+          ..write('cacheKey: $cacheKey, ')
+          ..write('payload: $payload, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('expiresAt: $expiresAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(scope, cacheKey, payload, capturedAt, expiresAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DiscoveryCacheEntry &&
+          other.scope == this.scope &&
+          other.cacheKey == this.cacheKey &&
+          other.payload == this.payload &&
+          other.capturedAt == this.capturedAt &&
+          other.expiresAt == this.expiresAt);
+}
+
+class DiscoveryCacheEntriesCompanion
+    extends UpdateCompanion<DiscoveryCacheEntry> {
+  final Value<String> scope;
+  final Value<String> cacheKey;
+  final Value<String> payload;
+  final Value<DateTime> capturedAt;
+  final Value<DateTime> expiresAt;
+  final Value<int> rowid;
+  const DiscoveryCacheEntriesCompanion({
+    this.scope = const Value.absent(),
+    this.cacheKey = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.capturedAt = const Value.absent(),
+    this.expiresAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DiscoveryCacheEntriesCompanion.insert({
+    required String scope,
+    required String cacheKey,
+    required String payload,
+    required DateTime capturedAt,
+    required DateTime expiresAt,
+    this.rowid = const Value.absent(),
+  })  : scope = Value(scope),
+        cacheKey = Value(cacheKey),
+        payload = Value(payload),
+        capturedAt = Value(capturedAt),
+        expiresAt = Value(expiresAt);
+  static Insertable<DiscoveryCacheEntry> custom({
+    Expression<String>? scope,
+    Expression<String>? cacheKey,
+    Expression<String>? payload,
+    Expression<DateTime>? capturedAt,
+    Expression<DateTime>? expiresAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (scope != null) 'scope': scope,
+      if (cacheKey != null) 'cache_key': cacheKey,
+      if (payload != null) 'payload': payload,
+      if (capturedAt != null) 'captured_at': capturedAt,
+      if (expiresAt != null) 'expires_at': expiresAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DiscoveryCacheEntriesCompanion copyWith(
+      {Value<String>? scope,
+      Value<String>? cacheKey,
+      Value<String>? payload,
+      Value<DateTime>? capturedAt,
+      Value<DateTime>? expiresAt,
+      Value<int>? rowid}) {
+    return DiscoveryCacheEntriesCompanion(
+      scope: scope ?? this.scope,
+      cacheKey: cacheKey ?? this.cacheKey,
+      payload: payload ?? this.payload,
+      capturedAt: capturedAt ?? this.capturedAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (scope.present) {
+      map['scope'] = Variable<String>(scope.value);
+    }
+    if (cacheKey.present) {
+      map['cache_key'] = Variable<String>(cacheKey.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (capturedAt.present) {
+      map['captured_at'] = Variable<DateTime>(capturedAt.value);
+    }
+    if (expiresAt.present) {
+      map['expires_at'] = Variable<DateTime>(expiresAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DiscoveryCacheEntriesCompanion(')
+          ..write('scope: $scope, ')
+          ..write('cacheKey: $cacheKey, ')
+          ..write('payload: $payload, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2358,6 +2675,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SettingsTable settings = $SettingsTable(this);
   late final $RecommendationCacheEntriesTable recommendationCacheEntries =
       $RecommendationCacheEntriesTable(this);
+  late final $DiscoveryCacheEntriesTable discoveryCacheEntries =
+      $DiscoveryCacheEntriesTable(this);
   late final Index databaseId = Index('database_id',
       'CREATE INDEX database_id ON database_items (user_id, id)');
   late final Index playbackQueueUserItem = Index('playback_queue_user_item',
@@ -2379,6 +2698,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         paletteCache,
         settings,
         recommendationCacheEntries,
+        discoveryCacheEntries,
         databaseId,
         playbackQueueUserItem,
         playbackQueuePending,
@@ -3516,6 +3836,186 @@ typedef $$RecommendationCacheEntriesTableProcessedTableManager
         ),
         RecommendationCacheEntry,
         PrefetchHooks Function()>;
+typedef $$DiscoveryCacheEntriesTableCreateCompanionBuilder
+    = DiscoveryCacheEntriesCompanion Function({
+  required String scope,
+  required String cacheKey,
+  required String payload,
+  required DateTime capturedAt,
+  required DateTime expiresAt,
+  Value<int> rowid,
+});
+typedef $$DiscoveryCacheEntriesTableUpdateCompanionBuilder
+    = DiscoveryCacheEntriesCompanion Function({
+  Value<String> scope,
+  Value<String> cacheKey,
+  Value<String> payload,
+  Value<DateTime> capturedAt,
+  Value<DateTime> expiresAt,
+  Value<int> rowid,
+});
+
+class $$DiscoveryCacheEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $DiscoveryCacheEntriesTable> {
+  $$DiscoveryCacheEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get scope => $composableBuilder(
+      column: $table.scope, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get cacheKey => $composableBuilder(
+      column: $table.cacheKey, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get payload => $composableBuilder(
+      column: $table.payload, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get capturedAt => $composableBuilder(
+      column: $table.capturedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get expiresAt => $composableBuilder(
+      column: $table.expiresAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$DiscoveryCacheEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DiscoveryCacheEntriesTable> {
+  $$DiscoveryCacheEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get scope => $composableBuilder(
+      column: $table.scope, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get cacheKey => $composableBuilder(
+      column: $table.cacheKey, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+      column: $table.payload, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get capturedAt => $composableBuilder(
+      column: $table.capturedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get expiresAt => $composableBuilder(
+      column: $table.expiresAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$DiscoveryCacheEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DiscoveryCacheEntriesTable> {
+  $$DiscoveryCacheEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get scope =>
+      $composableBuilder(column: $table.scope, builder: (column) => column);
+
+  GeneratedColumn<String> get cacheKey =>
+      $composableBuilder(column: $table.cacheKey, builder: (column) => column);
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get capturedAt => $composableBuilder(
+      column: $table.capturedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get expiresAt =>
+      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
+}
+
+class $$DiscoveryCacheEntriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $DiscoveryCacheEntriesTable,
+    DiscoveryCacheEntry,
+    $$DiscoveryCacheEntriesTableFilterComposer,
+    $$DiscoveryCacheEntriesTableOrderingComposer,
+    $$DiscoveryCacheEntriesTableAnnotationComposer,
+    $$DiscoveryCacheEntriesTableCreateCompanionBuilder,
+    $$DiscoveryCacheEntriesTableUpdateCompanionBuilder,
+    (
+      DiscoveryCacheEntry,
+      BaseReferences<_$AppDatabase, $DiscoveryCacheEntriesTable,
+          DiscoveryCacheEntry>
+    ),
+    DiscoveryCacheEntry,
+    PrefetchHooks Function()> {
+  $$DiscoveryCacheEntriesTableTableManager(
+      _$AppDatabase db, $DiscoveryCacheEntriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DiscoveryCacheEntriesTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DiscoveryCacheEntriesTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DiscoveryCacheEntriesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> scope = const Value.absent(),
+            Value<String> cacheKey = const Value.absent(),
+            Value<String> payload = const Value.absent(),
+            Value<DateTime> capturedAt = const Value.absent(),
+            Value<DateTime> expiresAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              DiscoveryCacheEntriesCompanion(
+            scope: scope,
+            cacheKey: cacheKey,
+            payload: payload,
+            capturedAt: capturedAt,
+            expiresAt: expiresAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String scope,
+            required String cacheKey,
+            required String payload,
+            required DateTime capturedAt,
+            required DateTime expiresAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              DiscoveryCacheEntriesCompanion.insert(
+            scope: scope,
+            cacheKey: cacheKey,
+            payload: payload,
+            capturedAt: capturedAt,
+            expiresAt: expiresAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$DiscoveryCacheEntriesTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $DiscoveryCacheEntriesTable,
+        DiscoveryCacheEntry,
+        $$DiscoveryCacheEntriesTableFilterComposer,
+        $$DiscoveryCacheEntriesTableOrderingComposer,
+        $$DiscoveryCacheEntriesTableAnnotationComposer,
+        $$DiscoveryCacheEntriesTableCreateCompanionBuilder,
+        $$DiscoveryCacheEntriesTableUpdateCompanionBuilder,
+        (
+          DiscoveryCacheEntry,
+          BaseReferences<_$AppDatabase, $DiscoveryCacheEntriesTable,
+              DiscoveryCacheEntry>
+        ),
+        DiscoveryCacheEntry,
+        PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3532,4 +4032,6 @@ class $AppDatabaseManager {
       get recommendationCacheEntries =>
           $$RecommendationCacheEntriesTableTableManager(
               _db, _db.recommendationCacheEntries);
+  $$DiscoveryCacheEntriesTableTableManager get discoveryCacheEntries =>
+      $$DiscoveryCacheEntriesTableTableManager(_db, _db.discoveryCacheEntries);
 }

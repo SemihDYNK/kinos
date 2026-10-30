@@ -72,6 +72,7 @@ class HomeRowSection extends ConsumerWidget {
       case HomeRowType.catalogWellRated:
       case HomeRowType.catalogNarrowGenres:
       case HomeRowType.catalogDecades:
+      case HomeRowType.seerrDiscovery:
       case HomeRowType.catalogLongFilms:
         // Jamais atteint en pratique : `dashboard_screen.dart` route ces
         // types vers leurs propres sections, pas vers ce widget (leur

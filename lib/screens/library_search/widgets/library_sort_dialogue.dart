@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:kinos/models/library_search/library_search_options.dart';
@@ -18,7 +19,7 @@ Future<(SortingOptions? sortOptions, SortingOrder? sortingOrder)?> openSortByDia
     builder: (context) {
       return StatefulBuilder(
         builder: (context, state) {
-          return AlertDialog(
+          return GlassAlertDialog(
             content: SizedBox(
               width: MediaQuery.of(context).size.width * 0.65,
               child: ListView(

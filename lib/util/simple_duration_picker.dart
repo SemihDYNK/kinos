@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -42,7 +43,7 @@ Future<Duration?> showSimpleDurationPicker({
   Duration? duration;
   await showDialog(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => GlassAlertDialog(
       title: Text(context.localized.selectTime),
       content: SimpleDurationPicker(
         initialValue: initialValue,

@@ -40,6 +40,7 @@ class _LabeledSelectorState extends State<LabeledSelector> {
   Widget build(BuildContext context) {
     return AnchoredPopover(
       controller: _controller,
+      preferredDirection: AxisDirection.down,
       popoverBuilder: (context, close) => PopoverOptionList(
         onSelected: close,
         options: widget.options
@@ -72,13 +73,14 @@ class _LabeledSelectorState extends State<LabeledSelector> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    '${widget.label} · ',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: AppColors.textSecondary),
-                  ),
+                  if (widget.label.isNotEmpty)
+                    Text(
+                      '${widget.label} · ',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: AppColors.textSecondary),
+                    ),
                   // Flexible + ellipsis : sans borne, une valeur longue (un
                   // chemin de dossier racine...) déborde du Row plutôt que
                   // de respecter la largeur réellement disponible — ce

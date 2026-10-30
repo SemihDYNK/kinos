@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -32,7 +33,7 @@ class SyncOptionsButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton(
+    return GlassPopupMenuButton(
       itemBuilder: (context) {
         final unSyncedChildren = children.where((element) {
           final hasDownload = ref.read(syncDownloadStatusProvider(element, []));
@@ -212,7 +213,7 @@ Future<dynamic> _deleteSyncedItems(
   return showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (context) => AlertDialog(
+    builder: (context) => GlassAlertDialog(
       title: Text(context.localized.syncDeleteAllItemsTitle(syncedItem.itemModel?.name ?? "")),
       content: Text(
         context.localized.syncDeleteAllItemsDesc(syncedItem.itemModel?.name ?? "", syncedChildren.length),
@@ -251,7 +252,7 @@ Future<dynamic> _syncRemainingItems(
   return showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (context) => AlertDialog(
+    builder: (context) => GlassAlertDialog(
       title: Text(context.localized.syncAllItemsTitle(syncedItem.itemModel?.name ?? "")),
       content: Text(
         context.localized.syncAllItemsDesc(

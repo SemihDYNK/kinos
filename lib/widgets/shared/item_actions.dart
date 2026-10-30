@@ -4,9 +4,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/theme/app_icons.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/widgets/shared/ensure_visible.dart';
 
@@ -14,9 +15,11 @@ abstract class ItemAction {
   Widget toMenuItemButton();
   PopupMenuEntry toPopupMenuItem({bool useIcons = false});
   Widget toLabel();
-  Widget toListItem(BuildContext context, {bool useIcons = false, bool shouldPop = true});
+  Widget toListItem(BuildContext context,
+      {bool useIcons = false, bool shouldPop = true});
   Widget toButton();
-  Widget toGroupButton(BuildContext context, {required bool useIcons, required bool shouldPop});
+  Widget toGroupButton(BuildContext context,
+      {required bool useIcons, required bool shouldPop});
 }
 
 class ItemActionDivider extends ItemAction {
@@ -26,19 +29,24 @@ class ItemActionDivider extends ItemAction {
   Divider toMenuItemButton() => const Divider();
 
   @override
-  PopupMenuEntry toPopupMenuItem({bool useIcons = false}) => const PopupMenuDivider(height: 3);
+  PopupMenuEntry toPopupMenuItem({bool useIcons = false}) =>
+      const PopupMenuDivider(height: 3);
 
   @override
   Widget toLabel() => Container();
 
   @override
-  Widget toListItem(BuildContext context, {bool useIcons = false, bool shouldPop = true}) => const Divider();
+  Widget toListItem(BuildContext context,
+          {bool useIcons = false, bool shouldPop = true}) =>
+      const Divider();
 
   @override
   Widget toButton() => const VerticalDivider();
 
   @override
-  Widget toGroupButton(BuildContext context, {required bool useIcons, required bool shouldPop}) => const Divider();
+  Widget toGroupButton(BuildContext context,
+          {required bool useIcons, required bool shouldPop}) =>
+      const Divider();
 }
 
 class ItemActionButton extends ItemAction {
@@ -77,14 +85,17 @@ class ItemActionButton extends ItemAction {
 
   Color _resolveForegroundColor(BuildContext context) {
     final theme = Theme.of(context);
-    final baseColor =
-        foregroundColor ?? (selected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurface);
+    final baseColor = foregroundColor ??
+        (selected
+            ? theme.colorScheme.onPrimaryContainer
+            : theme.colorScheme.onSurface);
     return baseColor.withAlpha(action == null ? 75 : 255);
   }
 
   Color _resolveBackgroundColor(BuildContext context) {
     final theme = Theme.of(context);
-    return backgroundColor ?? (selected ? theme.colorScheme.primaryContainer : Colors.transparent);
+    return backgroundColor ??
+        (selected ? theme.colorScheme.primaryContainer : Colors.transparent);
   }
 
   @override
@@ -92,9 +103,15 @@ class ItemActionButton extends ItemAction {
         leadingIcon: icon,
         onPressed: action,
         style: ButtonStyle(
-          backgroundColor: backgroundColor == null ? null : WidgetStatePropertyAll(backgroundColor),
-          foregroundColor: foregroundColor == null ? null : WidgetStatePropertyAll(foregroundColor),
-          iconColor: foregroundColor == null ? null : WidgetStatePropertyAll(foregroundColor),
+          backgroundColor: backgroundColor == null
+              ? null
+              : WidgetStatePropertyAll(backgroundColor),
+          foregroundColor: foregroundColor == null
+              ? null
+              : WidgetStatePropertyAll(foregroundColor),
+          iconColor: foregroundColor == null
+              ? null
+              : WidgetStatePropertyAll(foregroundColor),
         ),
         child: label,
       );
@@ -110,7 +127,9 @@ class ItemActionButton extends ItemAction {
           icon: icon ?? const SizedBox.shrink(),
         )
       : IconButton(
-          tooltip: label != null ? (label is Text ? (label as Text).data : null) : null,
+          tooltip: label != null
+              ? (label is Text ? (label as Text).data : null)
+              : null,
           onPressed: action,
           icon: icon ?? const SizedBox.shrink(),
         );
@@ -120,27 +139,24 @@ class ItemActionButton extends ItemAction {
     return PopupMenuItem(
       onTap: action,
       enabled: action != null,
+      height: AppPageLayout.toolbarHeight,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       child: Builder(
         builder: (context) {
           final resolvedForegroundColor = _resolveForegroundColor(context);
 
-          final child = useIcons
-              ? Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Row(
-                    children: [
-                      if (icon != null) icon!,
-                      const SizedBox(width: 8),
-                      if (label != null) Flexible(child: label!),
-                    ],
-                  ),
-                )
-              : Row(
-                  children: [
-                    if (label != null) Expanded(child: label!),
-                    if (selected) Icon(IconsaxPlusBold.tick_square, size: 24, color: resolvedForegroundColor),
-                  ],
-                );
+          final child = Row(children: [
+            if (useIcons) ...[
+              SizedBox.square(dimension: AppMotion.iconGrid, child: icon),
+              const SizedBox(width: AppSpacing.sm),
+            ],
+            if (label != null) Expanded(child: label!),
+            if (selected) ...[
+              const SizedBox(width: AppSpacing.sm),
+              Icon(AppIcons.watched,
+                  size: AppMotion.iconGrid, color: resolvedForegroundColor),
+            ],
+          ]);
 
           return IconTheme(
             data: IconThemeData(color: resolvedForegroundColor),
@@ -160,25 +176,33 @@ class ItemActionButton extends ItemAction {
   }
 
   @override
-  Widget toListItem(BuildContext context, {bool useIcons = false, bool shouldPop = true}) {
+  Widget toListItem(BuildContext context,
+      {bool useIcons = false, bool shouldPop = true}) {
     final foregroundColor = _resolveForegroundColor(context);
     final background = _resolveBackgroundColor(context);
     return ElevatedButton(
-      autofocus: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad && selected,
+      autofocus:
+          AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad && selected,
       style: ButtonStyle(
         backgroundColor: WidgetStatePropertyAll(background),
-        padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
-        minimumSize: const WidgetStatePropertyAll(Size(50, 50)),
+        padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: AppSpacing.sm)),
+        shape: const WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: AppRadii.controlBorder)),
+        minimumSize:
+            const WidgetStatePropertyAll(Size(0, AppPageLayout.toolbarHeight)),
         elevation: const WidgetStatePropertyAll(0),
         foregroundColor: WidgetStatePropertyAll(foregroundColor),
         iconColor: WidgetStatePropertyAll(foregroundColor),
       ),
-      onPressed: () {
-        if (shouldPop) {
-          Navigator.of(context).pop();
-        }
-        action?.call();
-      },
+      onPressed: action == null
+          ? null
+          : () {
+              if (shouldPop) {
+                Navigator.of(context).pop();
+              }
+              action?.call();
+            },
       child: useIcons
           ? Builder(
               builder: (context) {
@@ -202,19 +226,24 @@ class ItemActionButton extends ItemAction {
   }
 
   @override
-  Widget toGroupButton(BuildContext context, {required bool useIcons, required bool shouldPop}) {
-    final backgroundColor =
-        selected ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainer;
-    final foregroundColor =
-        selected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurface;
+  Widget toGroupButton(BuildContext context,
+      {required bool useIcons, required bool shouldPop}) {
+    final backgroundColor = selected
+        ? Theme.of(context).colorScheme.primaryContainer
+        : Theme.of(context).colorScheme.surfaceContainer;
+    final foregroundColor = selected
+        ? Theme.of(context).colorScheme.onPrimaryContainer
+        : Theme.of(context).colorScheme.onSurface;
 
     final labelWidget = label ?? const Text("");
-    final textStyle =
-        Theme.of(context).textTheme.bodyLarge?.copyWith(color: foregroundColor, fontWeight: FontWeight.bold) ??
-            TextStyle(
-              color: foregroundColor,
-              fontWeight: FontWeight.bold,
-            );
+    final textStyle = Theme.of(context)
+            .textTheme
+            .bodyLarge
+            ?.copyWith(color: foregroundColor, fontWeight: FontWeight.bold) ??
+        TextStyle(
+          color: foregroundColor,
+          fontWeight: FontWeight.bold,
+        );
     return Builder(
       builder: (buttonContext) {
         return FocusButton(
@@ -252,21 +281,28 @@ class ItemActionButton extends ItemAction {
 }
 
 extension ItemActionExtension on List<ItemAction> {
-  List<PopupMenuEntry> popupMenuItems({bool useIcons = false}) => map((e) => e.toPopupMenuItem(useIcons: useIcons))
-      .whereNotIndexed((index, element) => (index == 0 && element is PopupMenuDivider))
+  List<PopupMenuEntry> popupMenuItems({bool useIcons = false}) =>
+      map((e) => e.toPopupMenuItem(useIcons: useIcons))
+          .whereNotIndexed(
+              (index, element) => (index == 0 && element is PopupMenuDivider))
+          .toList();
+
+  List<Widget> menuItemButtonItems() => map((e) => e.toMenuItemButton())
+      .whereNotIndexed((index, element) => (index == 0 && element is Divider))
       .toList();
 
-  List<Widget> menuItemButtonItems() =>
-      map((e) => e.toMenuItemButton()).whereNotIndexed((index, element) => (index == 0 && element is Divider)).toList();
-
-  List<Widget> listTileItems(BuildContext context, {bool useIcons = false, bool shouldPop = true}) {
-    return map((e) => e.toListItem(context, useIcons: useIcons, shouldPop: shouldPop))
+  List<Widget> listTileItems(BuildContext context,
+      {bool useIcons = false, bool shouldPop = true}) {
+    return map((e) =>
+            e.toListItem(context, useIcons: useIcons, shouldPop: shouldPop))
         .whereNotIndexed((index, element) => (index == 0 && element is Divider))
         .toList();
   }
 
-  List<Widget> groupButtons(BuildContext context, {bool useIcons = false, bool shouldPop = true}) {
-    return map((e) => e.toGroupButton(context, useIcons: useIcons, shouldPop: shouldPop))
+  List<Widget> groupButtons(BuildContext context,
+      {bool useIcons = false, bool shouldPop = true}) {
+    return map((e) =>
+            e.toGroupButton(context, useIcons: useIcons, shouldPop: shouldPop))
         .whereNotIndexed((index, element) => (index == 0 && element is Divider))
         .toList();
   }

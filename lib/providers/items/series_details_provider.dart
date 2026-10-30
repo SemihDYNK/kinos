@@ -149,6 +149,13 @@ class SeriesDetailViewNotifier extends StateNotifier<SeriesModel?> {
     }
   }
 
+  void updateUserData(ItemBaseModel item, UserData userData) {
+    final current = state ?? item;
+    if (current is SeriesModel) {
+      state = current.copyWith(userData: userData);
+    }
+  }
+
   void updateEpisodeInfo(EpisodeModel episode) {
     final index = state?.availableEpisodes?.indexWhere((e) => e.id == episode.id);
 

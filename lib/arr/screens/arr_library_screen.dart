@@ -1,3 +1,6 @@
+import 'package:kinos/screens/shared/outlined_text_field.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -23,8 +26,14 @@ import 'package:kinos/widgets/shared/anchored_popover.dart';
 /// rencontré avec un filtre partagé entre onglets).
 class ArrLibraryScreen extends ConsumerStatefulWidget {
   final ArrService service;
+  final Widget? header;
+  final EdgeInsets contentPadding;
 
-  const ArrLibraryScreen({required this.service, super.key});
+  const ArrLibraryScreen(
+      {required this.service,
+      this.header,
+      this.contentPadding = EdgeInsets.zero,
+      super.key});
 
   @override
   ConsumerState<ArrLibraryScreen> createState() => _ArrLibraryScreenState();
@@ -36,6 +45,9 @@ const _sortLabels = {
   ArrLibrarySort.year: 'Année',
   ArrLibrarySort.status: 'Statut',
 };
+
+final arrLibraryQueryProvider =
+    StateProvider.autoDispose.family<String, ArrService>((ref, service) => '');
 
 class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
   final _sortPopover = AnchoredPopoverController();
@@ -101,7 +113,7 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
       BuildContext context, ArrLibraryEntry entry) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         backgroundColor: AppColors.surfaceHigh,
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder),
         title: const Text('Supprimer de la bibliothèque'),
@@ -133,7 +145,7 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (context, setDialogState) => GlassAlertDialog(
           backgroundColor: AppColors.surfaceHigh,
           shape:
               const RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder),
@@ -181,7 +193,7 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
         ref.watch(arrCredentialsProvider(widget.service)).valueOrNull;
 
     if (state.loading && state.entries.isEmpty) {
-      return const Padding(
+      return _placeholder(const Padding(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
         child: Row(
           children: [
@@ -195,11 +207,11 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
                 style: TextStyle(color: AppColors.textSecondary)),
           ],
         ),
-      );
+      ));
     }
 
     if (state.error != null && state.entries.isEmpty) {
-      return Padding(
+      return _placeholder(Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
         child: Row(
           children: [
@@ -214,150 +226,167 @@ class _ArrLibraryScreenState extends ConsumerState<ArrLibraryScreen> {
             ),
           ],
         ),
-      );
+      ));
     }
 
     if (credentials == null || !credentials.isConfigured) {
       // Ne devrait pas arriver (le service est déjà configuré à ce
       // stade, sans quoi ArrHomeScreen n'aurait pas affiché cet onglet)
       // — repli défensif plutôt qu'une jaquette qui échoue en boucle.
-      return const SizedBox.shrink();
+      return _placeholder(const SizedBox.shrink());
     }
 
     final view = ref.watch(arrLibraryViewProvider(widget.service));
     final viewNotifier =
         ref.read(arrLibraryViewProvider(widget.service).notifier);
-    final entries = _apply(state.entries, view);
+    final query =
+        ref.watch(arrLibraryQueryProvider(widget.service)).trim().toLowerCase();
+    final entries = _apply(state.entries, view)
+        .where((entry) => entry.title.toLowerCase().contains(query))
+        .toList();
 
-    return Column(
+    final toolbar = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            // Expanded + ellipsis, pas Spacer : ce texte est le seul élément
-            // de cette ligne sans largeur naturelle bornée — sans ça, la
-            // rangée de contrôles à droite (4 filtres + tri + sens) peut se
-            // faire pousser hors champ par une fenêtre étroite, avec un
-            // débordement de Row qui rend le dernier bouton (le sens du
-            // tri) instable au clic : la cible visuelle et la cible de
-            // geste réelle ne coïncident plus forcément.
-            Expanded(
-              child: Text(
-                '↑↓←→ naviguer · Entrée détail · clic droit ou touche Menu : actions',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.textDisabled),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Row(
-              spacing: AppSpacing.xxs,
-              children: [
-                FilterButton(
-                  isSelected: view.filter == ArrLibraryFilter.all,
-                  label: const Text('Tout'),
-                  onPressed: () => viewNotifier.setFilter(ArrLibraryFilter.all),
-                ),
-                FilterButton(
-                  isSelected: view.filter == ArrLibraryFilter.monitored,
-                  label: const Text('Surveillé'),
-                  onPressed: () =>
-                      viewNotifier.setFilter(ArrLibraryFilter.monitored),
-                ),
-                FilterButton(
-                  isSelected: view.filter == ArrLibraryFilter.unmonitored,
-                  label: const Text('Non surveillé'),
-                  onPressed: () =>
-                      viewNotifier.setFilter(ArrLibraryFilter.unmonitored),
-                ),
-                FilterButton(
-                  isSelected: view.filter == ArrLibraryFilter.missing,
-                  label: const Text('Manquant'),
-                  onPressed: () =>
-                      viewNotifier.setFilter(ArrLibraryFilter.missing),
-                ),
-              ],
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            AnchoredPopover(
-              controller: _sortPopover,
-              popoverBuilder: (context, close) => PopoverOptionList(
-                onSelected: close,
-                options: ArrLibrarySort.values
-                    .map((sort) => PopoverOption(
-                          content: Text(_sortLabels[sort]!),
-                          selected: view.sort == sort,
-                          onSelect: () => viewNotifier.setSort(sort),
-                        ))
-                    .toList(),
-              ),
-              child: FocusRing(
-                borderRadius: AppRadii.controlBorder,
-                onActivate: _sortPopover.toggle,
-                child: ExcludeFocus(
-                  child: Tooltip(
-                    message: 'Trier',
-                    child: IconButton(
-                      onPressed: _sortPopover.toggle,
-                      icon: const Icon(Icons.sort_rounded,
-                          color: AppColors.textSecondary),
+        if (widget.header != null) widget.header!,
+        LayoutBuilder(
+            builder: (context, constraints) => Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.sm,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SizedBox(
+                        width: constraints.maxWidth
+                            .clamp(0, AppLibraryLayout.searchWidth),
+                        child: OutlinedTextField(
+                            onChanged: (value) => ref
+                                .read(arrLibraryQueryProvider(widget.service)
+                                    .notifier)
+                                .state = value,
+                            decoration: InputDecoration(
+                                hintText:
+                                    context.localized.managementSearchLibrary,
+                                prefixIcon: const Icon(Icons.search),
+                                border: InputBorder.none))),
+                    Wrap(
+                      spacing: AppSpacing.xxs,
+                      runSpacing: AppSpacing.xxs,
+                      children: [
+                        FilterButton(
+                          isSelected: view.filter == ArrLibraryFilter.all,
+                          label: const Text('Tout'),
+                          onPressed: () =>
+                              viewNotifier.setFilter(ArrLibraryFilter.all),
+                        ),
+                        FilterButton(
+                          isSelected: view.filter == ArrLibraryFilter.monitored,
+                          label: const Text('Surveillé'),
+                          onPressed: () => viewNotifier
+                              .setFilter(ArrLibraryFilter.monitored),
+                        ),
+                        FilterButton(
+                          isSelected:
+                              view.filter == ArrLibraryFilter.unmonitored,
+                          label: const Text('Non surveillé'),
+                          onPressed: () => viewNotifier
+                              .setFilter(ArrLibraryFilter.unmonitored),
+                        ),
+                        FilterButton(
+                          isSelected: view.filter == ArrLibraryFilter.missing,
+                          label: const Text('Manquant'),
+                          onPressed: () =>
+                              viewNotifier.setFilter(ArrLibraryFilter.missing),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              ),
-            ),
-            // Sens du tri : contrôle indépendant du critère, mémorisé par
-            // critère (cf. ArrLibraryViewState.ascendingByCriterion) — pas
-            // question qu'inverser "Date d'ajout" retourne aussi "Titre".
-            FocusRing(
-              borderRadius: AppRadii.controlBorder,
-              onActivate: viewNotifier.toggleDirection,
-              child: ExcludeFocus(
-                child: Tooltip(
-                  message: view.ascending ? 'Croissant' : 'Décroissant',
-                  child: IconButton(
-                    onPressed: viewNotifier.toggleDirection,
-                    icon: Icon(
-                      view.ascending
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded,
-                      color: AppColors.textSecondary,
+                    const SizedBox(width: AppSpacing.sm),
+                    AnchoredPopover(
+                      controller: _sortPopover,
+                      popoverBuilder: (context, close) => PopoverOptionList(
+                        onSelected: close,
+                        options: ArrLibrarySort.values
+                            .map((sort) => PopoverOption(
+                                  content: Text(_sortLabels[sort]!),
+                                  selected: view.sort == sort,
+                                  onSelect: () => viewNotifier.setSort(sort),
+                                ))
+                            .toList(),
+                      ),
+                      child: FocusRing(
+                        borderRadius: AppRadii.controlBorder,
+                        onActivate: _sortPopover.toggle,
+                        child: ExcludeFocus(
+                          child: Tooltip(
+                            message: 'Trier',
+                            child: TextButton.icon(
+                              onPressed: _sortPopover.toggle,
+                              label: Text('Trier : ${_sortLabels[view.sort]}'),
+                              icon: const Icon(Icons.expand_more),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+                    // Sens du tri : contrôle indépendant du critère, mémorisé par
+                    // critère (cf. ArrLibraryViewState.ascendingByCriterion) — pas
+                    // question qu'inverser "Date d'ajout" retourne aussi "Titre".
+                    FocusRing(
+                      borderRadius: AppRadii.controlBorder,
+                      onActivate: viewNotifier.toggleDirection,
+                      child: ExcludeFocus(
+                        child: Tooltip(
+                          message: view.ascending ? 'Croissant' : 'Décroissant',
+                          child: IconButton(
+                            onPressed: viewNotifier.toggleDirection,
+                            icon: Icon(
+                              view.ascending
+                                  ? Icons.arrow_upward_rounded
+                                  : Icons.arrow_downward_rounded,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )),
         const SizedBox(height: AppSpacing.sm),
-        Expanded(
-          child: ArrLibraryGrid(
-            entries: entries,
-            baseUrl: credentials.baseUrl,
-            apiKey: credentials.apiKey,
-            onOpenDetail: (entry) => _openDetail(context, entry),
-            onSearch: (entry) => _runAction(
-              () => ref
-                  .read(arrLibraryProvider(widget.service).notifier)
-                  .search(entry),
-              failureContext: 'Recherche',
-            ),
-            onToggleMonitored: (entry) => _runAction(
-              () => ref
-                  .read(arrLibraryProvider(widget.service).notifier)
-                  .toggleMonitored(entry),
-              failureContext: 'Surveillance',
-            ),
-            onEdit: (entry) => _showEdit(context, entry),
-            onRemove: (entry) => _confirmRemove(context, entry),
-          ),
-        ),
+        Text(
+            '${context.localized.itemCount(entries.length)} · ↑↓←→ · Entrée · Maj+F10',
+            style: AppTypography.meta),
+        const SizedBox(height: AppSpacing.sm),
       ],
     );
+    return ArrLibraryGrid(
+      header: toolbar,
+      contentPadding: widget.contentPadding,
+      entries: entries,
+      baseUrl: credentials.baseUrl,
+      apiKey: credentials.apiKey,
+      onOpenDetail: (entry) => _openDetail(context, entry),
+      onSearch: (entry) => _runAction(
+        () =>
+            ref.read(arrLibraryProvider(widget.service).notifier).search(entry),
+        failureContext: 'Recherche',
+      ),
+      onToggleMonitored: (entry) => _runAction(
+        () => ref
+            .read(arrLibraryProvider(widget.service).notifier)
+            .toggleMonitored(entry),
+        failureContext: 'Surveillance',
+      ),
+      onEdit: (entry) => _showEdit(context, entry),
+      onRemove: (entry) => _confirmRemove(context, entry),
+    );
   }
+
+  Widget _placeholder(Widget child) => SingleChildScrollView(
+        padding: widget.contentPadding,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (widget.header != null) widget.header!,
+          child,
+        ]),
+      );
 
   String _errorMessage(ArrApiError error, String? detail) {
     final base = switch (error) {

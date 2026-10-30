@@ -1,3 +1,4 @@
+import 'package:kinos/util/motion_input.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -111,7 +112,8 @@ class _KinosApp extends ConsumerWidget {
           data: ref.watch(appThemeProvider),
           child: MediaQueryScaler(
             child: LocalizationContextWrapper(
-              child: PipLifecycleController(child: child ?? Container()),
+              child: MotionInputBoundary(
+                  child: PipLifecycleController(child: child ?? Container())),
               currentLocale: language,
             ),
             enable: ref.read(argumentsStateProvider).leanBackMode,

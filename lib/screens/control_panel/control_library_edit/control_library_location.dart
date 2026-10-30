@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -105,7 +106,7 @@ class DirectorySelectionDialog extends ConsumerWidget {
     final isLoading = browserState.loading;
     final hasParentDirectory =
         parentFolder != null && parentFolder.isNotEmpty == true && paths.contains(parentFolder) == false;
-    return Dialog(
+    return GlassDialog(
       child: PullToRefresh(
         onRefresh: () async => ref.read(directoryBrowserProvider.notifier).fetchFolders(startDirectory),
         child: (context) => Padding(

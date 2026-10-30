@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -62,7 +63,11 @@ SeasonModel _season(String id, int number, {required int episodeCount}) {
   );
 }
 
-Widget _harness({required List<SeasonModel> seasons, required double width}) {
+Widget _harness(
+    {required List<SeasonModel> seasons,
+    required double width,
+    bool seriesPresentation = false,
+    String? initialSeasonId}) {
   return MaterialApp(
     theme: buildAppTheme(),
     localizationsDelegates: KinosLocalizations.localizationsDelegates,
@@ -73,6 +78,8 @@ Widget _harness({required List<SeasonModel> seasons, required double width}) {
         body: SingleChildScrollView(
           child: SeasonEpisodeSection(
             seasons: seasons,
+            seriesPresentation: seriesPresentation,
+            initialSeasonId: initialSeasonId,
             contentPadding: const EdgeInsets.symmetric(horizontal: 24),
           ),
         ),
@@ -93,6 +100,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+      expect(find.byType(GridView), findsOneWidget);
       // Sans sélecteur de saison (une seule saison) : le libellé "N.
       // Titre" du premier épisode est directement visible.
       expect(find.textContaining('1. Un titre'), findsOneWidget);
@@ -111,6 +119,40 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+      expect(find.byType(GridView), findsOneWidget);
     });
   }
+  testWidgets(
+      'series season picker follows next-up season and changes by keyboard',
+      (tester) async {
+    tester.view.physicalSize = const Size(1920, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_harness(
+        width: 1920,
+        seriesPresentation: true,
+        initialSeasonId: 's2',
+        seasons: [
+          _season('s1', 1, episodeCount: 8),
+          _season('s2', 2, episodeCount: 4),
+        ]));
+    await tester.pumpAndSettle();
+    expect(find.text('Saison 2'), findsOneWidget);
+    expect(find.textContaining('4 '), findsWidgets);
+    final grid = tester.widget<GridView>(find.byType(GridView));
+    expect(
+        (grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
+            .crossAxisCount,
+        4);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.text('Saison 1'), findsOneWidget);
+    expect(find.textContaining('8 '), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
 }

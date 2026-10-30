@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -256,7 +257,7 @@ class MusicFloatingPlayerBarContent extends ConsumerWidget {
                                 ),
                               Flexible(
                                 child: OverflowView.flexible(
-                                  builder: (context, remainingItemCount) => PopupMenuButton(
+                                  builder: (context, remainingItemCount) => GlassPopupMenuButton(
                                     iconColor: Theme.of(context).colorScheme.onSurface.withAlpha(125),
                                     padding: EdgeInsets.zero,
                                     itemBuilder: (context) => itemActions

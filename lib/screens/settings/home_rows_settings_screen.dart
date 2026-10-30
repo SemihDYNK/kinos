@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -8,6 +9,7 @@ import 'package:kinos/models/settings/home_row_model.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/settings/home_rows_provider.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 /// Écran de configuration des rangées de l'accueil : activation,
 /// réordonnancement (glisser-déposer + équivalent clavier), ajout.
@@ -74,8 +76,8 @@ class HomeRowsSettingsScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      builder: (context) => const _AddHomeRowSheet(),
+      backgroundColor: Colors.transparent,
+      builder: (context) => const FrostedSurface(child: _AddHomeRowSheet()),
     );
   }
 }
@@ -90,6 +92,13 @@ class _HomeRowTile extends ConsumerWidget {
       required this.row,
       required this.index,
       required this.lastIndex});
+
+  void _cycleCacheDays(WidgetRef ref) {
+    const choices = [1, 3, 7, 14, 30];
+    final current = int.tryParse(row.params['cacheDays'] ?? '') ?? 7;
+    final next = choices[(choices.indexOf(current) + 1) % choices.length];
+    ref.read(homeRowsProvider.notifier).setDiscoveryCacheDays(row.id, next);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -132,6 +141,17 @@ class _HomeRowTile extends ConsumerWidget {
                 ],
               ),
             ),
+            if (row.type == HomeRowType.seerrDiscovery)
+              FocusRing(
+                borderRadius: AppRadii.controlBorder,
+                onActivate: () => _cycleCacheDays(ref),
+                child: ExcludeFocus(
+                    child: TextButton(
+                  onPressed: () => _cycleCacheDays(ref),
+                  child: Text(context.localized.discoveryCacheDays(
+                      int.tryParse(row.params['cacheDays'] ?? '') ?? 7)),
+                )),
+              ),
             FocusRing(
               borderRadius: AppRadii.controlBorder,
               onActivate: index == 0 ? null : () => notifier.moveUp(row.id),
@@ -326,6 +346,7 @@ class _ParamPickerState extends ConsumerState<_ParamPicker> {
       case HomeRowType.catalogWellRated:
       case HomeRowType.catalogNarrowGenres:
       case HomeRowType.catalogDecades:
+      case HomeRowType.seerrDiscovery:
       case HomeRowType.catalogLongFilms:
         return const [];
     }

@@ -1,7 +1,7 @@
+import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/season_model.dart';
@@ -85,16 +85,16 @@ class _SeasonDetailScreenState extends ConsumerState<SeasonDetailScreen> {
                                   .read(userProvider.notifier)
                                   .setAsFavorite(!details.userData.isFavourite, details.id),
                               selected: details.userData.isFavourite,
-                              selectedIcon: IconsaxPlusBold.heart,
-                              icon: IconsaxPlusLinear.heart,
+                              selectedIcon: AppIcons.favouriteSelected,
+                              icon: AppIcons.favourite,
                             ),
                             SelectableIconButton(
                               onPressed: () async => await ref
                                   .read(userProvider.notifier)
                                   .markAsPlayed(!details.userData.played, details.id),
                               selected: details.userData.played,
-                              selectedIcon: IconsaxPlusBold.tick_circle,
-                              icon: IconsaxPlusLinear.tick_circle,
+                              selectedIcon: AppIcons.watchedSelected,
+                              icon: AppIcons.watchedCircle,
                             ),
                           ],
                         ),

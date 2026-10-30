@@ -24,14 +24,17 @@ class SeerrFilterChips extends ConsumerWidget {
     final filters = searchState.filters;
     final notifier = ref.read(seerrSearchProvider.notifier);
     final watchRegions = searchState.watchProviderRegions;
-    final selectedWatchProviders = filters.watchProviders.values.where((v) => v).length;
-    final showFilters = searchMode == SeerrSearchMode.discoverMovies || searchMode == SeerrSearchMode.discoverTv;
+    final selectedWatchProviders =
+        filters.watchProviders.values.where((v) => v).length;
+    final showFilters = searchMode == SeerrSearchMode.discoverMovies ||
+        searchMode == SeerrSearchMode.discoverTv;
 
     final chips = [
       if (showFilters) ...[
         if (filters.genres.isNotEmpty)
           CategoryChip<SeerrGenre>(
-            label: Text(context.localized.genre(filters.genres.values.where((v) => v).length)),
+            label: Text(context.localized
+                .genre(filters.genres.values.where((v) => v).length)),
             items: filters.genres,
             activeIcon: IconsaxPlusBold.hierarchy_2,
             labelBuilder: (item) => Text(item.name ?? ''),
@@ -58,7 +61,8 @@ class SeerrFilterChips extends ConsumerWidget {
           label: Text(yearLabel(context, (filters.yearGte, filters.yearLte))),
           onPressed: () => openYearDialog(
             context,
-            (first, last) => notifier.setYearRangeWithoutSubmit(minYear: first, maxYear: last),
+            (first, last) => notifier.setYearRangeWithoutSubmit(
+                minYear: first, maxYear: last),
             (filters.yearGte, filters.yearLte),
           ),
         ),
@@ -66,12 +70,15 @@ class SeerrFilterChips extends ConsumerWidget {
           FilterButton(
             isSelected: true,
             icon: Icons.public,
-            label: Text('${context.localized.countryRegion}: ${filters.watchRegion ?? 'US'}'),
-            onPressed: () => openWatchRegionDialog(context, notifier, filters, watchRegions),
+            label: Text(
+                '${context.localized.countryRegion}: ${filters.watchRegion ?? 'US'}'),
+            onPressed: () =>
+                openWatchRegionDialog(context, notifier, filters, watchRegions),
           ),
         if (filters.watchProviders.isNotEmpty)
           CategoryChip<SeerrWatchProvider>(
-            label: Text(context.localized.streamingServices(selectedWatchProviders)),
+            label: Text(
+                context.localized.streamingServices(selectedWatchProviders)),
             activeIcon: IconsaxPlusBold.video,
             items: filters.watchProviders,
             labelBuilder: (item) => Row(
@@ -106,8 +113,11 @@ class SeerrFilterChips extends ConsumerWidget {
             },
           ),
         FilterButton(
-          isSelected: filters.voteAverageGte != null || filters.voteAverageLte != null,
-          icon: filters.voteAverageGte != null || filters.voteAverageLte != null ? IconsaxPlusBold.star : null,
+          isSelected:
+              filters.voteAverageGte != null || filters.voteAverageLte != null,
+          icon: filters.voteAverageGte != null || filters.voteAverageLte != null
+              ? IconsaxPlusBold.star
+              : null,
           label: Text(ratingLabel(context, filters)),
           onPressed: () => openRatingDialog(context, notifier, filters),
         ),
@@ -128,8 +138,11 @@ class SeerrFilterChips extends ConsumerWidget {
           ),
         if (searchMode == SeerrSearchMode.discoverMovies)
           FilterButton(
-            isSelected: filters.runtimeGte != null || filters.runtimeLte != null,
-            icon: filters.runtimeGte != null || filters.runtimeLte != null ? IconsaxPlusBold.timer : null,
+            isSelected:
+                filters.runtimeGte != null || filters.runtimeLte != null,
+            icon: filters.runtimeGte != null || filters.runtimeLte != null
+                ? IconsaxPlusBold.timer
+                : null,
             label: Text(runtimeLabel(context, filters)),
             onPressed: () => openRuntimeDialog(context, notifier, filters),
           ),
@@ -145,7 +158,8 @@ class SeerrFilterChips extends ConsumerWidget {
             isSelected: true,
             icon: searchMode.icon,
             label: Text(searchMode.label(context)),
-            onPressed: () => openSearchModeDialog(context, notifier, searchMode),
+            onPressed: () =>
+                openSearchModeDialog(context, notifier, searchMode),
           ),
           const VerticalDivider(),
           ...chips,

@@ -1,3 +1,4 @@
+import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,7 +7,6 @@ import 'package:kinos/providers/arguments_provider.dart';
 import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/widgets/full_screen_helpers/full_screen_helper_desktop.dart'
     if (dart.library.html) 'package:kinos/widgets/full_screen_helpers/full_screen_helper_web.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
 
 final FullScreenHelper fullScreenHelper = FullScreenHelper.instantiate();
 
@@ -25,7 +25,7 @@ class FullScreenButton extends ConsumerWidget {
     return IconButton(
       onPressed: () => fullScreenHelper.toggleFullScreen(ref),
       icon: Icon(
-        fullScreen ? IconsaxPlusLinear.screenmirroring : IconsaxPlusLinear.maximize_4,
+        fullScreen ? AppIcons.exitFullscreen : AppIcons.fullscreen,
       ),
     );
   }

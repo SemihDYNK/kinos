@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -390,7 +391,7 @@ class _DetailScaffoldState extends ConsumerState<DetailScaffold> {
                                         widget.actions?.call(context);
                                     if (AdaptiveLayout.inputDeviceOf(context) ==
                                         InputDevice.pointer) {
-                                      return PopupMenuButton(
+                                      return GlassPopupMenuButton(
                                         tooltip: context.localized.moreOptions,
                                         enabled: newActions?.isNotEmpty == true,
                                         icon: Icon(

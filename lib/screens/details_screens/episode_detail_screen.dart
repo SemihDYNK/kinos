@@ -10,7 +10,7 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/details_screens/components/media_info_formatters.dart';
 import 'package:kinos/screens/details_screens/components/media_info_section.dart';
 import 'package:kinos/screens/details_screens/components/media_meta_line.dart';
-import 'package:kinos/screens/details_screens/components/media_stream_selectors.dart';
+import 'package:kinos/screens/details_screens/components/movie_hero_content.dart';
 import 'package:kinos/screens/shared/media_detail_scaffold.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/humanize_duration.dart';
@@ -38,7 +38,6 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
       get providerId => episodeDetailsProvider(widget.item.id);
 
   /// Largeur de lecture confortable pour le résumé — ~80 caractères.
-  static const _readingWidth = 640.0;
 
   @override
   Widget build(BuildContext context) {
@@ -128,14 +127,25 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
       item: item,
       // L'épisode a sa propre vignette (le plan qui l'illustre) ; à
       // défaut, celle de la série.
-      backDrops: details?.images ?? series?.images,
+      backDrops: details?.images ?? series?.images ?? widget.item.images,
       onRefresh: () async =>
           await ref.read(providerId.notifier).fetchDetails(widget.item),
       title: item.name,
+      useTitleLogo: false,
+      cinematic: true,
       parentLink: series == null
           ? null
           : (label: series.name, onTap: () => series.navigateTo(context)),
       metaLine: metaLine,
+      heroContent: details == null
+          ? null
+          : MovieHeroContent(
+              summary: details.overview.summary,
+              streams: details.mediaStreams,
+              onStreamsChanged: (changed) => ref
+                  .read(providerId.notifier)
+                  .updateEpisode(details.copyWith(mediaStreams: changed)),
+            ),
       onPlay: details == null
           ? null
           : () async {
@@ -145,15 +155,23 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
       // "Reprendre S1 E3" / "Lire S1 E1" selon l'état de visionnage.
       playLabel: details?.playButtonLabel(context.localized),
       isFavourite: item.userData.isFavourite,
-      onToggleFavourite: () => ref.read(userProvider.notifier).setAsFavorite(
-            !item.userData.isFavourite,
-            item.id,
-          ),
+      onToggleFavourite: () async {
+        final response = await ref.read(userProvider.notifier).setAsFavorite(
+              !item.userData.isFavourite,
+              item.id,
+            );
+        if (!mounted || response == null) return;
+        ref.read(providerId.notifier).updateUserData(item, response.bodyOrThrow);
+      },
       isPlayed: item.userData.played,
-      onTogglePlayed: () => ref.read(userProvider.notifier).markAsPlayed(
-            !item.userData.played,
-            item.id,
-          ),
+      onTogglePlayed: () async {
+        final response = await ref.read(userProvider.notifier).markAsPlayed(
+              !item.userData.played,
+              item.id,
+            );
+        if (!mounted || response == null) return;
+        ref.read(providerId.notifier).updateUserData(item, response.bodyOrThrow);
+      },
       actions: details == null
           ? null
           : (context) => [
@@ -184,34 +202,6 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
       content: (context, padding) => details == null
           ? []
           : [
-              if (details.overview.summary.isNotEmpty)
-                SliverPadding(
-                  padding: padding,
-                  sliver: SliverToBoxAdapter(
-                    child: ConstrainedBox(
-                      constraints:
-                          const BoxConstraints(maxWidth: _readingWidth),
-                      child: Text(
-                        details.overview.summary,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                  ),
-                ),
-              if (details.mediaStreams.audioStreams.isNotEmpty ||
-                  details.mediaStreams.subStreams.isNotEmpty)
-                SliverPadding(
-                  padding: padding.copyWith(top: AppSpacing.lg),
-                  sliver: SliverToBoxAdapter(
-                    child: MediaStreamSelectors(
-                      mediaStream: details.mediaStreams,
-                      onChanged: (changed) => ref
-                          .read(providerId.notifier)
-                          .updateEpisode(
-                              details.copyWith(mediaStreams: changed)),
-                    ),
-                  ),
-                ),
               if (details.overview.people.isNotEmpty ||
                   state.guestActors.isNotEmpty ||
                   info.isNotEmpty)
@@ -219,6 +209,7 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
                   padding: const EdgeInsets.only(top: AppSpacing.xl),
                   sliver: SliverToBoxAdapter(
                     child: MediaInfoSection(
+                      cinematic: true,
                       people: [
                         ...details.overview.people,
                         ...state.guestActors,

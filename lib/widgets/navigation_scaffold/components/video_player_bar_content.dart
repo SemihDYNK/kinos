@@ -1,3 +1,5 @@
+import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -144,7 +146,7 @@ class VideoFloatingPlayerBarContent extends ConsumerWidget {
                                       .playOrPause(),
                                   icon: playbackState.playing
                                       ? const Icon(Icons.pause_rounded)
-                                      : const Icon(Icons.play_arrow_rounded),
+                                      : const Icon(AppIcons.play),
                                 ),
                               ),
                             ),
@@ -153,7 +155,7 @@ class VideoFloatingPlayerBarContent extends ConsumerWidget {
                         Flexible(
                           child: OverflowView.flexible(
                             builder: (context, remainingItemCount) =>
-                                PopupMenuButton(
+                                GlassPopupMenuButton(
                               iconColor:
                                   AppColors.textPrimary.withValues(alpha: 0.6),
                               padding: EdgeInsets.zero,

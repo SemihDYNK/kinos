@@ -18,6 +18,7 @@ import 'package:kinos/arr/widgets/arr_desktop_scope.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/app_page_header.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/router_extension.dart';
 
@@ -283,8 +284,7 @@ class _ArrSearchScreenState extends ConsumerState<ArrSearchScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Recherche interactive',
-                        style: Theme.of(context).textTheme.displaySmall),
+                    const AppPageHeader(title: 'Recherche interactive'),
                     const SizedBox(height: AppSpacing.md),
                     _ArrSearchField(
                         controller: _queryController,

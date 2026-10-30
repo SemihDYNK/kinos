@@ -1,3 +1,4 @@
+import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -203,7 +204,29 @@ void main() {
       controller.show();
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(AppIcons.watched), findsOneWidget);
     });
+  });
+  testWidgets('Enter keeps the selected option when a selector opens',
+      (tester) async {
+    final controller = AnchoredPopoverController();
+    String? chosen;
+    await tester.pumpWidget(_harness(
+        controller: controller,
+        popoverBuilder: (context, close) =>
+            PopoverOptionList(onSelected: close, options: [
+              PopoverOption(
+                  content: const Text('Un'), onSelect: () => chosen = 'one'),
+              PopoverOption(
+                  content: const Text('Deux'),
+                  selected: true,
+                  onSelect: () => chosen = 'two'),
+            ])));
+    controller.show();
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(chosen, 'two');
+    expect(controller.isOpen, isFalse);
   });
 }

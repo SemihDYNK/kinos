@@ -139,7 +139,13 @@ final unwatchedLibraryFirstPageProvider =
 final unwatchedLibraryProvider =
     FutureProvider.autoDispose<List<ItemBaseModel>>((ref) async {
   final api = ref.read(jellyApiProvider);
-  ref.read(unwatchedLibraryFirstPageProvider.notifier).state = null;
+  final preview = ref.read(unwatchedLibraryFirstPageProvider.notifier);
+  var active = true;
+  ref.onDispose(() => active = false);
+  // Clear the previous preview outside Riverpod's provider-build phase.
+  await Future<void>.value();
+  if (!active) return const [];
+  preview.state = null;
 
   if (!useConcurrentUnwatchedFetch) {
     final response = await api.usersUserIdItemsGet(
@@ -177,8 +183,9 @@ final unwatchedLibraryProvider =
     fetchPage,
     pageSize: unwatchedFetchPageSize,
     concurrency: unwatchedFetchConcurrency,
-    onFirstPage: (items) =>
-        ref.read(unwatchedLibraryFirstPageProvider.notifier).state = items,
+    onFirstPage: (items) {
+      if (active && preview.mounted) preview.state = items;
+    },
   );
 
   return result.items;

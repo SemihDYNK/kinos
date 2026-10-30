@@ -1,0 +1,37 @@
+{
+  "brand": "Kinos",
+  "tagline": "Signature A",
+  "brief": "Client cinéma pour Linux. Une signature sobre, lisible, qui laisse les films apporter la couleur.",
+  "adjectives": [
+    "cinématographique",
+    "sobre",
+    "distinctif"
+  ],
+  "industry": "consumer-app",
+  "mockups": [
+    "app-icon",
+    "website",
+    "favicon-tab"
+  ],
+  "nav": [
+    "Films",
+    "Séries",
+    "Rechercher"
+  ],
+  "brand_color": "#141414",
+  "greyscale": true,
+  "final": true,
+  "concepts": [
+    {
+      "name": "Signature",
+      "symbol": "kinos-symbol-black.svg",
+      "lockup": "kinos-wordmark-black.svg",
+      "idea": "Un K sculpté, suivi de lettres franches et lisibles.",
+      "rationale": [
+        "S lisible et espacement optique corrigé.",
+        "Même silhouette en clair et sombre.",
+        "Monogramme dédié au rail et à l’icône Linux."
+      ]
+    }
+  ]
+}

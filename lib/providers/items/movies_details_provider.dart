@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/item_shared_models.dart';
 import 'package:kinos/models/items/media_streams_model.dart';
 import 'package:kinos/models/items/movie_model.dart';
 import 'package:kinos/models/items/special_feature_model.dart';
@@ -102,6 +103,13 @@ class MovieDetails extends _$MovieDetails {
       log("Error fetching movie details: $e",
           level: logging.Level.WARNING.value, error: e, stackTrace: s);
       return null;
+    }
+  }
+
+  void updateUserData(ItemBaseModel item, UserData userData) {
+    final current = state ?? item;
+    if (current is MovieModel) {
+      state = current.copyWith(userData: userData);
     }
   }
 

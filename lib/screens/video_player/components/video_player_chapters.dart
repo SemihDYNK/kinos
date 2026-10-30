@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -15,7 +16,7 @@ void showPlayerChapterDialogue(
 }) {
   showDialog(
     context: context,
-    builder: (context) => Dialog(
+    builder: (context) => GlassDialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
       ),

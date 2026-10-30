@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:kinos/arr/models/arr_media_detail.dart';
@@ -59,7 +60,7 @@ class _ArrDetailEditDialogState extends State<_ArrDetailEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return GlassAlertDialog(
       backgroundColor: AppColors.surfaceHigh,
       shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder),
       title: Text('Modifier "${widget.entry.title}"'),

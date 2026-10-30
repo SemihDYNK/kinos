@@ -1,10 +1,68 @@
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/theme/palette_service.dart';
 
+class DecodeSizeImage extends MemoryImage {
+  DecodeSizeImage(super.bytes);
+  final decodedSizes = <ui.TargetImageSize>[];
+
+  @override
+  ImageStreamCompleter loadImage(MemoryImage key, ImageDecoderCallback decode) {
+    // ignore: deprecated_member_use
+    return super.loadImage(key, (buffer, {getTargetSize}) async {
+      final codec = await decode(buffer, getTargetSize: getTargetSize);
+      return RecordingCodec(codec, decodedSizes);
+    });
+  }
+}
+
+class RecordingCodec implements ui.Codec {
+  RecordingCodec(this.delegate, this.sizes);
+  final ui.Codec delegate;
+  final List<ui.TargetImageSize> sizes;
+  @override
+  int get frameCount => delegate.frameCount;
+  @override
+  int get repetitionCount => delegate.repetitionCount;
+  @override
+  Future<ui.FrameInfo> getNextFrame() async {
+    final frame = await delegate.getNextFrame();
+    sizes.add(ui.TargetImageSize(
+        width: frame.image.width, height: frame.image.height));
+    return frame;
+  }
+
+  @override
+  void dispose() => delegate.dispose();
+}
+
 void main() {
+  testWidgets('palette actually decodes a thumbnail instead of the full banner',
+      (tester) async {
+    final recording = ui.PictureRecorder();
+    Canvas(recording).drawColor(const Color(0xFFB0342A), BlendMode.src);
+    final result = await tester.runAsync(() async {
+      final picture = recording.endRecording();
+      final image = await picture.toImage(1200, 600);
+      final png = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      picture.dispose();
+      final provider = DecodeSizeImage(Uint8List.sublistView(png!));
+      final palette = await PaletteService(InMemoryPaletteCache())
+          .forItem(itemId: 'large-banner', image: provider);
+      return (provider, palette);
+    });
+    expect(result!.$1.decodedSizes.last.width,
+        lessThanOrEqualTo(TintLimits.thumbSize.width));
+    expect(result.$1.decodedSizes.last.height,
+        lessThanOrEqualTo(TintLimits.thumbSize.height));
+    expect(result.$2.isFallback, isFalse);
+  });
+
   late PaletteService service;
 
   setUp(() {

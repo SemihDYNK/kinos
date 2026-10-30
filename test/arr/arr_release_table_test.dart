@@ -2,7 +2,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:kinos/arr/models/arr_grab_status.dart';
 import 'package:kinos/arr/models/arr_release.dart';
 import 'package:kinos/arr/screens/widgets/arr_release_table.dart';
 

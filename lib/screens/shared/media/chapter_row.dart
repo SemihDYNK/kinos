@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -40,7 +41,7 @@ class ChapterRow extends ConsumerWidget {
             Offset localPosition = details.globalPosition;
             RelativeRect position =
                 RelativeRect.fromLTRB(localPosition.dx, localPosition.dy, localPosition.dx, localPosition.dy);
-            await showMenu(
+            await showGlassMenu(
               context: context,
               position: position,
               items: generateActions().popupMenuItems(),
@@ -102,7 +103,7 @@ class ChapterRow extends ConsumerWidget {
               Align(
                 alignment: Alignment.bottomRight,
                 child: ExcludeFocus(
-                  child: PopupMenuButton(
+                  child: GlassPopupMenuButton(
                     tooltip: context.localized.options,
                     icon: const Icon(
                       Icons.more_vert,

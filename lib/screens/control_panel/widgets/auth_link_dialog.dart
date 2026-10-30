@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -107,7 +108,7 @@ class _AuthLinkDialogState extends State<AuthLinkDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
+    return GlassDialog(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(

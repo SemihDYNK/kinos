@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -30,7 +31,7 @@ class _VideoPlaybackInformation extends ConsumerWidget {
     final sessionInfo = ref.watch(sessionInfoProvider);
     final backend = ref.read(videoPlayerProvider.select((value) => value.backend));
     final playbackState = ref.watch(videoPlayerProvider.select((value) => value.lastState));
-    return Dialog(
+    return GlassDialog(
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: SingleChildScrollView(

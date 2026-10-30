@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,7 +52,7 @@ Future<void> _showTranscodeDetails(BuildContext context, WidgetRef ref, SyncedIt
   if (itemModel == null) {
     await showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => GlassAlertDialog(
         title: Text(context.localized.transcodeInfoTitle),
         content: Text(context.localized.transcodeInfoNoMetadata),
         actions: [
@@ -75,7 +76,7 @@ Future<void> _showTranscodeDetails(BuildContext context, WidgetRef ref, SyncedIt
 
   await showDialog<void>(
     context: context,
-    builder: (_) => AlertDialog(
+    builder: (_) => GlassAlertDialog(
       title: Row(
         spacing: 16,
         children: [

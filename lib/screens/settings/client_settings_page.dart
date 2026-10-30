@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -67,8 +68,11 @@ class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
     final clientSettings = ref.watch(clientSettingsProvider);
 
     return SettingsScaffold(
-      label: "Kinos",
+      label: context.localized.managementApplication,
       items: [
+        ...buildClientSettingsTheme(context, ref),
+        ...buildClientSettingsVisual(
+            context, ref, nextUpDaysEditor, libraryPageSizeController),
         ...buildClientSettingsDownload(context, ref, setState),
         ...settingsListGroup(
           context,
@@ -101,11 +105,6 @@ class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
         ],
         const SizedBox(height: 12),
         ...buildClientSettingsDashboard(context, ref),
-        const SizedBox(height: 12),
-        ...buildClientSettingsVisual(
-            context, ref, nextUpDaysEditor, libraryPageSizeController),
-        const SizedBox(height: 12),
-        ...buildClientSettingsTheme(context, ref),
         const SizedBox(height: 12),
         if (AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer) ...[
           ...settingsListGroup(context,
@@ -162,7 +161,7 @@ class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
             onTap: () {
               showDialog(
                 context: context,
-                builder: (context) => Dialog(
+                builder: (context) => GlassDialog(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(

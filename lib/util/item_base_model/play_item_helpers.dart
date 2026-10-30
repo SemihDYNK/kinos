@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:developer';
 import 'dart:math' show Random, min;
 
@@ -821,7 +822,7 @@ class _LoadIndicatorCancelable extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = const BorderRadius.all(Radius.circular(4));
 
-    return Dialog(
+    return GlassDialog(
       constraints: const BoxConstraints(
         maxWidth: 450,
         maxHeight: 500,

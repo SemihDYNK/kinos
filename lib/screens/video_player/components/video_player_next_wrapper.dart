@@ -1,3 +1,5 @@
+import 'package:kinos/screens/video_player/components/player_motion.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -36,14 +38,17 @@ class VideoPlayerNextWrapper extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _VideoPlayerNextWrapperState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _VideoPlayerNextWrapperState();
 }
 
-class _VideoPlayerNextWrapperState extends ConsumerState<VideoPlayerNextWrapper> {
+class _VideoPlayerNextWrapperState
+    extends ConsumerState<VideoPlayerNextWrapper> {
   bool show = false;
   bool showOverwrite = false;
-  late RestartableTimerController timerController =
-      RestartableTimerController(const Duration(seconds: 30), const Duration(milliseconds: 33), onTimeout: onTimeOut);
+  late RestartableTimerController timerController = RestartableTimerController(
+      const Duration(seconds: 30), const Duration(milliseconds: 33),
+      onTimeout: onTimeOut);
 
   void onTimeOut() {
     timerController.cancel();
@@ -71,15 +76,18 @@ class _VideoPlayerNextWrapperState extends ConsumerState<VideoPlayerNextWrapper>
   }
 
   void determineShow(MediaPlaybackModel model) {
-    final playerState = ref.watch(mediaPlaybackProvider.select((value) => value.state));
+    final playerState =
+        ref.watch(mediaPlaybackProvider.select((value) => value.state));
     if (playerState != VideoPlayerState.fullScreen) {
       showOverwrite = false;
       show = false;
       return;
     }
 
-    final nextType = ref.read(videoPlayerSettingsProvider.select((value) => value.nextVideoType));
-    if (nextType == AutoNextType.off || model.duration < const Duration(seconds: 40)) {
+    final nextType = ref.read(
+        videoPlayerSettingsProvider.select((value) => value.nextVideoType));
+    if (nextType == AutoNextType.off ||
+        model.duration < const Duration(seconds: 40)) {
       showOverwrite = false;
       show = false;
       return;
@@ -88,20 +96,24 @@ class _VideoPlayerNextWrapperState extends ConsumerState<VideoPlayerNextWrapper>
     final credits = ref.read(playBackModel)?.mediaSegments?.outro;
 
     if (nextType == AutoNextType.static || credits == null) {
-      if ((model.duration - model.position).abs() < const Duration(seconds: 32)) {
+      if ((model.duration - model.position).abs() <
+          const Duration(seconds: 32)) {
         showNextScreen(model);
         return;
       }
     } else if (nextType == AutoNextType.smart) {
-      final maxTime = ref.read(userProvider.select((value) => value?.serverConfiguration?.maxResumePct ?? 90));
+      final maxTime = ref.read(userProvider
+          .select((value) => value?.serverConfiguration?.maxResumePct ?? 90));
       final resumeDuration = model.duration * (maxTime / 100);
       final timeLeft = model.duration - credits.end;
-      if (credits.end > resumeDuration && timeLeft < const Duration(seconds: 30)) {
+      if (credits.end > resumeDuration &&
+          timeLeft < const Duration(seconds: 30)) {
         if (model.position >= credits.start) {
           showNextScreen(model);
           return;
         }
-      } else if ((model.duration - model.position).abs() < const Duration(seconds: 32)) {
+      } else if ((model.duration - model.position).abs() <
+          const Duration(seconds: 32)) {
         showNextScreen(model);
         return;
       }
@@ -135,7 +147,8 @@ class _VideoPlayerNextWrapperState extends ConsumerState<VideoPlayerNextWrapper>
     }
 
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarIconBrightness: ref.read(clientSettingsProvider.select((value) => value.statusBarBrightness(context))),
+      statusBarIconBrightness: ref.read(clientSettingsProvider
+          .select((value) => value.statusBarBrightness(context))),
     ));
   }
 
@@ -147,199 +160,214 @@ class _VideoPlayerNextWrapperState extends ConsumerState<VideoPlayerNextWrapper>
 
   @override
   Widget build(BuildContext context) {
-    const animSpeed = Duration(milliseconds: 250);
+    final animSpeed =
+        AppMotion.enabled(context) ? AppDurations.selection : Duration.zero;
     final nextUp = ref.watch(playBackModel.select((value) => value?.nextVideo));
     final currentItem = ref.watch(playBackModel.select((value) => value?.item));
-    final portraitMode = MediaQuery.sizeOf(context).width < MediaQuery.sizeOf(context).height;
+    final portraitMode =
+        MediaQuery.sizeOf(context).width < MediaQuery.sizeOf(context).height;
 
     double padding = show ? 16 : 0;
 
     ref.listen(mediaPlaybackProvider, (previous, next) => determineShow(next));
-    return Hero(
-      tag: videoPlayerHeroTag,
-      child: Stack(
-        children: [
-          if (nextUp != null)
-            AnimatedAlign(
-              duration: animSpeed,
-              alignment: portraitMode ? Alignment.bottomCenter : Alignment.centerRight,
-              child: AnimatedOpacity(
-                duration: animSpeed,
-                opacity: show ? 1 : 0,
-                child: Padding(
-                  padding: MediaQuery.paddingOf(context).add(const EdgeInsets.all(32)),
-                  child: FractionallySizedBox(
-                    widthFactor: portraitMode ? null : 0.35,
-                    heightFactor: portraitMode ? 0.5 : null,
-                    child: Card(
-                      elevation: 10,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    context.localized.nextUp,
-                                    softWrap: false,
-                                    overflow: TextOverflow.fade,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(fontWeight: FontWeight.bold, fontSize: 24.0),
-                                  ),
-                                ),
-                                SizedBox.square(
-                                  dimension: 45.0,
-                                  child: ProgressFloatingButton(
-                                    controller: timerController,
-                                  ),
-                                ),
-                              ].addInBetween(
-                                const SizedBox(
-                                  height: 16,
-                                  width: 16,
+    return Stack(
+      children: [
+        if (nextUp != null)
+          AnimatedAlign(
+            duration: animSpeed,
+            curve: AppMotion.easeOut,
+            alignment:
+                portraitMode ? Alignment.bottomCenter : Alignment.centerRight,
+            child: PlayerControlsMotion(
+              visible: show,
+              hiddenOffset: const Offset(AppSpacing.lg, 0),
+              child: Padding(
+                padding:
+                    MediaQuery.paddingOf(context).add(const EdgeInsets.all(32)),
+                child: FractionallySizedBox(
+                  widthFactor: portraitMode ? null : 0.35,
+                  heightFactor: portraitMode ? 0.5 : null,
+                  child: Card(
+                    elevation: 10,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  context.localized.nextUp,
+                                  softWrap: false,
+                                  overflow: TextOverflow.fade,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 24.0),
                                 ),
                               ),
-                            ),
-                            const Divider(),
-                            Flexible(
-                              child: SingleChildScrollView(
-                                child: _NextUpInformation(
-                                  item: nextUp,
+                              SizedBox.square(
+                                dimension: 45.0,
+                                child: ProgressFloatingButton(
+                                  controller: timerController,
                                 ),
                               ),
+                            ].addInBetween(
+                              const SizedBox(
+                                height: 16,
+                                width: 16,
+                              ),
                             ),
-                          ].addInBetween(const SizedBox(
-                            height: 8,
-                            width: 8,
-                          )),
-                        ),
+                          ),
+                          const Divider(),
+                          Flexible(
+                            child: SingleChildScrollView(
+                              child: _NextUpInformation(
+                                item: nextUp,
+                              ),
+                            ),
+                          ),
+                        ].addInBetween(const SizedBox(
+                          height: 8,
+                          width: 8,
+                        )),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          AnimatedAlign(
+          ),
+        AnimatedAlign(
+          duration: animSpeed,
+          curve: AppMotion.easeOut,
+          alignment: portraitMode ? Alignment.topCenter : Alignment.centerLeft,
+          child: AnimatedPadding(
             duration: animSpeed,
-            alignment: portraitMode ? Alignment.topCenter : Alignment.centerLeft,
-            child: AnimatedPadding(
+            curve: AppMotion.easeOut,
+            padding: EdgeInsets.all(padding)
+                .add(show ? MediaQuery.paddingOf(context) : EdgeInsets.zero),
+            child: AnimatedFractionallySizedBox(
               duration: animSpeed,
-              padding: EdgeInsets.all(padding).add(show ? MediaQuery.paddingOf(context) : EdgeInsets.zero),
-              child: AnimatedFractionallySizedBox(
-                duration: animSpeed,
-                heightFactor: show ? (portraitMode ? 0.40 : 0.9) : 1.0,
-                widthFactor: show ? (portraitMode ? 1 : 0.60) : 1.0,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (currentItem != null)
-                      AnimatedFadeSize(
-                        duration: animSpeed,
-                        child: show
-                            ? Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
+              curve: AppMotion.easeOut,
+              heightFactor: show ? (portraitMode ? 0.40 : 0.9) : 1.0,
+              widthFactor: show ? (portraitMode ? 1 : 0.60) : 1.0,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (currentItem != null)
+                    AnimatedFadeSize(
+                      duration: animSpeed,
+                      child: show
+                          ? Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Flexible(
+                                            child: Text(currentItem.title,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .displaySmall)),
+                                        if (currentItem
+                                                .label(context.localized) !=
+                                            null)
                                           Flexible(
-                                              child: Text(currentItem.title,
-                                                  style: Theme.of(context).textTheme.displaySmall)),
-                                          if (currentItem.label(context.localized) != null)
-                                            Flexible(
-                                              child: Text(
-                                                currentItem.label(context.localized)!,
-                                                maxLines: 2,
-                                                overflow: TextOverflow.fade,
-                                                style: Theme.of(context).textTheme.bodyMedium,
-                                              ),
+                                            child: Text(
+                                              currentItem
+                                                  .label(context.localized)!,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.fade,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium,
                                             ),
-                                        ],
-                                      ),
+                                          ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 8),
-                                    IconButton.filledTonal(
-                                      onPressed: () => hideNextUp(),
-                                      tooltip: context.localized.resumeVideo,
-                                      icon: const Icon(IconsaxPlusBold.maximize_4),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    IconButton.filledTonal(
-                                      onPressed: () => closePlayer(),
-                                      tooltip: context.localized.closeVideo,
-                                      icon: const Icon(IconsaxPlusBold.close_square),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                    Flexible(
-                      child: Stack(
-                        fit: StackFit.passthrough,
-                        children: [
-                          AnimatedContainer(
-                            duration: animSpeed,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(show ? 16 : 0),
-                            ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton.filledTonal(
+                                    onPressed: () => hideNextUp(),
+                                    tooltip: context.localized.resumeVideo,
+                                    icon:
+                                        const Icon(IconsaxPlusBold.maximize_4),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton.filledTonal(
+                                    onPressed: () => closePlayer(),
+                                    tooltip: context.localized.closeVideo,
+                                    icon: const Icon(
+                                        IconsaxPlusBold.close_square),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  Flexible(
+                    child: Stack(
+                      fit: StackFit.passthrough,
+                      children: [
+                        AnimatedContainer(
+                          duration: animSpeed,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(show ? 16 : 0),
+                          ),
+                          child: Hero(
+                            tag: videoPlayerHeroTag,
                             child: widget.video,
                           ),
-                          IgnorePointer(
-                            ignoring: show,
-                            child: AnimatedOpacity(
-                              opacity: show ? 0 : 1,
-                              duration: animSpeed,
-                              child: widget.controls,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                        PlayerControlsMotion(
+                            visible: !show, child: widget.controls),
+                      ],
                     ),
-                    IgnorePointer(
-                      ignoring: !show,
-                      child: AnimatedFadeSize(
-                        duration: animSpeed,
-                        child: show
-                            ? Padding(
-                                padding: const EdgeInsets.only(top: 16),
-                                child: _SimpleControls(
-                                  skip: nextUp != null ? () => onTimeOut() : null,
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
+                  ),
+                  PlayerControlsMotion(
+                    visible: show,
+                    child: AnimatedFadeSize(
+                      duration: animSpeed,
+                      child: show
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: _SimpleControls(
+                                skip: nextUp != null ? () => onTimeOut() : null,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-          if (AdaptiveLayout.of(context).isDesktop)
-            IgnorePointer(
-              ignoring: !show,
-              child: AnimatedOpacity(
-                duration: animSpeed,
-                opacity: show ? 1 : 0,
-                child: const Align(
-                  alignment: Alignment.topRight,
-                  child: DefaultTitleBar(),
-                ),
+        ),
+        if (AdaptiveLayout.of(context).isDesktop)
+          IgnorePointer(
+            ignoring: !show,
+            child: AnimatedOpacity(
+              duration: animSpeed,
+              opacity: show ? 1 : 0,
+              child: const Align(
+                alignment: Alignment.topRight,
+                child: DefaultTitleBar(),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -443,13 +471,15 @@ class _SimpleControls extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(videoPlayerProvider);
-    final isPlaying = ref.watch(mediaPlaybackProvider.select((value) => value.playing));
+    final isPlaying =
+        ref.watch(mediaPlaybackProvider.select((value) => value.playing));
     return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton.filledTonal(
             onPressed: () => player.playOrPause(),
-            icon: Icon(isPlaying ? IconsaxPlusBold.pause : IconsaxPlusBold.play),
+            icon:
+                Icon(isPlaying ? IconsaxPlusBold.pause : IconsaxPlusBold.play),
           ),
           if (skip != null)
             IconButton.filledTonal(

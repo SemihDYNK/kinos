@@ -1,3 +1,4 @@
+import 'package:kinos/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -19,7 +20,7 @@ class SeerrUserLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatarUrl = user?.avatar;
     final placeholder = CircleAvatar(
-      radius: 18,
+      radius: AppManagementLayout.avatarSize / 2,
       child: Icon(
         KinosItemType.person.icon,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -32,9 +33,10 @@ class SeerrUserLabel extends StatelessWidget {
             child: CachedNetworkImage(
               imageUrl: avatarUrl,
               cacheManager: CustomCacheManager.instance,
-              cacheKey: 'seerr-avatar-${user?.id}-${user?.displayName}-$avatarUrl',
-              width: 28,
-              height: 28,
+              cacheKey:
+                  'seerr-avatar-${user?.id}-${user?.displayName}-$avatarUrl',
+              width: AppManagementLayout.avatarSize,
+              height: AppManagementLayout.avatarSize,
               fit: BoxFit.cover,
               placeholder: (_, __) => placeholder,
               errorWidget: (_, __, ___) => placeholder,
@@ -45,7 +47,7 @@ class SeerrUserLabel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         avatar,
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.xs),
         Flexible(
           child: Text(
             user?.label ?? context.localized.unknown,

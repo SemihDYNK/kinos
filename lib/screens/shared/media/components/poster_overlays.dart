@@ -1,11 +1,13 @@
+import 'package:kinos/widgets/shared/animated_media_icon.dart';
+import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 
-import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/photos_model.dart';
 import 'package:kinos/models/items/watched_state.dart';
 import 'package:kinos/theme.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/humanize_duration.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/status_card.dart';
@@ -59,14 +61,12 @@ class FavouriteOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
         StatusCard(
-          color: Colors.red,
           child: Icon(
-            IconsaxPlusBold.heart,
-            size: 21,
-            color: Colors.red,
+            AppIcons.favouriteSelected,
+            semanticLabel: context.localized.favorite,
           ),
         ),
       ],
@@ -117,21 +117,21 @@ class UnplayedWatchedOverlay extends StatelessWidget {
 
   const UnplayedWatchedOverlay({
     required this.poster,
-    this.padding = const EdgeInsets.all(6),
+    this.padding = const EdgeInsets.all(AppSpacing.xxs),
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     final unplayedState = poster.watchedState(context.localized);
-    if (unplayedState case Unplayed()) {
-      return const SizedBox.shrink();
-    }
-
     return IgnorePointer(
       child: Align(
         alignment: Alignment.topRight,
-        child: StatusCard(
+        child: Visibility(
+          visible: unplayedState is! Unplayed,
+          maintainState: true,
+          maintainAnimation: true,
+          child: StatusCard(
           color: Theme.of(context).colorScheme.primaryContainer,
           child: Padding(
             padding: padding,
@@ -146,15 +146,16 @@ class UnplayedWatchedOverlay extends StatelessWidget {
                     fontSize: 14,
                   ),
                 ),
-              Played() => Icon(
-                  Icons.check_rounded,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
+              _ => AnimatedWatchedIcon(
+                  selected: unplayedState is Played,
+                  circled: false,
+                  size: AppMediaIcons.badgeIconSize,
+                  color: AppColors.textPrimary,
+                  semanticLabel: context.localized.played,
                 ),
-              Unplayed() => const SizedBox.shrink(),
             },
           ),
-        ),
+        )),
       ),
     );
   }
@@ -201,7 +202,7 @@ class VideoDurationOverlay extends StatelessWidget {
                 ),
                 const SizedBox(width: 2),
                 Icon(
-                  Icons.play_arrow_rounded,
+                  AppIcons.play,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ],

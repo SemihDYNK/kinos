@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -411,7 +412,7 @@ class _TrackListItemState extends ConsumerState<_TrackListItem> {
 
   Future<void> _showContextMenu(Offset globalPosition) async {
     final position = RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy, globalPosition.dx, globalPosition.dy);
-    await showMenu(
+    await showGlassMenu(
       context: context,
       position: position,
       items: widget.actions.popupMenuItems(useIcons: true),
@@ -624,7 +625,7 @@ class _TrackListItemState extends ConsumerState<_TrackListItem> {
                         const SizedBox(width: _trackCellSpacing),
                         SizedBox(
                           width: _TrackColumn.action.width,
-                          child: PopupMenuButton(
+                          child: GlassPopupMenuButton(
                             itemBuilder: (context) => widget.actions.popupMenuItems(useIcons: true),
                           ),
                         ),

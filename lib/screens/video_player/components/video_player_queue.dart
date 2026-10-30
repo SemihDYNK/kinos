@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -32,7 +33,7 @@ void showFullScreenItemQueue(
     useRootNavigator: true,
     context: context,
     builder: (context) {
-      return Dialog(
+      return GlassDialog(
         child: VideoPlayerQueue(
           items: items,
           currentItem: currentItem,
@@ -77,7 +78,7 @@ class VideoPlayerQueue extends ConsumerWidget {
       },
     );
 
-    await showMenu(
+    await showGlassMenu(
       context: context,
       position: RelativeRect.fromLTRB(
         globalPosition.dx,

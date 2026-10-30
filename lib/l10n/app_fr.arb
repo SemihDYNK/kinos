@@ -2135,5 +2135,21 @@
         }
     },
     "leanBackModeTitle": "Mode Lean-back",
-    "leanBackModeInfo": "Le mode Lean-back est réactivé par défaut sur les appareils AndroidTV. Activer cette option sur les appareils non-AndroidTV peut entraîner un comportement inattendu."
+    "leanBackModeInfo": "Le mode Lean-back est réactivé par défaut sur les appareils AndroidTV. Activer cette option sur les appareils non-AndroidTV peut entraîner un comportement inattendu.",
+  "discoveryRowTitle": "À découvrir",
+  "discoveryRowSubtitle": "Hors de votre bibliothèque · À demander sur Seerr",
+  "discoveryToRequest": "À demander",
+  "discoveryCacheDays": "Cache découverte : {days} jours",
+  "discoveryShortcuts": "← → : défiler · Entrée : ouvrir · Maj+F10 : menu",
+  "discoveryMoviesTitle": "Films à découvrir",
+  "discoverySeriesTitle": "Séries à découvrir",
+  "discoveryScrollPrevious": "Défiler vers la gauche",
+  "discoveryScrollNext": "Défiler vers la droite",
+  "managementRequestsTitle": "Demandes",
+  "managementRequestsSubtitle": "Suivez les demandes récentes de votre serveur",
+  "managementRequestedBy": "Demandé par",
+  "managementSearchRequests": "Rechercher une demande…",
+  "managementApplication": "Application",
+  "managementSearchLibrary": "Rechercher dans la bibliothèque…",
+  "managementStatus": "Statut"
 }

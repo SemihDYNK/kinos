@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -137,7 +138,7 @@ class ControlUsersPage extends ConsumerWidget {
   Future<void> _showContextMenu(
       BuildContext context, WidgetRef ref, Offset globalPos, List<ItemAction> otherActions) async {
     final position = RelativeRect.fromLTRB(globalPos.dx, globalPos.dy, globalPos.dx, globalPos.dy);
-    await showMenu(
+    await showGlassMenu(
       context: context,
       position: position,
       items: otherActions.popupMenuItems(useIcons: true),

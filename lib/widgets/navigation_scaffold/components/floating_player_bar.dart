@@ -38,33 +38,36 @@ class FloatingPlayerBar extends ConsumerStatefulWidget {
 
 class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
   bool showExpandButton = false;
+  bool _opening = false;
 
   Future<void> openFullScreenPlayer() async {
+    if (_opening) return;
     setState(() => showExpandButton = false);
-    ref
-        .read(mediaPlaybackProvider.notifier)
-        .update((state) => state.copyWith(state: VideoPlayerState.fullScreen));
     final item = ref.read(playBackModel.select((value) => value?.item));
     if (item is AudioModel) {
-      if (context.mounted) {
+      ref.read(mediaPlaybackProvider.notifier).update(
+          (state) => state.copyWith(state: VideoPlayerState.fullScreen));
+      if (mounted) {
         await context.refreshData();
       }
       return;
     }
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (context) {
-          return const VideoPlayer();
-        },
-      ),
-    );
-    if (AdaptiveLayout.of(context).isDesktop || kIsWeb) {
+    final isDesktop = AdaptiveLayout.of(context).isDesktop || kIsWeb;
+    _opening = true;
+    try {
+      await Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(builder: (context) => const VideoPlayer()),
+      );
+    } finally {
+      _opening = false;
+    }
+    if (isDesktop) {
       final fullScreen = await windowManager.isFullScreen();
       if (fullScreen) {
         await windowManager.setFullScreen(false);
       }
     }
-    if (context.mounted) {
+    if (mounted) {
       await context.refreshData();
     }
   }

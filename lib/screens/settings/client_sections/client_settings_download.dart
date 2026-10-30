@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -38,7 +39,7 @@ List<Widget> buildClientSettingsDownload(BuildContext context, WidgetRef ref, Fu
               onTap: currentFolder != null
                   ? () async => await showDialog(
                         context: context,
-                        builder: (context) => AlertDialog(
+                        builder: (context) => GlassAlertDialog(
                           title: Text(context.localized.pathEditTitle),
                           content: Text(context.localized.pathEditDesc),
                           actions: [
@@ -68,7 +69,7 @@ List<Widget> buildClientSettingsDownload(BuildContext context, WidgetRef ref, Fu
                       color: Theme.of(context).colorScheme.error,
                       onPressed: () async => await showDialog(
                         context: context,
-                        builder: (context) => AlertDialog(
+                        builder: (context) => GlassAlertDialog(
                           title: Text(context.localized.pathClearTitle),
                           content: Text(context.localized.pathEditDesc),
                           actions: [

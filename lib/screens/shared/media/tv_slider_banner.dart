@@ -1,3 +1,5 @@
+import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -260,7 +262,7 @@ class _FocusedFullBannerState extends ConsumerState<TVSliderBanner> {
       BuildContext context, WidgetRef ref, Offset globalPos) async {
     final position = RelativeRect.fromLTRB(
         globalPos.dx, globalPos.dy, globalPos.dx, globalPos.dy);
-    await showMenu(
+    await showGlassMenu(
       context: context,
       position: position,
       items: _currentItem
@@ -293,7 +295,7 @@ class _BannerInfoOverlay extends StatelessWidget {
           color: Theme.of(context).colorScheme.primaryContainer,
           iconColor: Theme.of(context).colorScheme.primary,
           label: const Icon(
-            Icons.check_rounded,
+            AppIcons.watched,
             size: 18,
           ),
         ),

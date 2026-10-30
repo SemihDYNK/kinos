@@ -1,6 +1,6 @@
+import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 
-import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:square_progress_indicator/square_progress_indicator.dart';
 
@@ -42,7 +42,7 @@ class BannerPlayButton extends ConsumerWidget {
                 IconButton(
                   onPressed: () => item.play(context, ref),
                   icon: const Icon(
-                    IconsaxPlusBold.play,
+                    AppIcons.play,
                     size: 30,
                   ),
                 )

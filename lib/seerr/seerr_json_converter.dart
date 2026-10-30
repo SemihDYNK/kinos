@@ -57,28 +57,44 @@ class SeerrJsonConverter extends JsonConverter {
   FutureOr<Response<ResultType>> convertResponse<ResultType, Item>(
     Response response,
   ) async {
-    if (response.bodyString.isEmpty) return response.copyWith();
+    if (response.bodyString.trim().isEmpty) {
+      if (response.statusCode != 204 &&
+          response.statusCode != 205 &&
+          null is! ResultType) {
+        throw ChopperHttpException(Response<ResultType>(response.base, null,
+            error: const FormatException('Empty Seerr response')));
+      }
+      return Response<ResultType>(response.base, null, error: response.error);
+    }
 
     try {
-      final dynamic decodedBody = response.body is String ? jsonDecode(response.body as String) : response.body;
+      final dynamic decodedBody = response.body is String
+          ? jsonDecode(response.body as String)
+          : response.body;
 
       final dynamic convertedData = _decodeInternal<Item>(decodedBody);
 
       if (convertedData is! ResultType) {
-        throw Exception('Type Mismatch: Expected $ResultType but got ${convertedData.runtimeType}. '
+        throw Exception(
+            'Type Mismatch: Expected $ResultType but got ${convertedData.runtimeType}. '
             'Check if $Item is registered in _typeDeserializers.');
       }
 
-      return response.copyWith<ResultType>(body: convertedData);
-    } catch (e, stackTrace) {
-      print('Serialization Error: $e\n$stackTrace');
-      return response.copyWith<ResultType>(body: null, bodyError: e);
+      return Response<ResultType>(response.base, convertedData,
+          error: response.error);
+    } catch (_) {
+      // Chopper drops conversion errors on 2xx responses; the request interceptor restores them.
+      throw ChopperHttpException(Response<ResultType>(response.base, null,
+          error: const FormatException('Invalid Seerr response')));
     }
   }
 
   dynamic _decodeInternal<Item>(dynamic data) {
     if (data is List) {
-      return data.map((item) => _decodeInternal<Item>(item)).toList().cast<Item>();
+      return data
+          .map((item) => _decodeInternal<Item>(item))
+          .toList()
+          .cast<Item>();
     }
 
     if (data is Map<String, dynamic>) {

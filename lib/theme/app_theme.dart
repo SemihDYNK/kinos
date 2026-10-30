@@ -1,3 +1,4 @@
+import 'package:kinos/util/motion_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -25,6 +26,7 @@ abstract final class AppColors {
 
   static const border = Color(0xFF1F1F1F);
   static const borderStrong = Color(0xFF3A3A3A);
+  static const posterHoverBorder = Color(0xCC646464);
 
   /// Anneau de focus. Constant, jamais teinté par la palette dynamique.
   /// C'est le repère du mode salon : il doit être identique partout.
@@ -81,10 +83,168 @@ abstract final class AppSpacing {
   static const gridGap = 12.0;
 }
 
+abstract final class AppMedia {
+  static const posterHeightRatio = 1.5;
+  static const posterAspectRatio = 2 / 3;
+  static const resumeAspectRatio = 16 / 9;
+  static const resumeTargetWidth = 280.0;
+  static const denseGridMinWidth = 900.0;
+  static const denseGridMinColumns = 6;
+  static const denseGridMaxColumns = 8;
+}
+
+abstract final class AppMediaIcons {
+  static const badgeSize = 28.0;
+  static const badgeIconSize = 16.0;
+  static const playTargetSize = 48.0;
+  static const playIconSize = 22.0;
+  static const circle = BorderRadius.all(Radius.circular(999));
+  static const surface = Color(0xB3141414);
+}
+
+abstract final class AppBrand {
+  static const markSize = 28.0;
+  static const wordmarkWidth = 132.0;
+  static const startupWordmarkWidth = 280.0;
+  static const wordmarkAspectRatio = 949 / 256;
+  // Centre du O dans le viewBox de kinos_wordmark_final.svg.
+  static const wordmarkOAnchor = Offset(641.19 / 949, 128.14 / 256);
+}
+
+abstract final class AppNavigation {
+  static const surface = Color(0x4D141414);
+  static const glassBorder = Color(0x33FFFFFF);
+  static const blurSigma = 18.0;
+  static const inset = 12.0;
+  static const collapsedWidth = 68.0;
+  static const expandedWidth = 240.0;
+  static const radius = 24.0;
+  static const selectionRadius = 12.0;
+  static const rowHeight = 48.0;
+  static const iconSize = 22.0;
+  static const avatarSize = 32.0;
+  static const itemGap = 4.0;
+  static const borderWidth = 1.0;
+  static const border = BorderRadius.all(Radius.circular(radius));
+  static const selection = BorderRadius.all(Radius.circular(selectionRadius));
+}
+
+abstract final class AppLibraryLayout {
+  static const searchWidth = 320.0;
+  static const filterPanelWidth = 800.0;
+  static const inlineWidth = 1300.0;
+}
+
+abstract final class AppTopNavigation {
+  static const indicatorHeight = 2.0;
+  static const fullSearchWidth = 1100.0;
+  static const searchPanelWidth = 760.0;
+  static const searchHeightFraction = .70;
+  static const resultPosterWidth = 48.0;
+  static const contentInset = 100.0;
+}
+
+abstract final class AppGlass {
+  static const blur = 18.0;
+  static const surface = Color(0x99141414);
+  static const border = Color(0x33FFFFFF);
+  static const episodeTargetWidth = 260.0;
+}
+
+abstract final class AppPlayerStyle {
+  static const segmentBottomInset = 160.0;
+  static const staticLoadingProgress = .75;
+  static const segmentPartialOpacity = .75;
+  static const surface = Color(0xD91C1C1C);
+  static const controlSurface = Color(0xA6141414);
+}
+
+abstract final class AppHeroLayout {
+  static const minHeight = 520.0;
+  static const couchHeight = 620.0;
+  static const viewportHeightFraction = .75;
+  static const imageAlignment = Alignment.topCenter;
+  static const logoWidth = 480.0;
+  static const logoHeight = 180.0;
+  static const textWidthFraction = .48;
+  static const narrowTextWidthFraction = .88;
+  static const narrowWidth = 1000.0;
+  static const synopsisWidth = 520.0;
+  static const titleMin = 64.0;
+  static const titleMax = 144.0;
+  static const imageFadeStart = .55;
+  static const imageUniformScrimOpacity = .30;
+  static const imageScrimOpacity = .85;
+  static const imageReadingScrimOpacity = .75;
+  static const imageUpperScrimOpacity = .20;
+  static const imageReadingScrimStart = .55;
+  static const imageUpperScrimStart = .25;
+  static const secondaryOpacity = .75;
+  static const titleBottomSpace = 88.0;
+  static double titleSizeFor(double width, AppDensity density) =>
+      (width * .084 * density.scale).clamp(titleMin, titleMax);
+}
+
+abstract final class AppDetailLayout {
+  static const seriesViewportFraction = .68;
+  static const seriesMinHeight = 560.0;
+  static const seriesTintTailHeight = 64.0;
+  static const seriesEpisodeWidth = 320.0;
+  static const seriesEpisodeColumns = 4;
+  static const tintTailHeight = 112.0;
+  static const tintFadeStart = .80;
+  static const movieViewportFraction = .86;
+  static const movieMinHeight = 760.0;
+  static const movieBottomPadding = 48.0;
+  static const movieImageFadeStart = .78;
+  static const movieImageScrim = .12;
+  static const movieReadingScrimStart = .70;
+  static const popoverMinWidth = 240.0;
+  static const popoverMaxWidth = 360.0;
+  static const popoverCheckSize = 18.0;
+  static const popoverHighlight = Color(0x1AFFFFFF);
+  static const movieSynopsisWidth = 680.0;
+  static const castWidthFraction = .70;
+  static const castMaxWidth = 152.0;
+  static const infoLabelWidth = 104.0;
+  static const infoColumnsMinWidth = 360.0;
+  static const viewportHeightFraction = .60;
+  static const topPadding = 112.0;
+  static const readingWidth = 760.0;
+  static double minHeightFor(AppDensity density) => density == AppDensity.couch
+      ? AppHeroLayout.couchHeight
+      : AppHeroLayout.minHeight;
+}
+
+abstract final class AppManagementLayout {
+  static const settingsNavigationWidth = 272.0;
+  static const settingsSplitWidth = 1000.0;
+  static const settingsValueWidth = 220.0;
+  static const requestPosterWidth = 40.0;
+  static const avatarSize = 28.0;
+  static const requesterWidth = 200.0;
+  static const requestStatusWidth = 260.0;
+  static const requestWideWidth = 1000.0;
+  static const statusDotSize = 8.0;
+}
+
+abstract final class AppPageLayout {
+  static const titleSize = 42.0;
+  static const titleHeight = 1.1;
+  static const titleTracking = -1.2;
+  static const compactWidth = 760.0;
+  static const settingsWidth = 1120.0;
+  static const toolbarHeight = 48.0;
+  static const rowHeight = 64.0;
+  static const episodeWidth = 160.0;
+  static const episodeCompactWidth = 112.0;
+  static const requestPosterWidth = 64.0;
+}
+
 abstract final class AppRadii {
   static const card = 8.0;
-  static const control = 4.0;
-  static const sheet = 12.0;
+  static const control = 10.0;
+  static const sheet = 20.0;
 
   static const cardBorder = BorderRadius.all(Radius.circular(card));
   static const controlBorder = BorderRadius.all(Radius.circular(control));
@@ -92,10 +252,53 @@ abstract final class AppRadii {
 }
 
 abstract final class AppDurations {
+  static const bufferingDelay = Duration(milliseconds: 180);
   static const hover = Duration(milliseconds: 120);
+  static const selection = Duration(milliseconds: 240);
+  static const favourite = Duration(milliseconds: 400);
+  static const posterHover = Duration(milliseconds: 260);
+  static const navigationExpand = Duration(milliseconds: 320);
+  static const navigationCollapse = Duration(milliseconds: 220);
+  static const navigationSelection = Duration(milliseconds: 240);
+  static const favouriteRemoval = Duration(milliseconds: 180);
+  static const popover = Duration(milliseconds: 180);
   static const focusRing = Duration(milliseconds: 100);
   static const heroTint = Duration(milliseconds: 300);
+  static const heroSlide = Duration(milliseconds: 420);
   static const pageTransition = Duration(milliseconds: 220);
+  static const startupReveal = Duration(milliseconds: 1200);
+  static const startupLoadTimeout = Duration(seconds: 30);
+}
+
+abstract final class AppMotion {
+  static const startupScale = .97;
+  static const startupWordmarkMove = Interval(0, .30, curve: easeOut);
+  static const startupAperture =
+      Interval(.30, 1, curve: Cubic(.65, 0, .35, 1));
+  static const easeOut = Cubic(.23, 1, .32, 1);
+  static const heroTitleReveal = Interval(0, .75, curve: easeOut);
+  static const heroSynopsisReveal = Interval(.16, 1, curve: easeOut);
+  static const pageTravelFraction = .015;
+  static const playerSeekTravel = .12;
+  static const playerVolumePulse = 1.12;
+  static const heroTextTravel = AppSpacing.sm;
+  static const menuScale = .95;
+  static const navigationReveal = Cubic(.2, 1, .3, 1);
+  static const navigationLabels = Interval(.25, 1, curve: Curves.easeOut);
+  static const posterReveal = Cubic(.2, 1.3, .35, 1);
+  static const posterZoom = .025;
+  static const posterLift = 4.0;
+  static const posterActionScale = .88;
+  static const heartLift = .30;
+  static const heartRecoil = .94;
+  static const heartSettle = 1.04;
+  static const iconGrid = 24.0;
+  static const iconStroke = 1.8;
+  // Les raccourcis du compositeur peuvent laisser une touche enfoncée côté Flutter.
+  static bool enabled(BuildContext context) =>
+      !MediaQuery.disableAnimationsOf(context) &&
+      !MediaQuery.accessibleNavigationOf(context) &&
+      !MotionInputBoundary.keyboardOf(context);
 }
 
 // ---------------------------------------------------------------------------
@@ -130,6 +333,11 @@ enum AppDensity {
       AppDensity.desk => 180.0,
       AppDensity.couch => 240.0,
     };
+    if (this == AppDensity.desk && width >= AppMedia.denseGridMinWidth) {
+      return (width / target)
+          .floor()
+          .clamp(AppMedia.denseGridMinColumns, AppMedia.denseGridMaxColumns);
+    }
     return (width / target).floor().clamp(3, 10);
   }
 }
@@ -146,6 +354,15 @@ abstract final class AppTypography {
   /// Rubik : un seul fichier, un axe `wght` piloté par [fontVariations].
   /// `null` retomberait sur la police système ; ne jamais laisser ce cas ici.
   static const fontFamily = 'Inter';
+
+  static const heroEditorial = TextStyle(
+    fontFamily: 'BarlowCondensed',
+    fontSize: 112,
+    fontWeight: FontWeight.w700,
+    height: .95,
+    letterSpacing: -1.5,
+    color: AppColors.textPrimary,
+  );
 
   /// Titre de bandeau. 40–48 px selon la densité.
   static const display = TextStyle(
@@ -340,8 +557,12 @@ ThemeData buildAppTheme({
     surfaceContainerHigh: AppColors.surfaceHigh,
     primary: AppColors.textPrimary,
     onPrimary: AppColors.background,
+    primaryContainer: AppColors.surfaceHigh,
+    onPrimaryContainer: AppColors.textPrimary,
     secondary: AppColors.textSecondary,
     onSecondary: AppColors.background,
+    secondaryContainer: AppColors.surfaceHigh,
+    onSecondaryContainer: AppColors.textPrimary,
     outline: AppColors.border,
     outlineVariant: AppColors.borderStrong,
     error: AppColors.error,
@@ -369,7 +590,8 @@ ThemeData buildAppTheme({
     // retomber sur le style par défaut de ThemeData (Roboto, tailles Material
     // stock) — l'échelle du projet est le seul levier de caractère de l'UI.
     textTheme: base.textTheme.copyWith(
-      displayLarge: AppTypography.display,
+      displayLarge: AppTypography.heroEditorial
+          .copyWith(fontSize: AppHeroLayout.titleMin),
       displayMedium: AppTypography.displayMedium,
       displaySmall: AppTypography.displaySmall,
       headlineLarge: AppTypography.sectionTitle,
@@ -443,6 +665,50 @@ ThemeData buildAppTheme({
       ),
     ),
 
+    inputDecorationTheme: const InputDecorationThemeData(
+      filled: true,
+      fillColor: AppColors.surface,
+      hintStyle: TextStyle(color: AppColors.textSecondary),
+      contentPadding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      border: OutlineInputBorder(
+          borderRadius: AppRadii.controlBorder,
+          borderSide: BorderSide(color: AppColors.borderStrong)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadii.controlBorder,
+          borderSide: BorderSide(color: AppColors.borderStrong)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: AppRadii.controlBorder,
+          borderSide: BorderSide(color: AppColors.focus)),
+    ),
+    popupMenuTheme: const PopupMenuThemeData(
+      textStyle: AppTypography.cardTitle,
+      color: AppColors.surfaceHigh,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+          borderRadius: AppRadii.sheetBorder,
+          side: BorderSide(color: AppColors.borderStrong)),
+    ),
+    dialogTheme: const DialogThemeData(
+      titleTextStyle: AppTypography.sectionTitle,
+      contentTextStyle: AppTypography.body,
+      actionsPadding: EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
+      alignment: Alignment.center,
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder),
+    ),
+    menuTheme: const MenuThemeData(
+        style: MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(AppColors.surfaceHigh),
+      surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
+      elevation: WidgetStatePropertyAll(0),
+      shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder)),
+    )),
     tooltipTheme: const TooltipThemeData(
       decoration: BoxDecoration(
         color: AppColors.surfaceHigh,
@@ -453,10 +719,10 @@ ThemeData buildAppTheme({
     ),
 
     // Le défilement lisse trackpad/souris, pas le rebond mobile.
-    scrollbarTheme: ScrollbarThemeData(
-      thumbColor: const WidgetStatePropertyAll(AppColors.borderStrong),
-      thickness: const WidgetStatePropertyAll(6),
-      radius: const Radius.circular(3),
+    scrollbarTheme: const ScrollbarThemeData(
+      thumbColor: WidgetStatePropertyAll(AppColors.borderStrong),
+      thickness: WidgetStatePropertyAll(6),
+      radius: Radius.circular(3),
       crossAxisMargin: 2,
     ),
   );
@@ -468,6 +734,40 @@ ThemeData buildAppTheme({
 //
 // À utiliser sur TOUT élément interactif. C'est la règle absolue du projet :
 // rien ne doit être atteignable à la souris sans l'être au clavier.
+
+class PosterHoverMotion extends StatelessWidget {
+  const PosterHoverMotion(
+      {required this.active, required this.builder, super.key});
+  final bool active;
+  final Widget Function(BuildContext context, double reveal) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = AppMotion.enabled(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: motion && active ? 1 : 0),
+      duration: !motion
+          ? Duration.zero
+          : active
+              ? AppDurations.posterHover
+              : AppDurations.hover,
+      curve: AppMotion.posterReveal,
+      builder: (context, progress, _) => Transform.translate(
+        offset: Offset(0, -AppMotion.posterLift * progress),
+        child: Transform.scale(
+          scale: 1 + AppMotion.posterZoom * progress,
+          child: builder(
+              context,
+              motion
+                  ? progress
+                  : active
+                      ? 1
+                      : 0),
+        ),
+      ),
+    );
+  }
+}
 
 class FocusRing extends StatefulWidget {
   /// Espace vertical (et horizontal, la valeur est la même dans les deux
@@ -482,6 +782,9 @@ class FocusRing extends StatefulWidget {
   static double contentInset(BuildContext context) =>
       context.tokens.density.focusWidth * 2;
 
+  /// Insets du bord et du padding, tous deux inclus dans la boîte Flutter.
+  static double boxInset(BuildContext context) => contentInset(context) * 2;
+
   const FocusRing({
     super.key,
     required this.child,
@@ -489,6 +792,7 @@ class FocusRing extends StatefulWidget {
     this.borderRadius = AppRadii.cardBorder,
     this.autofocus = false,
     this.focusNode,
+    this.posterMotion = false,
   });
 
   final Widget child;
@@ -496,6 +800,7 @@ class FocusRing extends StatefulWidget {
   final BorderRadius borderRadius;
   final bool autofocus;
   final FocusNode? focusNode;
+  final bool posterMotion;
 
   @override
   State<FocusRing> createState() => _FocusRingState();
@@ -507,13 +812,12 @@ class _FocusRingState extends State<FocusRing> {
 
   @override
   Widget build(BuildContext context) {
-    final density = context.tokens.density;
-
     return FocusableActionDetector(
       focusNode: widget.focusNode,
       autofocus: widget.autofocus,
       onShowFocusHighlight: (v) => setState(() => _focused = v),
-      onShowHoverHighlight: (v) => setState(() => _hovered = v),
+      onShowHoverHighlight:
+          widget.posterMotion ? null : (v) => setState(() => _hovered = v),
       shortcuts: const {
         SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
         SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
@@ -530,29 +834,48 @@ class _FocusRingState extends State<FocusRing> {
       mouseCursor: widget.onActivate != null
           ? SystemMouseCursors.click
           : MouseCursor.defer,
-      child: GestureDetector(
-        onTap: widget.onActivate,
-        child: AnimatedContainer(
-          duration: AppDurations.focusRing,
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(
-            borderRadius: widget.borderRadius,
-            border: Border.all(
-              color: _focused ? AppColors.focus : Colors.transparent,
-              width: density.focusWidth,
-            ),
-          ),
-          // Ce padding retire bien de l'espace à l'enfant (il ne se
-          // dessine pas "en dehors" du contenu) — cf. [contentInset], à
-          // budgéter dans toute cellule de grille à hauteur fixe.
-          padding: EdgeInsets.all(density.focusWidth),
-          child: AnimatedScale(
-            duration: AppDurations.hover,
-            scale: _hovered ? 1.015 : 1.0,
-            child: widget.child,
-          ),
+      child: MouseRegion(
+        onEnter:
+            widget.posterMotion ? (_) => setState(() => _hovered = true) : null,
+        onExit: widget.posterMotion
+            ? (_) => setState(() => _hovered = false)
+            : null,
+        child: GestureDetector(
+          onTap: widget.onActivate,
+          child: widget.posterMotion
+              ? PosterHoverMotion(
+                  active: _hovered, builder: (context, _) => _surface(context))
+              : _surface(context),
         ),
       ),
+    );
+  }
+
+  Widget _surface(BuildContext context) {
+    final density = context.tokens.density;
+    return AnimatedContainer(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : AppDurations.focusRing,
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        borderRadius: widget.borderRadius,
+        border: Border.all(
+          color: _focused
+              ? AppColors.focus
+              : _hovered
+                  ? widget.posterMotion
+                      ? AppColors.posterHoverBorder
+                      : AppColors.borderStrong
+                  : Colors.transparent,
+          width: density.focusWidth,
+        ),
+      ),
+      // Ce padding retire bien de l'espace à l'enfant (il ne se
+      // dessine pas "en dehors" du contenu) — cf. [contentInset], à
+      // budgéter dans toute cellule de grille à hauteur fixe.
+      padding: EdgeInsets.all(density.focusWidth),
+      child: widget.child,
     );
   }
 }

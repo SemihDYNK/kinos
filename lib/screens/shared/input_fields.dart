@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -85,7 +86,7 @@ class _TextInputFieldDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Dialog(
+    return GlassDialog(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

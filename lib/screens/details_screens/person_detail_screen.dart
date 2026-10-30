@@ -1,3 +1,4 @@
+import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
@@ -84,8 +85,8 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
                                 .read(userProvider.notifier)
                                 .setAsFavorite(!(details?.userData.isFavourite ?? false), details?.id ?? ""),
                             selected: (details?.userData.isFavourite ?? false),
-                            selectedIcon: Icons.favorite_rounded,
-                            icon: Icons.favorite_border_rounded,
+                            selectedIcon: AppIcons.favouriteSelected,
+                            icon: AppIcons.favourite,
                           ),
                         ],
                       ),

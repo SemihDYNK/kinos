@@ -2,6 +2,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 class SvgUtils {
   static List<String> allSvgs = [
+    'icons/kinos_signature_final.svg',
+    'icons/kinos_wordmark_final.svg',
     'icons/kinos_icon.svg',
     'icons/kinos_icon_outline.svg',
     'icons/tomato.svg',

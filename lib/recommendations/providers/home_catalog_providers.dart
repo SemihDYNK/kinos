@@ -1,3 +1,6 @@
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/recommendations/seerr/discovery_providers.dart';
+import 'package:kinos/recommendations/seerr/discovery_registry.dart';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -337,7 +340,18 @@ final homeCatalogInventoryResultProvider =
   // Jellyfin") — appliqué seulement ici, pour l'inventaire, jamais sur
   // `unwatched`/`jellyfinCandidates` d'origine (rangées par graine,
   // calculées dans un provider séparé, cf. [homeSeedRowsResultProvider]).
-  final unwatchedDeduped = dedupeByTmdbId(unwatched);
+  final account = ref.watch(userProvider);
+  final discoveryIds = account?.seerrCredentials == null
+      ? <String>{}
+      : ref
+          .watch(discoveryRegistryProvider(discoveryAccountScope(
+              account!.credentials.serverId,
+              account.id,
+              account.seerrCredentials!.serverUrl)))
+          .ids;
+  final unwatchedDeduped = dedupeByTmdbId(unwatched)
+      .where((item) => !discoveryIds.contains(discoveryIdentityOf(item)))
+      .toList();
   final unwatchedMovies = unwatchedDeduped
       .where((item) => item.type == KinosItemType.movie)
       .toList();

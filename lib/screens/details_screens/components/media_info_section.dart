@@ -15,11 +15,13 @@ class MediaInfoSection extends StatelessWidget {
   final List<Person> people;
   final List<({String label, String value})> info;
   final EdgeInsets contentPadding;
+  final bool cinematic;
 
   const MediaInfoSection({
     required this.people,
     required this.info,
     required this.contentPadding,
+    this.cinematic = false,
     super.key,
   });
 
@@ -33,16 +35,21 @@ class MediaInfoSection extends StatelessWidget {
       padding: contentPadding,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final narrow = constraints.maxWidth < _narrowBreakpoint;
+          final narrow = constraints.maxWidth < _narrowBreakpoint ||
+              people.isEmpty ||
+              info.isEmpty;
           final castWidth = narrow
               ? constraints.maxWidth
-              : constraints.maxWidth * 0.6 - AppSpacing.lg;
+              : constraints.maxWidth *
+                      (cinematic ? AppDetailLayout.castWidthFraction : .6) -
+                  AppSpacing.lg;
           final infoWidth = narrow
               ? constraints.maxWidth
-              : constraints.maxWidth * 0.4 - AppSpacing.lg;
+              : constraints.maxWidth - castWidth - AppSpacing.lg;
 
-          final cast = _CastGrid(people: people, width: castWidth);
-          final panel = _InfoPanel(info: info);
+          final cast =
+              _CastGrid(people: people, width: castWidth, showRoles: cinematic);
+          final panel = _InfoPanel(info: info, compact: cinematic);
 
           // Un seul groupe de traversal : l'ordre de lecture (grille de
           // casting puis panneau) reste cohérent que les colonnes soient
@@ -80,7 +87,9 @@ class _CastGrid extends StatelessWidget {
   final List<Person> people;
   final double width;
 
-  const _CastGrid({required this.people, required this.width});
+  final bool showRoles;
+  const _CastGrid(
+      {required this.people, required this.width, this.showRoles = false});
 
   static const _tileWidth = 88.0;
   static const _maxRows = 1;
@@ -140,7 +149,15 @@ class _CastGrid extends StatelessWidget {
     // fixe ça ; le `ClipRect`/`SizedBox` restent pour une raison distincte
     // (cf. commentaire plus bas) : borner le conteneur à exactement une
     // rangée, `visible` pouvant en théorie déborder de `columns` éléments.
-    final cellWidth = (width - (columns - 1) * AppSpacing.sm) / columns;
+    final gridWidth = showRoles
+        ? width
+            .clamp(
+                0.0,
+                columns * AppDetailLayout.castMaxWidth +
+                    (columns - 1) * AppSpacing.sm)
+            .toDouble()
+        : width;
+    final cellWidth = (gridWidth - (columns - 1) * AppSpacing.sm) / columns;
     // Hauteur de ligne mesurée réellement (`measuredLineHeight`, pas un
     // repère approximatif) et budget explicite du padding que
     // `FocusRing` retire à son enfant (`FocusRing.contentInset`) —
@@ -152,8 +169,8 @@ class _CastGrid extends StatelessWidget {
         measuredLineHeight(context, Theme.of(context).textTheme.bodySmall);
     final tileHeight = cellWidth +
         AppSpacing.xxs +
-        labelHeight +
-        FocusRing.contentInset(context);
+        labelHeight * (showRoles ? 3 : 1) +
+        FocusRing.boxInset(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,9 +183,9 @@ class _CastGrid extends StatelessWidget {
           // .start ancre le titre en haut de la ligne dans les deux cas.
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.localized.castAndCrew,
-                style: Theme.of(context).textTheme.headlineMedium),
-            const Spacer(),
+            Expanded(
+                child: Text(context.localized.castAndCrew,
+                    style: Theme.of(context).textTheme.headlineMedium)),
             if (truncated)
               FocusRing(
                 borderRadius: AppRadii.controlBorder,
@@ -197,8 +214,10 @@ class _CastGrid extends StatelessWidget {
         // mainAxisExtent réglé plus haut, qui n'a plus lieu d'être masqué.
         ClipRect(
           child: SizedBox(
+            width: gridWidth,
             height: tileHeight,
             child: GridView.builder(
+              padding: EdgeInsets.zero,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: visible.length,
@@ -209,7 +228,7 @@ class _CastGrid extends StatelessWidget {
                 mainAxisExtent: tileHeight,
               ),
               itemBuilder: (context, index) =>
-                  _CastTile(person: visible[index]),
+                  _CastTile(person: visible[index], showRole: showRoles),
             ),
           ),
         ),
@@ -221,7 +240,8 @@ class _CastGrid extends StatelessWidget {
 class _CastTile extends StatelessWidget {
   final Person person;
 
-  const _CastTile({required this.person});
+  final bool showRole;
+  const _CastTile({required this.person, this.showRole = false});
 
   @override
   Widget build(BuildContext context) {
@@ -260,13 +280,18 @@ class _CastTile extends StatelessWidget {
             const SizedBox(height: AppSpacing.xxs),
             Text(
               person.name,
-              maxLines: 1,
+              maxLines: showRole ? 2 : 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
                   ?.copyWith(color: AppColors.textPrimary),
             ),
+            if (showRole && person.role.isNotEmpty)
+              Text(person.role,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
       ),
@@ -316,38 +341,63 @@ void showMediaInfoSheet(
 class _InfoPanel extends StatelessWidget {
   final List<({String label, String value})> info;
 
-  const _InfoPanel({required this.info});
+  final bool compact;
+  const _InfoPanel({required this.info, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
     if (info.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Informations', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: AppSpacing.sm),
-        for (final entry in info)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  entry.label,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                Text(
-                  entry.value,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: AppColors.textPrimary),
-                ),
-              ],
+    return LayoutBuilder(builder: (context, constraints) {
+      final useColumns = compact &&
+          constraints.maxWidth >=
+              AppDetailLayout.infoColumnsMinWidth *
+                  MediaQuery.textScalerOf(context).scale(1);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Informations',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: AppSpacing.sm),
+          for (final entry in info)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: useColumns
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                            width: AppDetailLayout.infoLabelWidth,
+                            child: Text(entry.label,
+                                style: Theme.of(context).textTheme.bodySmall)),
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                            child: Text(entry.value,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(color: AppColors.textPrimary))),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry.label,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        Text(
+                          entry.value,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
             ),
-          ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/catalog_navigation_bar.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,13 +41,20 @@ class GlobalHotkeys extends ConsumerWidget {
             return true;
           case GlobalHotKeys.search:
             if (inputFocused) return false;
-            context.navigateTo(LibrarySearchRoute());
+            if (AdaptiveLayout.isDesktop(context)) {
+              final nested =
+                  context.router.innerRouterOf<StackRouter>(HomeRoute.name);
+              showCatalogSearch(nested?.navigatorKey.currentContext ?? context);
+            } else {
+              context.navigateTo(LibrarySearchRoute());
+            }
             return true;
           case GlobalHotKeys.closeWindow:
             Future.microtask(() async {
               final closed = await closeCurrentWindow();
               if (!closed && context.mounted) {
-                KinosSnack.show(context.localized.somethingWentWrong, context: context);
+                KinosSnack.show(context.localized.somethingWentWrong,
+                    context: context);
               }
             });
             return true;
@@ -56,7 +65,8 @@ class GlobalHotkeys extends ConsumerWidget {
             return true;
         }
       },
-      keyMap: ref.watch(clientSettingsProvider.select((value) => value.currentShortcuts)),
+      keyMap: ref.watch(
+          clientSettingsProvider.select((value) => value.currentShortcuts)),
       child: child,
     );
   }

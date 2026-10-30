@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,7 +39,7 @@ class _RefreshPopupDialogState extends ConsumerState<RefreshPopupDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
+    return GlassDialog(
       child: Card(
         color: Theme.of(context).colorScheme.surface,
         child: ConstrainedBox(

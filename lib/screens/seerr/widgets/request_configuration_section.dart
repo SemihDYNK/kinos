@@ -26,8 +26,9 @@ class RequestConfigurationSection extends ConsumerWidget {
     final currentServer = requestState.activeServer;
     final defaultRootFolder = requestState.defaultRootFolder;
 
-    final hasConfigSection =
-        availableServers.isNotEmpty || availableProfiles.isNotEmpty || availableRootFolders.isNotEmpty;
+    final hasConfigSection = availableServers.isNotEmpty ||
+        availableProfiles.isNotEmpty ||
+        availableRootFolders.isNotEmpty;
 
     if (!hasConfigSection) {
       return const SizedBox.shrink();
@@ -35,7 +36,8 @@ class RequestConfigurationSection extends ConsumerWidget {
 
     final notifier = ref.read(seerrRequestProvider.notifier);
 
-    String rootFolderLabel(BuildContext context, String folder, String? defaultFolder) {
+    String rootFolderLabel(
+        BuildContext context, String folder, String? defaultFolder) {
       if (defaultFolder != null && folder == defaultFolder) {
         return context.localized.rootFolderDefaultLabel(folder);
       }
@@ -48,7 +50,10 @@ class RequestConfigurationSection extends ConsumerWidget {
       children: [
         Text(
           context.localized.requestConfiguration,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         if (availableServers.isNotEmpty && availableServers.length > 1)
           SeerrConfigSelector(
@@ -66,7 +71,8 @@ class RequestConfigurationSection extends ConsumerWidget {
         if (availableProfiles.isNotEmpty)
           SeerrConfigSelector(
             label: Text(context.localized.qualityProfile),
-            current: requestState.selectedProfile?.name ?? context.localized.selectProfile,
+            current: requestState.selectedProfile?.name ??
+                context.localized.selectProfile,
             itemBuilder: (context) => availableProfiles
                 .map((profile) => ItemActionButton(
                       label: Text(profile.name ?? context.localized.unknown),
@@ -78,11 +84,13 @@ class RequestConfigurationSection extends ConsumerWidget {
           SeerrConfigSelector(
             label: Text(context.localized.rootFolder),
             current: requestState.selectedRootFolder != null
-                ? rootFolderLabel(context, requestState.selectedRootFolder!, defaultRootFolder)
+                ? rootFolderLabel(context, requestState.selectedRootFolder!,
+                    defaultRootFolder)
                 : context.localized.selectFolder,
             itemBuilder: (context) => availableRootFolders
                 .map((folder) => ItemActionButton(
-                      label: Text(rootFolderLabel(context, folder, defaultRootFolder)),
+                      label: Text(
+                          rootFolderLabel(context, folder, defaultRootFolder)),
                       action: () => notifier.selectRootFolder(folder),
                     ))
                 .toList(),
@@ -100,9 +108,11 @@ class RequestConfigurationSection extends ConsumerWidget {
               ),
               ...availableTags.map((tag) => ItemActionButton(
                     label: Text(tag.label ?? context.localized.unknown),
-                    selected: requestState.selectedTags.any((t) => t.id == tag.id),
+                    selected:
+                        requestState.selectedTags.any((t) => t.id == tag.id),
                     action: () {
-                      final current = List<SeerrServiceTag>.from(requestState.selectedTags);
+                      final current =
+                          List<SeerrServiceTag>.from(requestState.selectedTags);
                       if (current.any((t) => t.id == tag.id)) {
                         current.removeWhere((t) => t.id == tag.id);
                       } else {
@@ -116,15 +126,20 @@ class RequestConfigurationSection extends ConsumerWidget {
         if (requestState.currentUser?.canManageUsers == true)
           SeerrConfigSelector(
             label: Text(context.localized.requestAs),
-            current: requestState.selectedUser?.label ?? requestState.currentUser?.label ?? context.localized.unknown,
-            currentWidget: SeerrUserLabel(user: requestState.selectedUser ?? requestState.currentUser),
+            current: requestState.selectedUser?.label ??
+                requestState.currentUser?.label ??
+                context.localized.unknown,
+            currentWidget: SeerrUserLabel(
+                user: requestState.selectedUser ?? requestState.currentUser),
             itemBuilder: (context) {
               if (requestState.availableUsers.isEmpty) {
                 Future.microtask(() => notifier.loadUsers());
               }
 
               final baseUser = requestState.currentUser!;
-              final others = requestState.availableUsers.where((u) => u.id != baseUser.id).toList();
+              final others = requestState.availableUsers
+                  .where((u) => u.id != baseUser.id)
+                  .toList();
 
               return [
                 ItemActionButton(

@@ -1040,6 +1040,8 @@ class JellyService {
     // directement depuis le module recommandations, pour rester le seul
     // point d'entrée `/Users/{userId}/Items`.
     int? startIndex,
+    List<String>? ids,
+    DateTime? minDateLastSaved,
     bool? recursive,
     List<BaseItemKind>? includeItemTypes,
     List<String>? genreIds,
@@ -1050,6 +1052,8 @@ class JellyService {
     num? minCommunityRating,
     List<ItemFields>? fields,
     List<ImageType>? enableImageTypes,
+    bool? enableImages,
+    bool? enableUserData,
     bool? enableTotalRecordCount,
   }) async {
     return api.usersUserIdItemsGet(
@@ -1061,6 +1065,8 @@ class JellyService {
       includeItemTypes: includeItemTypes,
       limit: limit,
       startIndex: startIndex,
+      ids: ids,
+      minDateLastSaved: minDateLastSaved,
       genreIds: genreIds,
       personIds: personIds,
       studioIds: studioIds,
@@ -1069,6 +1075,8 @@ class JellyService {
       minCommunityRating: minCommunityRating,
       fields: fields,
       enableImageTypes: enableImageTypes,
+      enableImages: enableImages,
+      enableUserData: enableUserData,
       enableTotalRecordCount: enableTotalRecordCount,
     );
   }

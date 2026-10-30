@@ -1,9 +1,9 @@
+import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/providers/settings/video_player_settings_provider.dart';
 import 'package:kinos/theme/app_theme.dart';
@@ -209,10 +209,10 @@ class _VideoVolumeSliderState extends ConsumerState<VideoVolumeSlider> {
 
 IconData volumeIcon(double value) {
   if (value <= 0) {
-    return IconsaxPlusLinear.volume_mute;
+    return AppIcons.muted;
   }
   if (value < 50) {
-    return IconsaxPlusLinear.volume_low_1;
+    return AppIcons.volumeLow;
   }
-  return IconsaxPlusLinear.volume_high;
+  return AppIcons.volumeHigh;
 }

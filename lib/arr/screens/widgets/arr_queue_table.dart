@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -90,13 +91,8 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
   static const _progressWidth = 140.0;
   static const _timeLeftWidth = 84.0;
   static const _statusWidth = 130.0;
-  // 80, pas 72 : chaque FocusRing de cette colonne dessine son anneau de
-  // focus *en dehors* de son enfant (`padding: EdgeInsets.all(focusWidth)`,
-  // cf. app_theme.dart) sans redimensionner l'enfant en retour — deux
-  // boutons dans cette colonne ajoutent donc 2×2×2.0 = 8px que la largeur
-  // devait déjà prévoir. C'est la cause exacte du débordement de 8px
-  // observé (bande rayée en debug) : élargir la colonne, pas la découper.
-  static const _actionsWidth = 80.0;
+  // Two compact buttons plus their external focus-ring padding.
+  static const _actionsWidth = AppPageLayout.toolbarHeight * 2;
   static const _columnGap = AppSpacing.xs;
 
   static const _minTableWidth = _checkboxWidth +
@@ -195,7 +191,7 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
     final multiple = totalItems > 1;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         backgroundColor: AppColors.surfaceHigh,
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder),
         title: Text(
@@ -228,7 +224,7 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
   Future<void> _showDetail(BuildContext context, ArrQueueItem item) {
     return showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         backgroundColor: AppColors.surfaceHigh,
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder),
         title:
@@ -313,7 +309,7 @@ class _ArrQueueTableState extends State<ArrQueueTable> {
     final controllable =
         singleRowActionable != null && _canControl(singleRowActionable);
 
-    showMenu<void>(
+    showGlassMenu<void>(
       context: context,
       position: position,
       items: [
@@ -591,6 +587,8 @@ class _ArrQueueHeaderRow extends StatelessWidget {
           SizedBox(
               width: _ArrQueueTableState._instanceWidth,
               child: Text('Instance',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall

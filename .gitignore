@@ -79,3 +79,6 @@ Output
 # Generated localizations
 lib/l10n/generated
 android/build/reports/problems/
+
+# Generated visual test diagnostics
+/test/widgets/failures/

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
@@ -50,7 +51,8 @@ class SeerrRequest implements Interceptor {
   final Ref ref;
 
   @override
-  FutureOr<Response<BodyType>> intercept<BodyType>(Chain<BodyType> chain) async {
+  FutureOr<Response<BodyType>> intercept<BodyType>(
+      Chain<BodyType> chain) async {
     final creds = ref.read(userProvider)?.seerrCredentials;
     final serverUrl = (KinosConfig.seerrBaseUrl ?? creds?.serverUrl)?.trim();
 
@@ -75,14 +77,31 @@ class SeerrRequest implements Interceptor {
       resolvedRequestUri = chain.request.url;
     }
 
+    final abort = Completer<void>();
+    final originalAbort = chain.request.abortTrigger;
     final requestWithHeaders = applyHeaders(
-      chain.request.copyWith(baseUri: apiBaseUri),
+      chain.request.copyWith(
+          baseUri: apiBaseUri,
+          abortTrigger: originalAbort == null
+              ? abort.future
+              : Future.any([originalAbort, abort.future])),
       headers,
     );
 
     try {
-      final response = await chain.proceed(requestWithHeaders);
+      final response = await Future<Response<BodyType>>.sync(
+          () => chain.proceed(requestWithHeaders)).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          abort.complete();
+          throw TimeoutException(
+              'Seerr request timed out', const Duration(seconds: 30));
+        },
+      );
       return response;
+    } on ChopperHttpException catch (e) {
+      return Response<BodyType>(e.response.base, null,
+          error: e.response.error ?? e);
     } catch (e, st) {
       throw HttpException(
         'Seerr API request failed: ${chain.request.method} $resolvedRequestUri\nError: $e\n$st',
@@ -91,9 +110,12 @@ class SeerrRequest implements Interceptor {
   }
 }
 
-Map<String, String> _authHeaders({required String apiKey, required String cookie}) {
+Map<String, String> _authHeaders(
+    {required String apiKey, required String cookie}) {
   if (apiKey.isNotEmpty) return {'X-Api-Key': apiKey};
-  if (cookie.isNotEmpty && cookie != kBrowserManagedCookie) return {'Cookie': cookie};
+  if (cookie.isNotEmpty && cookie != kBrowserManagedCookie) {
+    return {'Cookie': cookie};
+  }
   if (cookie == kBrowserManagedCookie) return const {};
   return const {};
 }
@@ -104,7 +126,8 @@ class SeerrResponse implements Interceptor {
   final Ref ref;
 
   @override
-  FutureOr<Response<BodyType>> intercept<BodyType>(Chain<BodyType> chain) async {
+  FutureOr<Response<BodyType>> intercept<BodyType>(
+      Chain<BodyType> chain) async {
     final Response<BodyType> response = await chain.proceed(chain.request);
 
     if (!response.isSuccessful) {
@@ -114,7 +137,8 @@ class SeerrResponse implements Interceptor {
       final reason = response.base.reasonPhrase;
 
       final body = response.bodyString;
-      final bodyPreview = body.length <= 1500 ? body : '${body.substring(0, 1500)}…';
+      final bodyPreview =
+          body.length <= 1500 ? body : '${body.substring(0, 1500)}…';
 
       log(
         'x- $status - $reason - ${response.error} - $method $url\n$bodyPreview',

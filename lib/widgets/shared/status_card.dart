@@ -1,41 +1,37 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 
-import 'package:kinos/theme.dart';
-
-class StatusCard extends ConsumerWidget {
+class StatusCard extends StatelessWidget {
   final Color? color;
   final Widget child;
 
   const StatusCard({this.color, required this.child, super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(2.5),
-      child: Container(
-        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        decoration: BoxDecoration(
-          color: blendColors(
-            Theme.of(context).colorScheme.surfaceContainer,
-            blend: color,
+      padding: const EdgeInsets.all(AppSpacing.xxs),
+      child: FrostedSurface(
+        borderRadius: AppMediaIcons.circle,
+        color: AppMediaIcons.surface,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+              minWidth: AppMediaIcons.badgeSize,
+              minHeight: AppMediaIcons.badgeSize),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: IconTheme(
+              data: IconThemeData(
+                  size: AppMediaIcons.badgeIconSize,
+                  color: color ?? AppColors.textPrimary),
+              child: child,
+            ),
           ),
-          borderRadius: KinosTheme.smallShape.borderRadius,
-        ),
-        child: IconTheme(
-          data: IconThemeData(
-            color: color,
-          ),
-          child: child,
         ),
       ),
     );
   }
-}
-
-Color blendColors(Color base, {Color? blend, double amount = 0.25}) {
-  if (blend == null) return base;
-
-  return Color.lerp(base, blend, amount) ?? base;
 }

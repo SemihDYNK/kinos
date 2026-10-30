@@ -1,3 +1,6 @@
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -30,7 +33,19 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final scrollController = ScrollController();
-  final minVerticalPadding = 20.0;
+  bool split(BuildContext context) =>
+      AdaptiveLayout.layoutModeOf(context) == LayoutMode.dual ||
+      (AdaptiveLayout.isDesktop(context) &&
+          MediaQuery.sizeOf(context).width -
+                  AdaptiveLayout.of(context).sideBarWidth >=
+              AppManagementLayout.settingsSplitWidth);
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
   late LayoutMode lastAdaptiveLayout = AdaptiveLayout.layoutModeOf(context);
 
   @override
@@ -39,14 +54,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context, content) {
         checkForNullIndex(context);
         return PopScope(
-          canPop: context.tabsRouter.activeIndex == 0 ||
-              AdaptiveLayout.layoutModeOf(context) == LayoutMode.dual,
+          canPop: context.tabsRouter.activeIndex == 0 || split(context),
           onPopInvokedWithResult: (didPop, result) {
             if (!didPop) {
               context.tabsRouter.setActiveIndex(0);
             }
           },
-          child: AdaptiveLayout.layoutModeOf(context) == LayoutMode.single
+          child: !split(context)
               ? Card(
                   elevation: 0,
                   child: Stack(
@@ -60,14 +74,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   mainAxisSize: MainAxisSize.max,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(flex: 2, child: _leftPane(context)),
+                    SizedBox(
+                        width: AdaptiveLayout.of(context).sideBarWidth +
+                            AppManagementLayout.settingsNavigationWidth +
+                            AppSpacing.lg,
+                        child: _leftPane(context)),
                     Expanded(
-                      flex: 3,
                       child: Padding(
                         padding: EdgeInsets.only(
                           left: MediaQuery.paddingOf(context).left,
                         ),
-                        child: content,
+                        child: AdaptiveLayout(
+                            data: AdaptiveLayout.of(context)
+                                .copyWith(layoutMode: LayoutMode.dual),
+                            child: content),
                       ),
                     ),
                   ],
@@ -81,8 +101,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void checkForNullIndex(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentIndex = context.tabsRouter.activeIndex;
-      if (AdaptiveLayout.layoutModeOf(context) == LayoutMode.dual &&
-          currentIndex == 0) {
+      if (mounted && split(context) && currentIndex == 0) {
         context.tabsRouter.setActiveIndex(1);
       }
     });
@@ -108,8 +127,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     void navigateTo(PageRouteInfo route) => context.tabsRouter.navigate(route);
 
     bool containsRoute(PageRouteInfo route) =>
-        AdaptiveLayout.layoutModeOf(context) == LayoutMode.dual &&
-        context.tabsRouter.current.name == route.routeName;
+        split(context) && context.tabsRouter.current.name == route.routeName;
 
     final quickConnectAvailable = ref.watch(userProvider.select(
         (value) => value?.serverConfiguration?.quickConnectAvailable ?? false));
@@ -126,18 +144,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       padding: EdgeInsetsDirectional.only(
           start: AdaptiveLayout.of(context).sideBarWidth),
       child: Container(
-        color: context.colors.surface,
+        color: AppColors.background,
         child: SettingsScaffold(
           label: context.localized.settings,
           scrollController: scrollController,
           showBackButtonNested:
               AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad,
-          showUserIcon: true,
+          showUserIcon: false,
+          navigation: true,
           items: [
             if (hasNewUpdate && newRelease != null) ...[
               Card(
                 color: context.colors.secondaryContainer,
                 child: SettingsListTile(
+                  navigation: true,
                   label: Text(context.localized
                       .newReleaseFoundTitle(newRelease.version)),
                   subLabel: Text(context.localized.newUpdateFoundOnGithub),
@@ -148,23 +168,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 8),
             ],
             SettingsListTile(
-              label: Text(context.localized.settingsClientTitle),
+              navigation: true,
+              label: Text(context.localized.managementApplication),
               subLabel: Text(context.localized.settingsClientDesc),
               autoFocus: true,
               selected: containsRoute(const ClientSettingsRoute()),
-              icon: deviceIcon,
+              icon: AppIcons.series,
               onTap: () => navigateTo(const ClientSettingsRoute()),
             ),
             if (isAdmin)
               SettingsListTile(
+                navigation: true,
                 label: Text(context.localized.controlPanel),
                 subLabel: Text(context.localized.controlPanelDesc),
                 selected: containsRoute(const ControlPanelSelectionRoute()),
-                icon: IconsaxPlusLinear.chart_3,
+                icon: AppIcons.activity,
                 onTap: () =>
                     const ControlPanelSelectionRoute().navigate(context),
               ),
             SettingsListTile(
+              navigation: true,
               label: Text(context.localized.settingsProfileTitle),
               subLabel: Text(context.localized.settingsProfileDesc),
               selected: containsRoute(const ProfileSettingsRoute()),
@@ -172,13 +195,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onTap: () => navigateTo(const ProfileSettingsRoute()),
             ),
             SettingsListTile(
+              navigation: true,
               label: Text(context.localized.settingsPlayerTitle),
               subLabel: Text(context.localized.settingsPlayerDesc),
               selected: containsRoute(const PlayerSettingsRoute()),
-              icon: IconsaxPlusLinear.video_play,
+              icon: AppIcons.play,
               onTap: () => navigateTo(const PlayerSettingsRoute()),
             ),
             SettingsListTile(
+              navigation: true,
               label: const Text('Radarr et Sonarr'),
               subLabel: const Text('URL, clé API et test de connexion'),
               selected: containsRoute(const ArrSettingsRoute()),
@@ -186,6 +211,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onTap: () => navigateTo(const ArrSettingsRoute()),
             ),
             SettingsListTile(
+              navigation: true,
               label: Text(context.localized.about),
               subLabel: Text("Kinos, ${context.localized.latestReleases}"),
               selected: containsRoute(const AboutSettingsRoute()),
@@ -204,6 +230,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             if (quickConnectAvailable)
               SettingsListTile(
+                navigation: true,
                 label: Text(context.localized.settingsQuickConnectTitle),
                 icon: IconsaxPlusLinear.password_check,
                 onTap: () => openQuickConnectDialog(context),
@@ -211,6 +238,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             if (ref.watch(
                 argumentsStateProvider.select((value) => value.htpcMode)))
               SettingsListTile(
+                navigation: true,
                 label: Text(context.localized.exitKinosTitle),
                 icon: IconsaxPlusLinear.close_square,
                 onTap: () async {
@@ -232,15 +260,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
             SettingsListTile(
+              navigation: true,
               label: Text(context.localized.switchUser),
               icon: IconsaxPlusLinear.arrow_swap_horizontal,
-              contentColor: Colors.greenAccent,
+              contentColor: AppColors.textPrimary,
               onTap: () async {
                 await ref.read(userProvider.notifier).logoutUser();
                 context.router.replaceAll([LoginRoute()]);
               },
             ),
             SettingsListTile(
+              navigation: true,
               label: Text(context.localized.logout),
               icon: IconsaxPlusLinear.logout,
               contentColor: Theme.of(context).colorScheme.error,
@@ -248,7 +278,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 final user = ref.read(userProvider);
                 showDialog(
                   context: context,
-                  builder: (context) => AlertDialog(
+                  builder: (context) => GlassAlertDialog(
                     title: Text(context.localized
                         .logoutUserPopupTitle(user?.name ?? "")),
                     scrollable: true,

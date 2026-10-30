@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -25,7 +26,8 @@ import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/sliver_list_padding.dart';
-import 'package:kinos/widgets/navigation_scaffold/components/background_image.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/app_page_header.dart';
 import 'package:kinos/widgets/shared/button_group.dart';
 import 'package:kinos/widgets/shared/horizontal_list.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
@@ -41,7 +43,8 @@ class LibraryScreen extends ConsumerStatefulWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTickerProviderStateMixin {
+class _LibraryScreenState extends ConsumerState<LibraryScreen>
+    with SingleTickerProviderStateMixin {
   final GlobalKey<RefreshIndicatorState>? refreshKey = GlobalKey();
 
   bool refreshing = false;
@@ -62,15 +65,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
     final genres = libraryScreenState.genres;
     final padding = AdaptiveLayout.adaptivePadding(context);
 
-    final useTVExpandedLayout = ref.watch(clientSettingsProvider.select((value) => value.useTVExpandedLayout));
+    final useTVExpandedLayout = ref.watch(
+        clientSettingsProvider.select((value) => value.useTVExpandedLayout));
 
     return NestedScaffold(
-      background: BackgroundImage(
-        items: [
-          ...recommendations.expand((e) => e.posters),
-          ...favourites,
-        ],
-      ),
+      background: const ColoredBox(color: AppColors.background),
       body: PullToRefresh(
         refreshOnStart: true,
         refreshKey: refreshKey,
@@ -94,6 +93,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 const DefaultSliverTopBadding(),
+                SliverToBoxAdapter(
+                    child: Padding(
+                        padding: padding.copyWith(
+                            top: AppSpacing.lg, bottom: AppSpacing.lg),
+                        child: AppPageHeader(
+                            title: context.localized.library(2)))),
                 if (AdaptiveLayout.viewSizeOf(context) == ViewSize.phone)
                   NestedSliverAppBar(
                     route: LibrarySearchRoute(),
@@ -107,7 +112,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                       selectedView: libraryScreenState.selectedViewModel,
                       onSelected: (view) {
                         if (refreshing) return;
-                        ref.read(libraryScreenProvider.notifier).selectLibrary(view);
+                        ref
+                            .read(libraryScreenProvider.notifier)
+                            .selectLibrary(view);
                         refreshKey?.currentState?.show();
                       },
                     ),
@@ -124,8 +131,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                           scrollDirection: Axis.horizontal,
                           children: [
                             FilledButton.tonalIcon(
-                              onPressed: () => context.pushRoute(LibrarySearchRoute(parentId: [selectedView.id])),
-                              label: Text("${context.localized.search} ${selectedView.name}..."),
+                              onPressed: () => context.pushRoute(
+                                  LibrarySearchRoute(
+                                      parentId: [selectedView.id])),
+                              label: Text(
+                                  "${context.localized.search} ${selectedView.name}..."),
                               icon: const Icon(IconsaxPlusLinear.search_normal),
                             ),
                             const Padding(
@@ -144,14 +154,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                                       )))
                                   .toList(),
                               selectedValues: viewTypes,
-                              onSelected: (value) => ref.read(libraryScreenProvider.notifier).setViewType(value),
+                              onSelected: (value) => ref
+                                  .read(libraryScreenProvider.notifier)
+                                  .setViewType(value),
                             ),
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 4.0),
                               child: VerticalDivider(),
                             ),
                             ElevatedButton.icon(
-                              onPressed: () => showRefreshPopup(context, selectedView.id, selectedView.name),
+                              onPressed: () => showRefreshPopup(
+                                  context, selectedView.id, selectedView.name),
                               label: Text(context.localized.scanLibrary),
                               icon: const Icon(IconsaxPlusLinear.refresh),
                             ),
@@ -164,8 +177,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                   SliverFillRemaining(
                     child: Center(child: Text(context.localized.noResults)),
                   ),
-                if (viewTypes.contains(LibraryViewType.recommended) && recommendations.isNotEmpty) ...[
-                  ...recommendations.where((element) => element.posters.isNotEmpty).map(
+                if (viewTypes.contains(LibraryViewType.recommended) &&
+                    recommendations.isNotEmpty) ...[
+                  ...recommendations
+                      .where((element) => element.posters.isNotEmpty)
+                      .map(
                     (element) {
                       return SliverToBoxAdapter(
                         child: Padding(
@@ -174,9 +190,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                             tvMode: useTVExpandedLayout,
                             contentPadding: padding,
                             posters: element.posters,
-                            collectionAspectRatio: element.name is Continue ? 1.2 : null,
+                            collectionAspectRatio:
+                                element.name is Continue ? 1.2 : null,
                             imagePriority: element.name is Continue
-                                ? const [jelly.ImageType.thumb, jelly.ImageType.backdrop, jelly.ImageType.primary]
+                                ? const [
+                                    jelly.ImageType.thumb,
+                                    jelly.ImageType.backdrop,
+                                    jelly.ImageType.primary
+                                  ]
                                 : null,
                             label: element.type != null
                                 ? "${element.type?.label(context.localized)} - ${element.name.label(context.localized)}"
@@ -187,7 +208,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                     },
                   ),
                 ],
-                if (viewTypes.contains(LibraryViewType.favourites) && favourites.isNotEmpty)
+                if (viewTypes.contains(LibraryViewType.favourites) &&
+                    favourites.isNotEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -196,7 +218,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                         contentPadding: padding,
                         onLabelClick: () => context.pushRoute(
                           LibrarySearchRoute(
-                            parentId: [libraryScreenState.selectedViewModel?.id ?? ""],
+                            parentId: [
+                              libraryScreenState.selectedViewModel?.id ?? ""
+                            ],
                           ).withFilter(
                             const LibraryFilterModel(
                               favourites: true,
@@ -209,7 +233,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                       ),
                     ),
                   ),
-                if (viewTypes.contains(LibraryViewType.genres) && genres.isNotEmpty) ...[
+                if (viewTypes.contains(LibraryViewType.genres) &&
+                    genres.isNotEmpty) ...[
                   ...genres.where((element) => element.posters.isNotEmpty).map(
                         (element) => SliverToBoxAdapter(
                           child: Padding(
@@ -220,11 +245,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                               posters: element.posters,
                               onLabelClick: () => context.pushRoute(
                                 LibrarySearchRoute(
-                                  parentId: [libraryScreenState.selectedViewModel?.id ?? ""],
+                                  parentId: [
+                                    libraryScreenState.selectedViewModel?.id ??
+                                        ""
+                                  ],
                                 ).withFilter(
                                   LibraryFilterModel(
                                     recursive: true,
-                                    genres: {(element.name as Other).customLabel: true},
+                                    genres: {
+                                      (element.name as Other).customLabel: true
+                                    },
                                   ),
                                 ),
                               ),
@@ -282,7 +312,8 @@ class LibraryRow extends ConsumerWidget {
           ItemActionButton(
             label: Text(context.localized.search),
             icon: const Icon(IconsaxPlusLinear.search_normal),
-            action: () => context.pushRoute(LibrarySearchRoute(parentId: [view.id])),
+            action: () =>
+                context.pushRoute(LibrarySearchRoute(parentId: [view.id])),
           ),
           ItemActionButton(
             label: Text(context.localized.scanLibrary),
@@ -301,12 +332,13 @@ class LibraryRow extends ConsumerWidget {
               onTap: isSelected ? null : () => onSelected?.call(view),
               onLongPress: onLongPress != null
                   ? () => onLongPress?.call(view)
-                  : () => context.pushRoute(LibrarySearchRoute(parentId: [view.id])),
+                  : () => context
+                      .pushRoute(LibrarySearchRoute(parentId: [view.id])),
               onSecondaryTapDown: (details) async {
                 Offset localPosition = details.globalPosition;
-                RelativeRect position =
-                    RelativeRect.fromLTRB(localPosition.dx, localPosition.dy, localPosition.dx, localPosition.dy);
-                await showMenu(
+                RelativeRect position = RelativeRect.fromLTRB(localPosition.dx,
+                    localPosition.dy, localPosition.dx, localPosition.dy);
+                await showGlassMenu(
                   context: context,
                   position: position,
                   items: combinedViewActions.popupMenuItems(useIcons: true),
@@ -318,7 +350,10 @@ class LibraryRow extends ConsumerWidget {
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: KinosTheme.smallShape.borderRadius,
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: isSelected ? 1.0 : 0.0),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: isSelected ? 1.0 : 0.0),
                     width: isSelected ? 3 : 0,
                   ),
                 ),

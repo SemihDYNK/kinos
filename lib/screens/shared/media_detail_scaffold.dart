@@ -1,3 +1,7 @@
+import 'package:kinos/screens/shared/media_navigation.dart';
+import 'package:kinos/widgets/shared/animated_media_icon.dart';
+import 'package:kinos/theme/app_icons.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -15,7 +19,8 @@ import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/router_extension.dart';
 import 'package:kinos/util/sliver_list_padding.dart';
-import 'package:kinos/widgets/shared/fading_hero_backdrop.dart';
+import 'package:kinos/screens/dashboard/home_hero_backdrop.dart';
+import 'package:kinos/screens/shared/media_hero_title.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 import 'package:kinos/widgets/shared/pull_to_refresh.dart';
@@ -48,11 +53,16 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
 
   final String title;
   final String? originalTitle;
+  final bool useTitleLogo;
 
   /// Lien contextuel sous le titre — ex. la série parente d'un épisode.
   /// Absent (défaut) pour un film ou une série, qui n'en ont pas.
   final ({String label, VoidCallback onTap})? parentLink;
 
+  /// Optional movie-specific reading block directly below hero actions.
+  final Widget? heroContent;
+  final bool cinematic;
+  final bool seriesLayout;
   final String metaLine;
   final VoidCallback? onPlay;
 
@@ -88,10 +98,14 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
     this.onRefresh,
     required this.title,
     this.originalTitle,
+    this.useTitleLogo = true,
     this.parentLink,
     required this.metaLine,
+    this.heroContent,
+    this.cinematic = false,
+    this.seriesLayout = false,
     this.onPlay,
-    this.playIcon = Icons.play_arrow_rounded,
+    this.playIcon = AppIcons.play,
     this.playLabel,
     this.isFavourite = false,
     this.onToggleFavourite,
@@ -109,6 +123,8 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
 
 class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   ImageData? _lastPaletteImage;
+  StateController<HeroPalette>? _palette;
+  late final HeroPalette _previousPalette;
   WindowTitleNotifier? _windowTitleNotifier;
 
   void _pushTitle() {
@@ -123,6 +139,8 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   @override
   void initState() {
     super.initState();
+    _palette = ref.read(heroPaletteProvider.notifier);
+    _previousPalette = _palette!.state;
     _updateHeroPalette();
   }
 
@@ -136,9 +154,16 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   @override
   void dispose() {
     _windowTitleNotifier?.removeTitle(this);
-    // Le bandeau est propre à cet écran : ne pas laisser sa teinte déteindre
-    // sur ce qui s'affiche ensuite.
-    ref.read(heroPaletteProvider.notifier).state = HeroPalette.fallback;
+    // Un retour restaure aussi la teinte de la page conservée sous cette fiche.
+    final palette = _palette;
+    if (palette != null) {
+      final previous = palette.mounted ? palette.state : null;
+      scheduleMicrotask(() {
+        if (palette.mounted && identical(palette.state, previous)) {
+          palette.state = _previousPalette;
+        }
+      });
+    }
     super.dispose();
   }
 
@@ -153,7 +178,7 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
   /// large, pensé pour ce format) à un Thumb, lui-même préféré à la
   /// jaquette Primary (portrait, dernier recours).
   ImageData? _bannerImage() => widget.backDrops?.backDrop?.isNotEmpty == true
-      ? widget.backDrops!.randomBackDrop
+      ? widget.backDrops!.backDrop!.first
       : widget.backDrops?.thumb ?? widget.backDrops?.primary;
 
   /// Teinte extraite de la même image que celle affichée dans le bandeau
@@ -174,7 +199,7 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
         );
 
     if (!mounted || !identical(_lastPaletteImage, image)) return;
-    ref.read(heroPaletteProvider.notifier).state = palette;
+    _palette?.state = palette;
   }
 
   void _showActions(BuildContext context) {
@@ -191,341 +216,249 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final density = context.tokens.density;
-    // Hauteur du bloc titre/métadonnées/boutons — 680/760 selon densité,
-    // jusqu'à +80 si le titre (2 lignes) le demande. Ce bloc reste posé sur
-    // l'image, à la même position qu'avant ; c'est la hauteur de l'image de
-    // fond (ci-dessous) qui change.
-    final minTitleHeight = density == AppDensity.couch ? 760.0 : 680.0;
-    final maxTitleHeight = minTitleHeight + 80;
-    // Hauteur de l'image de fond — nettement plus haute que le bloc titre :
-    // elle continue derrière le résumé, les sélecteurs et le début du
-    // casting, et s'efface sous le voile dégradé de _BannerBackdrop plutôt
-    // que de s'arrêter net à la hauteur du titre. Plus de zone de
-    // transition, donc plus de ligne de coupure visible.
-    final backdropHeight = density == AppDensity.couch ? 1300.0 : 1200.0;
-    final sideBarInset = AdaptiveLayout.of(context).sideBarWidth;
-    // `padding` inclut déjà la largeur de la barre latérale (cf.
-    // AdaptiveLayout.adaptivePadding) : la barre latérale n'est pas une
-    // colonne séparée, c'est un calque semi-transparent posé par-dessus un
-    // contenu plein cadre (SideNavigationRail). Le SliverPadding ci-dessous
-    // applique déjà `sideBarInset` une fois pour tout le bandeau ET le
-    // contenu (imbriqués ensemble dans le même SliverStack, cf. plus bas) :
-    // leur passer `padding` tel quel le décalerait une seconde fois, d'où
-    // `innerPadding` (sans lui) — même mécanique que dashboard_screen.dart.
-    // Le bloc titre, lui, n'a jamais eu ce problème : son padding est fixe
-    // (`AppSpacing.screenPadding`, dans _TitleBlock), pas dérivé de
-    // `adaptivePadding`.
+    _palette ??= ref.read(heroPaletteProvider.notifier);
+    final sidebar = AdaptiveLayout.of(context).sideBarWidth;
     final padding = AdaptiveLayout.adaptivePadding(context,
         horizontalPadding: AppSpacing.screenPadding);
-    final innerPadding = padding.copyWith(left: padding.left - sideBarInset);
-    final heroTint = context.tokens.heroTint;
-    final heroTextSecondary = context.tokens.heroTextSecondary;
     final image = _bannerImage();
-    final hasActions = widget.actions != null;
-
     return PullToRefresh(
-      onRefresh: () async => await widget.onRefresh?.call(),
+      onRefresh: widget.onRefresh,
       refreshOnStart: true,
       child: (context) => Scaffold(
         backgroundColor: AppColors.background,
-        body: Stack(
-          children: [
-            CustomScrollView(
+        body: Stack(children: [
+          CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                const DefaultSliverTopBadding(),
-                // SliverPadding(start: sideBarInset) : la barre latérale
-                // reste sur AppColors.background pur, jamais teintée — même
-                // mécanique que dashboard_screen.dart.
-                //
-                // SliverStack (sliver_tools) superpose deux slivers dans le
-                // même espace de défilement, au lieu de les enchaîner :
-                // - FadingHeroBackdrop, épinglé en haut sur `backdropHeight`
-                //   (positionné via SliverPositioned, ne compte donc pas
-                //   dans la taille du groupe) ;
-                // - le bloc titre puis tout le contenu (`widget.content`),
-                //   qui déterminent la taille réelle du groupe.
-                // L'image reste pleinement nette sur toute la hauteur du
-                // bloc titre (`holdUntil: minTitleHeight`, posé par-dessus
-                // elle) ; le voile ne commence qu'après, et se dissout
-                // entièrement (jamais un aplat de substitution — une seule
-                // surface peinte au final, celle du Scaffold) pendant que
-                // l'image continue derrière le résumé, les sélecteurs et le
-                // début du casting — cf. FadingHeroBackdrop.
-                SliverPadding(
-                  padding: EdgeInsetsDirectional.only(start: sideBarInset),
-                  sliver: SliverStack(
-                    children: [
-                      SliverPositioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: backdropHeight,
-                        child: FadingHeroBackdrop(
-                          image: image,
-                          heroTint: heroTint,
-                          holdUntil: minTitleHeight,
-                        ),
-                      ),
-                      SliverMainAxisGroup(
-                        slivers: [
-                          SliverToBoxAdapter(
-                            child: _TitleBlock(
-                              minHeight: minTitleHeight,
-                              maxHeight: maxTitleHeight,
-                              heroTextSecondary: heroTextSecondary,
-                              title: widget.title,
-                              originalTitle: widget.originalTitle,
-                              parentLink: widget.parentLink,
-                              metaLine: widget.metaLine,
-                              onPlay: widget.onPlay,
-                              playIcon: widget.playIcon,
-                              playLabel: widget.playLabel,
-                              isFavourite: widget.isFavourite,
-                              onToggleFavourite: widget.onToggleFavourite,
-                              isPlayed: widget.isPlayed,
-                              onTogglePlayed: widget.onTogglePlayed,
-                              onMore: hasActions
-                                  ? () => _showActions(context)
-                                  : null,
-                            ),
-                          ),
-                          ...widget.content(context, innerPadding),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                SliverStack(children: [
+                  SliverPositioned.fill(
+                      child: AnimatedContainer(
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : AppDurations.heroTint,
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            stops: widget.cinematic
+                                ? const [0, AppDetailLayout.tintFadeStart, 1]
+                                : null,
+                            colors: widget.cinematic
+                                ? [
+                                    context.tokens.heroTint,
+                                    context.tokens.heroTint,
+                                    AppColors.background
+                                  ]
+                                : [
+                                    context.tokens.heroTint,
+                                    AppColors.background
+                                  ])),
+                  )),
+                  SliverMainAxisGroup(slivers: [
+                    SliverToBoxAdapter(
+                        child: LayoutBuilder(builder: (context, constraints) {
+                      final available = constraints.maxWidth - sidebar;
+                      return ConstrainedBox(
+                          constraints: BoxConstraints(
+                              minHeight: (MediaQuery.sizeOf(context).height *
+                                      (widget.seriesLayout
+                                          ? AppDetailLayout
+                                              .seriesViewportFraction
+                                          : widget.cinematic
+                                              ? AppDetailLayout
+                                                  .movieViewportFraction
+                                              : AppDetailLayout
+                                                  .viewportHeightFraction))
+                                  .clamp(
+                                      widget.seriesLayout
+                                          ? AppDetailLayout.seriesMinHeight *
+                                              context.tokens.density.scale
+                                          : widget.cinematic
+                                              ? AppDetailLayout.movieMinHeight *
+                                                  context.tokens.density.scale
+                                              : AppDetailLayout.minHeightFor(
+                                                  context.tokens.density),
+                                      double.infinity)),
+                          child:
+                              Stack(alignment: Alignment.bottomLeft, children: [
+                            Positioned.fill(
+                                child: MediaArtwork(
+                                    child: HomeHeroBackdrop(
+                                        image: image,
+                                        fallback: switch (
+                                            MediaNavigationScope.tagOf(
+                                                context)) {
+                                          MediaNavigationOrigin origin =>
+                                            origin.image,
+                                          _ => null,
+                                        },
+                                        cinematic: widget.cinematic))),
+                            Padding(
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    sidebar + AppSpacing.screenPadding,
+                                    AppDetailLayout.topPadding,
+                                    AppSpacing.screenPadding,
+                                    widget.cinematic
+                                        ? AppDetailLayout.movieBottomPadding
+                                        : AppHeroLayout.titleBottomSpace),
+                                child: SizedBox(
+                                    width: available *
+                                        (available < AppHeroLayout.narrowWidth
+                                            ? AppHeroLayout
+                                                .narrowTextWidthFraction
+                                            : AppHeroLayout.textWidthFraction),
+                                    child: _TitleBlock(
+                                        widget: widget,
+                                        availableWidth: available,
+                                        onMore: widget.actions == null
+                                            ? null
+                                            : () => _showActions(context)))),
+                          ]));
+                    })),
+                    if (widget.cinematic)
+                      SliverToBoxAdapter(
+                          child: SizedBox(
+                              key: const ValueKey('detail-tint-fade'),
+                              height: widget.seriesLayout
+                                  ? AppDetailLayout.seriesTintTailHeight
+                                  : AppDetailLayout.tintTailHeight)),
+                  ]),
+                ]),
+                ...widget.content(context, padding),
                 const DefaultSliverBottomPadding(),
-              ],
-            ),
-            PositionedDirectional(
+              ]),
+          PositionedDirectional(
               top: MediaQuery.paddingOf(context).top + AppSpacing.sm,
-              start: sideBarInset + AppSpacing.sm,
+              start: sidebar + AppSpacing.sm,
               child: FocusRing(
-                borderRadius: AppRadii.controlBorder,
-                onActivate: () => context.router.popBack(),
-                child: ExcludeFocus(
-                  child: IconButton.filledTonal(
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.scrim.withValues(alpha: 0.4),
-                      foregroundColor: AppColors.textPrimary,
-                    ),
-                    onPressed: () => context.router.popBack(),
-                    icon: const BackButtonIcon(),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+                  borderRadius: AppRadii.controlBorder,
+                  onActivate: () => context.router.popBack(),
+                  child: ExcludeFocus(
+                      child: IconButton.filledTonal(
+                          tooltip: MaterialLocalizations.of(context)
+                              .backButtonTooltip,
+                          style: IconButton.styleFrom(
+                              backgroundColor: AppPlayerStyle.controlSurface,
+                              foregroundColor: AppColors.textPrimary),
+                          onPressed: () => context.router.popBack(),
+                          icon: const BackButtonIcon())))),
+        ]),
       ),
     );
   }
 }
 
-/// Bloc titre/métadonnées/boutons — posé sur [FadingHeroBackdrop], pas de
-/// calque d'image ou de dégradé propre : le fond vient entièrement de la
-/// zone de FadingHeroBackdrop qui le recouvre (même espace de défilement,
-/// cf. le SliverStack de l'appelant).
 class _TitleBlock extends StatelessWidget {
-  final double minHeight;
-  final double maxHeight;
-  final Color heroTextSecondary;
-  final String title;
-  final String? originalTitle;
-  final ({String label, VoidCallback onTap})? parentLink;
-  final String metaLine;
-  final VoidCallback? onPlay;
-  final IconData playIcon;
-  final String? playLabel;
-  final bool isFavourite;
-  final VoidCallback? onToggleFavourite;
-  final bool isPlayed;
-  final VoidCallback? onTogglePlayed;
+  const _TitleBlock(
+      {required this.widget,
+      required this.availableWidth,
+      required this.onMore});
+  final MediaDetailScaffold widget;
+  final double availableWidth;
   final VoidCallback? onMore;
-
-  const _TitleBlock({
-    required this.minHeight,
-    required this.maxHeight,
-    required this.heroTextSecondary,
-    required this.title,
-    required this.originalTitle,
-    required this.parentLink,
-    required this.metaLine,
-    required this.onPlay,
-    required this.playIcon,
-    required this.playLabel,
-    required this.isFavourite,
-    required this.onToggleFavourite,
-    required this.isPlayed,
-    required this.onTogglePlayed,
-    required this.onMore,
-  });
 
   @override
   Widget build(BuildContext context) {
-    final showOriginalTitle = originalTitle != null &&
-        originalTitle!.toLowerCase() != title.toLowerCase();
-    final secondaryButtonStyle = IconButton.styleFrom(
-      side: BorderSide(color: heroTextSecondary),
-      foregroundColor: heroTextSecondary,
-      overlayColor: heroTextSecondary,
-    );
-
-    // Hauteur minimale, extensible si le titre (2 lignes max) le demande —
-    // même mécanique de dimensionnement que le bandeau du tableau de bord
-    // (le Column non positionné pilote la taille du Stack).
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: minHeight, maxHeight: maxHeight),
-      child: Stack(
-        alignment: Alignment.bottomLeft,
+    final secondary =
+        AppColors.textPrimary.withValues(alpha: AppHeroLayout.secondaryOpacity);
+    final iconStyle = IconButton.styleFrom(
+        foregroundColor: AppColors.textPrimary,
+        backgroundColor: AppPlayerStyle.controlSurface,
+        side: const BorderSide(color: AppColors.borderStrong),
+        shape:
+            const RoundedRectangleBorder(borderRadius: AppRadii.controlBorder));
+    Widget action(Widget icon, String tooltip, VoidCallback callback) =>
+        FocusRing(
+            borderRadius: AppRadii.controlBorder,
+            onActivate: callback,
+            child: ExcludeFocus(
+                child: IconButton.outlined(
+                    style: iconStyle,
+                    tooltip: tooltip,
+                    onPressed: callback,
+                    icon: icon)));
+    final parent = widget.parentLink;
+    return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.screenPadding),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .displayLarge
-                      ?.copyWith(color: AppColors.textPrimary),
-                ),
-                if (parentLink != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                    child: FocusRing(
-                      borderRadius: AppRadii.controlBorder,
-                      onActivate: parentLink!.onTap,
-                      child: ExcludeFocus(
-                        child: InkWell(
-                          borderRadius: AppRadii.controlBorder,
-                          onTap: parentLink!.onTap,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.subdirectory_arrow_right_rounded,
-                                  size: 16, color: heroTextSecondary),
-                              const SizedBox(width: AppSpacing.xxs),
-                              Text(
-                                parentLink!.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(color: heroTextSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (showOriginalTitle)
-                  Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                    child: Text(
-                      originalTitle!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      // 75%, pas moins : sur une image, même voilée, le texte
-                      // secondaire suit AppColors.textPrimary à 75% d'opacité
-                      // (règle du bandeau teinté, CLAUDE.md) — même valeur que
-                      // metaLine ci-dessous. À 55% (l'ancienne valeur), le
-                      // contraste n'était plus garanti.
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary.withValues(alpha: 0.75)),
-                    ),
-                  ),
-                if (metaLine.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    metaLine,
-                    maxLines: 1,
+          MediaArtwork(
+              title: true,
+              child: MediaHeroTitle(
+                  title: widget.title,
+                  logo: widget.useTitleLogo && widget.parentLink == null
+                      ? widget.backDrops?.logo ?? widget.item?.tvPosterLogo
+                      : null,
+                  availableWidth: availableWidth)),
+          if (parent != null)
+            Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: FocusRing(
+                    borderRadius: AppRadii.controlBorder,
+                    onActivate: parent.onTap,
+                    child: ExcludeFocus(
+                        child: TextButton.icon(
+                            onPressed: parent.onTap,
+                            icon: const Icon(
+                                Icons.subdirectory_arrow_right_rounded),
+                            label: Text(parent.label,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis))))),
+          if (widget.originalTitle?.trim().isNotEmpty == true &&
+              widget.originalTitle!.toLowerCase() != widget.title.toLowerCase())
+            Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(widget.originalTitle!,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: secondary))),
+          if (widget.metaLine.isNotEmpty)
+            Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.md),
+                child: Text(widget.metaLine,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textPrimary.withValues(alpha: 0.75)),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (onPlay != null)
-                      FocusRing(
-                        autofocus: AdaptiveLayout.inputDeviceOf(context) ==
-                            InputDevice.dPad,
-                        onActivate: onPlay,
-                        child: ExcludeFocus(
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: secondary))),
+          const SizedBox(height: AppSpacing.lg),
+          Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (widget.onPlay != null)
+                  FocusRing(
+                      borderRadius: AppRadii.controlBorder,
+                      autofocus: AdaptiveLayout.inputDeviceOf(context) ==
+                          InputDevice.dPad,
+                      onActivate: widget.onPlay,
+                      child: ExcludeFocus(
                           child: FilledButton.icon(
-                            onPressed: onPlay,
-                            icon: Icon(playIcon),
-                            label:
-                                Text(playLabel ?? context.localized.playLabel),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(width: AppSpacing.sm),
-                    if (onToggleFavourite != null)
-                      FocusRing(
-                        borderRadius: AppRadii.controlBorder,
-                        onActivate: onToggleFavourite,
-                        child: ExcludeFocus(
-                          child: IconButton.outlined(
-                            style: secondaryButtonStyle,
-                            onPressed: onToggleFavourite,
-                            icon: Icon(
-                              isFavourite
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                            ),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(width: AppSpacing.xxs),
-                    if (onTogglePlayed != null)
-                      FocusRing(
-                        borderRadius: AppRadii.controlBorder,
-                        onActivate: onTogglePlayed,
-                        child: ExcludeFocus(
-                          child: IconButton.outlined(
-                            style: secondaryButtonStyle,
-                            onPressed: onTogglePlayed,
-                            icon: Icon(
-                              isPlayed
-                                  ? Icons.check_circle_rounded
-                                  : Icons.check_circle_outline_rounded,
-                            ),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(width: AppSpacing.xxs),
-                    if (onMore != null)
-                      FocusRing(
-                        borderRadius: AppRadii.controlBorder,
-                        onActivate: onMore,
-                        child: ExcludeFocus(
-                          child: IconButton.outlined(
-                            style: secondaryButtonStyle,
-                            onPressed: onMore,
-                            icon: const Icon(Icons.more_horiz_rounded),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+                              onPressed: widget.onPlay,
+                              icon: Icon(widget.playIcon),
+                              label: Text(widget.playLabel ??
+                                  context.localized.playLabel)))),
+                if (widget.onToggleFavourite != null)
+                  action(AnimatedFavouriteIcon(selected: widget.isFavourite),
+                      context.localized.favorite, widget.onToggleFavourite!),
+                if (widget.onTogglePlayed != null)
+                  action(
+                      AnimatedWatchedIcon(selected: widget.isPlayed),
+                      widget.isPlayed
+                          ? context.localized.markAsUnwatched
+                          : context.localized.markAsWatched,
+                      widget.onTogglePlayed!),
+                if (onMore != null)
+                  action(const Icon(AppIcons.more),
+                      context.localized.moreOptions, onMore!),
+              ]),
+          if (widget.heroContent != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            widget.heroContent!,
+          ],
+        ]);
   }
 }

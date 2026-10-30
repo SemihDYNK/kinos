@@ -1,123 +1,189 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:kinos/screens/shared/media_navigation.dart';
+import 'package:kinos/widgets/shared/animated_media_icon.dart';
+import 'package:kinos/theme/app_icons.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/providers/theme/app_theme_provider.dart';
 import 'package:kinos/providers/theme/palette_service_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/screens/dashboard/home_hero_backdrop.dart';
+import 'package:kinos/screens/shared/media_hero_title.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/theme/palette_service.dart';
-import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/humanize_duration.dart';
 import 'package:kinos/util/item_base_model/play_item_helpers.dart';
+import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
 
-/// Bandeau carrousel du tableau de bord.
-///
-/// Un seul item affiché à la fois (fondu croisé entre les diapos), fond
-/// [AppColors] teinté par [heroPaletteProvider] via [context.tokens].
-/// Défilement manuel uniquement — aucune rotation automatique.
+/// Carrousel manuel : l'image et la palette suivent la même diapo.
 class HeroCarousel extends ConsumerStatefulWidget {
-  /// Films et séries non vus, déjà filtrés et limités par l'appelant.
+  const HeroCarousel(
+      {required this.items,
+      this.onCurrentChanged,
+      this.actionsBuilder,
+      this.contentStart = 0,
+      super.key});
+
   final List<ItemBaseModel> items;
-
-  /// Appelé à chaque changement de diapo (y compris la première, au
-  /// montage) — permet à l'appelant de poser un fond ([FadingHeroBackdrop])
-  /// qui suit la même image, sans dupliquer l'état de rotation ici et là.
   final ValueChanged<ItemBaseModel>? onCurrentChanged;
+  final double contentStart;
+  final Widget Function(BuildContext context, ItemBaseModel item)?
+      actionsBuilder;
 
-  const HeroCarousel({required this.items, this.onCurrentChanged, super.key});
-
-  /// Hauteur minimale, extensible (cf. [_HeroCarouselState.build]) — publiée
-  /// pour que l'appelant (dashboard_screen.dart) puisse dimensionner son
-  /// propre fond ([FadingHeroBackdrop]) sur la même base, sans dupliquer
-  /// ces valeurs.
-  ///
-  /// 560/640 (desk/couch) — même raisonnement que le bandeau film/série
-  /// (480 -> 680) : sur une largeur de contenu large (~1880px), un cadre
-  /// bas donne un ratio très éloigné du 16:9 des images sources, que
-  /// BoxFit.cover doit combler en agrandissant (et donc en rognant)
-  /// massivement l'image. Un cadre plus haut rapproche ce ratio du 16:9,
-  /// pour un recadrage bien moins agressif — indépendant de la hauteur de
-  /// la zone de fondu ([FadingHeroBackdrop], dimensionnée séparément par
-  /// l'appelant).
-  static double minHeightFor(AppDensity density) =>
-      density == AppDensity.couch ? 640.0 : 560.0;
-  static double maxHeightFor(AppDensity density) =>
-      density == AppDensity.couch ? 720.0 : 640.0;
+  static double minHeightFor(AppDensity density) => density == AppDensity.couch
+      ? AppHeroLayout.couchHeight
+      : AppHeroLayout.minHeight;
 
   @override
   ConsumerState<HeroCarousel> createState() => _HeroCarouselState();
 }
 
-class _HeroCarouselState extends ConsumerState<HeroCarousel> {
+class _HeroCarouselState extends ConsumerState<HeroCarousel>
+    with SingleTickerProviderStateMixin {
   int _index = 0;
-  bool _hovering = false;
-
-  ItemBaseModel? _lastPaletteItem;
+  ItemBaseModel? _paletteItem;
+  late final _revealController = AnimationController(
+      vsync: this, value: 1, duration: AppDurations.heroSlide);
   final Set<String> _favouriteOverrides = {};
+  late final StateController<HeroPalette> _palette;
 
   ItemBaseModel get _current =>
       widget.items[_index.clamp(0, widget.items.length - 1)];
 
-  bool _isFavourite(ItemBaseModel item) => _favouriteOverrides.contains(item.id)
-      ? !item.userData.isFavourite
-      : item.userData.isFavourite;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _updateHeroPalette());
+    _palette = ref.read(heroPaletteProvider.notifier);
+    _schedulePalette();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_revealController.isAnimating && !AppMotion.enabled(context)) {
+      _revealController.value = 1;
+    }
   }
 
   @override
   void didUpdateWidget(covariant HeroCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.items.isEmpty) return;
+    final previousId = oldWidget.items.isEmpty
+        ? null
+        : oldWidget.items[_index.clamp(0, oldWidget.items.length - 1)].id;
     if (_index >= widget.items.length) _index = 0;
-    _updateHeroPalette();
+    if (previousId != null &&
+        widget.items.isNotEmpty &&
+        previousId != _current.id) {
+      _restartReveal();
+    }
+    _schedulePalette();
   }
 
   @override
   void dispose() {
-    // Le bandeau est propre à cet écran : ne pas laisser sa teinte
-    // déteindre sur ce qui s'affiche ensuite.
-    ref.read(heroPaletteProvider.notifier).state = HeroPalette.fallback;
+    _revealController.dispose();
+    final previous = _palette.state;
+    scheduleMicrotask(() {
+      if (_palette.mounted && identical(_palette.state, previous)) {
+        _palette.state = HeroPalette.fallback;
+      }
+    });
     super.dispose();
   }
 
-  Future<void> _updateHeroPalette() async {
-    if (widget.items.isEmpty) return;
+  void _schedulePalette() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _updatePalette();
+    });
+  }
+
+  Future<void> _updatePalette() async {
+    if (widget.items.isEmpty) {
+      _paletteItem = null;
+      _palette.state = HeroPalette.fallback;
+      return;
+    }
     final item = _current;
-    if (identical(item, _lastPaletteItem)) return;
-    _lastPaletteItem = item;
-    // Synchrone, avant le calcul de palette (asynchrone) : le fond doit
-    // amorcer son fondu vers la nouvelle image immédiatement, pas attendre
-    // que sa teinte soit connue.
+    if (identical(item, _paletteItem)) return;
+    _paletteItem = item;
+    final image = _imageFor(item);
     widget.onCurrentChanged?.call(item);
-
-    final image = item.getPosters?.randomBackDrop ?? item.getPosters?.primary;
-    if (image == null) return;
-
+    _precacheNeighbourArtwork();
+    if (image == null) {
+      _palette.state = HeroPalette.fallback;
+      return;
+    }
     final palette = await ref.read(paletteServiceProvider).forItem(
           itemId: item.id,
           image: image.imageProvider,
         );
-
-    if (!mounted || !identical(_lastPaletteItem, item)) return;
-    ref.read(heroPaletteProvider.notifier).state = palette;
+    if (!mounted || !identical(_paletteItem, item)) return;
+    _palette.state = palette;
   }
 
   void _go(int delta) {
     if (widget.items.length < 2) return;
-    setState(() {
-      _index = (_index + delta) % widget.items.length;
-      if (_index < 0) _index += widget.items.length;
-    });
-    _updateHeroPalette();
+    setState(() => _index = (_index + delta) % widget.items.length);
+    _restartReveal();
+    _updatePalette();
   }
+
+  void _precacheNeighbourArtwork() {
+    if (widget.items.length < 2) return;
+    for (final index in {
+      (_index - 1) % widget.items.length,
+      (_index + 1) % widget.items.length
+    }) {
+      final neighbour = widget.items[index];
+      final logo = neighbour.tvPosterLogo;
+      for (final image in [
+        _imageFor(neighbour),
+        if (logo?.key.endsWith('_logo_null') != true) logo,
+      ]) {
+        if (image == null || image.path.isEmpty) continue;
+        unawaited(
+            precacheImage(image.imageProvider, context, onError: (_, __) {}));
+      }
+    }
+  }
+
+  void _restartReveal() {
+    if (AppMotion.enabled(context)) {
+      _revealController.forward(from: 0);
+    } else {
+      _revealController.value = 1;
+    }
+  }
+
+  Widget _reveal(Widget child, Interval interval, String role) =>
+      AnimatedBuilder(
+          animation: _revealController,
+          child: child,
+          builder: (_, child) {
+            final progress = interval.transform(_revealController.value);
+            return Opacity(
+                key: ValueKey(role),
+                opacity: progress,
+                child: Transform.translate(
+                    offset:
+                        Offset(0, AppMotion.heroTextTravel * (1 - progress)),
+                    child: child));
+          });
+
+  ImageData? _imageFor(ItemBaseModel item) =>
+      item.getPosters?.backDrop?.firstOrNull ??
+      item.getPosters?.primary ??
+      item.getPosters?.thumb;
+
+  bool _isFavourite(ItemBaseModel item) => _favouriteOverrides.contains(item.id)
+      ? !item.userData.isFavourite
+      : item.userData.isFavourite;
 
   Future<void> _toggleFavourite(ItemBaseModel item) async {
     setState(() => _favouriteOverrides.contains(item.id)
@@ -132,316 +198,180 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel> {
     }
   }
 
-  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-      return KeyEventResult.ignored;
-    }
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.arrowLeft:
-        _go(-1);
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowRight:
-        _go(1);
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowUp:
-        Actions.maybeInvoke<DirectionalFocusIntent>(
-            context, const DirectionalFocusIntent(TraversalDirection.up));
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowDown:
-        Actions.maybeInvoke<DirectionalFocusIntent>(
-            context, const DirectionalFocusIntent(TraversalDirection.down));
-        return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
-
-  String _metaLine(ItemBaseModel item) {
-    final parts = [
-      // `yearAired`, pas `productionYear` — jamais peuplé pour un item
-      // chargé depuis le serveur (cf. `OverviewModel.fromBaseItemDto`),
-      // d'où une année toujours absente de cette ligne jusqu'ici.
-      item.overview.yearAired?.toString(),
-      item.overview.runTime?.humanize,
-      item.streamModel?.resolution?.value,
-      item.overview.genreItems.firstOrNull?.name,
-    ].nonNulls.toList();
-    return parts.join(' · ');
-  }
+  String _metaLine(ItemBaseModel item) => [
+        item.overview.yearAired?.toString(),
+        item.overview.genreItems.firstOrNull?.name ??
+            item.overview.genres.firstOrNull,
+        item.overview.runTime?.humanize,
+      ].nonNulls.join(' · ');
 
   @override
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) return const SizedBox.shrink();
-
-    final density = context.tokens.density;
-    final minHeight = HeroCarousel.minHeightFor(density);
-    final maxHeight = HeroCarousel.maxHeightFor(density);
     final item = _current;
-    final isDpad = AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad;
-    final heroTextSecondary = context.tokens.heroTextSecondary;
-
-    return Focus(
-      // Observateur pur : n'est jamais lui-même une étape de tabulation,
-      // il intercepte juste les flèches quand le focus est sur un enfant.
-      canRequestFocus: false,
-      onKeyEvent: _handleKeyEvent,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovering = true),
-        onExit: (_) => setState(() => _hovering = false),
-        child: ClipRRect(
-          // Bandeau plein cadre, jusqu'aux bords de la zone de contenu :
-          // pas de coins arrondis, contrairement aux cartes de jaquettes.
-          borderRadius: BorderRadius.zero,
-          child: ConstrainedBox(
-            // Hauteur minimale, extensible si le titre (2 lignes max) le
-            // demande — jamais de débordement : le contenu pilote la
-            // hauteur du Stack (enfant non positionné), les calques de
-            // fond suivent en Positioned.fill.
-            constraints:
-                BoxConstraints(minHeight: minHeight, maxHeight: maxHeight),
-            child: Stack(
-              alignment: Alignment.bottomLeft,
-              children: [
-                // Fond (image, teinte, dégradés de lisibilité horizontal ET
-                // vertical) : plus ici — posé par [FadingHeroBackdrop],
-                // derrière ce carrousel ET "Continuer à regarder", dans le
-                // même espace de défilement (cf. dashboard_screen.dart),
-                // avec `holdUntil` réglé sur la hauteur de ce carrousel :
-                // l'image (et ses dégradés) reste pleinement nette et
-                // visible sur toute cette hauteur, exactement comme si elle
-                // était peinte ici. Ce Stack ne porte donc plus que le
-                // texte et les contrôles, sur fond transparent.
-                //
-                // Flou local derrière le texte : abandonné. Sans moyen de
-                // vérifier visuellement le rendu ici (pas d'affichage dans
-                // cet environnement), le risque d'un bord de flou visible
-                // est trop élevé — les dégradés de FadingHeroBackdrop
-                // suffisent au contraste. Cf. consigne : mieux vaut
-                // l'absence de flou qu'un rectangle net.
-                //
-                // Bloc de texte.
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.screenPadding),
-                  child: FractionallySizedBox(
-                    widthFactor: 0.48,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // letterSpacing positif (AppTypography.overline,
-                        // 0.96) : Flutter le distribue de part et d'autre de
-                        // chaque glyphe, y compris avant le premier — sans
-                        // compensation, son bord gauche mord sur le cadre du
-                        // texte et se fait rogner par le ClipRRect du
-                        // bandeau. Aucun souci sur le titre juste en dessous
-                        // (displayLarge, letterSpacing négatif). Un padding
-                        // de gauche à moitié de la valeur restitue le glyphe
-                        // en entier sans décaler visiblement le sur-titre.
-                        Padding(
-                          padding: EdgeInsetsDirectional.only(
-                            start:
-                                (AppTypography.overline.letterSpacing ?? 0) / 2,
-                          ),
-                          child: Text(
-                            'à voir',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(color: heroTextSecondary),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(
-                          item.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .displayLarge
-                              ?.copyWith(color: AppColors.textPrimary),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          _metaLine(item),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: heroTextSecondary),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Row(
+    final density = context.tokens.density;
+    final secondary =
+        AppColors.textPrimary.withValues(alpha: AppHeroLayout.secondaryOpacity);
+    return MediaNavigation(
+        previewImage: _imageFor(item),
+        builder: (context) => LayoutBuilder(builder: (context, constraints) {
+              final contentWidth = constraints.maxWidth - widget.contentStart;
+              final textWidth = contentWidth *
+                  (contentWidth < AppHeroLayout.narrowWidth
+                      ? AppHeroLayout.narrowTextWidthFraction
+                      : AppHeroLayout.textWidthFraction);
+              return ConstrainedBox(
+                constraints: BoxConstraints(
+                    minHeight: (MediaQuery.sizeOf(context).height *
+                            AppHeroLayout.viewportHeightFraction)
+                        .clamp(HeroCarousel.minHeightFor(density),
+                            double.infinity)),
+                child: Stack(alignment: Alignment.bottomLeft, children: [
+                  Positioned.fill(
+                      child: MediaArtwork(
+                          child: HomeHeroBackdrop(image: _imageFor(item)))),
+                  Padding(
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                        widget.contentStart + AppSpacing.screenPadding,
+                        AppSpacing.xxl,
+                        AppSpacing.screenPadding,
+                        AppHeroLayout.titleBottomSpace),
+                    child: SizedBox(
+                        width: textWidth,
+                        child: Column(
                           mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            FocusRing(
-                              autofocus: isDpad,
-                              onActivate: () => item.play(context, ref),
-                              child: ExcludeFocus(
-                                child: FilledButton.icon(
-                                  onPressed: () => item.play(context, ref),
-                                  icon: const Icon(Icons.play_arrow_rounded),
-                                  label: const Text('Lire'),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            FocusRing(
-                              borderRadius: AppRadii.controlBorder,
-                              onActivate: () => item.navigateTo(context),
-                              child: ExcludeFocus(
-                                child: IconButton.outlined(
-                                  onPressed: () => item.navigateTo(context),
-                                  icon: const Icon(Icons.info_outline),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.xxs),
-                            FocusRing(
-                              borderRadius: AppRadii.controlBorder,
-                              onActivate: () => _toggleFavourite(item),
-                              child: ExcludeFocus(
-                                child: IconButton.outlined(
-                                  onPressed: () => _toggleFavourite(item),
-                                  icon: Icon(
-                                    _isFavourite(item)
-                                        ? Icons.favorite_rounded
-                                        : Icons.favorite_border_rounded,
-                                  ),
-                                ),
-                              ),
-                            ),
+                            _reveal(
+                                MediaArtwork(
+                                    title: true,
+                                    child: MediaHeroTitle(
+                                        title: item.title,
+                                        logo: item.tvPosterLogo,
+                                        availableWidth: contentWidth)),
+                                AppMotion.heroTitleReveal,
+                                'hero-title-reveal'),
+                            const SizedBox(height: AppSpacing.md),
+                            _reveal(
+                                Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(_metaLine(item),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(color: secondary)),
+                                      if (item.overview.summary.isNotEmpty) ...[
+                                        const SizedBox(height: AppSpacing.sm),
+                                        ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                                maxWidth: AppHeroLayout
+                                                    .synopsisWidth),
+                                            child: Text(item.overview.summary,
+                                                maxLines: 3,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                        color: AppColors
+                                                            .textPrimary))),
+                                      ],
+                                    ]),
+                                AppMotion.heroSynopsisReveal,
+                                'hero-synopsis-reveal'),
+                            const SizedBox(height: AppSpacing.lg),
+                            widget.actionsBuilder?.call(context, item) ??
+                                Wrap(
+                                    spacing: AppSpacing.sm,
+                                    runSpacing: AppSpacing.xs,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    children: [
+                                      FocusRing(
+                                          borderRadius: AppRadii.controlBorder,
+                                          onActivate: () =>
+                                              item.play(context, ref),
+                                          child: ExcludeFocus(
+                                              child: FilledButton.icon(
+                                                  onPressed: () =>
+                                                      item.play(context, ref),
+                                                  icon:
+                                                      const Icon(AppIcons.play),
+                                                  label: Text(context
+                                                      .localized.playLabel)))),
+                                      FocusRing(
+                                          focusNode:
+                                              MediaNavigationScope.focusOf(
+                                                  context),
+                                          borderRadius: AppRadii.controlBorder,
+                                          onActivate: () =>
+                                              openMediaDetails(context, item),
+                                          child: ExcludeFocus(
+                                              child: OutlinedButton.icon(
+                                                  onPressed: () =>
+                                                      openMediaDetails(
+                                                          context, item),
+                                                  icon: const Icon(
+                                                      Icons.info_outline),
+                                                  label: Text(context.localized
+                                                      .showDetails)))),
+                                      FocusRing(
+                                          borderRadius: AppRadii.controlBorder,
+                                          onActivate: () =>
+                                              _toggleFavourite(item),
+                                          child: ExcludeFocus(
+                                              child: IconButton.outlined(
+                                                  tooltip: context
+                                                      .localized.favorite,
+                                                  onPressed: () =>
+                                                      _toggleFavourite(item),
+                                                  icon: AnimatedFavouriteIcon(
+                                                      selected: _isFavourite(
+                                                          item))))),
+                                    ]),
                           ],
-                        ),
-                      ],
-                    ),
+                        )),
                   ),
-                ),
-                if (widget.items.length > 1) ...[
-                  _HoverArrow(
-                    alignment: Alignment.centerLeft,
-                    visible: _hovering,
-                    icon: Icons.chevron_left_rounded,
-                    onTap: () => _go(-1),
-                  ),
-                  _HoverArrow(
-                    alignment: Alignment.centerRight,
-                    visible: _hovering,
-                    icon: Icons.chevron_right_rounded,
-                    onTap: () => _go(1),
-                  ),
-                  Positioned(
-                    right: AppSpacing.md,
-                    bottom: AppSpacing.sm,
-                    child: _PaginationDots(
-                      count: widget.items.length,
-                      index: _index,
-                      onSelect: (i) {
-                        setState(() => _index = i);
-                        _updateHeroPalette();
-                      },
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+                  if (widget.items.length > 1)
+                    PositionedDirectional(
+                        end: AppSpacing.screenPadding,
+                        bottom: AppSpacing.md,
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          _arrow(
+                              context,
+                              Icons.chevron_left_rounded,
+                              -1,
+                              MaterialLocalizations.of(context)
+                                  .previousPageTooltip),
+                          Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm),
+                              child: Text(
+                                  '${_index + 1} / ${widget.items.length}',
+                                  style: AppTypography.meta
+                                      .copyWith(color: AppColors.textPrimary))),
+                          _arrow(
+                              context,
+                              Icons.chevron_right_rounded,
+                              1,
+                              MaterialLocalizations.of(context)
+                                  .nextPageTooltip),
+                        ])),
+                ]),
+              );
+            }));
   }
-}
 
-class _HoverArrow extends StatelessWidget {
-  final Alignment alignment;
-  final bool visible;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _HoverArrow({
-    required this.alignment,
-    required this.visible,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: alignment,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-        child: AnimatedOpacity(
-          duration: AppDurations.hover,
-          opacity: visible ? 1 : 0,
-          child: IgnorePointer(
-            ignoring: !visible,
-            child: MaybeExcludeFocus(
-              excluding: !visible,
-              child: FocusRing(
-                borderRadius: AppRadii.controlBorder,
-                onActivate: onTap,
-                child: ExcludeFocus(
-                  child: IconButton.filledTonal(
-                    onPressed: onTap,
-                    icon: Icon(icon),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// [ExcludeFocus] dont l'exclusion est conditionnelle — les flèches ne
-/// doivent pas être une étape de tabulation tant qu'elles sont masquées.
-class MaybeExcludeFocus extends StatelessWidget {
-  final bool excluding;
-  final Widget child;
-
-  const MaybeExcludeFocus(
-      {required this.excluding, required this.child, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ExcludeFocus(excluding: excluding, child: child);
-  }
-}
-
-class _PaginationDots extends StatelessWidget {
-  final int count;
-  final int index;
-  final ValueChanged<int> onSelect;
-
-  const _PaginationDots(
-      {required this.count, required this.index, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(count, (i) {
-        final selected = i == index;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          child: FocusRing(
-            borderRadius: BorderRadius.circular(99),
-            onActivate: () => onSelect(i),
-            child: AnimatedContainer(
-              duration: AppDurations.hover,
-              width: selected ? 18 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: AppColors.textPrimary
-                    .withValues(alpha: selected ? 0.9 : 0.4),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-          ),
-        );
-      }),
-    );
-  }
+  Widget _arrow(BuildContext context, IconData icon, int delta, String label) =>
+      FocusRing(
+          borderRadius: AppRadii.controlBorder,
+          onActivate: () => _go(delta),
+          child: ExcludeFocus(
+              child: IconButton(
+                  tooltip: label,
+                  onPressed: () => _go(delta),
+                  icon: Icon(icon))));
 }

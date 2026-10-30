@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 
-import 'package:dynamic_color/dynamic_color.dart';
+import 'package:kinos/theme/app_theme.dart';
 
-List<Widget> settingsListGroup(BuildContext context, Widget? label, List<Widget> children) {
+List<Widget> settingsListGroup(
+    BuildContext context, Widget? label, List<Widget> children) {
+  if (children.isEmpty) return const [];
   return [
     if (label != null) SettingsListGroupTitle(label: label),
-    ...children.map(
-      (e) {
-        return SettingsListChild(
-          child: e,
-          isFirst: e == children.first && label == null,
-          isLast: e == children.last,
-        );
-      },
-    )
+    DecoratedBox(
+      decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadii.controlBorder,
+          border: Border.all(color: AppColors.border)),
+      child: ClipRRect(
+          borderRadius: AppRadii.controlBorder,
+          child: Column(children: [
+            for (var index = 0; index < children.length; index++) ...[
+              if (index > 0) const Divider(height: 0, color: AppColors.border),
+              children[index],
+            ],
+          ])),
+    ),
+    const SizedBox(height: AppSpacing.lg),
   ];
 }
 
@@ -26,22 +34,9 @@ class SettingsListGroupTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(24);
-    final radiusSmall = const Radius.circular(6);
-    final color = Theme.of(context).colorScheme.surfaceContainerLow.harmonizeWith(Colors.red);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: radius.copyWith(
-          bottomLeft: radiusSmall,
-          bottomRight: radiusSmall,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0),
-        child: label,
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
+      child: label,
     );
   }
 }
@@ -50,24 +45,23 @@ class SettingsListChild extends StatelessWidget {
   final Widget child;
   final bool isFirst;
   final bool isLast;
-  const SettingsListChild({required this.child, this.isFirst = false, this.isLast = false, super.key});
+  const SettingsListChild(
+      {required this.child,
+      this.isFirst = false,
+      this.isLast = false,
+      super.key});
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(24);
-    final radiusSmall = const Radius.circular(6);
-    final color = Theme.of(context).colorScheme.surfaceContainerLow.harmonizeWith(Colors.red);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: radius.copyWith(
-          topLeft: isFirst ? null : radiusSmall,
-          topRight: isFirst ? null : radiusSmall,
-          bottomLeft: isLast ? null : radiusSmall,
-          bottomRight: isLast ? null : radiusSmall,
-        ),
-      ),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(
+            top:
+                isFirst ? const Radius.circular(AppRadii.control) : Radius.zero,
+            bottom:
+                isLast ? const Radius.circular(AppRadii.control) : Radius.zero,
+          )),
       child: child,
     );
   }

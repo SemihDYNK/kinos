@@ -1,3 +1,5 @@
+import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -118,7 +120,7 @@ enum ItemActions {
 extension ItemBaseModelExtensions on ItemBaseModel {
   Future<void> showDetailsMenu(BuildContext context, WidgetRef ref, Offset globalPos) async {
     final position = RelativeRect.fromLTRB(globalPos.dx, globalPos.dy, globalPos.dx, globalPos.dy);
-    await showMenu(
+    await showGlassMenu(
       context: context,
       position: position,
       items: generateActions(
@@ -187,7 +189,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
         if (playAble)
           ItemActionButton(
             action: () => play(context, ref),
-            icon: const Icon(IconsaxPlusLinear.play),
+            icon: const Icon(AppIcons.play),
             label: Text(playButtonLabel(context.localized)),
           ),
       if (!exclude.contains(ItemActions.addToQueue))
@@ -294,7 +296,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
       if (showMarkAs) ...[
         if (!exclude.contains(ItemActions.markPlayed))
           ItemActionButton(
-            icon: const Icon(IconsaxPlusLinear.eye),
+            icon: const Icon(AppIcons.watchedSelected),
             action: () async {
               try {
                 final userData = await ref.read(userProvider.notifier).markAsPlayed(true, id);
@@ -307,7 +309,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
           ),
         if (!exclude.contains(ItemActions.markUnplayed))
           ItemActionButton(
-            icon: const Icon(IconsaxPlusLinear.eye_slash),
+            icon: const Icon(AppIcons.watchedCircle),
             label: Text(context.localized.markAsUnwatched),
             action: () async {
               try {
@@ -321,7 +323,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
       ],
       if (!exclude.contains(ItemActions.setFavorite))
         ItemActionButton(
-          icon: Icon(userData.isFavourite ? IconsaxPlusLinear.heart_remove : IconsaxPlusLinear.heart_add),
+          icon: Icon(userData.isFavourite ? AppIcons.favouriteSelected : AppIcons.favourite),
           action: () async {
             try {
               final newData = await ref.read(userProvider.notifier).setAsFavorite(!userData.isFavourite, id);
@@ -517,7 +519,7 @@ Future<void> _showTrackLyricsPopup(BuildContext context, WidgetRef ref, AudioMod
   return showDialog<void>(
     context: context,
     builder: (context) {
-      return AlertDialog(
+      return GlassAlertDialog(
         title: Text(context.localized.lyrics),
         content: SizedBox(
           width: 540,
@@ -563,7 +565,7 @@ Future<void> _showTrackLyricsPopupWithTimeline(
   return showDialog<void>(
     context: context,
     builder: (context) {
-      return AlertDialog(
+      return GlassAlertDialog(
         title: Text(context.localized.lyrics),
         content: SizedBox(
           width: 540,

@@ -1,3 +1,5 @@
+import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
@@ -273,7 +275,7 @@ class EpisodePoster extends ConsumerWidget {
                 Offset localPosition = details.globalPosition;
                 RelativeRect position =
                     RelativeRect.fromLTRB(localPosition.dx, localPosition.dy, localPosition.dx, localPosition.dy);
-                await showMenu(context: context, position: position, items: actions.popupMenuItems(useIcons: true));
+                await showGlassMenu(context: context, position: position, items: actions.popupMenuItems(useIcons: true));
               },
               child: Hero(
                 tag: heroTag ?? UniqueKey(),
@@ -333,16 +335,15 @@ class EpisodePoster extends ConsumerWidget {
                       },
                       if (episode.userData.isFavourite)
                         const StatusCard(
-                          color: Colors.red,
                           child: Icon(
-                            Icons.favorite_rounded,
+                            AppIcons.favouriteSelected,
                           ),
                         ),
                       if (episode.userData.played)
                         StatusCard(
                           color: Theme.of(context).colorScheme.primary,
                           child: const Icon(
-                            Icons.check_rounded,
+                            AppIcons.watched,
                           ),
                         ),
                     ],
@@ -363,10 +364,10 @@ class EpisodePoster extends ConsumerWidget {
                   ExcludeFocus(
                     child: Align(
                       alignment: Alignment.bottomRight,
-                      child: PopupMenuButton(
+                      child: GlassPopupMenuButton(
                         tooltip: context.localized.options,
                         icon: const Icon(
-                          Icons.more_vert,
+                          AppIcons.more,
                           color: Colors.white,
                         ),
                         itemBuilder: (context) => actions.popupMenuItems(useIcons: true),

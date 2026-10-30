@@ -15,10 +15,14 @@ class AutoApproveBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasGlobalAutoApprove = user?.hasPermission(SeerrPermission.autoApprove) ?? false;
-    final hasMovieAutoApprove = user?.hasPermission(SeerrPermission.autoApproveMovie) ?? false;
-    final hasSeriesAutoApprove = user?.hasPermission(SeerrPermission.autoApproveTv) ?? false;
-    final hasAutoApprove = hasGlobalAutoApprove || (isTv ? hasSeriesAutoApprove : hasMovieAutoApprove);
+    final hasGlobalAutoApprove =
+        user?.hasPermission(SeerrPermission.autoApprove) ?? false;
+    final hasMovieAutoApprove =
+        user?.hasPermission(SeerrPermission.autoApproveMovie) ?? false;
+    final hasSeriesAutoApprove =
+        user?.hasPermission(SeerrPermission.autoApproveTv) ?? false;
+    final hasAutoApprove = hasGlobalAutoApprove ||
+        (isTv ? hasSeriesAutoApprove : hasMovieAutoApprove);
 
     if (!hasAutoApprove) return const SizedBox.shrink();
 
@@ -33,7 +37,8 @@ class AutoApproveBanner extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           spacing: 8,
           children: [
-            Icon(IconsaxPlusLinear.tick_circle, color: Theme.of(context).colorScheme.onTertiaryContainer),
+            Icon(IconsaxPlusLinear.tick_circle,
+                color: Theme.of(context).colorScheme.onTertiaryContainer),
             Expanded(
               child: Text(
                 context.localized.seerrAutoApproveNotice,
@@ -67,14 +72,13 @@ class PermissionDeniedWarning extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               spacing: 8,
               children: [
-                Icon(IconsaxPlusBold.forbidden_2, color: Theme.of(context).colorScheme.onErrorContainer),
+                Icon(IconsaxPlusBold.forbidden_2,
+                    color: Theme.of(context).colorScheme.onErrorContainer),
                 Expanded(
                   child: Text(
                     context.localized.seerrPermissionDenied,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.onErrorContainer),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onErrorContainer),
                   ),
                 ),
               ],
@@ -103,14 +107,19 @@ class QuotaLimitCard extends StatelessWidget {
     final quotaLimit = quota.limit ?? 0;
     final quotaDays = quota.days ?? 0;
 
-    final limitReached = quota.limit != null && quota.remaining != null && quota.remaining! <= 0;
+    final limitReached =
+        quota.limit != null && quota.remaining != null && quota.remaining! <= 0;
 
-    final mediaTypeLabel =
-        type == SeerrMediaType.movie ? context.localized.mediaTypeMovie(5) : context.localized.mediaTypeSeries(5);
+    final mediaTypeLabel = type == SeerrMediaType.movie
+        ? context.localized.mediaTypeMovie(5)
+        : context.localized.mediaTypeSeries(5);
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.75),
+        color: Theme.of(context)
+            .colorScheme
+            .primaryContainer
+            .withValues(alpha: 0.75),
         borderRadius: KinosTheme.smallShape.borderRadius,
       ),
       child: Padding(
@@ -133,7 +142,8 @@ class QuotaLimitCard extends StatelessWidget {
                   ),
                   if (limitReached)
                     Text(
-                      context.localized.requestQuotaLimitReached(mediaTypeLabel.toLowerCase()),
+                      context.localized.requestQuotaLimitReached(
+                          mediaTypeLabel.toLowerCase()),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.error,
                             fontWeight: FontWeight.w700,
@@ -144,7 +154,10 @@ class QuotaLimitCard extends StatelessWidget {
             ),
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.15),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onPrimaryContainer
+                    .withValues(alpha: 0.15),
                 borderRadius: KinosTheme.defaultShape.borderRadius,
               ),
               padding: const EdgeInsets.all(4),
@@ -152,7 +165,9 @@ class QuotaLimitCard extends StatelessWidget {
                 children: [
                   SquareProgressIndicator(
                     value: quotaLimit > 0 ? quotaRemaining / quotaLimit : 0,
-                    color: limitReached ? Theme.of(context).colorScheme.error : Colors.greenAccent,
+                    color: limitReached
+                        ? Theme.of(context).colorScheme.error
+                        : Colors.greenAccent,
                     strokeCap: StrokeCap.round,
                     strokeWidth: 6,
                     borderRadius: 12,
@@ -167,7 +182,9 @@ class QuotaLimitCard extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                               color: limitReached
                                   ? Theme.of(context).colorScheme.error
-                                  : Theme.of(context).colorScheme.onPrimaryContainer,
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
                             ),
                       ),
                     ),

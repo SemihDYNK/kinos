@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,7 +33,9 @@ Future<void> showMediaManagementSheet({
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Flexible(child: Text(context.localized.settings)),
-          Flexible(child: Text(mediaInfo.title, style: Theme.of(context).textTheme.headlineSmall)),
+          Flexible(
+              child: Text(mediaInfo.title,
+                  style: Theme.of(context).textTheme.headlineSmall)),
         ],
       ),
       content: _MediaManagementActions(
@@ -64,10 +67,12 @@ class _MediaManagementActions extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_MediaManagementActions> createState() => _MediaManagementActionsState();
+  ConsumerState<_MediaManagementActions> createState() =>
+      _MediaManagementActionsState();
 }
 
-class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions> {
+class _MediaManagementActionsState
+    extends ConsumerState<_MediaManagementActions> {
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -77,7 +82,8 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final canManageRequest = ref.watch(seerrUserProvider.select((value) => value?.canManageRequests ?? false));
+    final canManageRequest = ref.watch(
+        seerrUserProvider.select((value) => value?.canManageRequests ?? false));
 
     final mediaInfo = widget.poster.mediaInfo;
     final itemModel = widget.poster.itemBaseModel;
@@ -94,7 +100,8 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
         label: Text(context.localized.openInSeerr),
         backgroundColor: Colors.deepPurpleAccent.shade700,
         action: () {
-          final seerrUrl = ref.read(userProvider.select((value) => value?.seerrCredentials?.serverUrl));
+          final seerrUrl = ref.read(userProvider
+              .select((value) => value?.seerrCredentials?.serverUrl));
           if (isTvSeries) {
             launchUrl(context, '$seerrUrl/tv/${widget.poster.tmdbId}');
           } else {
@@ -115,14 +122,18 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
           ItemActionDivider(),
           ItemActionButton(
             icon: const Icon(IconsaxPlusLinear.export_1),
-            label: Text(isTvSeries ? context.localized.openInSonarr : context.localized.openInRadarr),
+            label: Text(isTvSeries
+                ? context.localized.openInSonarr
+                : context.localized.openInRadarr),
             action: _isLoading ? null : _openInExternalService,
           ),
           ItemActionButton(
             icon: const Icon(IconsaxPlusLinear.close_circle),
             backgroundColor: theme.colorScheme.errorContainer,
             foregroundColor: theme.colorScheme.onErrorContainer,
-            label: Text(isTvSeries ? context.localized.removeFromSonarr : context.localized.removeFromRadarr),
+            label: Text(isTvSeries
+                ? context.localized.removeFromSonarr
+                : context.localized.removeFromRadarr),
             action: _isLoading ? null : _removeFromService,
           ),
         ],
@@ -131,7 +142,9 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
           ItemActionButton(
             icon: const Icon(IconsaxPlusLinear.tick_circle),
             backgroundColor: Colors.green.shade900,
-            label: Text(isTvSeries ? context.localized.markAllSeasonsAsAvailable : context.localized.markAsAvailable),
+            label: Text(isTvSeries
+                ? context.localized.markAllSeasonsAsAvailable
+                : context.localized.markAsAvailable),
             action: _isLoading ? null : _markAsAvailable,
           ),
         ItemActionButton(
@@ -196,7 +209,8 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
     );
   }
 
-  Future<void> _handleAction(Future<void> Function() action, String successMessage) async {
+  Future<void> _handleAction(
+      Future<void> Function() action, String successMessage) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -235,10 +249,12 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
     final seerrService = ref.read(seerrApiProvider);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         title: Text(context.localized.delete),
         content: Text(
-          isTvSeries ? context.localized.removeSeriesFromSonarrConfirm : context.localized.removeMovieFromRadarrConfirm,
+          isTvSeries
+              ? context.localized.removeSeriesFromSonarrConfirm
+              : context.localized.removeMovieFromRadarrConfirm,
         ),
         actions: [
           TextButton(
@@ -262,7 +278,9 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
 
         await seerrService.deleteMediaFile(mediaId: mediaId);
       },
-      isTvSeries ? context.localized.removedFromSonarr : context.localized.removedFromRadarr,
+      isTvSeries
+          ? context.localized.removedFromSonarr
+          : context.localized.removedFromRadarr,
     );
   }
 
@@ -270,10 +288,12 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
     final seerrService = ref.read(seerrApiProvider);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         title: Text(context.localized.delete),
         content: Text(
-          isTvSeries ? context.localized.markAllSeasonsAsAvailableConfirm : context.localized.markAsAvailableConfirm,
+          isTvSeries
+              ? context.localized.markAllSeasonsAsAvailableConfirm
+              : context.localized.markAsAvailableConfirm,
         ),
         actions: [
           TextButton(
@@ -308,10 +328,11 @@ class _MediaManagementActionsState extends ConsumerState<_MediaManagementActions
     final seerrService = ref.read(seerrApiProvider);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         title: Text(context.localized.delete),
         content: Text(
-          context.localized.deleteSeerrDataConfirm(isTvSeries ? "Sonarr" : "Radarr"),
+          context.localized
+              .deleteSeerrDataConfirm(isTvSeries ? "Sonarr" : "Radarr"),
         ),
         actions: [
           TextButton(

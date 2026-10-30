@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -156,7 +157,7 @@ class _NavigationButtonState extends ConsumerState<NavigationButton> {
                                     ),
                                   ),
                                 if (widget.trailing.isNotEmpty && onHover)
-                                  PopupMenuButton(
+                                  GlassPopupMenuButton(
                                     tooltip: context.localized.options,
                                     iconColor: foreGroundColor,
                                     iconSize: 18,

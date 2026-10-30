@@ -1,3 +1,4 @@
+import 'package:kinos/theme/app_theme.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -33,10 +34,13 @@ class RestartableTimerController {
     _timeLeft = value;
   }
 
-  final StreamController<Duration> _timeLeftController = StreamController<Duration>.broadcast();
-  final StreamController<bool> _isActiveController = StreamController<bool>.broadcast();
+  final StreamController<Duration> _timeLeftController =
+      StreamController<Duration>.broadcast();
+  final StreamController<bool> _isActiveController =
+      StreamController<bool>.broadcast();
 
-  RestartableTimerController(Duration duration, Duration steps, {Function()? onTimeout}) {
+  RestartableTimerController(Duration duration, Duration steps,
+      {Function()? onTimeout}) {
     _steps = steps;
     _duration = duration;
     _onTimeout = onTimeout;
@@ -110,13 +114,16 @@ class ProgressFloatingButton extends ConsumerStatefulWidget {
   final RestartableTimerController? controller;
   final Function()? onTimeOut;
   final Function(Duration? newDuration)? onLongPress;
-  const ProgressFloatingButton({this.controller, this.onTimeOut, this.onLongPress, super.key});
+  const ProgressFloatingButton(
+      {this.controller, this.onTimeOut, this.onLongPress, super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ProgressFloatingButtonState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _ProgressFloatingButtonState();
 }
 
-class _ProgressFloatingButtonState extends ConsumerState<ProgressFloatingButton> {
+class _ProgressFloatingButtonState
+    extends ConsumerState<ProgressFloatingButton> {
   late RestartableTimerController timer;
   late Duration timeLeft = timer._duration;
   late bool isActive = false;
@@ -159,8 +166,10 @@ class _ProgressFloatingButtonState extends ConsumerState<ProgressFloatingButton>
       onLongPress: widget.onLongPress != null
           ? () async {
               HapticFeedback.vibrate();
-              final newTimer =
-                  await showSimpleDurationPicker(context: context, initialValue: timer._duration, showNever: false);
+              final newTimer = await showSimpleDurationPicker(
+                  context: context,
+                  initialValue: timer._duration,
+                  showNever: false);
               widget.onLongPress?.call(newTimer);
               if (newTimer != null) {
                 setState(() {
@@ -176,11 +185,19 @@ class _ProgressFloatingButtonState extends ConsumerState<ProgressFloatingButton>
           fit: StackFit.expand,
           alignment: Alignment.center,
           children: [
-            SquareProgressIndicator(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
-              borderRadius: 6,
-              strokeWidth: 4,
-              value: timeLeft.inMilliseconds / timer._duration.inMilliseconds,
+            TweenAnimationBuilder<double>(
+              tween: Tween(
+                  end:
+                      (timeLeft.inMicroseconds / timer._duration.inMicroseconds)
+                          .clamp(0.0, 1.0)),
+              duration:
+                  AppMotion.enabled(context) ? timer._steps : Duration.zero,
+              builder: (context, progress, child) => SquareProgressIndicator(
+                color: AppColors.textPrimary,
+                borderRadius: AppRadii.control,
+                strokeWidth: AppSpacing.xxs,
+                value: progress,
+              ),
             ),
             Icon(isActive ? IconsaxPlusBold.pause : IconsaxPlusBold.play)
           ],

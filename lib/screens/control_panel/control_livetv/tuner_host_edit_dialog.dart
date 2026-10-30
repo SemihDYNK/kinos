@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,7 +35,7 @@ class TunerHostEditDialog extends ConsumerWidget {
     final state = ref.watch(controlTunerEditProvider(tunerHost));
     final notifier = ref.read(controlTunerEditProvider(tunerHost).notifier);
 
-    return AlertDialog(
+    return GlassAlertDialog(
       title: Text(tunerHost == null ? context.localized.addTunerDevice : context.localized.editTunerDevice),
       content: SingleChildScrollView(
         child: Column(

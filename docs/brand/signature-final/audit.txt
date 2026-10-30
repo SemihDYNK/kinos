@@ -1,0 +1,14 @@
+
+=== kinos_signature_final.svg  (291 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #ffffff · gradients 0 · anchors 15
+margins L20.0 R17.0 T15.0 B15.0 · bbox fill 0.755
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== kinos_wordmark_final.svg  (2397 bytes)
+viewBox 0 0 949 256 · aspect 3.707 (horizontal)
+colours 1: #ffffff · gradients 0 · anchors 111
+margins L20.0 R20.1 T15.0 B15.0 · bbox fill 0.845
+▲ WARN [near-miss-angle] 2 straight edge(s) are 0.3–3° off a clean angle — they read as mistakes. Snap them: 58.2° (→60°) len 94.3 at (395,26); 58.1° (→60°) len 87.8 at (464,230). (Expected — and fine — for type set on a curve or deliberately rotated elements.)
+production-readiness score: 92/100 (heuristic)

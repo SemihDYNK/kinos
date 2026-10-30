@@ -34,12 +34,14 @@ extension ResponseFutureExtensions<T> on Future<Response<T>> {
   Future<ApiResult<T>> get apiResult async {
     try {
       final response = await this;
-      if (response.isSuccessful) {
+      if (response.isSuccessful && response.error == null) {
         return ApiResult.success(response.body);
       }
 
       final reason = response.base.reasonPhrase;
-      final body = response.body?.toString() ?? response.error?.toString() ?? 'Unknown error';
+      final body = response.body?.toString() ??
+          response.error?.toString() ??
+          'Unknown error';
       return ApiResult.failure(ApiError(
         statusCode: response.base.statusCode,
         reason: reason,
@@ -53,16 +55,17 @@ extension ResponseFutureExtensions<T> on Future<Response<T>> {
 
 extension ResponseExtensions<T> on Response<T> {
   ApiResult<T> get apiResult {
-    if (isSuccessful) {
-      final responseBody = body;
+    if (isSuccessful && error == null) {
+      final responseBody = this.body;
       if (responseBody is T) {
-        return ApiResult.success(responseBody as T);
+        return ApiResult.success(responseBody);
       }
 
       return ApiResult.success(null);
     } else {
       final reason = base.reasonPhrase;
-      final body = this.body?.toString() ?? error?.toString() ?? 'Unknown error';
+      final body =
+          this.body?.toString() ?? error?.toString() ?? 'Unknown error';
       return ApiResult.failure(ApiError(
         statusCode: base.statusCode,
         reason: reason,

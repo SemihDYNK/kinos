@@ -1,3 +1,4 @@
+import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,7 +56,7 @@ class MediaPlayButton extends ConsumerWidget {
             ),
             const SizedBox(width: 4),
             Icon(
-              IconsaxPlusBold.play,
+              AppIcons.play,
               color: contentColor,
             ),
           ],

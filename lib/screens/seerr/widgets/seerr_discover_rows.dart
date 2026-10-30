@@ -30,21 +30,24 @@ class SeerrDiscoverRows extends ConsumerWidget {
           label: context.localized.trending,
           posters: dashboard.trending,
           contentPadding: contentPadding,
-          onLabelClick: () => context.pushRoute(SeerrSearchRoute(mode: SeerrSearchMode.trending)),
+          onLabelClick: () => context
+              .pushRoute(SeerrSearchRoute(mode: SeerrSearchMode.trending)),
         ),
       if (dashboard.popularMovies.isNotEmpty)
         SeerrPosterRow(
           label: context.localized.popularMovies,
           posters: dashboard.popularMovies,
           contentPadding: contentPadding,
-          onLabelClick: () => context.pushRoute(SeerrSearchRoute(mode: SeerrSearchMode.discoverMovies)),
+          onLabelClick: () => context.pushRoute(
+              SeerrSearchRoute(mode: SeerrSearchMode.discoverMovies)),
         ),
       if (dashboard.popularSeries.isNotEmpty)
         SeerrPosterRow(
           label: context.localized.popularSeries,
           posters: dashboard.popularSeries,
           contentPadding: contentPadding,
-          onLabelClick: () => context.pushRoute(SeerrSearchRoute(mode: SeerrSearchMode.discoverTv)),
+          onLabelClick: () => context
+              .pushRoute(SeerrSearchRoute(mode: SeerrSearchMode.discoverTv)),
         ),
       if (dashboard.expectedMovies.isNotEmpty)
         SeerrPosterRow(
@@ -52,7 +55,9 @@ class SeerrDiscoverRows extends ConsumerWidget {
           posters: dashboard.expectedMovies,
           contentPadding: contentPadding,
           onLabelClick: () => context.pushRoute(
-            SeerrSearchRoute(mode: SeerrSearchMode.discoverMovies, yearGte: DateTime.now().year),
+            SeerrSearchRoute(
+                mode: SeerrSearchMode.discoverMovies,
+                yearGte: DateTime.now().year),
           ),
         ),
       if (dashboard.expectedSeries.isNotEmpty)
@@ -61,7 +66,8 @@ class SeerrDiscoverRows extends ConsumerWidget {
           posters: dashboard.expectedSeries,
           contentPadding: contentPadding,
           onLabelClick: () => context.pushRoute(
-            SeerrSearchRoute(mode: SeerrSearchMode.discoverTv, yearGte: DateTime.now().year),
+            SeerrSearchRoute(
+                mode: SeerrSearchMode.discoverTv, yearGte: DateTime.now().year),
           ),
         ),
     ];

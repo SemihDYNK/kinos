@@ -1,3 +1,4 @@
+import 'package:kinos/models/items/movie_model.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -12,7 +13,7 @@ import 'package:kinos/screens/dashboard/single_row_section.dart';
 import 'package:kinos/screens/details_screens/components/media_info_formatters.dart';
 import 'package:kinos/screens/details_screens/components/media_info_section.dart';
 import 'package:kinos/screens/details_screens/components/media_meta_line.dart';
-import 'package:kinos/screens/details_screens/components/media_stream_selectors.dart';
+import 'package:kinos/screens/details_screens/components/movie_hero_content.dart';
 import 'package:kinos/screens/shared/media_detail_scaffold.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/humanize_duration.dart';
@@ -37,20 +38,14 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
   /// Largeur de lecture confortable pour le résumé — ~80 caractères, ni un
   /// bloc étalé sur toute la largeur de l'écran, ni tronqué.
-  static const _readingWidth = 640.0;
 
   @override
   Widget build(BuildContext context) {
-    final details = ref.watch(providerInstance);
-    // `details` est null tant que le premier fetchDetails n'a pas abouti —
-    // et c'est justement PullToRefresh (refreshOnStart: true), à l'intérieur
-    // de MediaDetailScaffold, qui le déclenche. Un retour anticipé ici,
-    // avant de construire MediaDetailScaffold, empêchait ce déclenchement :
-    // l'écran restait bloqué sur le fond du Hero de DetailsScreen, sans
-    // jamais charger quoi que ce soit. MediaDetailScaffold doit donc
-    // toujours être construit ; seul son contenu dérivé de `details` est
-    // conditionnel, avec repli sur `widget.item` (déjà disponible) tant que
-    // le chargement n'est pas terminé.
+    final seed = widget.item;
+    final details =
+        ref.watch(providerInstance) ?? (seed is MovieModel ? seed : null);
+    // Le film source réserve dès la première frame le résumé et les commandes :
+    // le logo Hero ne vise pas une fiche vide qui grandit pendant son trajet.
     final item = details ?? widget.item;
 
     final resolution =
@@ -58,7 +53,9 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final metaLine = details == null
         ? ''
         : buildMediaMetaLine(
-            year: details.premiereDate.year,
+            year: details.premiereDate.year > 0
+                ? details.premiereDate.year
+                : null,
             extras: [details.overview.runTime?.humanize, resolution]
                 .nonNulls
                 .toList(),
@@ -143,6 +140,16 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
       title: item.name,
       originalTitle: details?.originalTitle,
       metaLine: metaLine,
+      cinematic: true,
+      heroContent: details == null
+          ? null
+          : MovieHeroContent(
+              summary: details.overview.summary,
+              streams: details.mediaStreams,
+              onStreamsChanged: (changed) => ref
+                  .read(providerInstance.notifier)
+                  .setMediaStreamHelper(changed),
+            ),
       onPlay: details == null
           ? null
           : () async {
@@ -150,15 +157,27 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
               ref.read(providerInstance.notifier).fetchDetails(widget.item);
             },
       isFavourite: item.userData.isFavourite,
-      onToggleFavourite: () => ref.read(userProvider.notifier).setAsFavorite(
-            !item.userData.isFavourite,
-            item.id,
-          ),
+      onToggleFavourite: () async {
+        final response = await ref.read(userProvider.notifier).setAsFavorite(
+              !item.userData.isFavourite,
+              item.id,
+            );
+        if (!mounted || response == null) return;
+        ref
+            .read(providerInstance.notifier)
+            .updateUserData(item, response.bodyOrThrow);
+      },
       isPlayed: item.userData.played,
-      onTogglePlayed: () => ref.read(userProvider.notifier).markAsPlayed(
-            !item.userData.played,
-            item.id,
-          ),
+      onTogglePlayed: () async {
+        final response = await ref.read(userProvider.notifier).markAsPlayed(
+              !item.userData.played,
+              item.id,
+            );
+        if (!mounted || response == null) return;
+        ref
+            .read(providerInstance.notifier)
+            .updateUserData(item, response.bodyOrThrow);
+      },
       actions: details == null
           ? null
           : (context) => [
@@ -188,38 +207,12 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
       content: (context, padding) => details == null
           ? []
           : [
-              if (details.overview.summary.isNotEmpty)
-                SliverPadding(
-                  padding: padding,
-                  sliver: SliverToBoxAdapter(
-                    child: ConstrainedBox(
-                      constraints:
-                          const BoxConstraints(maxWidth: _readingWidth),
-                      child: Text(
-                        details.overview.summary,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                  ),
-                ),
-              if (details.mediaStreams.audioStreams.isNotEmpty ||
-                  details.mediaStreams.subStreams.isNotEmpty)
-                SliverPadding(
-                  padding: padding.copyWith(top: AppSpacing.lg),
-                  sliver: SliverToBoxAdapter(
-                    child: MediaStreamSelectors(
-                      mediaStream: details.mediaStreams,
-                      onChanged: (changed) => ref
-                          .read(providerInstance.notifier)
-                          .setMediaStreamHelper(changed),
-                    ),
-                  ),
-                ),
               if (details.overview.people.isNotEmpty || info.isNotEmpty)
                 SliverPadding(
                   padding: const EdgeInsets.only(top: AppSpacing.xl),
                   sliver: SliverToBoxAdapter(
                     child: MediaInfoSection(
+                        cinematic: true,
                         people: details.overview.people,
                         info: info,
                         contentPadding: padding),

@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -22,7 +23,8 @@ String yearLabel(BuildContext context, (int? minYear, int? maxYear) yearRange) {
   final maxYear = yearRange.$2;
 
   if (minYear == null && maxYear == null) return context.localized.year(1);
-  if (minYear != null && maxYear != null) return '${context.localized.year(1)}: $minYear-$maxYear';
+  if (minYear != null && maxYear != null)
+    return '${context.localized.year(1)}: $minYear-$maxYear';
   if (minYear != null) return '${context.localized.year(1)}: $minYear+';
   return '${context.localized.year(1)}: <=$maxYear';
 }
@@ -31,11 +33,13 @@ String ratingLabel(BuildContext context, SeerrFilterModel filters) {
   final minRating = filters.voteAverageGte;
   final maxRating = filters.voteAverageLte;
 
-  if (minRating == null && maxRating == null) return context.localized.rating(1);
+  if (minRating == null && maxRating == null)
+    return context.localized.rating(1);
   if (minRating != null && maxRating != null) {
     return '${context.localized.rating(1)}: ${minRating.toStringAsFixed(1)}-${maxRating.toStringAsFixed(1)}';
   }
-  if (minRating != null) return '${context.localized.rating(1)}: ${minRating.toStringAsFixed(1)}+';
+  if (minRating != null)
+    return '${context.localized.rating(1)}: ${minRating.toStringAsFixed(1)}+';
   return '${context.localized.rating(1)}: <=${maxRating?.toStringAsFixed(1)}';
 }
 
@@ -43,8 +47,10 @@ String runtimeLabel(BuildContext context, SeerrFilterModel filters) {
   final minRuntime = filters.runtimeGte;
   final maxRuntime = filters.runtimeLte;
 
-  if (minRuntime == null && maxRuntime == null) return context.localized.runTime;
-  if (minRuntime != null && maxRuntime != null) return '${context.localized.runTime}: $minRuntime-$maxRuntime';
+  if (minRuntime == null && maxRuntime == null)
+    return context.localized.runTime;
+  if (minRuntime != null && maxRuntime != null)
+    return '${context.localized.runTime}: $minRuntime-$maxRuntime';
   if (minRuntime != null) return '${context.localized.runTime}: $minRuntime+';
   return '${context.localized.runTime}: <=$maxRuntime';
 }
@@ -57,7 +63,7 @@ Future<void> openSearchModeDialog(
   return showDialog(
     context: context,
     builder: (dialogContext) {
-      return AlertDialog(
+      return GlassAlertDialog(
         title: Text(context.localized.search),
         content: SizedBox(
           width: MediaQuery.of(context).size.width * 0.65,
@@ -149,7 +155,8 @@ Future<void> openRatingDialog(
       (end ?? 10).toStringAsFixed(1),
     ),
     wholeNumbers: false,
-    summaryBuilder: (start, end) => '${(start ?? 0).toStringAsFixed(1)} - ${(end ?? 10).toStringAsFixed(1)}',
+    summaryBuilder: (start, end) =>
+        '${(start ?? 0).toStringAsFixed(1)} - ${(end ?? 10).toStringAsFixed(1)}',
     onClear: () async {
       notifier.setVoteAverageRange(null, null);
       await context.refreshData();
@@ -209,7 +216,7 @@ Future<void> openSortDialog(
   return showDialog(
     context: context,
     builder: (dialogContext) {
-      return AlertDialog(
+      return GlassAlertDialog(
         title: Text(context.localized.sortBy),
         content: SizedBox(
           width: MediaQuery.of(context).size.width * 0.65,
@@ -246,14 +253,16 @@ Future<void> openWatchRegionDialog(
   final rootContext = context;
   final currentRegion = (filters.watchRegion ?? 'US').toUpperCase();
   final regionDisplayNames = <SeerrWatchProviderRegion, String>{
-    for (final region in watchRegions) region: region.englishName ?? region.nativeName ?? region.iso31661 ?? '',
+    for (final region in watchRegions)
+      region: region.englishName ?? region.nativeName ?? region.iso31661 ?? '',
   };
-  final sortedRegions = [...watchRegions]..sort((a, b) => regionDisplayNames[a]!.compareTo(regionDisplayNames[b]!));
+  final sortedRegions = [...watchRegions]
+    ..sort((a, b) => regionDisplayNames[a]!.compareTo(regionDisplayNames[b]!));
 
   return showDialog(
     context: context,
     builder: (dialogContext) {
-      return AlertDialog(
+      return GlassAlertDialog(
         title: Text(context.localized.countryRegion),
         content: SizedBox(
           width: MediaQuery.of(context).size.width * 0.65,
@@ -265,7 +274,8 @@ Future<void> openWatchRegionDialog(
                 final isSelected = code == currentRegion;
                 return Builder(builder: (context) {
                   return CheckboxListTile(
-                    title: Text('${region.englishName ?? region.nativeName ?? region.iso31661 ?? ''} ($code)'),
+                    title: Text(
+                        '${region.englishName ?? region.nativeName ?? region.iso31661 ?? ''} ($code)'),
                     value: isSelected,
                     selected: isSelected,
                     onFocusChange: (value) {
@@ -349,7 +359,7 @@ Future<void> _showRangeDialog({
     builder: (dialogContext) {
       return StatefulBuilder(
         builder: (context, setState) {
-          return AlertDialog(
+          return GlassAlertDialog(
             title: Text(title),
             content: SizedBox(
               width: MediaQuery.of(context).size.width * 0.65,
@@ -357,7 +367,8 @@ Future<void> _showRangeDialog({
                 mainAxisSize: MainAxisSize.min,
                 spacing: 12,
                 children: [
-                  Text((summaryBuilder ?? defaultSummary)(currentStart, currentEnd)),
+                  Text((summaryBuilder ?? defaultSummary)(
+                      currentStart, currentEnd)),
                   AdaptiveRangeInput(
                     min: min,
                     max: max,
@@ -437,7 +448,8 @@ class _StudioSearchDialog extends StatefulWidget {
 }
 
 class _StudioSearchDialogState extends State<_StudioSearchDialog> {
-  late final TextEditingController _searchController = TextEditingController(text: widget.selectedStudio?.name ?? '');
+  late final TextEditingController _searchController =
+      TextEditingController(text: widget.selectedStudio?.name ?? '');
   final Debouncer _debouncer = Debouncer(const Duration(milliseconds: 500));
   List<SeerrCompany> _searchResults = [];
   bool _isSearching = false;
@@ -479,7 +491,7 @@ class _StudioSearchDialogState extends State<_StudioSearchDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return GlassAlertDialog(
       title: Text(context.localized.studio(1)),
       content: SizedBox(
         width: MediaQuery.of(context).size.width * 0.65,
@@ -514,15 +526,19 @@ class _StudioSearchDialogState extends State<_StudioSearchDialog> {
                       final selected = _selectedStudio?.id == studio.id;
                       return ListTile(
                         selected: selected,
-                        selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
+                        selectedTileColor:
+                            Theme.of(context).colorScheme.primaryContainer,
                         trailing: studio.logoUrl != null
                             ? Container(
                                 width: 120,
                                 height: 40,
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  borderRadius: KinosTheme.smallShape.borderRadius,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                                  borderRadius:
+                                      KinosTheme.smallShape.borderRadius,
                                 ),
                                 child: CachedNetworkImage(
                                   imageUrl: studio.logoUrl!,

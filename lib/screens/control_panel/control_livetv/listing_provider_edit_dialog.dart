@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:iconsax_plus/iconsax_plus.dart';
@@ -101,7 +102,7 @@ class _ListingProviderEditDialogState extends State<ListingProviderEditDialog> {
   Widget build(BuildContext context) {
     final availableTuners = widget.availableTuners ?? [];
 
-    return AlertDialog(
+    return GlassAlertDialog(
       title: Text(widget.provider == null ? context.localized.addEpgProvider : context.localized.editEpgProvider),
       content: SingleChildScrollView(
         child: Column(

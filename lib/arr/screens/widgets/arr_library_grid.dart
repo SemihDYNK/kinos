@@ -1,3 +1,5 @@
+import 'package:kinos/util/text_metrics.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -17,6 +19,8 @@ import 'package:kinos/theme/app_theme.dart';
 /// perdu), sans les nœuds de focus individuels.
 class ArrLibraryGrid extends StatefulWidget {
   final List<ArrLibraryEntry> entries;
+  final Widget? header;
+  final EdgeInsets contentPadding;
   final String baseUrl;
   final String apiKey;
   final void Function(ArrLibraryEntry entry) onOpenDetail;
@@ -27,6 +31,8 @@ class ArrLibraryGrid extends StatefulWidget {
 
   const ArrLibraryGrid({
     required this.entries,
+    this.header,
+    this.contentPadding = EdgeInsets.zero,
     required this.baseUrl,
     required this.apiKey,
     required this.onOpenDetail,
@@ -42,9 +48,8 @@ class ArrLibraryGrid extends StatefulWidget {
 }
 
 class _ArrLibraryGridState extends State<ArrLibraryGrid> {
-  static const _targetTileWidth = 180.0;
   static const _gap = AppSpacing.sm;
-  static const _aspectRatio = 2 / 3;
+  static const _aspectRatio = AppMedia.posterAspectRatio;
 
   final _focusNode = FocusNode(debugLabel: 'ArrLibraryGrid');
   final _scrollController = ScrollController();
@@ -54,6 +59,13 @@ class _ArrLibraryGridState extends State<ArrLibraryGrid> {
   // porteur de RenderObject s'intercale) pour la conversion coordonnées
   // locales -> globales utilisée par `_tileCenter`/`_ensureVisible`.
   final _gridKey = GlobalKey();
+  final _headerKey = GlobalKey();
+
+  double get _headerHeight =>
+      (_headerKey.currentContext?.findRenderObject() as RenderBox?)
+          ?.size
+          .height ??
+      0;
   int _focusedIndex = 0;
 
   RenderBox? get _gridBox =>
@@ -74,30 +86,46 @@ class _ArrLibraryGridState extends State<ArrLibraryGrid> {
     }
   }
 
-  int _crossAxisCount(double width) =>
-      (width / (_targetTileWidth + _gap)).round().clamp(6, 8);
+  int _crossAxisCount(double width) => context.tokens.density.columnsFor(width);
+
+  double _tileHeight(double width) =>
+      width / _aspectRatio +
+      AppSpacing.xs +
+      measuredLineHeight(context, AppTypography.cardTitle) +
+      measuredLineHeight(context, AppTypography.meta) * 2;
 
   double _tileWidth(double width, int crossAxisCount) =>
       (width - _gap * (crossAxisCount - 1)) / crossAxisCount;
 
-  void _move(int delta, int crossAxisCount) {
-    if (widget.entries.isEmpty) return;
-    final next = (_focusedIndex + delta).clamp(0, widget.entries.length - 1);
+  KeyEventResult _move(int delta, int crossAxisCount) {
+    final next = _focusedIndex + delta;
+    if (next < 0 || next >= widget.entries.length) {
+      return KeyEventResult.ignored;
+    }
     setState(() => _focusedIndex = next);
-    _ensureVisible(next, crossAxisCount,
-        _tileWidth(_gridBox?.size.width ?? 0, crossAxisCount));
+    _ensureVisible(
+        next,
+        crossAxisCount,
+        _tileWidth(
+            (_gridBox?.size.width ?? 0) - widget.contentPadding.horizontal,
+            crossAxisCount));
+    return KeyEventResult.handled;
   }
 
   void _ensureVisible(int index, int crossAxisCount, double tileWidth) {
     if (!_scrollController.hasClients) return;
-    final tileHeight = tileWidth / _aspectRatio;
+    final tileHeight = _tileHeight(tileWidth);
     final row = index ~/ crossAxisCount;
-    final rowTop = row * (tileHeight + _gap);
+    final rowTop =
+        widget.contentPadding.top + _headerHeight + row * (tileHeight + _gap);
     final rowBottom = rowTop + tileHeight;
     final viewport = _scrollController.position.viewportDimension;
     final current = _scrollController.offset;
-    if (rowTop < current) {
-      _scrollController.jumpTo(rowTop);
+    final overlay =
+        widget.contentPadding.top.clamp(0.0, AppTopNavigation.contentInset);
+    if (rowTop < current + overlay) {
+      _scrollController.jumpTo((rowTop - overlay)
+          .clamp(0, _scrollController.position.maxScrollExtent));
     } else if (rowBottom > current + viewport) {
       _scrollController.jumpTo((rowBottom - viewport)
           .clamp(0, _scrollController.position.maxScrollExtent));
@@ -107,31 +135,33 @@ class _ArrLibraryGridState extends State<ArrLibraryGrid> {
   Offset _tileCenter(int index, int crossAxisCount, double tileWidth) {
     final box = _gridBox;
     if (box == null) return Offset.zero;
-    final tileHeight = tileWidth / _aspectRatio;
+    final tileHeight = _tileHeight(tileWidth);
     final row = index ~/ crossAxisCount;
     final col = index % crossAxisCount;
     final local = Offset(
-      col * (tileWidth + _gap) + tileWidth / 2,
-      row * (tileHeight + _gap) - _scrollController.offset + tileHeight / 2,
+      widget.contentPadding.left + col * (tileWidth + _gap) + tileWidth / 2,
+      widget.contentPadding.top +
+          _headerHeight +
+          row * (tileHeight + _gap) -
+          _scrollController.offset +
+          tileHeight / 2,
     );
     return box.localToGlobal(local);
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event, int crossAxisCount) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event is! KeyDownEvent || !node.hasPrimaryFocus) {
+      return KeyEventResult.ignored;
+    }
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowLeft:
-        _move(-1, crossAxisCount);
-        return KeyEventResult.handled;
+        return _move(-1, crossAxisCount);
       case LogicalKeyboardKey.arrowRight:
-        _move(1, crossAxisCount);
-        return KeyEventResult.handled;
+        return _move(1, crossAxisCount);
       case LogicalKeyboardKey.arrowUp:
-        _move(-crossAxisCount, crossAxisCount);
-        return KeyEventResult.handled;
+        return _move(-crossAxisCount, crossAxisCount);
       case LogicalKeyboardKey.arrowDown:
-        _move(crossAxisCount, crossAxisCount);
-        return KeyEventResult.handled;
+        return _move(crossAxisCount, crossAxisCount);
       case LogicalKeyboardKey.enter:
       case LogicalKeyboardKey.numpadEnter:
         if (widget.entries.isNotEmpty) {
@@ -140,8 +170,13 @@ class _ArrLibraryGridState extends State<ArrLibraryGrid> {
         return KeyEventResult.handled;
       case LogicalKeyboardKey.contextMenu:
         if (widget.entries.isNotEmpty) {
-          final position = _tileCenter(_focusedIndex, crossAxisCount,
-              _tileWidth(_gridBox?.size.width ?? 0, crossAxisCount));
+          final position = _tileCenter(
+              _focusedIndex,
+              crossAxisCount,
+              _tileWidth(
+                  (_gridBox?.size.width ?? 0) -
+                      widget.contentPadding.horizontal,
+                  crossAxisCount));
           _showContextMenu(context, position, widget.entries[_focusedIndex]);
         }
         return KeyEventResult.handled;
@@ -152,8 +187,13 @@ class _ArrLibraryGridState extends State<ArrLibraryGrid> {
         if (event.logicalKey == LogicalKeyboardKey.f10 &&
             HardwareKeyboard.instance.isShiftPressed &&
             widget.entries.isNotEmpty) {
-          final position = _tileCenter(_focusedIndex, crossAxisCount,
-              _tileWidth(_gridBox?.size.width ?? 0, crossAxisCount));
+          final position = _tileCenter(
+              _focusedIndex,
+              crossAxisCount,
+              _tileWidth(
+                  (_gridBox?.size.width ?? 0) -
+                      widget.contentPadding.horizontal,
+                  crossAxisCount));
           _showContextMenu(context, position, widget.entries[_focusedIndex]);
           return KeyEventResult.handled;
         }
@@ -165,7 +205,7 @@ class _ArrLibraryGridState extends State<ArrLibraryGrid> {
       BuildContext context, Offset globalPosition, ArrLibraryEntry entry) {
     final position = RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy,
         globalPosition.dx, globalPosition.dy);
-    showMenu<void>(
+    showGlassMenu<void>(
       context: context,
       position: position,
       items: [
@@ -201,52 +241,65 @@ class _ArrLibraryGridState extends State<ArrLibraryGrid> {
   Widget build(BuildContext context) {
     final dpr = MediaQuery.of(context).devicePixelRatio;
     return LayoutBuilder(builder: (context, constraints) {
-      final crossAxisCount = _crossAxisCount(constraints.maxWidth);
-      final tileWidth = _tileWidth(constraints.maxWidth, crossAxisCount);
+      final width = constraints.maxWidth - widget.contentPadding.horizontal;
+      final crossAxisCount = _crossAxisCount(width);
+      final tileWidth = _tileWidth(width, crossAxisCount);
       return Focus(
         focusNode: _focusNode,
-        autofocus: true,
+        autofocus: false,
+        onFocusChange: (_) => setState(() {}),
         onKeyEvent: (node, event) => _onKey(node, event, crossAxisCount),
-        child: widget.entries.isEmpty
-            ? const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-                child: Text('Bibliothèque vide.',
-                    style: TextStyle(color: AppColors.textSecondary)),
-              )
-            : GridView.builder(
-                key: _gridKey,
-                controller: _scrollController,
-                padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: _gap,
-                  crossAxisSpacing: _gap,
-                  childAspectRatio: _aspectRatio,
-                ),
-                itemCount: widget.entries.length,
-                itemBuilder: (context, index) {
-                  final entry = widget.entries[index];
-                  return _ArrLibraryTile(
-                    key: ValueKey(entry.id),
-                    entry: entry,
-                    focused: index == _focusedIndex,
-                    tileWidth: tileWidth,
-                    cacheWidth: (tileWidth * dpr).round(),
-                    baseUrl: widget.baseUrl,
-                    apiKey: widget.apiKey,
-                    onTap: () {
-                      setState(() => _focusedIndex = index);
-                      _focusNode.requestFocus();
-                      widget.onOpenDetail(entry);
-                    },
-                    onSecondaryTapUp: (details) {
-                      setState(() => _focusedIndex = index);
-                      _focusNode.requestFocus();
-                      _showContextMenu(context, details.globalPosition, entry);
-                    },
-                  );
-                },
-              ),
+        child: CustomScrollView(
+          key: _gridKey,
+          controller: _scrollController,
+          slivers: [
+            SliverPadding(
+              padding: widget.contentPadding.copyWith(bottom: 0),
+              sliver: SliverToBoxAdapter(
+                  child: SizedBox(key: _headerKey, child: widget.header)),
+            ),
+            SliverPadding(
+              padding: widget.contentPadding.copyWith(top: 0),
+              sliver: widget.entries.isEmpty
+                  ? const SliverToBoxAdapter(
+                      child:
+                          Text('Bibliothèque vide.', style: AppTypography.meta))
+                  : SliverGrid.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        mainAxisSpacing: _gap,
+                        crossAxisSpacing: _gap,
+                        mainAxisExtent: _tileHeight(tileWidth),
+                      ),
+                      itemCount: widget.entries.length,
+                      itemBuilder: (context, index) {
+                        final entry = widget.entries[index];
+                        return _ArrLibraryTile(
+                          key: ValueKey(entry.id),
+                          entry: entry,
+                          focused:
+                              _focusNode.hasFocus && index == _focusedIndex,
+                          tileWidth: tileWidth,
+                          cacheWidth: (tileWidth * dpr).round(),
+                          baseUrl: widget.baseUrl,
+                          apiKey: widget.apiKey,
+                          onTap: () {
+                            setState(() => _focusedIndex = index);
+                            _focusNode.requestFocus();
+                            widget.onOpenDetail(entry);
+                          },
+                          onSecondaryTapUp: (details) {
+                            setState(() => _focusedIndex = index);
+                            _focusNode.requestFocus();
+                            _showContextMenu(
+                                context, details.globalPosition, entry);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       );
     });
   }
@@ -302,10 +355,6 @@ class _ArrLibraryTileState extends State<_ArrLibraryTile> {
   @override
   Widget build(BuildContext context) {
     final entry = widget.entry;
-    // Non surveillé ou fichier absent : désaturation + opacité réduite —
-    // jamais de pastille ni de bandeau de couleur (cf. CLAUDE.md, aucune
-    // couleur d'accent décorative dans cette grille).
-    final dimmed = !entry.monitored || !entry.hasContent;
     final posterUrl = arrNativePosterUrl(entry.id, baseUrl: widget.baseUrl);
 
     Widget poster = Image.network(
@@ -324,37 +373,6 @@ class _ArrLibraryTileState extends State<_ArrLibraryTile> {
           progress == null ? child : const ColoredBox(color: AppColors.surface),
     );
 
-    if (dimmed) {
-      poster = Opacity(
-        opacity: 0.55,
-        child: ColorFiltered(
-          colorFilter: const ColorFilter.matrix(<double>[
-            0.2126,
-            0.7152,
-            0.0722,
-            0,
-            0,
-            0.2126,
-            0.7152,
-            0.0722,
-            0,
-            0,
-            0.2126,
-            0.7152,
-            0.0722,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-          ]),
-          child: poster,
-        ),
-      );
-    }
-
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -362,83 +380,52 @@ class _ArrLibraryTileState extends State<_ArrLibraryTile> {
       child: GestureDetector(
         onTap: widget.onTap,
         onSecondaryTapUp: widget.onSecondaryTapUp,
-        child: AnimatedContainer(
-          duration: AppDurations.focusRing,
-          decoration: BoxDecoration(
-            borderRadius: AppRadii.cardBorder,
-            border: Border.all(
-              color: widget.focused ? AppColors.focus : Colors.transparent,
-              width: 2,
-            ),
-          ),
-          child: ClipRRect(
-            borderRadius: AppRadii.cardBorder,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                poster,
-                if (_hovered) _HoverOverlay(entry: entry),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Métadonnées au survol seulement, dans un voile dégradé sur le bas de
-/// la jaquette — règle « texte sur image » du CLAUDE.md : textPrimary
-/// pour le principal, textPrimary à 75% pour le secondaire, jamais
-/// textSecondary (pas de garantie de contraste sur une image).
-class _HoverOverlay extends StatelessWidget {
-  final ArrLibraryEntry entry;
-  const _HoverOverlay({required this.entry});
-
-  @override
-  Widget build(BuildContext context) {
-    final year = entry.year;
-    final subtitleParts = [
-      if (entry.qualityName != null) entry.qualityName!,
-      entry.statusLabel,
-    ];
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xs, AppSpacing.lg, AppSpacing.xs, AppSpacing.xs),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              AppColors.scrim.withValues(alpha: 0.85),
-            ],
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              year == null ? entry.title : '${entry.title} ($year)',
-              maxLines: 2,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+              child: PosterHoverMotion(
+                  active: _hovered,
+                  builder: (context, _) => AnimatedContainer(
+                        duration: AppDurations.focusRing,
+                        decoration: BoxDecoration(
+                            borderRadius: AppRadii.cardBorder,
+                            border: Border.all(
+                                color: widget.focused
+                                    ? AppColors.focus
+                                    : _hovered
+                                        ? AppColors.posterHoverBorder
+                                        : Colors.transparent,
+                                width: context.tokens.density.focusWidth)),
+                        child: ClipRRect(
+                            borderRadius: AppRadii.cardBorder, child: poster),
+                      ))),
+          const SizedBox(height: AppSpacing.xs),
+          Text(entry.title,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-            ),
-            if (subtitleParts.isNotEmpty)
-              Text(
-                subtitleParts.join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textPrimary.withValues(alpha: 0.75)),
-              ),
-          ],
-        ),
+              style: AppTypography.cardTitle),
+          Text(entry.year?.toString() ?? '', style: AppTypography.meta),
+          Row(children: [
+            Icon(
+                !entry.monitored
+                    ? Icons.visibility_off_outlined
+                    : entry.hasContent
+                        ? Icons.check_circle_outline
+                        : Icons.error_outline,
+                size: AppTypography.meta.fontSize,
+                color: !entry.monitored
+                    ? AppColors.textSecondary
+                    : entry.hasContent
+                        ? AppColors.success
+                        : AppColors.warning),
+            const SizedBox(width: AppSpacing.xxs),
+            Expanded(
+                child: Text(
+                    !entry.monitored ? 'Non surveillé' : entry.statusLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.meta)),
+          ]),
+        ]),
       ),
     );
   }

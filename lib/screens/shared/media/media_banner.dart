@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:async/async.dart';
@@ -192,7 +193,7 @@ class _MediaBannerState extends ConsumerState<MediaBanner> {
                                                   localPosition.dy);
                                           final poster = currentItem;
 
-                                          await showMenu(
+                                          await showGlassMenu(
                                             context: context,
                                             position: position,
                                             items: poster

@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/page_motion.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -89,7 +90,10 @@ final List<AutoRoute> homeRoutes = [
 ];
 
 final List<AutoRoute> detailsRoutes = [
-  AutoRoute(page: DetailsRoute.page, path: 'details'),
+  CustomRoute(
+      page: DetailsRoute.page,
+      path: 'details',
+      customRouteBuilder: mediaPageRoute),
   AutoRoute(page: PhotoViewerRoute.page, path: "album"),
   AutoRoute(
     page: LibrarySearchRoute.page,
@@ -97,8 +101,18 @@ final List<AutoRoute> detailsRoutes = [
     usesPathAsKey: true,
   ),
   AutoRoute(page: LiveTvRoute.page, path: 'live-tv'),
-  AutoRoute(page: SeerrSearchRoute.page, path: 'seerr-search'),
-  AutoRoute(page: SeerrDetailsRoute.page, path: 'seerr/:mediaType/:tmdbId'),
+  CustomRoute(
+      page: SeerrSearchRoute.page,
+      path: 'seerr-search',
+      customRouteBuilder: catalogPageRoute),
+  CustomRoute(
+      page: SeerrDetailsRoute.page,
+      path: 'seerr/:mediaType/:tmdbId',
+      customRouteBuilder: mediaPageRoute),
+  CustomRoute(
+      page: ArrTitleDetailsRoute.page,
+      path: 'arr/title',
+      customRouteBuilder: mediaPageRoute),
 ];
 
 final List<AutoRoute> _defaultRoutes = [
@@ -110,6 +124,7 @@ final List<AutoRoute> _settingsChildren = [
   AutoRoute(page: SettingsSelectionRoute.page, path: 'list'),
   AutoRoute(
       page: ClientSettingsRoute.page, path: 'client', maintainState: false),
+  AutoRoute(page: HomeRowsSettingsRoute.page, path: 'home-rows'),
   AutoRoute(
       page: ProfileSettingsRoute.page, path: 'security', maintainState: false),
   AutoRoute(

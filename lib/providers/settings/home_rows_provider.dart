@@ -82,9 +82,11 @@ class HomeRowsNotifier extends StateNotifier<List<HomeRowModel>> {
       // deux nouvelles rangées système.
       if (initialized == null) {
         await _seedDefaults();
+        await _ensureDiscoveryRow();
       } else {
         await _ensureRecommendationRows();
         await _ensureCatalogRows();
+        await _ensureDiscoveryRow();
       }
       return;
     }
@@ -101,6 +103,41 @@ class HomeRowsNotifier extends StateNotifier<List<HomeRowModel>> {
     }
     await _ensureRecommendationRows();
     await _ensureCatalogRows();
+    await _ensureDiscoveryRow();
+  }
+
+  Future<void> _ensureDiscoveryRow() async {
+    final db = ref.read(appDatabaseProvider);
+    const key = 'home_rows_seerr_discovery_migration';
+    if (await db.getSetting(key, scope: _homeRowsSettingScope) != null) return;
+    if (state.every((row) => row.type != HomeRowType.seerrDiscovery)) {
+      final rows = [...state];
+      final index =
+          rows.indexWhere((row) => row.type == HomeRowType.tasteSeeds);
+      rows.insert(
+          index < 0 ? rows.length : index + 1,
+          HomeRowModel(
+            id: _uuid.v4(),
+            type: HomeRowType.seerrDiscovery,
+            title: HomeRowType.seerrDiscovery.label,
+            order: 0,
+            params: const {'cacheDays': '7'},
+          ));
+      await _reindexAndPersist(rows);
+    }
+    await db.setSetting(key, '1', scope: _homeRowsSettingScope);
+  }
+
+  Future<void> setDiscoveryCacheDays(String id, int days) async {
+    if (days < 1 || days > 30) return;
+    state = [
+      for (final row in state)
+        if (row.id == id && row.type == HomeRowType.seerrDiscovery)
+          row.copyWith(params: {...row.params, 'cacheDays': '$days'})
+        else
+          row
+    ];
+    await _persist();
   }
 
   /// Ajoute [HomeRowType.forYou]/[HomeRowType.setAside] en tête de liste

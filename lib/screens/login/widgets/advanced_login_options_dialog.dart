@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,7 +39,7 @@ class _AdvancedLoginOptionsDialogState extends ConsumerState<_AdvancedLoginOptio
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return GlassAlertDialog(
       title: Row(
         children: [
           const Icon(IconsaxPlusLinear.setting_3),

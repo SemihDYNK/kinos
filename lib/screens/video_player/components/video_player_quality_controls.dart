@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -22,7 +23,7 @@ class _QualityOptionsDialogue extends ConsumerWidget {
     final playbackModel = ref.watch(playBackModel);
     final qualityOptions = playbackModel?.bitRateOptions;
 
-    return Dialog(
+    return GlassDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -401,7 +402,7 @@ Future<void> showSubSelection(BuildContext context) {
         builder: (context, ref, child) {
           final playbackModel = ref.watch(playBackModel);
           final player = ref.watch(videoPlayerProvider);
-          return SimpleDialog(
+          return GlassSimpleDialog(
             contentPadding: const EdgeInsets.only(top: 8, bottom: 24),
             title: Row(
               children: [
@@ -453,7 +454,7 @@ Future<void> showAudioSelection(BuildContext context) {
         builder: (context, ref, child) {
           final playbackModel = ref.watch(playBackModel);
           final player = ref.watch(videoPlayerProvider);
-          return SimpleDialog(
+          return GlassSimpleDialog(
             contentPadding: const EdgeInsets.only(top: 8, bottom: 24),
             title: Row(
               children: [
@@ -494,7 +495,7 @@ Future<void> showPlaybackSpeed(BuildContext context) {
           builder: (context, ref, child) {
             final player = ref.watch(videoPlayerProvider);
             final lastSpeed = ref.watch(playbackRateProvider);
-            return SimpleDialog(
+            return GlassSimpleDialog(
               contentPadding: const EdgeInsets.only(top: 8, bottom: 24),
               title: Row(children: [Text(context.localized.playbackRate)]),
               children: [
@@ -553,7 +554,7 @@ Future<void> showOrientationOptions(BuildContext context, WidgetRef ref) async {
     context: context,
     builder: (context) {
       return StatefulBuilder(builder: (context, state) {
-        return SimpleDialog(
+        return GlassSimpleDialog(
           contentPadding: const EdgeInsets.only(top: 8, bottom: 24),
           title: Row(children: [Text(context.localized.playerSettingsOrientationTitle)]),
           children: [

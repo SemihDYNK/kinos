@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,7 +68,7 @@ class MusicPlaylistRow extends ConsumerWidget {
 
     Future<void> showContextMenu(BuildContext context, WidgetRef ref, Offset globalPos, ItemBaseModel playlist) async {
       final position = RelativeRect.fromLTRB(globalPos.dx, globalPos.dy, globalPos.dx, globalPos.dy);
-      await showMenu(
+      await showGlassMenu(
         context: context,
         position: position,
         items: playlist

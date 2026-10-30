@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:iconsax_plus/iconsax_plus.dart';
@@ -17,7 +18,7 @@ Future<void> showConnectLinkDialog(
       final textController = TextEditingController();
       return ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 400),
-        child: AlertDialog(
+        child: GlassAlertDialog(
           title: Row(
             spacing: 8,
             children: [

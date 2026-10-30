@@ -38,17 +38,23 @@ class SeerrSeasonsSection extends ConsumerWidget {
       children: [
         Text(
           context.localized.season(seasons.length),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         ...seasons.map(
           (season) {
             final seasonNumber = season.seasonNumber;
             if (seasonNumber == null) return const SizedBox.shrink();
             final locked = requestState.isRequestedAlready(seasonNumber);
-            final selected = requestState.selectedSeasons[seasonNumber] ?? false;
+            final selected =
+                requestState.selectedSeasons[seasonNumber] ?? false;
             final status = seasonStatuses[seasonNumber];
-            final seasonDownloads =
-                model.mediaInfo?.downloadStatus?.where((d) => d.episode?.seasonNumber == seasonNumber).toList() ?? [];
+            final seasonDownloads = model.mediaInfo?.downloadStatus
+                    ?.where((d) => d.episode?.seasonNumber == seasonNumber)
+                    .toList() ??
+                [];
 
             return Builder(builder: (context) {
               return FocusButton(
@@ -64,9 +70,13 @@ class SeerrSeasonsSection extends ConsumerWidget {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: selected ? AppColors.surfaceHigh : Colors.transparent,
+                    color:
+                        selected ? AppColors.surfaceHigh : Colors.transparent,
                     borderRadius: AppRadii.controlBorder,
-                    border: Border.all(color: selected ? AppColors.borderStrong : AppColors.border),
+                    border: Border.all(
+                        color: selected
+                            ? AppColors.borderStrong
+                            : AppColors.border),
                   ),
                   padding: const EdgeInsets.all(8),
                   child: Row(
@@ -87,16 +97,21 @@ class SeerrSeasonsSection extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (status != null && status != SeerrMediaStatus.unknown)
+                            if (status != null &&
+                                status != SeerrMediaStatus.unknown)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: status.color.withAlpha(200),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   status.label(context),
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -106,16 +121,23 @@ class SeerrSeasonsSection extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Flexible(child: Text("${context.localized.season(1)} $seasonNumber")),
+                                Flexible(
+                                    child: Text(
+                                        "${context.localized.season(1)} $seasonNumber")),
                                 if (season.episodeCount != null)
                                   Expanded(
                                     child: Text(
                                       '${season.episodeCount} ${context.localized.episode(season.episodeCount ?? 0)}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color:
-                                                Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                                .withValues(alpha: 0.7),
                                           ),
                                     ),
                                   ),
@@ -123,7 +145,8 @@ class SeerrSeasonsSection extends ConsumerWidget {
                             ),
                             if (seasonDownloads.isNotEmpty) ...[
                               const SizedBox(height: 6),
-                              SeasonDownloadProgressWidget(downloads: seasonDownloads),
+                              SeasonDownloadProgressWidget(
+                                  downloads: seasonDownloads),
                             ],
                           ],
                         ),
@@ -138,7 +161,10 @@ class SeerrSeasonsSection extends ConsumerWidget {
                               child: KinosImage(
                                 image: season.posterUrl == null
                                     ? null
-                                    : ImageData(path: season.posterUrl!, key: 'id${season.id}_season$seasonNumber'),
+                                    : ImageData(
+                                        path: season.posterUrl!,
+                                        key:
+                                            'id${season.id}_season$seasonNumber'),
                                 fit: BoxFit.cover,
                               ),
                             ),

@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,7 @@ import 'package:page_transition/page_transition.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/providers/library_search_provider.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
-import 'package:kinos/theme.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/debouncer.dart';
 import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -48,14 +49,16 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      textEditingController.text =
-          ref.read(librarySearchProvider(widget.key!).select((value) => value.filters.searchQuery));
+      textEditingController.text = ref.read(librarySearchProvider(widget.key!)
+          .select((value) => value.filters.searchQuery));
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(librarySearchProvider(widget.key!).select((value) => value.filters.searchQuery), (previous, next) {
+    ref.listen(
+        librarySearchProvider(widget.key!)
+            .select((value) => value.filters.searchQuery), (previous, next) {
       if (textEditingController.text != next) {
         setState(() {
           textEditingController.text = next;
@@ -63,8 +66,8 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
       }
     });
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
       ),
       child: TypeAheadField<ItemBaseModel>(
         controller: textEditingController,
@@ -78,11 +81,8 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
           ),
         ),
         suggestionsController: suggestionsBoxController,
-        decorationBuilder: (context, child) => DecoratedBox(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.secondaryContainer,
-            borderRadius: KinosTheme.smallShape.borderRadius,
-          ),
+        decorationBuilder: (context, child) => FrostedSurface(
+          borderRadius: AppRadii.controlBorder,
           child: child,
         ),
         builder: (context, controller, focusNode) => OutlinedTextField(
@@ -101,8 +101,9 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
           searchQuery: (query) async {
             if (query.isEmpty) return [];
             if (widget.key != null) {
-              final items =
-                  await ref.read(librarySearchProvider(widget.key!).notifier).fetchSuggestions(query, limit: 5);
+              final items = await ref
+                  .read(librarySearchProvider(widget.key!).notifier)
+                  .fetchSuggestions(query, limit: 5);
               return items.map((e) => e.name).toList();
             }
             return [];
@@ -111,7 +112,7 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
           decoration: InputDecoration(
             hintText: widget.title ?? "${context.localized.search}...",
             prefixIcon: const Icon(IconsaxPlusLinear.search_normal),
-            contentPadding: const EdgeInsets.only(top: 13),
+            contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             suffixIcon: controller.text.isNotEmpty
                 ? IconButton(
                     onPressed: () {
@@ -125,11 +126,17 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
                     icon: const Icon(Icons.clear))
                 : null,
             border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            focusedErrorBorder: InputBorder.none,
           ),
         ),
         loadingBuilder: (context) => const SizedBox(
           height: 50,
-          child: Center(child: CircularProgressIndicator(strokeCap: StrokeCap.round)),
+          child: Center(
+              child: CircularProgressIndicator(strokeCap: StrokeCap.round)),
         ),
         onSelected: (suggestion) {
           suggestionsBoxController.close();
@@ -140,8 +147,9 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
               if (widget.onItem != null) {
                 widget.onItem?.call(suggestion);
               } else {
-                Navigator.of(context)
-                    .push(PageTransition(child: suggestion.detailScreenWidget, type: PageTransitionType.fade));
+                Navigator.of(context).push(PageTransition(
+                    child: suggestion.detailScreenWidget,
+                    type: PageTransitionType.fade));
               }
             },
             contentPadding: const EdgeInsets.symmetric(horizontal: 8),
@@ -155,9 +163,10 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
                 child: Row(
                   children: [
                     Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                      shape: const RoundedRectangleBorder(
+                          borderRadius: AppRadii.cardBorder),
                       child: AspectRatio(
-                        aspectRatio: 0.8,
+                        aspectRatio: AppMedia.posterAspectRatio,
                         child: KinosImage(
                           image: suggestion.images?.primary,
                           fit: BoxFit.cover,
@@ -175,10 +184,15 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           )),
-                          if (suggestion.overview.yearAired.toString().isNotEmpty)
+                          if (suggestion.overview.yearAired
+                              .toString()
+                              .isNotEmpty)
                             Flexible(
                                 child: Opacity(
-                                    opacity: 0.45, child: Text(suggestion.overview.yearAired?.toString() ?? ""))),
+                                    opacity: AppHeroLayout.secondaryOpacity,
+                                    child: Text(suggestion.overview.yearAired
+                                            ?.toString() ??
+                                        ""))),
                         ],
                       ),
                     ),
@@ -191,7 +205,9 @@ class _SearchBarState extends ConsumerState<SuggestionSearchBar> {
         suggestionsCallback: (pattern) async {
           if (pattern.isEmpty) return [];
           if (widget.key != null) {
-            return (await ref.read(librarySearchProvider(widget.key!).notifier).fetchSuggestions(pattern));
+            return (await ref
+                .read(librarySearchProvider(widget.key!).notifier)
+                .fetchSuggestions(pattern));
           }
           return [];
         },

@@ -1,6 +1,12 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kinos/arr/providers/arr_jellyfin_link_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart' show BaseItemDto;
+import 'package:kinos/models/items/movie_model.dart';
+import 'package:kinos/models/items/series_model.dart';
+import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:flutter/material.dart';
-
-import 'package:auto_route/auto_route.dart';
 
 import 'package:kinos/arr/models/arr_library_entry.dart';
 import 'package:kinos/arr/models/arr_service.dart';
@@ -35,11 +41,15 @@ import 'package:kinos/widgets/shared/grid_focus_traveler.dart';
 /// dans le moteur, cf. `recommendation_scorer.dart`/
 /// `home_catalog_providers.dart`, aucun des deux non touché.
 class RecommendationTile {
+  final Object identity;
+  final ImageData? previewImage;
   final String title;
   final Widget Function(BuildContext context) buildPoster;
-  final void Function(BuildContext context) navigate;
+  final Future<void> Function(BuildContext context) navigate;
 
   const RecommendationTile({
+    required this.identity,
+    this.previewImage,
     required this.title,
     required this.buildPoster,
     required this.navigate,
@@ -47,9 +57,13 @@ class RecommendationTile {
 
   factory RecommendationTile.jellyfin({required ItemBaseModel item}) {
     return RecommendationTile(
+      identity: ('jellyfin', item.id),
+      previewImage: item.getPosters?.primary ??
+          item.getPosters?.thumb ??
+          item.getPosters?.randomBackDrop,
       title: item.name,
       buildPoster: (context) => _jellyfinPoster(item),
-      navigate: (context) => item.navigateTo(context),
+      navigate: (context) => openMediaDetails(context, item),
     );
   }
 
@@ -64,37 +78,38 @@ class RecommendationTile {
     ItemBaseModel? jellyfinMatch,
   }) {
     return RecommendationTile(
+      identity: ('arr', entry.isMovie, entry.id),
+      previewImage:
+          entry.posterUrl == null ? null : _ArrPosterImage(entry.posterUrl!),
       title: entry.title,
       buildPoster: (context) => _arrPoster(entry.posterUrl),
-      navigate: (context) {
-        if (jellyfinMatch != null) {
-          jellyfinMatch.navigateTo(context);
-          return;
-        }
-        context.router.push(ArrDetailRoute(
-          service: entry.isMovie ? ArrService.radarr : ArrService.sonarr,
+      navigate: (context) => _openArrTitle(context,
           id: entry.id,
-        ));
-      },
+          isMovie: entry.isMovie,
+          title: entry.title,
+          year: entry.year,
+          image: entry.posterUrl == null
+              ? null
+              : _ArrPosterImage(entry.posterUrl!),
+          knownMatch: jellyfinMatch),
     );
   }
 
-  /// Depuis le cache — jaquette reconstruite depuis le seul id
-  /// (`imageUtilityProvider.getItemsImageUrl`, vérifié : aucun tag
-  /// d'image requis), navigation par id seul (`DetailsRoute(id: ...)`,
-  /// même construction que les liens profonds et que la redirection Arr
-  /// -> Jellyfin en direct — la fiche se charge elle-même, pas besoin de
-  /// l'objet complet).
+  /// Le cache fournit aussi le type : la fiche peut exister dès la première frame du Hero.
   factory RecommendationTile.cachedJellyfin({
     required String itemId,
     required String title,
     required ImageData image,
+    required bool isMovie,
+    int? year,
   }) {
-    return RecommendationTile(
-      title: title,
-      buildPoster: (context) => KinosImage(image: image, fit: BoxFit.cover),
-      navigate: (context) => context.router.push(DetailsRoute(id: itemId)),
-    );
+    return RecommendationTile.jellyfin(
+        item: _libraryItem(
+            itemId: itemId,
+            title: title,
+            image: image,
+            isMovie: isMovie,
+            year: year));
   }
 
   /// Depuis le cache — jaquette reconstruite depuis l'id Arr et les
@@ -108,15 +123,98 @@ class RecommendationTile {
     required String title,
     required String posterUrl,
     required String apiKey,
+    int? year,
   }) {
     return RecommendationTile(
+      identity: ('arr', isMovie, arrId),
+      previewImage:
+          posterUrl.isEmpty ? null : _ArrPosterImage(posterUrl, apiKey: apiKey),
       title: title,
       buildPoster: (context) => _arrPoster(posterUrl, apiKey: apiKey),
-      navigate: (context) => context.router.push(ArrDetailRoute(
-        service: isMovie ? ArrService.radarr : ArrService.sonarr,
-        id: arrId,
-      )),
+      navigate: (context) => _openArrTitle(context,
+          id: arrId,
+          isMovie: isMovie,
+          title: title,
+          year: year,
+          image: posterUrl.isEmpty
+              ? null
+              : _ArrPosterImage(posterUrl, apiKey: apiKey)),
     );
+  }
+}
+
+ItemBaseModel _libraryItem(
+    {required String itemId,
+    required String title,
+    required ImageData? image,
+    required bool isMovie,
+    int? year}) {
+  final dto = BaseItemDto(
+      id: itemId,
+      name: title,
+      productionYear: year,
+      premiereDate: DateTime(year ?? 0));
+  final images = ImagesData(primary: image);
+  return isMovie
+      ? MovieModel.fromBaseDto(dto, null).copyWith(images: images)
+      : SeriesModel.fromBaseDto(dto, null).copyWith(images: images);
+}
+
+Future<void> _openArrTitle(BuildContext context,
+    {required int id,
+    required bool isMovie,
+    required String title,
+    int? year,
+    ImageData? image,
+    ItemBaseModel? knownMatch}) async {
+  if (knownMatch != null) {
+    await openMediaDetails(context, knownMatch);
+    return;
+  }
+  final container = ProviderScope.containerOf(context, listen: false);
+  final account = container.read(userProvider);
+  final accountKey =
+      (account?.id, account?.credentials.serverId, account?.credentials.url);
+  final source = ModalRoute.of(context);
+  final focus = MediaNavigationScope.focusOf(context);
+  focus?.requestFocus();
+  final provider =
+      arrJellyfinLinkProvider((title: title, year: year, isMovie: isMovie));
+  final subscription = container.listen(provider, (_, __) {});
+  ArrJellyfinLinkMatch? match;
+  try {
+    match = await container.read(provider.future);
+  } finally {
+    subscription.close();
+  }
+  if (!context.mounted ||
+      source?.isCurrent == false ||
+      (focus != null && !focus.hasFocus)) {
+    return;
+  }
+  final active = container.read(userProvider);
+  if ((active?.id, active?.credentials.serverId, active?.credentials.url) !=
+      accountKey) {
+    return;
+  }
+  if (match != null) {
+    await openMediaDetails(
+        context,
+        _libraryItem(
+            itemId: match.id,
+            title: match.name,
+            image: image,
+            isMovie: isMovie,
+            year: year));
+  } else {
+    await pushMediaRoute(
+        context,
+        ArrTitleDetailsRoute(
+            service: isMovie ? ArrService.radarr : ArrService.sonarr,
+            id: id,
+            title: title,
+            image: image,
+            tag: MediaNavigationScope.tagOf(context)));
   }
 }
 
@@ -142,12 +240,17 @@ Widget _jellyfinPoster(ItemBaseModel item) {
 /// bibliothèque).
 Widget _arrPoster(String? posterUrl, {String? apiKey}) {
   if (posterUrl == null || posterUrl.isEmpty) return _missingPoster();
-  return Image.network(
-    posterUrl,
-    headers: apiKey == null ? null : {'X-Api-Key': apiKey},
-    fit: BoxFit.cover,
-    errorBuilder: (context, error, stackTrace) => _missingPoster(),
-  );
+  return KinosImage(
+      image: _ArrPosterImage(posterUrl, apiKey: apiKey),
+      imageErrorBuilder: (_, __, ___) => _missingPoster());
+}
+
+class _ArrPosterImage extends ImageData {
+  _ArrPosterImage(String url, {this.apiKey}) : super(path: url, key: url);
+  final String? apiKey;
+  @override
+  ImageProvider get imageProvider => NetworkImage(path,
+      headers: apiKey == null ? null : {'X-Api-Key': apiKey!});
 }
 
 Widget _missingPoster() => const Center(
@@ -205,22 +308,59 @@ class RecommendationRowGrid extends StatelessWidget {
   }
 }
 
-class _RecommendationTileWidget extends StatelessWidget {
+class _RecommendationTileWidget extends StatefulWidget {
   final RecommendationTile tile;
 
   const _RecommendationTileWidget({required this.tile});
 
   @override
+  State<_RecommendationTileWidget> createState() =>
+      _RecommendationTileWidgetState();
+}
+
+class _RecommendationTileWidgetState extends State<_RecommendationTileWidget> {
+  bool _opening = false;
+  RecommendationTile get tile => widget.tile;
+
+  Future<void> _open(BuildContext context) async {
+    if (_opening) return;
+    setState(() => _opening = true);
+    try {
+      await tile.navigate(context);
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FocusRing(
-      onActivate: () => tile.navigate(context),
-      child: ClipRRect(
-        borderRadius: AppRadii.cardBorder,
-        child: ColoredBox(
-          color: AppColors.surface,
-          child: tile.buildPoster(context),
-        ),
-      ),
-    );
+    return MediaNavigation(
+        key: ValueKey(tile.identity),
+        previewImage: tile.previewImage,
+        builder: (context) => FocusRing(
+              posterMotion: true,
+              focusNode: MediaNavigationScope.focusOf(context),
+              onActivate: () => _open(context),
+              child: ClipRRect(
+                borderRadius: AppRadii.cardBorder,
+                child: ColoredBox(
+                  color: AppColors.surface,
+                  child: Stack(fit: StackFit.expand, children: [
+                    MediaArtwork(child: tile.buildPoster(context)),
+                    if (_opening)
+                      IgnorePointer(
+                          child: Center(
+                              child: SizedBox.square(
+                                  dimension: AppSpacing.lg,
+                                  child: CircularProgressIndicator(
+                                      color: AppColors.textPrimary,
+                                      strokeWidth:
+                                          context.tokens.density.focusWidth,
+                                      semanticsLabel:
+                                          context.localized.loading)))),
+                  ]),
+                ),
+              ),
+            ));
   }
 }

@@ -1,10 +1,10 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 Future<void> showDefaultAlertDialog(
   BuildContext context,
@@ -17,27 +17,25 @@ Future<void> showDefaultAlertDialog(
 ) {
   return showDialog(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => GlassAlertDialog(
       title: Text(title),
       content: content != null ? Text(content) : null,
       actions: [
         if (decline != null)
-          Consumer(
-            builder: (context, ref, child) => ElevatedButton(
-              autofocus: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad,
-              onPressed: () => decline.call(context),
-              child: Text(declineTitle),
-            ),
+          TextButton(
+            autofocus: true,
+            onPressed: () => decline.call(context),
+            child: Text(declineTitle),
           ),
         if (accept != null)
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
-              iconColor: Theme.of(context).colorScheme.onErrorContainer,
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.textPrimary,
+              iconColor: AppColors.textPrimary,
             ),
             onPressed: () => accept.call(context),
-            child: Text(acceptTitle ?? "Accept"),
+            child: Text(acceptTitle ?? context.localized.accept),
           ),
       ],
     ),
@@ -55,24 +53,20 @@ Future<void> showDefaultActionDialog(
 ) {
   return showDialog(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => GlassAlertDialog(
       title: Text(title),
       content: content != null ? Text(content) : null,
       actions: [
         if (decline != null)
-          ElevatedButton(
+          TextButton(
+            autofocus: true,
             onPressed: () => decline.call(context),
             child: Text(declineTitle),
           ),
         if (accept != null)
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-              iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
+          FilledButton(
             onPressed: () => accept.call(context),
-            child: Text(acceptTitle ?? "Accept"),
+            child: Text(acceptTitle ?? context.localized.accept),
           ),
       ],
     ),

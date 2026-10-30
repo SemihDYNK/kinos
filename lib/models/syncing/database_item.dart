@@ -15,6 +15,7 @@ import 'package:kinos/models/items/media_segments_model.dart';
 import 'package:kinos/models/items/media_streams_model.dart';
 import 'package:kinos/models/items/trick_play_model.dart';
 import 'package:kinos/models/syncing/local_settings_table.dart';
+import 'package:kinos/models/syncing/discovery_cache_table.dart';
 import 'package:kinos/models/syncing/palette_cache_table.dart';
 import 'package:kinos/models/syncing/playback_queue_table.dart';
 import 'package:kinos/models/syncing/recommendation_cache_table.dart';
@@ -58,6 +59,7 @@ class DatabaseItems extends Table {
   PaletteCache,
   Settings,
   RecommendationCacheEntries,
+  DiscoveryCacheEntries,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(this.ref, [QueryExecutor? executor]) : super(executor ?? _openConnection());
@@ -67,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   String get userId => ref.read(userProvider.select((value) => value?.id ?? ""));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -75,6 +77,9 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
         },
         onUpgrade: (Migrator m, int from, int to) async {
+          if (from < 4 && to >= 4) {
+            await m.createTable(discoveryCacheEntries);
+          }
           if (from < 2 && to >= 2) {
             await m.createTable(playbackQueue);
             await m.createIndex(playbackQueueUserItem);

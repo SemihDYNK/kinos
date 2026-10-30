@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:chopper/chopper.dart';
@@ -14,7 +15,7 @@ Future<ApiResult<dynamic>?> showDeleteDialog(BuildContext context, ItemBaseModel
   await showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (context) => AlertDialog(
+    builder: (context) => GlassAlertDialog(
       title: Text(context.localized.deleteItem(item.type.label(context.localized))),
       content: Text(
         context.localized.deleteFileFromSystem(item.name),

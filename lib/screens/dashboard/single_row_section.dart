@@ -1,3 +1,4 @@
+import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:kinos/models/item_base_model.dart';
@@ -22,18 +23,11 @@ class SingleRowSection extends StatelessWidget {
   final EdgeInsets contentPadding;
   final VoidCallback? onSeeAll;
 
-  /// Style du titre — défaut inchangé (`headlineMedium`) pour toutes les
-  /// rangées existantes. Les rangées d'inventaire du catalogue (lot
-  /// graines/inventaire) passent `AppTypography.catalogSectionTitle`
-  /// pour la rupture de registre typographique demandée (cf. spec).
-  final TextStyle? titleStyle;
-
   const SingleRowSection({
     required this.title,
     required this.items,
     required this.contentPadding,
     this.onSeeAll,
-    this.titleStyle,
     super.key,
   });
 
@@ -43,61 +37,78 @@ class SingleRowSection extends StatelessWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    final width = MediaQuery.sizeOf(context).width - contentPadding.horizontal;
-    final columns = context.tokens.density.columnsFor(width);
-    // Une seule ligne : le reste est tronqué, jamais affiché ni défilable.
-    final visible = items.take(columns).toList();
+    return SliverLayoutBuilder(builder: (context, constraints) {
+      final width = constraints.crossAxisExtent - contentPadding.horizontal;
+      final columns = context.tokens.density.columnsFor(width);
+      // Une seule ligne : le reste est tronqué, jamais affiché ni défilable.
+      final visible = items.take(columns).toList();
+      final tileWidth = (width - (columns - 1) * AppSpacing.gridGap) / columns;
+      final inset = FocusRing.boxInset(context);
+      double lineHeight(TextStyle? style) => TextPainter(
+            text: TextSpan(text: 'Ag', style: style),
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+          ).preferredLineHeight;
+      final labelsHeight = lineHeight(Theme.of(context).textTheme.titleMedium) +
+          lineHeight(Theme.of(context).textTheme.bodySmall);
+      final tileHeight = (tileWidth - inset) / AppMedia.posterAspectRatio +
+          inset +
+          AppSpacing.xs +
+          labelsHeight;
 
-    return SliverMainAxisGroup(
-      slivers: [
-        SliverPadding(
-          padding: contentPadding,
-          sliver: SliverToBoxAdapter(
-            child: Row(
-              children: [
-                Text(
-                  title,
-                  style:
-                      titleStyle ?? Theme.of(context).textTheme.headlineMedium,
-                ),
-                const Spacer(),
-                if (onSeeAll != null)
-                  FocusRing(
-                    borderRadius: AppRadii.controlBorder,
-                    onActivate: onSeeAll,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xs, vertical: AppSpacing.xxs),
+      return SliverMainAxisGroup(
+        slivers: [
+          SliverPadding(
+            padding: contentPadding,
+            sliver: SliverToBoxAdapter(
+              child: Row(
+                children: [
+                  Expanded(
                       child: Text(
-                        'tout voir',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: AppColors.textPrimary),
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  )),
+                  if (onSeeAll != null)
+                    FocusRing(
+                      borderRadius: AppRadii.controlBorder,
+                      onActivate: onSeeAll,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xs,
+                            vertical: AppSpacing.xxs),
+                        child: Text(
+                          'tout voir',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: AppColors.textPrimary),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        SliverPadding(
-          padding: contentPadding.copyWith(top: AppSpacing.sm),
-          sliver: GridFocusTraveler(
-            itemCount: visible.length,
-            crossAxisCount: columns,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          SliverPadding(
+            padding: contentPadding.copyWith(top: AppSpacing.sm),
+            sliver: GridFocusTraveler(
+              itemCount: visible.length,
               crossAxisCount: columns,
-              crossAxisSpacing: AppSpacing.gridGap,
-              mainAxisSpacing: AppSpacing.gridGap,
-              childAspectRatio: 2 / 3,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: AppSpacing.gridGap,
+                mainAxisSpacing: AppSpacing.gridGap,
+                mainAxisExtent: tileHeight,
+              ),
+              itemBuilder: (context, selectedIndex, index) =>
+                  _Tile(item: visible[index]),
             ),
-            itemBuilder: (context, selectedIndex, index) =>
-                _Tile(item: visible[index]),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }
 
@@ -117,18 +128,40 @@ class _Tile extends StatelessWidget {
         ? (item.getPosters?.thumb ?? item.getPosters?.randomBackDrop)
         : null;
 
-    return FocusRing(
-      onActivate: () => item.navigateTo(context),
-      child: ClipRRect(
-        borderRadius: AppRadii.cardBorder,
-        child: ColoredBox(
-          color: AppColors.surface,
-          child: KinosImage(
-            image: image ?? fallback,
-            fit: image != null ? BoxFit.cover : BoxFit.contain,
-          ),
-        ),
-      ),
-    );
+    return MediaNavigation(
+        previewImage: image ?? fallback,
+        key: ValueKey(item.id),
+        builder: (context) => FocusRing(
+              posterMotion: true,
+              focusNode: MediaNavigationScope.focusOf(context),
+              onActivate: () => openMediaDetails(context, item),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AspectRatio(
+                        aspectRatio: AppMedia.posterAspectRatio,
+                        child: ClipRRect(
+                          borderRadius: AppRadii.cardBorder,
+                          child: ColoredBox(
+                            color: AppColors.surface,
+                            child: MediaArtwork(
+                                child: KinosImage(
+                              image: image ?? fallback,
+                              fit:
+                                  image != null ? BoxFit.cover : BoxFit.contain,
+                            )),
+                          ),
+                        )),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(item.subText ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ]),
+            ));
   }
 }

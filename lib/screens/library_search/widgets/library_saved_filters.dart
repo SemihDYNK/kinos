@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,7 +121,7 @@ class LibrarySavedFiltersDialogue extends ConsumerWidget {
 
     final smallSize = AdaptiveLayout.viewSizeOf(context) <= ViewSize.phone;
 
-    return Dialog(
+    return GlassDialog(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -162,7 +163,7 @@ class LibrarySavedFiltersDialogue extends ConsumerWidget {
                                     ),
                                   ),
                                   if (smallSize)
-                                    PopupMenuButton(
+                                    GlassPopupMenuButton(
                                       icon: const Icon(IconsaxPlusLinear.more),
                                       itemBuilder: (context) => filterActions(filter, isCurrentFilter)
                                           .map((e) => e.toPopupMenuItem(useIcons: true))

@@ -4,7 +4,7 @@ import 'package:kinos/recommendations/models/trait.dart';
 /// présentes mais jamais lancées (pure intention, cf. spec du lot) du
 /// reste de la bibliothèque Jellyfin, pour qu'un lot futur (rangée
 /// dédiée) puisse les séparer sans recalculer quoi que ce soit.
-enum CandidateSource { jellyfinLibrary, arrOnly }
+enum CandidateSource { jellyfinLibrary, arrOnly, seerrDiscovery }
 
 /// Une œuvre candidate à la recommandation — bibliothèque Jellyfin non
 /// vue, ou entrée Radarr/Sonarr présente mais jamais lancée. Mêmes

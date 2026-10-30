@@ -1,54 +1,43 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:kinos/theme/app_theme.dart';
 
-import 'package:kinos/util/theme_extensions.dart';
-
+/// Kinos Signature: the same vector geometry at every display size.
 class KinosIcon extends StatelessWidget {
-  final double size;
   const KinosIcon({this.size = 100, super.key});
-
+  final double size;
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ShaderMask(
-          shaderCallback: (Rect bounds) {
-            return ui.Gradient.linear(
-              const Offset(30, 30),
-              const Offset(80, 80),
-              [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.secondary,
-              ],
-            );
-          },
-          child: SvgPicture.asset(
-            "icons/kinos_icon.svg",
-            width: size,
-            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => SvgPicture.asset('icons/kinos_signature_final.svg',
+      width: size,
+      height: size,
+      semanticsLabel: 'Kinos',
+      colorFilter:
+          const ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn));
 }
 
 class KinosIconOutlined extends StatelessWidget {
+  const KinosIconOutlined({this.size = 100, this.color, super.key});
   final double size;
   final Color? color;
-  const KinosIconOutlined({this.size = 100, this.color, super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return SvgPicture.asset(
-      "icons/kinos_icon_outline.svg",
+  Widget build(BuildContext context) => SvgPicture.asset(
+      'icons/kinos_signature_final.svg',
       width: size,
-      colorFilter: ColorFilter.mode(color ?? context.colors.onSurfaceVariant, BlendMode.srcATop),
-    );
-  }
+      height: size,
+      semanticsLabel: 'Kinos',
+      colorFilter:
+          ColorFilter.mode(color ?? AppColors.textPrimary, BlendMode.srcIn));
+}
+
+class KinosWordmark extends StatelessWidget {
+  const KinosWordmark({this.width = AppBrand.wordmarkWidth, super.key});
+  final double width;
+  @override
+  Widget build(BuildContext context) => SvgPicture.asset(
+      'icons/kinos_wordmark_final.svg',
+      width: width,
+      height: width / AppBrand.wordmarkAspectRatio,
+      semanticsLabel: 'Kinos',
+      colorFilter:
+          const ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn));
 }

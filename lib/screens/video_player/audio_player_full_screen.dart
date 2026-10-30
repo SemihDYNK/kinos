@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -399,7 +400,7 @@ class _AudioPlayerFullScreenState extends ConsumerState<AudioPlayerFullScreen> {
                     );
               },
             );
-            showMenu(
+            showGlassMenu(
               context: context,
               position: RelativeRect.fromLTRB(
                 details.globalPosition.dx,
@@ -621,7 +622,7 @@ class _AudioPlayerFullScreenState extends ConsumerState<AudioPlayerFullScreen> {
                       children: itemActions.listTileItems(scrollContext, useIcons: true),
                     ),
                   ),
-                  onSecondaryTapDown: (details) => showMenu(
+                  onSecondaryTapDown: (details) => showGlassMenu(
                     context: context,
                     position: RelativeRect.fromLTRB(
                       details.globalPosition.dx,

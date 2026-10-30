@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
@@ -16,7 +17,7 @@ Future<List<T>> openMultiSelectOptions<T>(
   await showDialog(
     context: context,
     builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
+      builder: (context, setState) => GlassAlertDialog(
         title: Text(label),
         content: SizedBox(
           width: MediaQuery.of(context).size.width * 0.85,

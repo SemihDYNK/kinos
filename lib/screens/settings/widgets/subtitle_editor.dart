@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_blurhash/flutter_blurhash.dart';
@@ -27,7 +28,7 @@ class _SubtitleEditorState extends ConsumerState<SubtitleEditor> {
 
     return Padding(
       padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-      child: Dialog.fullscreen(
+      child: GlassDialog.fullscreen(
         child: Column(
           children: [
             Row(

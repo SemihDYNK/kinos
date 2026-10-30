@@ -159,8 +159,11 @@ class PaletteService {
 
   Future<Color?> _extract(ImageProvider image) async {
     final generator = await PaletteGenerator.fromImageProvider(
-      image,
-      size: TintLimits.thumbSize,
+      // ImageConfiguration.size is only a hint; enforce the decode dimensions.
+      ResizeImage(image,
+          width: TintLimits.thumbSize.width.toInt(),
+          height: TintLimits.thumbSize.height.toInt(),
+          policy: ResizeImagePolicy.fit),
       maximumColorCount: TintLimits.maxColorCount,
     );
 

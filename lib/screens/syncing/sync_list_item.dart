@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:background_downloader/background_downloader.dart';
@@ -171,7 +172,7 @@ Future<void> _showPlaylistDeleteDialog(
     context: context,
     builder: (dialogContext) {
       final localized = context.localized;
-      return AlertDialog(
+      return GlassAlertDialog(
         title: Text(localized.syncPlaylistDeleteTitle),
         content: Text(localized.syncPlaylistDeleteContent),
         actions: [

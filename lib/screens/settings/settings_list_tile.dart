@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:kinos/theme/app_theme.dart';
 
-import 'package:kinos/screens/shared/flat_button.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/widgets/shared/ensure_visible.dart';
 import 'package:kinos/widgets/shared/enum_selection.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
@@ -72,7 +71,8 @@ class SettingsListTileEnum extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final itemList = itemBuilder(context);
-    final useBottomSheet = AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad;
+    final useBottomSheet =
+        AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad;
     final hasMultipleItems = itemList.length > 1;
 
     void openSelectionSheet() {
@@ -119,8 +119,10 @@ class SettingsListTile extends StatelessWidget {
   final IconData? icon;
   final Widget? leading;
   final bool trailingInlineWithLabel;
+  final bool navigation;
+  final bool valueAsTrailing;
   final Color? contentColor;
-  final Function()? onTap;
+  final VoidCallback? onTap;
   const SettingsListTile({
     required this.label,
     this.subLabel,
@@ -130,6 +132,8 @@ class SettingsListTile extends StatelessWidget {
     this.leading,
     this.icon,
     this.trailingInlineWithLabel = false,
+    this.navigation = false,
+    this.valueAsTrailing = false,
     this.contentColor,
     this.onTap,
     super.key,
@@ -137,125 +141,80 @@ class SettingsListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconWidget = icon != null ? Icon(icon) : null;
-
-    final leadingWidget = (leading ?? iconWidget) != null
-        ? Padding(
-            padding: const EdgeInsetsDirectional.only(end: 12.0),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 125),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: selected ? 1 : 0),
-                borderRadius: BorderRadius.circular(selected ? 5 : 20),
-              ),
-              child: Padding(
-                padding: const EdgeInsetsDirectional.all(12),
-                child: (leading ?? iconWidget),
-              ),
-            ),
-          )
-        : leading;
-    return LayoutBuilder(builder: (context, constraints) {
-      return Container(
-        decoration: BoxDecoration(
-          color: selected ? Theme.of(context).colorScheme.surfaceContainerLow : Colors.transparent,
-          borderRadius: const BorderRadiusDirectional.only(
-            topStart: Radius.circular(8),
-            bottomStart: Radius.circular(8),
-          ),
-        ),
-        margin: EdgeInsets.zero,
-        child: FlatButton(
-          onTap: onTap,
-          autoFocus: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad && autoFocus,
-          onFocusChange: (value) {
-            if (value) {
-              context.ensureVisible();
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 16,
-              vertical: 6,
-            ).copyWith(
-              start: (leading ?? iconWidget) != null ? 4 : null,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minHeight: 50,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                spacing: 4,
-                children: [
-                  if (leadingWidget != null)
-                    DefaultTextStyle.merge(
-                      style: TextStyle(
-                        color: contentColor ?? Theme.of(context).colorScheme.onSurface,
-                      ),
-                      child: IconTheme(
-                        data: IconThemeData(
-                          color: contentColor ?? Theme.of(context).colorScheme.onSurface,
-                        ),
-                        child: leadingWidget,
-                      ),
-                    ),
+    final foreground = contentColor ?? AppColors.textPrimary;
+    final value = trailing ?? (valueAsTrailing ? subLabel : null);
+    final description = navigation || valueAsTrailing ? null : subLabel;
+    final leadingWidget = leading ?? (icon == null ? null : Icon(icon));
+    Widget body = LayoutBuilder(
+        builder: (context, constraints) => Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                    minHeight: (navigation
+                            ? AppPageLayout.toolbarHeight
+                            : AppPageLayout.rowHeight) -
+                        AppSpacing.md -
+                        (onTap == null ? 0 : FocusRing.boxInset(context))),
+                child: Row(children: [
+                  if (leadingWidget != null) ...[
+                    IconTheme(
+                        data: IconThemeData(color: foreground),
+                        child: leadingWidget),
+                    const SizedBox(width: AppSpacing.md),
+                  ],
                   Expanded(
-                    flex: 1,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.max,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Material(
-                                color: Colors.transparent,
-                                textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(color: contentColor),
-                                child: label,
-                              ),
-                            ),
-                            if (trailing != null && trailingInlineWithLabel) ...[
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: ExcludeFocusTraversal(
-                                  excluding: onTap != null,
-                                  child: trailing!,
-                                ),
-                              ),
-                            ]
-                          ],
-                        ),
-                        if (subLabel != null)
-                          Material(
-                            color: Colors.transparent,
-                            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        DefaultTextStyle.merge(
+                            style: AppTypography.cardTitle
+                                .copyWith(color: foreground),
+                            child: label),
+                        if (description != null) ...[
+                          const SizedBox(height: AppSpacing.xxs),
+                          DefaultTextStyle.merge(
+                              style: AppTypography.meta.copyWith(
                                   color:
-                                      (contentColor ?? Theme.of(context).colorScheme.onSurface).withValues(alpha: 0.65),
-                                ),
-                            child: subLabel,
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (trailing != null && !trailingInlineWithLabel)
+                                      contentColor ?? AppColors.textSecondary),
+                              child: description),
+                        ],
+                      ])),
+                  if (value != null) ...[
+                    const SizedBox(width: AppSpacing.md),
                     ConstrainedBox(
-                      constraints: BoxConstraints(minWidth: 50, maxWidth: constraints.maxWidth * 0.5),
-                      child: ExcludeFocusTraversal(
-                        excluding: onTap != null,
-                        child: Padding(
-                          padding: const EdgeInsetsDirectional.only(start: 16),
-                          child: trailing,
-                        ),
-                      ),
-                    )
-                ],
+                        constraints: BoxConstraints(
+                            maxWidth: constraints.maxWidth * .45 <
+                                    AppManagementLayout.settingsValueWidth
+                                ? constraints.maxWidth * .45
+                                : AppManagementLayout.settingsValueWidth),
+                        child: DefaultTextStyle.merge(
+                            style: AppTypography.cardTitle
+                                .copyWith(color: foreground),
+                            child: value)),
+                  ],
+                  if (onTap != null && valueAsTrailing) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    const Icon(Icons.chevron_right,
+                        color: AppColors.textSecondary),
+                  ],
+                ]),
               ),
-            ),
-          ),
+            ));
+    if (onTap != null) {
+      body = FocusRing(
+          onActivate: onTap,
+          autofocus: autoFocus,
+          borderRadius: AppRadii.controlBorder,
+          child: ExcludeFocus(child: body));
+    }
+    return DecoratedBox(
+        decoration: BoxDecoration(
+          color: selected ? AppColors.surfaceHigh : Colors.transparent,
+          borderRadius: AppRadii.controlBorder,
+          border: selected ? Border.all(color: AppColors.borderStrong) : null,
         ),
-      );
-    });
+        child: body);
   }
 }

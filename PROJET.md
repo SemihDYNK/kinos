@@ -36,9 +36,10 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   Dart ≥3.1.3, Riverpod 2.6.1, Drift 2.28.1, auto_route 10.1.2,
   dart_mappable 4.6.0, chopper 8.3.0 (clients API générés), media_kit
   1.2.2 (via mpv), flutter_secure_storage 10.3.1, Freezed 3.1.0.
-- **596 tests** passent (108 fichiers environ, en forte hausse depuis le
+- **640 tests** passent (74 fichiers de tests, en forte hausse depuis le
   dernier instantané — 412 au 23 septembre, +99 pour Seerr, +quelques
-  dizaines pour la migration/résilience des identifiants). Répartition
+  dizaines pour la migration/résilience des identifiants, puis +30 pour
+  la découverte Seerr et sa migration Drift). Répartition
   large : `test/arr/`, `test/recommendations/`, `test/seerr/` (8
   fichiers, 99 tests), `test/providers/` (migration et résilience des
   identifiants Jellyfin/Seerr), `test/widgets/`, `test/database/`,
@@ -53,9 +54,8 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
 - CI : `.github/workflows/checks.yaml` (lint/format), `build.yml`,
   `prepare-release.yml`, `validate-fastlane.yml` — déclenchés sur PR
   vers `develop`.
-- Dépôt propre : **aucun fichier non committé** au 2026-10-08 (contraste
-  avec le précédent instantané, qui listait 57 fichiers en attente — tout
-  a été committé depuis, cf. section suivante).
+- **Lot découverte Seerr implémenté, non committé** au 2026-10-08.
+  Le fichier `AGENTS.md` non suivi était déjà présent avant ce lot.
 
 ## Travail committé depuis le dernier instantané (23 sept → 24 sept)
 
@@ -86,6 +86,12 @@ le dépôt lui-même (commit du travail en cours, correction de la fuite
 Seerr, mise à jour de `CLAUDE.md`) sont donc **faits**.
 
 ## Modules — ce qui est fait, et comment
+
+Le bandeau d’accueil prend désormais jusqu’à huit films aléatoires dans toute
+la bibliothèque via un provider dédié (`hero_items_provider.dart`), vus ou
+non vus. Une seule requête Jellyfin `SortBy=Random` par session/profil ; les
+retours à l’accueil et rafraîchissements des informations du profil gardent
+la sélection. La rangée « Ajouts récents » conserve sa source actuelle.
 
 ### Cœur Jellyfin (auth, providers, bibliothèque, modèles)
 
@@ -208,8 +214,8 @@ la rangée "Vous l'aviez mis de côté".
 **Décision actée** (`CLAUDE.md`) : la blocklist Arr est abandonnée, hors
 périmètre — ce n'est plus un manque à combler, c'est tranché.
 
-Manque réellement : **vue qBittorrent dédiée** (client et identifiants
-déjà en place, seule la vue liste/progression des torrents manque).
+**Décision du 29 octobre 2026** : la vue qBittorrent dédiée est abandonnée,
+hors périmètre. Les clients et identifiants existants sont conservés.
 
 ### Module Seerr — Overseerr/Jellyseerr (`lib/seerr/`, `lib/screens/seerr/`)
 
@@ -246,19 +252,80 @@ mapping AniList), cas de champ inattendu par modèle principal.
 **Bug découvert en écrivant ces tests, documenté, non corrigé** — voir
 section Bugs connus.
 
-**Lot "découverte hors catalogue" : en cours de conception, interrompu.**
-Un prompt de planification ("Phase 1 — plan sans code") est en cours dans
-une autre conversation, coupé en plein point 7 — à y reprendre, pas dans
-celle-ci. Rien n'est encore implémenté pour ce lot.
+**Lot "découverte hors catalogue" : implémenté, tests automatisés passés.**
+Module isolé sous `lib/recommendations/seerr/`, deux rangées « Films à découvrir »
+et « Séries à découvrir » après les graines et avant l'inventaire, jusqu’à
+15 titres chacune selon les candidats éligibles. Défilement horizontal au
+clavier et par boutons fléchés à droite du titre ; sans barre de défilement
+ni défilement horizontal à la souris ; quotas séparés. Jusqu'à quinze films
+et quinze séries de l'historique, classés par signal positif × décroissance temporelle (éditions dédoublonnées),
+une page de similaires et une page de recommandations par œuvre. Pot enrichi
+borné à 60 fiches, équilibré entre graines/routes, soit au plus 120 requêtes
+Seerr hors nouvelle tentative HTTP. Deux appels simultanés, deux départs par
+seconde, timeout de 15 s, respect de `Retry-After`, une seule nouvelle tentative
+sur 429 puis délai persistant avant prochain calcul (au moins cinq minutes).
+
+Adaptation des genres (alias français/anglais), quatre premiers acteurs,
+vrais réalisateurs, mots-clés, studios et décennie vers le moteur existant ;
+score positif requis, diversité du scorer conservée. Calcul du profil et du
+classement dans un isolate. Les fiches sont décodées dans un DTO propre au
+lot, qui conserve les mots-clés film absents du modèle Seerr historique.
+Le client HTTP est dédié, utilise les identifiants existants uniquement en
+en-têtes et se ferme à la destruction du provider. Aucun secret en cache.
+
+Exclusions : présence d'un `mediaInfo` non vide (choix conservateur, y compris
+anciens refus/statuts inconnus/4K), bibliothèque Jellyfin complète par ID,
+Radarr par TMDB et Sonarr par TVDB/IMDb. Chaque calcul prend son propre
+instantané des bibliothèques en arrière-plan ; aucune attente ajoutée aux
+autres rangées. Les statuts Seerr des candidats retenus sont contrôlés pendant
+le calcul courant, jamais autorisés depuis le seul cache. Une demande locale
+réussie retire immédiatement le titre. Le registre d'accueil reçoit les IDs
+externes typés sans dépendre du calcul réseau de la rangée.
+
+Synchronisation Jellyfin initiale : pages de métadonnées de 50 titres,
+séquentielles, délai de 30 s par page ; un instantané incomplet reste rejeté.
+Les traits sont ensuite conservés dans le cache Drift existant, sans nouvelle
+table ni historique utilisateur. Chaque calcul suivant lit un inventaire
+léger de 500 IDs par page avec les données de lecture actuelles, récupère les
+métadonnées modifiées via `minDateLastSaved` (recouvrement de cinq minutes),
+et cible les IDs manquants. Suppressions et identifiants retirés sont reflétés
+immédiatement dans l’instantané. Cache expiré ou invalide : nouvelle
+synchronisation complète en arrière-plan. Tests du cache et des quotas passés.
+La mise à jour des informations du profil et le retour du focus pendant un
+calcul ne le relancent plus. Les traces de debug indiquent le numéro du calcul,
+sa progression et distinguent annulation et erreur sans journaliser de secrets.
+Deux erreurs de rafraîchissement de l'accueil ont aussi été reproduites et
+corrigées : remise à zéro de l'aperçu pendant l'initialisation Riverpod et
+notification du carrousel pendant la construction de son parent.
+
+Cache Drift dédié de sept jours, réglable à 1/3/7/14/30 jours dans les réglages
+des rangées : listes, fiches et métadonnées Jellyfin versionnées, réponses vides incluses, scope
+serveur Jellyfin/utilisateur/instance Seerr/langue. Activation migrée une seule
+fois ; une suppression volontaire n'est pas annulée aux lancements suivants.
+La rangée démarre après la première frame, reste absente pendant chargement,
+revérification ou erreur et en mode hors ligne. Consulter une fiche Seerr ou
+revenir au focus conserve le résultat ; une demande réussie retire uniquement
+le titre concerné. Carte « À demander » avec
+navigation exclusivement vers Seerr, focus directionnel, menu clic droit et
+Maj+F10, jetons du thème, libellés français/anglais (repli anglais ailleurs).
+
+**Validation réelle encore à faire** : pertinence des candidats et fraîcheur
+des exclusions contre les instances de l'utilisateur, inspection avec de
+vraies jaquettes et mesure des temps de frame dans l'application. Les tests
+vérifient l'absence d'attente du premier rendu et les débordements bureau/salon,
+pas une absence absolue de contention réseau/CPU. La garantie d'exclusion reste
+limitée par les identifiants et la fraîcheur des données exposées côté serveurs.
 
 ### Persistance locale (Drift, `lib/models/syncing/`)
 
-`AppDatabase`, schéma v3, 5 tables : `DatabaseItems` (cache Jellyfin
+`AppDatabase`, schéma v4, 6 tables : `DatabaseItems` (cache Jellyfin
 synchronisé/téléchargé), `PlaybackQueue` (outbox des rapports de
 lecture), `PaletteCache` (couleur dominante de jaquette), `Settings`
 (clé/valeur scopée), `RecommendationCacheEntries` (dernier calcul de
-recommandations, scope explicite par `userId`). Migrations v1→v2→v3
-testées, schémas exportés dans `drift_schemas/`.
+recommandations, scope explicite par `userId`), `DiscoveryCacheEntries`
+(listes/fiches de découverte Seerr, scope composite explicite). Migrations
+v1→v2→v3 et v1/v2/v3→v4 testées avec conservation des données ; schémas
+exportés dans `drift_schemas/`.
 
 **Rapports de lecture** : `PlaybackReportQueueWorker`
 (`@Riverpod(keepAlive: true)`) draine `PlaybackQueue` en continu (timer
@@ -329,39 +396,24 @@ courante et son texte secondaire dérivé.
   tests Seerr (cf. Bugs connus) : rapporter fichier:ligne, comportement
   observé/attendu, laisser la décision de correction à l'humain.
 
-## Bugs connus non corrigés
+## Bugs connus et suivi
 
-1. **`SeerrJsonConverter.convertResponse` plante au lieu de renvoyer un
-   body `null` proprement** (`lib/seerr/seerr_json_converter.dart:60` et
-   `:75`). Cause : `Response.copyWith` de chopper (`body ?? (this.body as
-   NewBodyType?)`) ne distingue pas "paramètre omis" de "paramètre `null`
-   explicite" — l'ancien body (la chaîne JSON brute) est recasté sur le
-   nouveau type et lève un `TypeError` qui masque l'erreur de décodage
-   initiale. Portée réelle, précisée par les tests (`ef2704ef`) : **n'est
-   atteint que sur une réponse 2xx** dont le corps échoue au décodage
-   (corps vide, champ malformé) et dont le type de retour est concret —
-   `approveRequest`, `createRequest`/`requestMovie`/`requestSeries`,
-   `updateMediaStatus` sont exposés ; `logout`/`deleteRequest`/
-   `deleteMedia`/`deleteMediaFile` (`Response<dynamic>`) ne le sont pas,
-   un cast vers `dynamic` ne lève jamais. Pas de capture réelle confirmant
-   qu'un de ces endpoints renvoie effectivement un corps vide en pratique.
-   Impact UI si déclenché : silencieux pour "Approuver une demande"
-   (`seerr_details_provider.dart:236`, aucun try/catch) ; visible mais
-   moche pour "Marquer disponible/indisponible" (trace brute affichée
-   comme message d'erreur) ; sans impact pour "Demander un titre" (passe
-   par `.apiResult`, qui encapsule tout dans un try/catch).
-2. **Aucun `errorConverter` configuré sur le `ChopperClient` Seerr** —
-   consequence connexe du point 1 : pour tout statut HTTP non-2xx
-   (401/403/409/502…), `response.error` est la chaîne JSON brute non
-   décodée, jamais le champ `"message"` extrait proprement. Le message
-   finit techniquement lisible par l'utilisateur (`ApiError.toString()` →
-   snackbar `KinosSnack.showResponse`) mais noyé dans du JSON non nettoyé,
-   ex. `An error occurred: Exception: (409) Bad Request:
-   {"message":"Request quota exceeded"}`. Un timeout côté client Seerr
-   pourrait être ajouté sans toucher aux zones protégées (`lib/util/
-   seerr_http_client.dart`/`seerr_http_client_web.dart` sont libres) —
-   actuellement **aucun timeout n'existe**, une requête Seerr qui ne
-   répond jamais bloque indéfiniment.
+1. **Conversion Seerr et résultats API — corrigés le 29 octobre 2026.**
+   Les réponses 2xx malformées ou vides pour un type concret ne provoquent
+   plus un second `TypeError`. L’intercepteur préserve l’erreur malgré le
+   traitement interne de Chopper ; les deux accès `.apiResult` refusent un
+   faux succès. Les réponses sans contenu 204/205 et le JSON `null` pour un
+   type nullable ou dynamique sont conservés. Le résultat API synchrone lit
+   explicitement `this.body` pour éviter l’annotation Chopper homonyme.
+   Aucun contenu de réponse invalide n’est imprimé par le convertisseur.
+2. **Seerr : erreurs HTTP encore brutes, attente réseau bornée.**
+   L’absence d’`errorConverter` laisse encore les erreurs HTTP non-2xx sous
+   forme de chaîne JSON ou HTML. Leur présentation reste à améliorer.
+   Depuis le 29 octobre 2026, l’intercepteur borne à 30 secondes la requête
+   complète, y compris la réception du corps, et déclenche l’annulation HTTP.
+   Une annulation déjà fournie est conservée. Aucune nouvelle tentative
+   automatique n’est ajoutée : après un délai dépassé sur une écriture, le
+   serveur peut avoir reçu la demande même sans réponse côté client.
 3. **`localPin` stocké en clair** sur disque (`SharedPreferences`, via
    `AccountModel`) — risque moindre qu'un secret de compte distant, mais
    pas blanchi. Non traité.
@@ -394,29 +446,25 @@ courante et son texte secondaire dérivé.
 ## Reste à faire
 
 Feuille de route produit (ordre, justification) : voir `CLAUDE.md` §
-Feuille de route — ce document ne la duplique pas. Rappel de l'ordre
-acté : lot Seerr (découverte hors catalogue) → AniList (mapping
+Feuille de route. Priorités validées le 29 octobre 2026 : stabilisation
+de Kinos normal (y compris validation Seerr) → AniList (mapping
 d'identifiants d'abord) → import Letterboxd (alimente le profil de goût,
-jamais les candidats recommandés) → mode salon (en dernier).
+jamais les candidats recommandés) → mode salon → préparation de la version
+distribuable propre, en toute fin. Le Lab Plezy/Plex reste de côté.
 
 Ouverts côté code, dans un ordre de priorité suggéré :
 
-- **Lot Seerr "découverte hors catalogue"** — conception interrompue dans
-  une autre conversation (point 7 d'un plan en cours), à reprendre là-bas.
-  Le prompt de vérification préalable (bug du corps vide, messages
-  d'erreur lisibles, timeout client — cf. Bugs connus 1-2) conditionne ce
-  lot et a déjà été traité par ce document.
+- **Lot Seerr "découverte hors catalogue"** — implémentation livrée dans le
+  working tree ; valider contre les vrais serveurs et mesurer le rendu avant
+  publication. Ce lot conserve son délai propre ; le client Seerr historique
+  est désormais borné à 30 secondes. La présentation des erreurs HTTP reste
+  à améliorer.
 - **Fixtures Seerr réelles** à capturer (`discover/trending`,
   `movie/<id>`, `tv/<id>`, `requests`) pour remplacer les 3 fixtures
   synthétiques identifiées dans `test/fixtures/seerr/README.md`, avec
   nettoyage des champs personnels avant capture.
-- **Décider du bug `SeerrJsonConverter`** (Bugs connus 1) : corriger
-  (remplacer `response.copyWith(body: null, ...)` par une construction
-  directe de `Response`), ou documenter plus largement et laisser tel
-  quel — impact limité à 3 endpoints, aucune preuve d'occurrence réelle à
-  ce jour.
-- **Timeout client Seerr** (Bugs connus 2) — faisable sans toucher aux
-  zones protégées.
+- **Présentation des erreurs HTTP Seerr** — simplifier les messages JSON/HTML
+  non-2xx. Le défaut de conversion et le délai maximal du client sont corrigés.
 - **Reconfirmer à l'écran** le recentrage piste/pouce et l'icône du bouton
   d'arrêt du lecteur vidéo (Bugs connus 6).
 - **Vérification manuelle du module recommandations** (jamais faite,
@@ -428,8 +476,6 @@ Ouverts côté code, dans un ordre de priorité suggéré :
   si souhaité.
 - **Tests sur la synchronisation/téléchargement offline** (Bugs connus
   5) — avant toute modification non triviale de cette zone.
-- **Vue qBittorrent dédiée** (client et identifiants déjà en place, la
-  vue manque).
 - **Déconnexion Discord au play** — idée notée, mis de côté, aucun code
   (vérifier `pactl list sinks` avant/pendant lecture avec Discord en
   vocal).

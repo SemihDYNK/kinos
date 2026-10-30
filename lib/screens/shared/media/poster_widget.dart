@@ -24,6 +24,7 @@ class PosterWidget extends ConsumerWidget {
   final bool? selected;
   final int maxLines;
   final double? aspectRatio;
+  final double? imageAspectRatio;
   final bool inlineTitle;
   final bool underTitle;
   final Set<ItemActions> excludeActions;
@@ -42,6 +43,7 @@ class PosterWidget extends ConsumerWidget {
     this.maxLines = 3,
     this.selected,
     this.aspectRatio,
+    this.imageAspectRatio,
     this.inlineTitle = false,
     this.underTitle = true,
     this.excludeActions = const {},
@@ -65,96 +67,116 @@ class PosterWidget extends ConsumerWidget {
         },
       _ => null,
     };
-    return AspectRatio(
-      aspectRatio: aspectRatio ?? AdaptiveLayout.poster(context).ratio,
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          Expanded(
-            child: PosterImage(
-              poster: poster,
-              selected: selected,
-              playVideo: (value) async => await poster.play(context, ref),
-              inlineTitle: inlineTitle,
-              excludeActions: excludeActions,
-              otherActions: otherActions,
-              onUserDataChanged: (newData) => onUserDataChanged?.call(poster.id, newData),
-              onItemRemoved: onItemRemoved,
-              onItemUpdated: onItemUpdated,
-              onPressed: onPressed,
-              imagePriority: imagePriority,
-              onFocusChanged: onFocusChanged,
-              showSyncStatus: showSyncStatus,
+    final posterImage = PosterImage(
+      poster: poster,
+      selected: selected,
+      playVideo: (value) async => await poster.play(context, ref),
+      inlineTitle: inlineTitle,
+      excludeActions: excludeActions,
+      otherActions: otherActions,
+      onUserDataChanged: (newData) =>
+          onUserDataChanged?.call(poster.id, newData),
+      onItemRemoved: onItemRemoved,
+      onItemUpdated: onItemUpdated,
+      onPressed: onPressed,
+      imagePriority: imagePriority,
+      onFocusChanged: onFocusChanged,
+      showSyncStatus: showSyncStatus,
+    );
+    final content = Column(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        if (imageAspectRatio != null)
+          AspectRatio(aspectRatio: imageAspectRatio!, child: posterImage)
+        else
+          Expanded(child: posterImage),
+        if (!inlineTitle && underTitle)
+          ExcludeFocus(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Flexible(
+                  child: ClickableText(
+                    onTap: AdaptiveLayout.inputDeviceOf(context) ==
+                            InputDevice.pointer
+                        ? () => switch (poster) {
+                              ArtistModel artist => artist.navigateTo(context),
+                              AlbumModel album => album.navigateTo(context),
+                              _ => poster.parentBaseModel.navigateTo(context),
+                            }
+                        : null,
+                    text: poster.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (subTitle != null) ...[
+                      Flexible(
+                        child: subTitle!,
+                      ),
+                    ],
+                    if (poster.subText?.isNotEmpty ?? false)
+                      Flexible(
+                        child: ClickableText(
+                          onTap: subtitleClick,
+                          opacity: opacity,
+                          text: poster.subText ?? "",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      )
+                    else
+                      Flexible(
+                        child: ClickableText(
+                          onTap: subtitleClick,
+                          opacity: opacity,
+                          text: poster.subTextShort(context.localized) ?? "",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                  ],
+                ),
+                Flexible(
+                  child: ClickableText(
+                    opacity: opacity,
+                    text: poster.subText?.isNotEmpty ?? false
+                        ? poster.subTextShort(context.localized) ?? ""
+                        : "",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ].take(maxLines).toList(),
             ),
           ),
-          if (!inlineTitle && underTitle)
-            ExcludeFocus(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Flexible(
-                    child: ClickableText(
-                      onTap: AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer
-                          ? () => switch (poster) {
-                                ArtistModel artist => artist.navigateTo(context),
-                                AlbumModel album => album.navigateTo(context),
-                                _ => poster.parentBaseModel.navigateTo(context),
-                              }
-                          : null,
-                      text: poster.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (subTitle != null) ...[
-                        Flexible(
-                          child: subTitle!,
-                        ),
-                      ],
-                      if (poster.subText?.isNotEmpty ?? false)
-                        Flexible(
-                          child: ClickableText(
-                            onTap: subtitleClick,
-                            opacity: opacity,
-                            text: poster.subText ?? "",
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        )
-                      else
-                        Flexible(
-                          child: ClickableText(
-                            onTap: subtitleClick,
-                            opacity: opacity,
-                            text: poster.subTextShort(context.localized) ?? "",
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                    ],
-                  ),
-                  Flexible(
-                    child: ClickableText(
-                      opacity: opacity,
-                      text: poster.subText?.isNotEmpty ?? false ? poster.subTextShort(context.localized) ?? "" : "",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ].take(maxLines).toList(),
-              ),
-            ),
-        ],
-      ),
+      ],
     );
+    return imageAspectRatio == null
+        ? AspectRatio(
+            aspectRatio: aspectRatio ?? AdaptiveLayout.poster(context).ratio,
+            child: content)
+        : content;
   }
 }
 
@@ -179,7 +201,8 @@ class PosterPlaceHolder extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: KinosTheme.defaultShape.borderRadius,
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+              color:
+                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
             ),
             child: Center(
               child: Padding(

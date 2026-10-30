@@ -5,6 +5,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:kinos/models/api_result.dart';
 import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
 import 'package:kinos/providers/seerr_api_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/recommendations/seerr/discovery_providers.dart';
 import 'package:kinos/providers/seerr_user_provider.dart';
 import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/util/seerr_helpers.dart';
@@ -198,6 +200,10 @@ class SeerrRequest extends _$SeerrRequest {
     final poster = state.poster;
     if (poster == null) return null;
 
+    final account = ref.read(userProvider);
+    final requested = account?.seerrCredentials == null ? null : ref.read(
+      discoveryRequestedProvider(discoveryAccountScope(account!.credentials.serverId,
+        account.id, account.seerrCredentials!.serverUrl)).notifier);
     final canOverrideUser = state.currentUser?.canManageUsers ?? false;
     final userId = canOverrideUser ? state.selectedUser?.id ?? state.currentUser?.id : null;
     final tags = state.selectedTags.map((t) => t.id).whereType<int>().toList();
@@ -209,8 +215,9 @@ class SeerrRequest extends _$SeerrRequest {
     final profileId = state.selectedProfile?.id;
     final rootFolder = state.selectedRootFolder ?? state.defaultRootFolder;
 
+    final ApiResult<SeerrMediaRequest?> result;
     if (isTv) {
-      return (await api.requestSeries(
+      result = await api.requestSeries(
         tmdbId: poster.tmdbId,
         is4k: selectedServer?.is4k ?? false,
         userId: userId,
@@ -219,10 +226,9 @@ class SeerrRequest extends _$SeerrRequest {
         rootFolder: rootFolder,
         tags: tags,
         seasons: state.selectedSeasonNumbers,
-      ))
-          .apiResult;
+      ).apiResult;
     } else {
-      return (await api.requestMovie(
+      result = await api.requestMovie(
         tmdbId: poster.tmdbId,
         is4k: selectedServer?.is4k ?? false,
         userId: userId,
@@ -230,9 +236,12 @@ class SeerrRequest extends _$SeerrRequest {
         profileId: profileId,
         rootFolder: rootFolder,
         tags: tags,
-      ))
-          .apiResult;
+      ).apiResult;
     }
+    if (result.isSuccess && requested != null && requested.mounted) {
+      requested.update((ids) => {...ids, 'tmdb:${isTv ? 'tv' : 'movie'}:${poster.tmdbId}'});
+    }
+    return result;
   }
 
   Future<void> deleteRequest() async {

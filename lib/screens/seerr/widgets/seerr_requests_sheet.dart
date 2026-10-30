@@ -70,7 +70,9 @@ class _SeerrRequestsSheet extends ConsumerWidget {
 
     return ListView.separated(
       controller: useParentScroll ? scrollController : null,
-      physics: useParentScroll ? const NeverScrollableScrollPhysics() : const ClampingScrollPhysics(),
+      physics: useParentScroll
+          ? const NeverScrollableScrollPhysics()
+          : const ClampingScrollPhysics(),
       shrinkWrap: useParentScroll,
       padding: const EdgeInsets.all(16),
       itemBuilder: (context, index) {
@@ -113,7 +115,9 @@ class _SeerrRequestsSheet extends ConsumerWidget {
                   Expanded(
                     child: ElevatedButton.icon(
                         icon: const Icon(IconsaxPlusBold.close_circle),
-                        label: Text(myRequest ? context.localized.delete : context.localized.decline),
+                        label: Text(myRequest
+                            ? context.localized.delete
+                            : context.localized.decline),
                         onPressed: requestId != null && isPending
                             ? () {
                                 onDecline(requestId);
@@ -121,14 +125,18 @@ class _SeerrRequestsSheet extends ConsumerWidget {
                               }
                             : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.errorContainer,
-                          foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.errorContainer,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onErrorContainer,
                         )),
                   ),
                   if (!myRequest)
                     Expanded(
                       child: FilledButton.icon(
-                        autofocus: index == 0 && AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad,
+                        autofocus: index == 0 &&
+                            AdaptiveLayout.inputDeviceOf(context) ==
+                                InputDevice.dPad,
                         icon: const Icon(IconsaxPlusBold.tick_circle),
                         label: Text(context.localized.approve),
                         onPressed: isPending && requestId != null
@@ -138,8 +146,10 @@ class _SeerrRequestsSheet extends ConsumerWidget {
                               }
                             : null,
                         style: FilledButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primaryContainer,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),

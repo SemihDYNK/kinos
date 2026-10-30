@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:kinos/models/book_model.dart';
 import 'package:kinos/providers/book_viewer_provider.dart';
@@ -20,7 +21,7 @@ Future<void> openBookViewer(
     context: context,
     useRootNavigator: true,
     useSafeArea: false,
-    builder: (context) => Dialog.fullscreen(
+    builder: (context) => GlassDialog.fullscreen(
       child: BookViewerScreen(
         initialPage: initialPage ?? 0,
         provider: provider,

@@ -14,6 +14,10 @@ import 'package:sliver_tools/sliver_tools.dart';
 import 'package:kinos/models/boxset_model.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/photos_model.dart';
+import 'package:kinos/models/items/movie_model.dart';
+import 'package:kinos/models/items/series_model.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/text_metrics.dart';
 import 'package:kinos/models/items/playlist_model.dart';
 import 'package:kinos/models/library_search/library_search_options.dart';
 import 'package:kinos/providers/library_search_provider.dart';
@@ -58,7 +62,11 @@ class LibraryViews extends ConsumerWidget {
   final GroupBy groupByType;
   final Function(ItemBaseModel)? onPressed;
   final Set<ItemActions> excludeActions = const {ItemActions.openParent};
-  const LibraryViews({required this.items, required this.groupByType, this.onPressed, super.key});
+  const LibraryViews(
+      {required this.items,
+      required this.groupByType,
+      this.onPressed,
+      super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,20 +80,24 @@ class LibraryViews extends ConsumerWidget {
   }
 
   Widget _getWidget(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(librarySearchProvider(key!).select((value) => value.selectedPosters));
-    final posterSizeMultiplier = ref.watch(clientSettingsProvider.select((value) => value.posterSize));
+    final selected = ref.watch(
+        librarySearchProvider(key!).select((value) => value.selectedPosters));
+    final posterSizeMultiplier =
+        ref.watch(clientSettingsProvider.select((value) => value.posterSize));
     final libraryProvider = ref.read(librarySearchProvider(key!).notifier);
     final posterSize = MediaQuery.sizeOf(context).width /
         (AdaptiveLayout.poster(context).gridRatio *
-            ref.watch(clientSettingsProvider.select((value) => value.posterSize)));
+            ref.watch(
+                clientSettingsProvider.select((value) => value.posterSize)));
     final decimal = posterSize - posterSize.toInt();
 
-    final sortingOptions = ref.watch(librarySearchProvider(key!).select((value) => value.filters.sortingOption));
+    final sortingOptions = ref.watch(librarySearchProvider(key!)
+        .select((value) => value.filters.sortingOption));
 
     List<ItemAction> otherActions(ItemBaseModel item) {
       return [
-        if (ref.watch(librarySearchProvider(key!)
-            .select((value) => value.folderOverwrite.included.firstOrNull?.type is BoxSetModel))) ...{
+        if (ref.watch(librarySearchProvider(key!).select((value) => value
+            .folderOverwrite.included.firstOrNull?.type is BoxSetModel))) ...{
           ItemActionButton(
             label: Text(context.localized.removeFromCollection),
             icon: const Icon(IconsaxPlusLinear.archive_slash),
@@ -97,8 +109,8 @@ class LibraryViews extends ConsumerWidget {
             },
           )
         },
-        if (ref.watch(librarySearchProvider(key!)
-            .select((value) => value.folderOverwrite.included.firstOrNull?.type is PlaylistModel))) ...{
+        if (ref.watch(librarySearchProvider(key!).select((value) => value
+            .folderOverwrite.included.firstOrNull?.type is PlaylistModel))) ...{
           ItemActionButton(
             label: Text(context.localized.removeFromPlaylist),
             icon: const Icon(IconsaxPlusLinear.archive_minus),
@@ -116,43 +128,62 @@ class LibraryViews extends ConsumerWidget {
     switch (ref.watch(libraryViewTypeProvider)) {
       case LibraryViewTypes.grid:
         Widget createGrid(List<ItemBaseModel> items) {
-          final width = MediaQuery.of(context).size.width;
-          final cellWidth = (width / posterSize).floorToDouble();
-          // Même plancher que columnsFor() (cf. AppDensity) : jamais une
-          // grille à 2 colonnes, trop proche d'une mise en page mobile
-          // (règle anti-mobile-first, CLAUDE.md).
-          final crossAxisCount = ((width / cellWidth).floor()).clamp(3, 10);
-          return GridFocusTraveler(
-            itemCount: items.length,
-            crossAxisCount: crossAxisCount,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          return SliverLayoutBuilder(builder: (context, constraints) {
+            final width = constraints.crossAxisExtent;
+            final cinema = items
+                .every((item) => item is MovieModel || item is SeriesModel);
+            final crossAxisCount = cinema
+                ? context.tokens.density
+                    .columnsFor(width / posterSizeMultiplier)
+                : posterSize.floor().clamp(3, 10);
+            final tileWidth =
+                (width - (crossAxisCount - 1) * AppSpacing.gridGap) /
+                    crossAxisCount;
+            final labelHeight = measuredLineHeight(
+                    context, Theme.of(context).textTheme.titleMedium) +
+                measuredLineHeight(
+                        context, Theme.of(context).textTheme.titleSmall) *
+                    2;
+            final tileHeight = cinema
+                ? tileWidth / AppMedia.posterAspectRatio + labelHeight
+                : tileWidth / items.getMostCommonType.aspectRatio;
+            return GridFocusTraveler(
+              itemCount: items.length,
               crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: items.getMostCommonType.aspectRatio,
-            ),
-            itemBuilder: (other, selectedIndex, index) {
-              final item = items[index];
-              return PosterWidget(
-                key: Key(item.id),
-                poster: item,
-                maxLines: 2,
-                subTitle: item.subTitle(sortingOptions),
-                excludeActions: excludeActions,
-                otherActions: otherActions(item),
-                selected: selected.contains(item),
-                onUserDataChanged: (id, newData) => libraryProvider.updateUserData(id, newData),
-                onItemRemoved: (oldItem) => libraryProvider.removeFromPosters([oldItem.id]),
-                onItemUpdated: (newItem) => libraryProvider.updateItem(newItem),
-                onPressed: (action, item) async => onItemPressed(action, key, item, ref, context),
-                onFocusChanged: (focus) {
-                  if (focus) {
-                    other.ensureVisible();
-                  }
-                },
-              );
-            },
-          );
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: AppSpacing.gridGap,
+                mainAxisSpacing: AppSpacing.md,
+                mainAxisExtent: tileHeight,
+              ),
+              itemBuilder: (other, selectedIndex, index) {
+                final item = items[index];
+                return PosterWidget(
+                  key: Key(item.id),
+                  poster: item,
+                  imageAspectRatio: cinema ? AppMedia.posterAspectRatio : null,
+                  maxLines: 2,
+                  subTitle: item.subTitle(sortingOptions),
+                  excludeActions: excludeActions,
+                  otherActions: otherActions(item),
+                  selected: selected.contains(item),
+                  onUserDataChanged: (id, newData) =>
+                      libraryProvider.updateUserData(id, newData),
+                  onItemRemoved: (oldItem) =>
+                      libraryProvider.removeFromPosters([oldItem.id]),
+                  onItemUpdated: (newItem) =>
+                      libraryProvider.updateItem(newItem),
+                  onPressed: (action, item) async =>
+                      onItemPressed(action, key, item, ref, context),
+                  onFocusChanged: (focus) {
+                    if (focus) {
+                      other.ensureVisible();
+                    }
+                  },
+                );
+              },
+            );
+          });
         }
 
         if (groupByType != GroupBy.none) {
@@ -189,10 +220,14 @@ class LibraryViews extends ConsumerWidget {
                   excludeActions: excludeActions,
                   otherActions: otherActions(poster),
                   subTitle: poster.subTitle(sortingOptions),
-                  onUserDataChanged: (id, newData) => libraryProvider.updateUserData(id, newData),
-                  onItemRemoved: (oldItem) => libraryProvider.removeFromPosters([oldItem.id]),
-                  onItemUpdated: (newItem) => libraryProvider.updateItem(newItem),
-                  onPressed: (action, item) async => onItemPressed(action, key, item, ref, context),
+                  onUserDataChanged: (id, newData) =>
+                      libraryProvider.updateUserData(id, newData),
+                  onItemRemoved: (oldItem) =>
+                      libraryProvider.removeFromPosters([oldItem.id]),
+                  onItemUpdated: (newItem) =>
+                      libraryProvider.updateItem(newItem),
+                  onPressed: (action, item) async =>
+                      onItemPressed(action, key, item, ref, context),
                 ),
               );
             },
@@ -232,11 +267,13 @@ class LibraryViews extends ConsumerWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: (8 * decimal) + 8,
                     crossAxisSpacing: (8 * decimal) + 8,
-                    gridDelegate: SliverSimpleGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent:
-                          (MediaQuery.sizeOf(context).width ~/ (lerpDouble(250, 75, posterSizeMultiplier) ?? 1.0))
-                                  .toDouble() *
-                              12,
+                    gridDelegate:
+                        SliverSimpleGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: (MediaQuery.sizeOf(context).width ~/
+                                  (lerpDouble(250, 75, posterSizeMultiplier) ??
+                                      1.0))
+                              .toDouble() *
+                          12,
                     ),
                     itemCount: group.length,
                     itemBuilder: (context, index) {
@@ -250,10 +287,14 @@ class LibraryViews extends ConsumerWidget {
                         subTitle: item.subTitle(sortingOptions),
                         excludeActions: excludeActions,
                         otherActions: otherActions(group[index]),
-                        onUserDataChanged: (id, newData) => libraryProvider.updateUserData(id, newData),
-                        onItemRemoved: (oldItem) => libraryProvider.removeFromPosters([oldItem.id]),
-                        onItemUpdated: (newItem) => libraryProvider.updateItem(newItem),
-                        onPressed: (action, item) async => onItemPressed(action, key, item, ref, context),
+                        onUserDataChanged: (id, newData) =>
+                            libraryProvider.updateUserData(id, newData),
+                        onItemRemoved: (oldItem) =>
+                            libraryProvider.removeFromPosters([oldItem.id]),
+                        onItemUpdated: (newItem) =>
+                            libraryProvider.updateItem(newItem),
+                        onPressed: (action, item) async =>
+                            onItemPressed(action, key, item, ref, context),
                       );
                     },
                   ),
@@ -278,10 +319,13 @@ class LibraryViews extends ConsumerWidget {
                 excludeActions: excludeActions,
                 otherActions: otherActions(item),
                 subTitle: item.subTitle(sortingOptions),
-                onUserDataChanged: (id, newData) => libraryProvider.updateUserData(id, newData),
-                onItemRemoved: (oldItem) => libraryProvider.removeFromPosters([oldItem.id]),
+                onUserDataChanged: (id, newData) =>
+                    libraryProvider.updateUserData(id, newData),
+                onItemRemoved: (oldItem) =>
+                    libraryProvider.removeFromPosters([oldItem.id]),
                 onItemUpdated: (newItem) => libraryProvider.updateItem(newItem),
-                onPressed: (action, item) async => onItemPressed(action, key, item, ref, context),
+                onPressed: (action, item) async =>
+                    onItemPressed(action, key, item, ref, context),
               );
             },
           );
@@ -309,7 +353,10 @@ class LibraryViews extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
                 header,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -319,17 +366,28 @@ class LibraryViews extends ConsumerWidget {
     );
   }
 
-  Map<String, List<ItemBaseModel>> groupItemsBy(BuildContext context, List<ItemBaseModel> list, GroupBy groupOption) {
+  Map<String, List<ItemBaseModel>> groupItemsBy(
+      BuildContext context, List<ItemBaseModel> list, GroupBy groupOption) {
     switch (groupOption) {
       case GroupBy.dateAdded:
         return groupBy(
             items,
-            (poster) => DateFormat.yMMMMd(context.localized.localeName).format(DateTime(
-                poster.overview.dateAdded!.year, poster.overview.dateAdded!.month, poster.overview.dateAdded!.day)));
+            (poster) => DateFormat.yMMMMd(context.localized.localeName).format(
+                DateTime(
+                    poster.overview.dateAdded!.year,
+                    poster.overview.dateAdded!.month,
+                    poster.overview.dateAdded!.day)));
       case GroupBy.releaseDate:
-        return groupBy(list, (poster) => poster.overview.yearAired?.toString() ?? context.localized.unknown);
+        return groupBy(
+            list,
+            (poster) =>
+                poster.overview.yearAired?.toString() ??
+                context.localized.unknown);
       case GroupBy.rating:
-        return groupBy(list, (poster) => poster.overview.parentalRating ?? context.localized.noRating);
+        return groupBy(
+            list,
+            (poster) =>
+                poster.overview.parentalRating ?? context.localized.noRating);
       case GroupBy.tags:
         return groupByList(context, list, true);
       case GroupBy.genres:
@@ -350,7 +408,8 @@ class LibraryViews extends ConsumerWidget {
     WidgetRef ref,
     BuildContext context,
   ) async {
-    final selectMode = ref.read(librarySearchProvider(key!).select((value) => value.selecteMode));
+    final selectMode = ref
+        .read(librarySearchProvider(key!).select((value) => value.selecteMode));
     if (selectMode) {
       ref.read(librarySearchProvider(key).notifier).toggleSelection(item);
       return;
@@ -361,7 +420,9 @@ class LibraryViews extends ConsumerWidget {
         if (context.mounted) {
           await context.router.push(PhotoViewerRoute(
             items: photoList,
-            photoQueueSource: ref.read(librarySearchProvider(key).notifier).createPhotoQueueSource(shuffle: false),
+            photoQueueSource: ref
+                .read(librarySearchProvider(key).notifier)
+                .createPhotoQueueSource(shuffle: false),
             selected: item.id,
           ));
         }
@@ -374,7 +435,8 @@ class LibraryViews extends ConsumerWidget {
   }
 }
 
-Map<String, List<ItemBaseModel>> groupByList(BuildContext context, List<ItemBaseModel> items, bool tags) {
+Map<String, List<ItemBaseModel>> groupByList(
+    BuildContext context, List<ItemBaseModel> items, bool tags) {
   Map<String, int> tagsCount = {};
   for (var item in items) {
     for (var tag in (tags ? item.overview.tags : item.overview.genres)) {
@@ -382,13 +444,15 @@ Map<String, List<ItemBaseModel>> groupByList(BuildContext context, List<ItemBase
     }
   }
 
-  List<String> sortedTags = tagsCount.keys.toList()..sort((a, b) => tagsCount[a]!.compareTo(tagsCount[b]!));
+  List<String> sortedTags = tagsCount.keys.toList()
+    ..sort((a, b) => tagsCount[a]!.compareTo(tagsCount[b]!));
 
   Map<String, List<ItemBaseModel>> groupedItems = {};
 
   for (var item in items) {
     List<String> itemTags = (tags ? item.overview.tags : item.overview.genres);
-    itemTags.sort((a, b) => sortedTags.indexOf(a).compareTo(sortedTags.indexOf(b)));
+    itemTags
+        .sort((a, b) => sortedTags.indexOf(a).compareTo(sortedTags.indexOf(b)));
     String key = itemTags.take(2).join(', ');
     key = key.isNotEmpty ? key : context.localized.none;
     groupedItems[key] = [...(groupedItems[key] ?? []), item];

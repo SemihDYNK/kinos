@@ -186,6 +186,7 @@ final homeRowItemsProvider = FutureProvider.autoDispose
       case HomeRowType.catalogWellRated:
       case HomeRowType.catalogNarrowGenres:
       case HomeRowType.catalogDecades:
+      case HomeRowType.seerrDiscovery:
       case HomeRowType.catalogLongFilms:
         // Jamais atteint en pratique : leur contenu vient de
         // `recommendationResultProvider`/`homeSeedRowsResultProvider`/

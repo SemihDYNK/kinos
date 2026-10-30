@@ -147,7 +147,7 @@ modules:
       - mkdir -p /app/share/applications
       - mkdir -p /app/share/icons/hicolor/scalable/apps
       - install -Dm644 flatpak/Kinos.desktop /app/share/applications/${FLATPAK_ID}.desktop
-      - install -Dm644 icons/kinos_icon.svg /app/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
+      - install -Dm644 icons/kinos_app_icon.svg /app/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
     sources:
       - type: dir
         path: ..

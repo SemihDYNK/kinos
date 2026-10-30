@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,7 +34,7 @@ class _PasswordResetDialogState extends ConsumerState<PasswordResetDialog> {
     final controlUserProvider = ref.read(controlUsersProvider.notifier);
     final currentUser = ref.watch(userProvider);
     final hasConfiguredPassword = currentUser?.hasConfiguredPassword ?? false;
-    return Dialog(
+    return GlassDialog(
       backgroundColor: Theme.of(context).colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(12.0),

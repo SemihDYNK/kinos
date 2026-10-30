@@ -45,7 +45,8 @@ enum HomeRowType {
   catalogWellRated,
   catalogNarrowGenres,
   catalogDecades,
-  catalogLongFilms;
+  catalogLongFilms,
+  seerrDiscovery;
 
   /// Vrai si ce type a besoin d'un paramètre choisi par l'utilisateur
   /// (genre, personne, studio, décennie ou collection).
@@ -66,6 +67,7 @@ enum HomeRowType {
         HomeRowType.catalogWellRated ||
         HomeRowType.catalogNarrowGenres ||
         HomeRowType.catalogDecades ||
+        HomeRowType.seerrDiscovery ||
         HomeRowType.catalogLongFilms =>
           false,
       };
@@ -88,6 +90,7 @@ enum HomeRowType {
         HomeRowType.catalogNarrowGenres => 'Genres étroits',
         HomeRowType.catalogDecades => 'Décennies',
         HomeRowType.catalogLongFilms => 'Plus de 2h30',
+        HomeRowType.seerrDiscovery => 'À découvrir',
       };
 
   /// Titre par défaut proposé pour une nouvelle rangée de ce type, en
@@ -110,6 +113,7 @@ enum HomeRowType {
         HomeRowType.catalogNarrowGenres => 'Genres étroits',
         HomeRowType.catalogDecades => 'Décennies',
         HomeRowType.catalogLongFilms => 'Plus de 2h30',
+        HomeRowType.seerrDiscovery => 'À découvrir',
       };
 }
 

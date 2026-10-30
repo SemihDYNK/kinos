@@ -1,3 +1,4 @@
+import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -20,6 +21,7 @@ import 'package:kinos/screens/shared/media_detail_scaffold.dart';
 import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/theme.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/app_page_header.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
@@ -30,6 +32,7 @@ import 'package:kinos/widgets/shared/item_actions.dart';
 
 @RoutePage()
 class SeerrDetailsScreen extends ConsumerWidget {
+  final Object? tag;
   final String mediaType;
   final int tmdbId;
   final SeerrDashboardPosterModel? poster;
@@ -38,12 +41,12 @@ class SeerrDetailsScreen extends ConsumerWidget {
     @PathParam('mediaType') required this.mediaType,
     @PathParam('tmdbId') required this.tmdbId,
     this.poster,
+    this.tag,
     super.key,
   });
 
   /// Largeur de lecture confortable pour le résumé — même valeur que les
   /// fiches film/série Jellyfin ([MovieDetailScreen]/[SeriesDetailScreen]).
-  static const _readingWidth = 640.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,13 +66,17 @@ class SeerrDetailsScreen extends ConsumerWidget {
 
     final hasKnownStatus = currentPoster?.hasDisplayStatus ?? false;
     final requests = state.poster?.mediaInfo?.requests ?? [];
-    final pendingRequests = requests.where((request) => request.requestStatus == SeerrRequestStatus.pending).toList();
+    final pendingRequests = requests
+        .where((request) => request.requestStatus == SeerrRequestStatus.pending)
+        .toList();
 
     final rottenTomatoes = state.ratings?.rt;
 
     final canManageRequest = state.currentUser?.canManageRequests ?? false;
-    final hasUsersRequests = requests.any((request) => request.requestedBy?.id == state.currentUser?.id);
-    final hasVisibleRequests = (canManageRequest || hasUsersRequests) && requests.isNotEmpty;
+    final hasUsersRequests = requests
+        .any((request) => request.requestedBy?.id == state.currentUser?.id);
+    final hasVisibleRequests =
+        (canManageRequest || hasUsersRequests) && requests.isNotEmpty;
 
     final canRequestMore = hasKnownStatus
         ? switch (currentPoster?.type) {
@@ -81,7 +88,9 @@ class SeerrDetailsScreen extends ConsumerWidget {
 
     final mainButtonLabel = currentPoster?.type == SeerrMediaType.movie
         ? context.localized.request
-        : (canRequestMore ? context.localized.requestMore : context.localized.request);
+        : (canRequestMore
+            ? context.localized.requestMore
+            : context.localized.request);
 
     // "PG · 2026 · 6.1 · Family, Fantasy, Comedy, Adventure" — texte simple,
     // jamais de badges, même règle que les fiches film/série Jellyfin (cf.
@@ -97,143 +106,149 @@ class SeerrDetailsScreen extends ConsumerWidget {
             genres: state.genres.map((genre) => genre.name).nonNulls.toList(),
           );
 
-    return MediaDetailScaffold(
-      label: currentPoster?.title ?? context.localized.request,
-      item: itemBaseModel,
-      // Repli d'identité de teinte quand le titre n'est pas (encore) dans
-      // la bibliothèque Jellyfin — cf. la doc de [MediaDetailScaffold.paletteId].
-      paletteId: itemBaseModel == null && currentPoster != null ? 'seerr-tmdb-${currentPoster.tmdbId}' : null,
-      backDrops: currentPoster?.images,
-      onRefresh: notifier.fetch,
-      title: currentPoster?.title ?? context.localized.request,
-      metaLine: metaLine,
-      // Pas de lecture ici (contenu pas nécessairement téléchargé) : le
-      // bouton principal envoie une demande Seerr, d'où l'icône dédiée.
-      onPlay: currentPoster != null && canRequestMore ? () => openSeerrRequestPopup(context, currentPoster) : null,
-      playIcon: Icons.add_rounded,
-      playLabel: mainButtonLabel,
-      actions: currentPoster == null
-          ? null
-          : (context) => [
-                if (hasVisibleRequests)
-                  ItemActionButton(
-                    icon: const Icon(IconsaxPlusBold.folder_open),
-                    label: Text(
-                      pendingRequests.isNotEmpty
-                          ? '${context.localized.manageRequest} (${pendingRequests.length})'
-                          : context.localized.manageRequest,
+    return MediaNavigationScope(
+        tag: tag,
+        child: MediaDetailScaffold(
+          label: currentPoster?.title ?? context.localized.request,
+          item: itemBaseModel,
+          // Repli d'identité de teinte quand le titre n'est pas (encore) dans
+          // la bibliothèque Jellyfin — cf. la doc de [MediaDetailScaffold.paletteId].
+          paletteId: itemBaseModel == null && currentPoster != null
+              ? 'seerr-tmdb-${currentPoster.tmdbId}'
+              : null,
+          backDrops: currentPoster?.images,
+          onRefresh: notifier.fetch,
+          title: currentPoster?.title ?? context.localized.request,
+          metaLine: metaLine,
+          // Pas de lecture ici (contenu pas nécessairement téléchargé) : le
+          // bouton principal envoie une demande Seerr, d'où l'icône dédiée.
+          onPlay: currentPoster != null && canRequestMore
+              ? () => openSeerrRequestPopup(context, currentPoster)
+              : null,
+          playIcon: Icons.add_rounded,
+          playLabel: mainButtonLabel,
+          actions: currentPoster == null
+              ? null
+              : (context) => [
+                    if (hasVisibleRequests)
+                      ItemActionButton(
+                        icon: const Icon(IconsaxPlusBold.folder_open),
+                        label: Text(
+                          pendingRequests.isNotEmpty
+                              ? '${context.localized.manageRequest} (${pendingRequests.length})'
+                              : context.localized.manageRequest,
+                        ),
+                        action: () => showSeerrRequestsSheet(
+                          context: context,
+                          poster: currentPoster,
+                          requests: requests,
+                          onApprove: notifier.approveRequest,
+                          onDecline: notifier.declineRequest,
+                        ),
+                      ),
+                    if (state.hasTrailerAction)
+                      ItemActionButton(
+                        icon: const Icon(IconsaxPlusLinear.video_play),
+                        label: Text(context.localized.viewTrailer),
+                        action: () async {
+                          if (officialTrailerUrl == null) return;
+                          await launchUrl(context, officialTrailerUrl);
+                        },
+                      ),
+                    if (hasVisibleRequests && currentPoster.mediaInfo != null)
+                      ItemActionButton(
+                        icon: const Icon(IconsaxPlusLinear.setting_4),
+                        label: const Text('Gérer le média'),
+                        action: () => showMediaManagementSheet(
+                          context: context,
+                          mediaInfo: currentPoster,
+                          onActionComplete: () => context.refreshData(),
+                        ),
+                      ),
+                  ],
+          content: (context, padding) => currentPoster == null
+              ? []
+              : [
+                  if (hasKnownStatus ||
+                      rottenTomatoes?.criticsScore != null ||
+                      rottenTomatoes?.audienceScore != null)
+                    SliverPadding(
+                      padding: padding,
+                      sliver: SliverToBoxAdapter(
+                        child: _SeerrStatusLine(
+                          poster: currentPoster,
+                          hasKnownStatus: hasKnownStatus,
+                          criticsScore: rottenTomatoes?.criticsScore,
+                          audienceScore: rottenTomatoes?.audienceScore,
+                        ),
+                      ),
                     ),
-                    action: () => showSeerrRequestsSheet(
-                      context: context,
-                      poster: currentPoster,
-                      requests: requests,
-                      onApprove: notifier.approveRequest,
-                      onDecline: notifier.declineRequest,
-                    ),
-                  ),
-                if (state.hasTrailerAction)
-                  ItemActionButton(
-                    icon: const Icon(IconsaxPlusLinear.video_play),
-                    label: Text(context.localized.viewTrailer),
-                    action: () async {
-                      if (officialTrailerUrl == null) return;
-                      await launchUrl(context, officialTrailerUrl);
-                    },
-                  ),
-                if (hasVisibleRequests && currentPoster.mediaInfo != null)
-                  ItemActionButton(
-                    icon: const Icon(IconsaxPlusLinear.setting_4),
-                    label: const Text('Gérer le média'),
-                    action: () => showMediaManagementSheet(
-                      context: context,
-                      mediaInfo: currentPoster,
-                      onActionComplete: () => context.refreshData(),
-                    ),
-                  ),
-              ],
-      content: (context, padding) => currentPoster == null
-          ? []
-          : [
-              if (hasKnownStatus || rottenTomatoes?.criticsScore != null || rottenTomatoes?.audienceScore != null)
-                SliverPadding(
-                  padding: padding,
-                  sliver: SliverToBoxAdapter(
-                    child: _SeerrStatusLine(
-                      poster: currentPoster,
-                      hasKnownStatus: hasKnownStatus,
-                      criticsScore: rottenTomatoes?.criticsScore,
-                      audienceScore: rottenTomatoes?.audienceScore,
-                    ),
-                  ),
-                ),
-              SliverPadding(
-                padding: padding.copyWith(top: AppSpacing.sm),
-                sliver: SliverToBoxAdapter(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: _readingWidth),
-                    child: Text(
-                      currentPoster.overview.trim().isEmpty
+                  SliverPadding(
+                    padding: padding.copyWith(top: AppSpacing.sm),
+                    sliver: SliverToBoxAdapter(
+                      child: MediaSynopsis(currentPoster.overview.trim().isEmpty
                           ? context.localized.noOverviewAvailable
-                          : currentPoster.overview,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                          : currentPoster.overview),
                     ),
                   ),
-                ),
-              ),
-              if (currentPoster.type == SeerrMediaType.tvshow && (currentPoster.seasons?.isNotEmpty ?? false))
-                SliverPadding(
-                  padding: padding.copyWith(top: AppSpacing.xl),
-                  sliver: SliverToBoxAdapter(
-                    child: _SeerrSeasonsSection(
-                      state: state,
-                      notifier: notifier,
-                      seasons: currentPoster.seasons ?? const [],
-                      seasonStatuses: state.seasonStatuses,
+                  if (currentPoster.type == SeerrMediaType.tvshow &&
+                      (currentPoster.seasons?.isNotEmpty ?? false))
+                    SliverPadding(
+                      padding: padding.copyWith(top: AppSpacing.xl),
+                      sliver: SliverToBoxAdapter(
+                        child: _SeerrSeasonsSection(
+                          state: state,
+                          notifier: notifier,
+                          seasons: currentPoster.seasons ?? const [],
+                          seasonStatuses: state.seasonStatuses,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              if (state.people.isNotEmpty)
-                SliverPadding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xl),
-                  sliver: SliverToBoxAdapter(
-                    child: PeopleRow(
-                      people: state.people,
-                      contentPadding: padding,
-                      onTap: () {},
+                  if (state.people.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xl),
+                      sliver: SliverToBoxAdapter(
+                        child: PeopleRow(
+                          people: state.people,
+                          contentPadding: padding,
+                          onTap: () {},
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              if (state.recommended.isNotEmpty)
-                SliverPadding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xl),
-                  sliver: SliverToBoxAdapter(
-                    child: SeerrPosterRow(
-                      posters: state.recommended,
-                      label: "${context.localized.discover} ${context.localized.recommended.toLowerCase()}",
-                      contentPadding: padding,
+                  if (state.recommended.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xl),
+                      sliver: SliverToBoxAdapter(
+                        child: SeerrPosterRow(
+                          posters: state.recommended,
+                          label:
+                              "${context.localized.discover} ${context.localized.recommended.toLowerCase()}",
+                          contentPadding: padding,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              if (state.similar.isNotEmpty)
-                SliverPadding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xl),
-                  sliver: SliverToBoxAdapter(
-                    child: SeerrPosterRow(
-                      posters: state.similar,
-                      label: "${context.localized.discover} ${context.localized.related.toLowerCase()}",
-                      contentPadding: padding,
+                  if (state.similar.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xl),
+                      sliver: SliverToBoxAdapter(
+                        child: SeerrPosterRow(
+                          posters: state.similar,
+                          label:
+                              "${context.localized.discover} ${context.localized.related.toLowerCase()}",
+                          contentPadding: padding,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              if (externalUrls.isNotEmpty)
-                SliverPadding(
-                  padding: padding.copyWith(top: AppSpacing.xl, bottom: AppSpacing.xl),
-                  sliver: SliverToBoxAdapter(
-                    child: ExternalUrlsRow(urls: externalUrls),
-                  ),
-                ),
-            ],
-    );
+                  if (externalUrls.isNotEmpty)
+                    SliverPadding(
+                      padding: padding.copyWith(
+                          top: AppSpacing.xl, bottom: AppSpacing.xl),
+                      sliver: SliverToBoxAdapter(
+                        child: ExternalUrlsRow(urls: externalUrls),
+                      ),
+                    ),
+                ],
+        ));
   }
 }
 
@@ -270,7 +285,10 @@ class _SeerrStatusLine extends StatelessWidget {
         if (rtParts.isNotEmpty)
           Text(
             'Rotten Tomatoes : ${rtParts.join(' · ')}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppColors.textSecondary),
           ),
       ],
     );
@@ -298,7 +316,10 @@ class _SeerrSeasonsSection extends StatelessWidget {
       children: [
         Text(
           context.localized.season(seasons.length),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         ...seasons.map((season) {
           final seasonNumber = season.seasonNumber;
@@ -343,11 +364,18 @@ class _SeasonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final standardDownloads =
-        poster?.mediaInfo?.downloadStatus?.where((d) => d.episode?.seasonNumber == seasonNumber).toList() ?? [];
-    final fourKDownloads =
-        poster?.mediaInfo?.downloadStatus4k?.where((d) => d.episode?.seasonNumber == seasonNumber).toList() ?? [];
-    final seasonDownloads = <SeerrDownloadStatus>[...standardDownloads, ...fourKDownloads];
+    final standardDownloads = poster?.mediaInfo?.downloadStatus
+            ?.where((d) => d.episode?.seasonNumber == seasonNumber)
+            .toList() ??
+        [];
+    final fourKDownloads = poster?.mediaInfo?.downloadStatus4k
+            ?.where((d) => d.episode?.seasonNumber == seasonNumber)
+            .toList() ??
+        [];
+    final seasonDownloads = <SeerrDownloadStatus>[
+      ...standardDownloads,
+      ...fourKDownloads
+    ];
 
     return Container(
       decoration: BoxDecoration(
@@ -371,18 +399,23 @@ class _SeasonCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (status != null && status != SeerrMediaStatus.unknown)
+                        if (status != null &&
+                            status != SeerrMediaStatus.unknown)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 4),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: status!.color.withAlpha(200),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 status!.label(context),
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -391,18 +424,28 @@ class _SeasonCard extends StatelessWidget {
                           ),
                         Text(
                           "${context.localized.season(1)} $seasonNumber",
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         if (season.episodeCount != null)
                           Text(
                             '${season.episodeCount} ${context.localized.episode(season.episodeCount ?? 0)}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withValues(alpha: 0.7),
                                 ),
                           ),
                         if (seasonDownloads.isNotEmpty) ...[
                           const SizedBox(height: 8),
-                          SeasonDownloadProgressWidget(downloads: seasonDownloads),
+                          SeasonDownloadProgressWidget(
+                              downloads: seasonDownloads),
                         ],
                       ],
                     ),
@@ -446,10 +489,14 @@ class _EpisodeCard extends StatelessWidget {
     final posterUrl = episode.stillUrl;
     final posterImage = posterUrl == null
         ? null
-        : ImageData(path: posterUrl, key: 'seerr_episode_${episode.id ?? episode.episodeNumber}');
+        : ImageData(
+            path: posterUrl,
+            key: 'seerr_episode_${episode.id ?? episode.episodeNumber}');
 
     return FocusButton(
-      onTap: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad ? () {} : null,
+      onTap: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad
+          ? () {}
+          : null,
       onFocusChanged: (focus) {
         if (focus) {
           context.ensureVisible();
@@ -477,24 +524,31 @@ class _EpisodeCard extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           'E${episode.episodeNumber}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer,
+                                  ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           episode.name ?? 'Episode ${episode.episodeNumber}',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -505,7 +559,10 @@ class _EpisodeCard extends StatelessWidget {
                     Text(
                       episode.overview!,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.8),
                           ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
@@ -516,11 +573,14 @@ class _EpisodeCard extends StatelessWidget {
                         color: Theme.of(context).colorScheme.surfaceContainer,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       child: Text(
                         episode.airDate!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                       ),
                     ),
@@ -546,7 +606,8 @@ class _EpisodeCard extends StatelessWidget {
                         child: Center(
                           child: Icon(
                             IconsaxPlusLinear.video,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             size: 32,
                           ),
                         ),

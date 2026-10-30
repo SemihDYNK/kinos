@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +29,7 @@ class _DeviceDiscoveryDialogState extends ConsumerState<DeviceDiscoveryDialog> {
   Widget build(BuildContext context) {
     final state = ref.watch(controlDeviceDiscoveryProvider);
 
-    return AlertDialog(
+    return GlassAlertDialog(
       title: Text(context.localized.discoveredDevices),
       content: SizedBox(
         width: double.maxFinite,

@@ -1,3 +1,4 @@
+import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
@@ -436,7 +437,7 @@ class MetadataLabels extends StatelessWidget {
           ),
         if (favourite != null)
           SimpleLabel(
-            icon: favourite == true ? IconsaxPlusBold.heart : IconsaxPlusLinear.heart,
+            icon: favourite == true ? AppIcons.favouriteSelected : AppIcons.favourite,
             color: Theme.of(context).colorScheme.error,
             iconColor: Theme.of(context).colorScheme.onError,
           ),
@@ -448,7 +449,7 @@ class MetadataLabels extends StatelessWidget {
           )
         else if (playState case Played())
           SimpleLabel(
-            icon: Icons.check_rounded,
+            icon: AppIcons.watched,
             color: Theme.of(context).colorScheme.onPrimary,
             iconColor: Theme.of(context).colorScheme.primary,
           ),

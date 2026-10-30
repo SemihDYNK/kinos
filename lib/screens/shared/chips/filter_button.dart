@@ -37,11 +37,14 @@ class FilterButton extends StatelessWidget {
           onTap: onPressed,
           onLongPress: onLongPress,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
             decoration: BoxDecoration(
               borderRadius: AppRadii.controlBorder,
-              border: Border.all(color: isSelected ? AppColors.borderStrong : AppColors.border),
-              color: isSelected ? AppColors.surfaceHigh : Colors.transparent,
+              border: Border.all(
+                  color:
+                      isSelected ? AppColors.borderStrong : AppColors.border),
+              color: isSelected ? AppColors.surfaceHigh : AppColors.surface,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -51,7 +54,10 @@ class FilterButton extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xxs),
                 ],
                 DefaultTextStyle(
-                  style: Theme.of(context).textTheme.bodySmall!.copyWith(color: color),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium!
+                      .copyWith(color: color),
                   child: IconTheme.merge(
                     // Une icône dans `label` (ex. la flèche de CategoryChip)
                     // suit la même couleur d'état sans que chaque appelant

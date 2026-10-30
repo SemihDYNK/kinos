@@ -70,7 +70,7 @@ class WindowTitleNotifier extends StateNotifier<String> {
     if (state == newState) return;
 
     Future.microtask(() {
-      state = newState;
+      if (mounted) state = newState;
     });
 
     if (!kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows)) {

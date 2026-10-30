@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:iconsax_plus/iconsax_plus.dart';
@@ -17,7 +18,7 @@ Future<void> showAuthOptionsDialogue(
   final availableOptions = await Authentication.available();
   showDialog(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => GlassAlertDialog(
       scrollable: true,
       icon: const Icon(IconsaxPlusBold.lock_1),
       title: Text(context.localized.appLockTitle(currentUser.name)),

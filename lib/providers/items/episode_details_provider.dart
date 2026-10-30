@@ -92,6 +92,13 @@ class EpisodeDetailsProvider extends StateNotifier<EpisodeDetailModel> {
     return;
   }
 
+  void updateUserData(ItemBaseModel item, UserData userData) {
+    final current = state.episode ?? item;
+    if (current is EpisodeModel) {
+      state = state.copyWith(episode: current.copyWith(userData: userData));
+    }
+  }
+
   void updateEpisode(EpisodeModel episode) {
     state = state.copyWith(episode: episode);
   }

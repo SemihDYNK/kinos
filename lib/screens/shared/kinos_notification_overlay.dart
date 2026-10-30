@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:async';
 import 'dart:collection';
 
@@ -316,7 +317,7 @@ class _NotificationOverlayWidgetState extends State<_NotificationOverlayWidget> 
   void _showActionDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => GlassAlertDialog(
         title: Text(widget.message),
         actions: [
           FilledButton(

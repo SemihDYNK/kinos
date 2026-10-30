@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:kinos/models/account_model.dart';
+import 'package:kinos/models/api_result.dart';
 import 'package:kinos/models/credentials_model.dart';
 import 'package:kinos/models/seerr_credentials_model.dart';
 import 'package:kinos/providers/seerr_api_provider.dart';
@@ -29,8 +30,8 @@ class _FakeUser extends User {
 /// (`SeerrRequest`) and converter (`SeerrJsonConverter`) as production, only
 /// the HTTP transport and the account are swapped out.
 (SeerrService, ProviderContainer) _service(
-  Future<http.Response> Function(http.Request) handler,
-) {
+    Future<http.Response> Function(http.Request) handler,
+    {http.Client? client}) {
   final container = ProviderContainer(
     overrides: [
       userProvider.overrideWith(() => _FakeUser(AccountModel(
@@ -49,7 +50,7 @@ class _FakeUser extends User {
   final ref = container.read(Provider<Ref>((ref) => ref));
 
   final chopperClient = chopper.ChopperClient(
-    client: MockClient(handler),
+    client: client ?? MockClient(handler),
     converter: const SeerrJsonConverter(),
     interceptors: [SeerrRequest(ref)],
   );
@@ -60,23 +61,12 @@ class _FakeUser extends User {
 
 void main() {
   group('SeerrService — HTTP error status handling', () {
-    // No `errorConverter` is configured on the ChopperClient (see
-    // seerr_api_provider.dart's SeerrApi.build()). chopper's
-    // ResponseConverterInterceptor._handleErrorResponse (chopper-8.4.0/lib/
-    // src/interceptors/response_converter_interceptor.dart:71-82) only
-    // consults `_errorConverter` when it's non-null; without one, ANY
-    // non-2xx response short-circuits straight to
-    // `Response(base, null, error: response.body)` using the RAW,
-    // UNDECODED body string - `SeerrJsonConverter.convertResponse` is never
-    // called at all for error statuses. That also means the converter's
-    // `body: null` bug (documented in seerr_json_converter_test.dart) is
-    // NOT reachable through this path - it only bites on a *successful*
-    // (2xx) response whose body fails to decode, see the group below.
-    test('401 with a JSON error body: does not throw, .error is the raw '
+    // Non-2xx responses keep Chopper's raw error body; the converter handles 2xx only.
+    test(
+        '401 with a JSON error body: does not throw, .error is the raw '
         'undecoded string (never parsed into a structured object, since '
         'no errorConverter is configured) - callers must check '
-        'isSuccessful/statusCode, not try to read fields off .error',
-        () async {
+        'isSuccessful/statusCode, not try to read fields off .error', () async {
       final (service, container) = _service((request) async => http.Response(
             '{"message":"Unauthorized"}',
             401,
@@ -92,7 +82,8 @@ void main() {
       expect(response.body, isNull);
     });
 
-    test('403 for me(): same shape, service.me() returns the response '
+    test(
+        '403 for me(): same shape, service.me() returns the response '
         'unmodified rather than throwing (user is null, so me() returns '
         'the raw response without touching response.body)', () async {
       final (service, container) = _service((request) async => http.Response(
@@ -108,7 +99,8 @@ void main() {
       expect(response.statusCode, 403);
     });
 
-    test('502 with an HTML error body (reverse proxy in front of a down '
+    test(
+        '502 with an HTML error body (reverse proxy in front of a down '
         'Seerr instance): also just surfaces as the raw string in .error, '
         'not a crash - confirms non-JSON error bodies are as harmless as '
         'JSON ones, since neither is ever parsed without an errorConverter',
@@ -127,60 +119,75 @@ void main() {
     });
   });
 
-  group('SeerrService — the converter bug IS reachable through a 2xx '
-      'response (unlike the 401/502 cases above)', () {
-    // Through the full stack, SeerrRequest.intercept's own catch-all
-    // (seerr_api_provider.dart:83-90) wraps whatever exception comes back
-    // up the chain - including this TypeError - into an HttpException
-    // (message preserved via string interpolation, original type lost).
-    // seerr_json_converter_test.dart exercises the converter directly and
-    // sees the bare TypeError; this is what a real caller of SeerrService
-    // actually receives.
-    test('a 200 OK with an empty body currently throws instead of '
-        'returning a null body - hits seerr_json_converter.dart:60 through '
-        'the full service stack, not just the converter in isolation. A '
-        'real Seerr instance returning 200 with an empty body (e.g. a '
-        'misbehaving proxy stripping the body) would crash the caller.',
-        () async {
-      final (service, container) = _service((request) async => http.Response(
-            '',
-            200,
-          ));
-      addTearDown(container.dispose);
-
-      await expectLater(
-        service.status(),
-        throwsA(isA<HttpException>().having(
-          (e) => e.message,
-          'message',
-          contains('type \'String\' is not a subtype'),
-        )),
-      );
-    });
-
-    test('a 200 OK with a malformed field currently throws instead of '
-        'surfacing response.error - hits seerr_json_converter.dart:75 '
-        'through the full service stack', () async {
-      final (service, container) = _service((request) async => http.Response(
-            '{"version": {"nested": "not-a-string"}}',
-            200,
-            headers: {'content-type': 'application/json'},
-          ));
-      addTearDown(container.dispose);
-
-      await expectLater(
-        service.status(),
-        throwsA(isA<HttpException>().having(
-          (e) => e.message,
-          'message',
-          contains('type \'String\' is not a subtype'),
-        )),
-      );
-    });
+  group('SeerrService — invalid successful responses', () {
+    for (final body in ['', '{"version": {"nested": "not-a-string"}}']) {
+      test(
+          'invalid 200 response is returned as an error and not an API success ($body)',
+          () async {
+        final (service, container) = _service((_) async => http.Response(
+            body, 200,
+            headers: {'content-type': 'application/json'}));
+        addTearDown(container.dispose);
+        final response = await service.status();
+        expect(response.statusCode, 200);
+        expect(response.body, isNull);
+        expect(response.error, isA<FormatException>());
+        expect(response.apiResult.isSuccess, isFalse);
+        expect((await Future.value(response).apiResult).isSuccess, isFalse);
+      });
+    }
   });
 
   group('SeerrService — transport failures', () {
-    test('connection refused / unreachable host: wrapped as HttpException '
+    for (final stallBody in [false, true]) {
+      testWidgets(
+          'a stalled ${stallBody ? 'body' : 'connection'} is aborted after 30 seconds',
+          (tester) async {
+        final pending = Completer<http.StreamedResponse>();
+        final body = StreamController<List<int>>();
+        var aborted = false;
+        var calls = 0;
+        var sawAbortable = false;
+        final client = MockClient.streaming((request, _) async {
+          calls++;
+          sawAbortable = request is http.Abortable;
+          unawaited((request as http.Abortable).abortTrigger!.then((_) {
+            aborted = true;
+            if (stallBody) {
+              body.addError(http.RequestAbortedException(request.url));
+              unawaited(body.close());
+            }
+          }));
+          if (stallBody) return http.StreamedResponse(body.stream, 200);
+          return await pending.future;
+        });
+        final (service, container) = _service(
+            (_) async => throw StateError('Unused transport'),
+            client: client);
+        addTearDown(container.dispose);
+        Object? failure;
+        unawaited(service.status().then((_) {}, onError: (Object error) {
+          failure = error;
+        }));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 29));
+        expect(failure, isNull);
+        expect(aborted, isFalse);
+        await tester.pump(const Duration(seconds: 2));
+        expect(failure, isA<HttpException>());
+        expect(failure.toString(), contains('TimeoutException'));
+        expect(aborted, isTrue);
+        expect(sawAbortable, isTrue);
+        expect(calls, 1);
+        if (!stallBody) {
+          pending.complete(http.StreamedResponse(Stream.value([]), 200));
+        }
+        await tester.pump();
+      });
+    }
+
+    test(
+        'connection refused / unreachable host: wrapped as HttpException '
         'by SeerrRequest, not left as a raw SocketException', () async {
       final (service, container) = _service((request) async {
         throw const SocketException('Connection refused');
@@ -190,13 +197,7 @@ void main() {
       await expectLater(service.status(), throwsA(isA<HttpException>()));
     });
 
-    test('a timeout from the underlying transport is wrapped the same way '
-        '- there is no Seerr-specific timeout policy '
-        '(lib/util/seerr_http_client.dart just returns a plain '
-        'http.Client(), no .timeout() anywhere in lib/providers/seerr_*. '
-        'dart or lib/seerr/) so a slow/hanging server currently has no '
-        'client-side cutoff at all; this documents what happens if the '
-        'transport itself ever throws one', () async {
+    test('a transport timeout is exposed as HttpException', () async {
       final (service, container) = _service((request) async {
         throw TimeoutException('timed out', const Duration(seconds: 30));
       });
@@ -205,7 +206,8 @@ void main() {
       await expectLater(service.status(), throwsA(isA<HttpException>()));
     });
 
-    test('the wrapped HttpException for a transport failure does not leak '
+    test(
+        'the wrapped HttpException for a transport failure does not leak '
         'the apiKey', () async {
       final (service, container) = _service((request) async {
         throw const SocketException('Connection refused');

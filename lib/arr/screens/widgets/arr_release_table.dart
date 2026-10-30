@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -159,7 +160,7 @@ class _ArrReleaseTableState extends State<ArrReleaseTable> {
     if (release.rejected) {
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => GlassAlertDialog(
           title: const Text('Release rejetée'),
           content: Text(
             release.rejections.isEmpty
@@ -554,7 +555,7 @@ class _ArrReleaseRow extends StatelessWidget {
     final position = RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy,
         globalPosition.dx, globalPosition.dy);
     final hasInfoUrl = release.infoUrl?.isNotEmpty ?? false;
-    showMenu<void>(
+    showGlassMenu<void>(
       context: context,
       position: position,
       items: [

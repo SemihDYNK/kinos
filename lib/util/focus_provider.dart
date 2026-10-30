@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:kinos/screens/shared/flat_button.dart';
 import 'package:kinos/theme.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/navigation_body.dart';
 
 final acceptKeys = {
@@ -55,6 +56,8 @@ class FocusButton extends StatefulWidget {
   final bool darkOverlay;
   final bool visualizeFocus;
   final bool forceFocusOutline;
+  final bool focusableOverlays;
+  final bool posterMotion;
   final Function(bool focus)? onFocusChanged;
   final BorderRadiusGeometry? borderRadius;
   final KeyEventResult Function(FocusNode node, KeyEvent event)? onKeyEvent;
@@ -72,6 +75,8 @@ class FocusButton extends StatefulWidget {
     this.darkOverlay = true,
     this.visualizeFocus = true,
     this.forceFocusOutline = false,
+    this.focusableOverlays = false,
+    this.posterMotion = false,
     this.onFocusChanged,
     this.borderRadius,
     this.onKeyEvent,
@@ -92,7 +97,9 @@ class FocusButtonState extends State<FocusButton> {
   static const Duration _kLongPressTimeout = Duration(milliseconds: 500);
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
-    if (!node.hasFocus) return KeyEventResult.ignored;
+    if (!node.hasFocus || (widget.focusableOverlays && !node.hasPrimaryFocus)) {
+      return KeyEventResult.ignored;
+    }
 
     if (widget.onKeyEvent != null) {
       final result = widget.onKeyEvent!(node, event);
@@ -166,24 +173,31 @@ class FocusButtonState extends State<FocusButton> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.onTap == null && widget.onLongPress == null && widget.onSecondaryTapDown == null) {
+    if (widget.onTap == null &&
+        widget.onLongPress == null &&
+        widget.onSecondaryTapDown == null) {
       return widget.child ?? const SizedBox.shrink();
     }
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (event) => onHover.value = true,
       onExit: (event) {
-        onHover.value = false;
+        onHover.value = focusNode.hasFocus;
         if (widget.onHover != null) {
           widget.onHover?.call(false);
         }
       },
-      onHover: widget.onHover != null ? (event) => widget.onHover?.call(true) : null,
+      onHover:
+          widget.onHover != null ? (event) => widget.onHover?.call(true) : null,
       child: Focus(
         focusNode: focusNode,
         autofocus: widget.autoFocus,
-        canRequestFocus: widget.onTap != null || widget.onLongPress != null || widget.onSecondaryTapDown != null,
-        skipTraversal: widget.onTap == null && widget.onLongPress == null && widget.onSecondaryTapDown != null,
+        canRequestFocus: widget.onTap != null ||
+            widget.onLongPress != null ||
+            widget.onSecondaryTapDown != null,
+        skipTraversal: widget.onTap == null &&
+            widget.onLongPress == null &&
+            widget.onSecondaryTapDown != null,
         onFocusChange: (value) {
           widget.onFocusChanged?.call(value);
           if (value) {
@@ -193,52 +207,95 @@ class FocusButtonState extends State<FocusButton> {
         },
         onKeyEvent: _handleKey,
         child: ExcludeFocus(
+          excluding: !widget.focusableOverlays,
           child: ValueListenableBuilder(
             valueListenable: onHover,
             builder: (context, value, child) {
               final hasFocus = widget.forceFocusOutline ? true : value;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                clipBehavior: Clip.hardEdge,
-                decoration: BoxDecoration(
-                  borderRadius: widget.borderRadius ?? KinosTheme.smallShape.borderRadius,
-                ),
-                foregroundDecoration: BoxDecoration(
-                  borderRadius: widget.borderRadius ?? KinosTheme.smallShape.borderRadius,
-                  color: widget.darkOverlay && widget.visualizeFocus
-                      ? Theme.of(context).colorScheme.primaryFixedDim.withValues(alpha: hasFocus ? 0.10 : 0.0)
-                      : null,
-                  border: widget.visualizeFocus
-                      ? Border.all(
-                          width: hasFocus ? 3.5 : 2,
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: hasFocus ? 1 : 0.0),
-                        )
-                      : null,
-                ),
-                child: FlatButton(
-                  onTap: widget.onTap,
-                  onSecondaryTapDown: widget.onSecondaryTapDown,
-                  onLongPress: widget.onLongPress,
-                  child: widget.child,
-                  overlays: [
-                    if (widget.overlays.isNotEmpty) ...widget.overlays,
-                    if (widget.focusedOverlays.isNotEmpty)
-                      Positioned.fill(
-                        child: AnimatedOpacity(
-                          opacity: hasFocus ? 1 : 0,
-                          duration: const Duration(milliseconds: 250),
-                          child: Stack(
-                            children: [...widget.focusedOverlays],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+              if (!widget.posterMotion) return _surface(context, hasFocus);
+              return PosterHoverMotion(
+                active: hasFocus,
+                builder: (context, reveal) =>
+                    _surface(context, hasFocus, reveal: reveal),
               );
             },
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _surface(BuildContext context, bool hasFocus, {double reveal = 1}) {
+    return AnimatedContainer(
+      duration: widget.posterMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        borderRadius: widget.borderRadius ?? KinosTheme.smallShape.borderRadius,
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: widget.borderRadius ?? KinosTheme.smallShape.borderRadius,
+        color:
+            !widget.posterMotion && widget.darkOverlay && widget.visualizeFocus
+                ? Theme.of(context)
+                    .colorScheme
+                    .primaryFixedDim
+                    .withValues(alpha: hasFocus ? 0.10 : 0.0)
+                : null,
+        border: widget.visualizeFocus
+            ? Border.all(
+                width: widget.posterMotion
+                    ? context.tokens.density.focusWidth
+                    : hasFocus
+                        ? 3.5
+                        : 2,
+                color: widget.posterMotion
+                    ? (widget.forceFocusOutline || focusNode.hasFocus)
+                        ? AppColors.focus
+                        : hasFocus
+                            ? AppColors.posterHoverBorder
+                            : Colors.transparent
+                    : Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: hasFocus ? 1 : 0.0),
+              )
+            : null,
+      ),
+      child: FlatButton(
+        canRequestFocus: false,
+        onTap: widget.onTap,
+        onSecondaryTapDown: widget.onSecondaryTapDown,
+        onLongPress: widget.onLongPress,
+        child: widget.child,
+        overlays: [
+          if (widget.overlays.isNotEmpty) ...widget.overlays,
+          if (widget.focusedOverlays.isNotEmpty)
+            Positioned.fill(
+              child: widget.posterMotion
+                  ? ExcludeFocus(
+                      excluding: !hasFocus,
+                      child: IgnorePointer(
+                        ignoring: !hasFocus,
+                        child: Opacity(
+                          opacity: reveal.clamp(0.0, 1.0),
+                          child: Transform.scale(
+                            scale: AppMotion.posterActionScale +
+                                (1 - AppMotion.posterActionScale) * reveal,
+                            child: Stack(children: widget.focusedOverlays),
+                          ),
+                        ),
+                      ),
+                    )
+                  : AnimatedOpacity(
+                      opacity: hasFocus ? 1 : 0,
+                      duration: const Duration(milliseconds: 250),
+                      child: Stack(children: widget.focusedOverlays),
+                    ),
+            ),
+        ],
       ),
     );
   }

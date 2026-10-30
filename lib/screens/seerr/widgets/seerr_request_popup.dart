@@ -75,7 +75,8 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
     super.dispose();
   }
 
-  Future<void> openSeerrLink(BuildContext context, SeerrDashboardPosterModel model) async {
+  Future<void> openSeerrLink(
+      BuildContext context, SeerrDashboardPosterModel model) async {
     final seerrUrl = ref.read(userProvider)?.seerrCredentials?.serverUrl;
     if (seerrUrl != null && seerrUrl.isNotEmpty) {
       final mediaType = model.type == SeerrMediaType.movie ? 'movie' : 'tv';
@@ -93,7 +94,8 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
     final seasonStatuses = requestState.seasonStatuses;
 
     final currentUser = requestState.currentUser;
-    final canShowAdvancedConfiguration = currentUser?.canManageRequests ?? false;
+    final canShowAdvancedConfiguration =
+        currentUser?.canManageRequests ?? false;
 
     // "PG · 2026 · 6.1 · Family, Fantasy, Comedy, Adventure" — texte simple,
     // jamais de badges colorés (même règle que la fiche détail Seerr).
@@ -107,7 +109,8 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
     return PullToRefresh(
       onRefresh: () => notifier.initialize(widget.requestModel),
       child: (context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.md),
         child: Column(
           spacing: AppSpacing.sm,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -120,8 +123,10 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                   mainAxisSize: MainAxisSize.min,
                   spacing: AppSpacing.sm,
                   children: [
-                    AutoApproveBanner(user: currentUser, isTv: requestState.isTv),
-                    if (requestState.activeQuota != null && requestState.activeQuota?.hasRestrictions == true)
+                    AutoApproveBanner(
+                        user: currentUser, isTv: requestState.isTv),
+                    if (requestState.activeQuota != null &&
+                        requestState.activeQuota?.hasRestrictions == true)
                       QuotaLimitCard(
                         quota: requestState.activeQuota!,
                         type: model.type,
@@ -144,7 +149,9 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                                   placeHolder: ColoredBox(
                                     color: AppColors.surfaceHigh,
                                     child: Icon(
-                                      model.type == SeerrMediaType.movie ? Icons.movie_outlined : Icons.tv_outlined,
+                                      model.type == SeerrMediaType.movie
+                                          ? Icons.movie_outlined
+                                          : Icons.tv_outlined,
                                       color: AppColors.textDisabled,
                                     ),
                                   ),
@@ -167,7 +174,8 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                                       style: Theme.of(context)
                                           .textTheme
                                           .headlineMedium
-                                          ?.copyWith(color: AppColors.textPrimary),
+                                          ?.copyWith(
+                                              color: AppColors.textPrimary),
                                     ),
                                   ),
                                   // Statut (disponible/en attente...) : un vrai
@@ -175,17 +183,23 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                                   // cosmétique — laissé tel quel.
                                   if (model.hasDisplayStatus)
                                     Padding(
-                                      padding: const EdgeInsets.only(left: AppSpacing.xs),
+                                      padding: const EdgeInsets.only(
+                                          left: AppSpacing.xs),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: AppSpacing.sm, vertical: AppSpacing.xxs),
+                                            horizontal: AppSpacing.sm,
+                                            vertical: AppSpacing.xxs),
                                         decoration: BoxDecoration(
-                                          color: model.displayStatusColor.withAlpha(200),
+                                          color: model.displayStatusColor
+                                              .withAlpha(200),
                                           borderRadius: AppRadii.controlBorder,
                                         ),
                                         child: Text(
                                           model.displayStatusLabel(context),
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.w600,
                                               ),
@@ -197,16 +211,23 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                               if (metaLine.isNotEmpty)
                                 Text(
                                   metaLine,
-                                  style:
-                                      Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                          color: AppColors.textSecondary),
                                 ),
                               Padding(
-                                padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                                padding:
+                                    const EdgeInsets.only(top: AppSpacing.xxs),
                                 child: SelectableText(
                                   model.overview.trim().isEmpty
                                       ? context.localized.noOverviewAvailable
                                       : model.overview,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(color: AppColors.textPrimary),
                                   maxLines: 4,
                                 ),
                               ),
@@ -215,7 +236,8 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                         ),
                       ],
                     ),
-                    if (model.type == SeerrMediaType.tvshow && seasons.isNotEmpty) ...[
+                    if (model.type == SeerrMediaType.tvshow &&
+                        seasons.isNotEmpty) ...[
                       const Divider(color: AppColors.border),
                       SeerrSeasonsSection(
                         model: model,
@@ -241,7 +263,10 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
             if (requestState.isAnime) ...[
               Text(
                 context.localized.seerrAnimeSeriesNote,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.textSecondary),
               ),
             ],
             FilledButtonAwait(
@@ -249,7 +274,8 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                   ? () async {
                       await KinosSnack.showResponse(
                         notifier.submitRequest(),
-                        successTitle: context.localized.requestedSuccessForItem(model.title),
+                        successTitle: context.localized
+                            .requestedSuccessForItem(model.title),
                       );
                       if (context.mounted) {
                         Navigator.of(context).pop();
@@ -266,7 +292,8 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
               ),
             ),
             OutlinedButton(
-              autofocus: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad,
+              autofocus:
+                  AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad,
               focusNode: _closeButtonFocusNode,
               onPressed: () => context.pop(),
               child: Text(context.localized.close),

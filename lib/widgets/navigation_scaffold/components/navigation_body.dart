@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:kinos/widgets/navigation_scaffold/components/catalog_navigation_bar.dart';
 import 'package:flutter/services.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/providers/settings/client_settings_provider.dart';
-import 'package:kinos/providers/views_provider.dart';
 import 'package:kinos/routes/auto_router.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/destination_model.dart';
@@ -38,17 +38,11 @@ class _NavigationBodyState extends ConsumerState<NavigationBody> {
   double currentSideBarWidth = 80;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((value) {
-      ref.read(viewsProvider.notifier).fetchViews();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final hasOverlay = AdaptiveLayout.layoutModeOf(context) == LayoutMode.dual ||
-        homeRoutes.any((element) => element.name.contains(context.router.current.name));
+    final hasOverlay = AdaptiveLayout.layoutModeOf(context) ==
+            LayoutMode.dual ||
+        homeRoutes.any(
+            (element) => element.name.contains(context.router.current.name));
 
     ref.listen(
       clientSettingsProvider,
@@ -66,17 +60,21 @@ class _NavigationBodyState extends ConsumerState<NavigationBody> {
           child: widget.child,
         );
 
-    final newTVLayout = AdaptiveLayout.viewSizeOf(context) >= ViewSize.television &&
-        ref.watch(clientSettingsProvider.select((value) => value.useTVExpandedLayout));
+    final newTVLayout =
+        AdaptiveLayout.viewSizeOf(context) >= ViewSize.television &&
+            ref.watch(clientSettingsProvider
+                .select((value) => value.useTVExpandedLayout));
 
     return BackIntentDpad(
       child: FocusTraversalGroup(
         policy: GlobalFallbackTraversalPolicy(fallbackNode: navBarNode),
         child: switch (AdaptiveLayout.layoutOf(context)) {
           ViewSize.phone => paddedChild(),
-          ViewSize.tablet => hasOverlay
+          ViewSize.tablet => hasOverlay || AdaptiveLayout.isDesktop(context)
               ? SideNavigationRail(
-                  child: paddedChild(),
+                  child: AdaptiveLayout.isDesktop(context)
+                      ? CatalogNavigationBar(child: paddedChild())
+                      : paddedChild(),
                 )
               : paddedChild(),
           ViewSize.desktop || ViewSize.television => newTVLayout
@@ -88,7 +86,7 @@ class _NavigationBodyState extends ConsumerState<NavigationBody> {
                   scaffoldKey: widget.drawerKey,
                 )
               : SideNavigationRail(
-                  child: paddedChild(),
+                  child: CatalogNavigationBar(child: paddedChild()),
                 ),
         },
       ),
@@ -125,13 +123,15 @@ class GlobalFallbackTraversalPolicy extends ReadingOrderTraversalPolicy {
   @override
   bool inDirection(FocusNode currentNode, TraversalDirection direction) {
     final isRtl = Directionality.of(currentNode.context!) == TextDirection.rtl;
-    final towardsSidebar = isRtl ? TraversalDirection.right : TraversalDirection.left;
+    final towardsSidebar =
+        isRtl ? TraversalDirection.right : TraversalDirection.left;
     lastMainFocus = null;
     final handled = super.inDirection(currentNode, direction);
     if (!handled && direction == towardsSidebar) {
       lastMainFocus = currentNode;
 
-      if (fallbackNode.canRequestFocus && fallbackNode.context?.mounted == true) {
+      if (fallbackNode.canRequestFocus &&
+          fallbackNode.context?.mounted == true) {
         final cb = FocusTraversalPolicy.defaultTraversalRequestFocusCallback;
         cb(fallbackNode);
         return true;

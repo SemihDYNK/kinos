@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'dart:async';
 
 import 'package:async/async.dart';
@@ -75,7 +76,7 @@ class _LoginCodeDialogState extends ConsumerState<LoginCodeDialog> {
   Widget build(BuildContext context) {
     final code = quickConnectInfo.code;
     final serverName = ref.watch(authProvider.select((value) => value.serverLoginModel?.tempCredentials.serverName));
-    return Dialog(
+    return GlassDialog(
       constraints: const BoxConstraints(
         maxWidth: 500,
       ),

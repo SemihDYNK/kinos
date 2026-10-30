@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -96,7 +97,7 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
       BuildContext context, ArrDetailEntry entry) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         backgroundColor: AppColors.surfaceHigh,
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheetBorder),
         title: const Text('Supprimer de la bibliothèque'),
@@ -151,7 +152,7 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
     final position = RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy,
         globalPosition.dx, globalPosition.dy);
     final notifier = ref.read(arrDetailProvider(_key).notifier);
-    showMenu<void>(
+    showGlassMenu<void>(
       context: context,
       position: position,
       items: [

@@ -1,6 +1,9 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
+import 'package:kinos/widgets/shared/poster_size_slider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +17,6 @@ import 'package:kinos/models/items/playlist_model.dart';
 import 'package:kinos/models/library_filter_model.dart';
 import 'package:kinos/models/library_search/library_search_model.dart';
 import 'package:kinos/models/library_search/library_search_options.dart';
-import 'package:kinos/models/settings/client_settings_model.dart';
 import 'package:kinos/providers/library_search_provider.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
@@ -26,7 +28,6 @@ import 'package:kinos/screens/library_search/widgets/library_sort_dialogue.dart'
 import 'package:kinos/screens/library_search/widgets/library_views.dart';
 import 'package:kinos/screens/library_search/widgets/suggestion_search_bar.dart';
 import 'package:kinos/screens/playlists/add_to_playlists.dart';
-import 'package:kinos/screens/shared/animated_fade_size.dart';
 import 'package:kinos/screens/shared/nested_scaffold.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/debouncer.dart';
@@ -34,19 +35,11 @@ import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/map_bool_helper.dart';
-import 'package:kinos/util/position_provider.dart';
 import 'package:kinos/util/refresh_state.dart';
-import 'package:kinos/util/router_extension.dart';
-import 'package:kinos/widgets/navigation_scaffold/components/background_image.dart';
-import 'package:kinos/widgets/navigation_scaffold/components/settings_user_icon.dart';
 import 'package:kinos/widgets/shared/kinos_scrollbar.dart';
-import 'package:kinos/widgets/shared/hide_on_scroll.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
-import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 import 'package:kinos/widgets/shared/pinch_poster_zoom.dart';
-import 'package:kinos/widgets/shared/poster_size_slider.dart';
 import 'package:kinos/widgets/shared/pull_to_refresh.dart';
-import 'package:kinos/widgets/shared/scroll_position.dart';
 
 @RoutePage()
 class LibrarySearchScreen extends ConsumerStatefulWidget {
@@ -81,12 +74,14 @@ class LibrarySearchScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _LibrarySearchScreenState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _LibrarySearchScreenState();
 }
 
 class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
   final Debouncer debouncer = Debouncer(const Duration(seconds: 1));
-  final GlobalKey<RefreshIndicatorState> refreshKey = GlobalKey<RefreshIndicatorState>();
+  final GlobalKey<RefreshIndicatorState> refreshKey =
+      GlobalKey<RefreshIndicatorState>();
   final ScrollController scrollController = ScrollController();
   late double lastScale = 0;
 
@@ -108,7 +103,11 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
   Key get uniqueKey {
     String mapSignature<K>(Map<K, bool>? map, String Function(K) keyToString) {
       if (map == null) return '';
-      final activeKeys = map.entries.where((e) => e.value).map((e) => keyToString(e.key)).toList()..sort();
+      final activeKeys = map.entries
+          .where((e) => e.value)
+          .map((e) => keyToString(e.key))
+          .toList()
+        ..sort();
       return activeKeys.join(',');
     }
 
@@ -126,8 +125,10 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
     return Key(signature.isEmpty ? "EmptySearch" : signature);
   }
 
-  StateNotifierProvider<LibrarySearchNotifier, LibrarySearchModel> get providerKey => librarySearchProvider(uniqueKey);
-  LibrarySearchNotifier get libraryProvider => ref.read(librarySearchProvider(uniqueKey).notifier);
+  StateNotifierProvider<LibrarySearchNotifier, LibrarySearchModel>
+      get providerKey => librarySearchProvider(uniqueKey);
+  LibrarySearchNotifier get libraryProvider =>
+      ref.read(librarySearchProvider(uniqueKey).notifier);
 
   @override
   void didUpdateWidget(covariant LibrarySearchScreen oldWidget) {
@@ -157,7 +158,8 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
   }
 
   void scrollPosition() {
-    if (scrollController.position.pixels > scrollController.position.maxScrollExtent * 0.65) {
+    if (scrollController.position.pixels >
+        scrollController.position.maxScrollExtent * 0.65) {
       libraryProvider.loadMore();
     }
   }
@@ -169,14 +171,15 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isEmptySearchScreen = widget.parentId == null && widget.favourites == null;
+    final isEmptySearchScreen = widget.parentId == null &&
+        widget.favourites == null &&
+        !(widget.types?.values.any((selected) => selected) ?? false);
     final librarySearchResults = ref.watch(providerKey);
-    final postersList = librarySearchResults.posters.hideEmptyChildren(librarySearchResults.filters.hideEmptyShows);
+    final postersList = librarySearchResults.posters
+        .hideEmptyChildren(librarySearchResults.filters.hideEmptyShows);
     final libraryViewType = ref.watch(libraryViewTypeProvider);
 
-    final floatingAppBar = AdaptiveLayout.layoutModeOf(context) != LayoutMode.single;
-
-    final toolbarHeight = 55.0;
+    final toolbarHeight = AppPageLayout.toolbarHeight;
 
     ref.listen(
       providerKey,
@@ -191,11 +194,9 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
 
     final mediaQuery = MediaQuery.of(context);
 
-    final useBlurredBackground = ref.watch(clientSettingsProvider.select(
-      (value) => value.backgroundImage == BackgroundType.blurred && value.enableBlurEffects,
-    ));
-
-    List<ItemAction>? itemActions = librarySearchResults.folderOverwrite.included.firstOrNull?.generateActions(
+    List<ItemAction>? itemActions = librarySearchResults
+        .folderOverwrite.included.firstOrNull
+        ?.generateActions(
       context,
       ref,
       exclude: {
@@ -213,7 +214,8 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
 
     List<ItemAction> menuActions = [
       ItemActionButton(
-        label: Text(context.localized.itemCount(librarySearchResults.totalItemCount)),
+        label: Text(
+            context.localized.itemCount(librarySearchResults.totalItemCount)),
         icon: const Icon(IconsaxPlusBold.document_1),
       ),
       ItemActionButton(
@@ -233,7 +235,7 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
           showAdaptiveDialog(
             context: context,
             barrierDismissible: true,
-            builder: (context) => AlertDialog(
+            builder: (context) => GlassAlertDialog(
               content: Consumer(
                 builder: (context, ref, child) {
                   final currentType = ref.watch(libraryViewTypeProvider);
@@ -241,25 +243,31 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(context.localized.selectViewType, style: Theme.of(context).textTheme.titleMedium),
+                      Text(context.localized.selectViewType,
+                          style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 12),
                       ...LibraryViewTypes.values
                           .map(
                             (e) => FilledButton.tonal(
-                              style: FilledButtonTheme.of(context).style?.copyWith(
-                                    padding: const WidgetStatePropertyAll(
-                                        EdgeInsets.symmetric(horizontal: 12, vertical: 24)),
-                                    backgroundColor: WidgetStateProperty.resolveWith(
-                                      (states) {
-                                        if (e != currentType) {
-                                          return Colors.transparent;
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                  ),
+                              style:
+                                  FilledButtonTheme.of(context).style?.copyWith(
+                                        padding: const WidgetStatePropertyAll(
+                                            EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 24)),
+                                        backgroundColor:
+                                            WidgetStateProperty.resolveWith(
+                                          (states) {
+                                            if (e != currentType) {
+                                              return Colors.transparent;
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ),
                               onPressed: () {
-                                ref.read(libraryViewTypeProvider.notifier).state = e;
+                                ref
+                                    .read(libraryViewTypeProvider.notifier)
+                                    .state = e;
                               },
                               child: Row(
                                 children: [
@@ -308,10 +316,12 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
         context,
         context.localized.libraryShuffleAndPlayItems,
         playVideos: librarySearchResults.showPlayButtons
-            ? () => libraryProvider.playLibraryItems(context, ref, shuffle: shuffle)
+            ? () =>
+                libraryProvider.playLibraryItems(context, ref, shuffle: shuffle)
             : null,
         playMusic: librarySearchResults.showMusicButtons
-            ? () => libraryProvider.playMusicItems(context, ref, shuffle: shuffle)
+            ? () =>
+                libraryProvider.playMusicItems(context, ref, shuffle: shuffle)
             : null,
         viewGallery: librarySearchResults.showGalleryButtons
             ? () => libraryProvider.viewGallery(context, ref, shuffle: shuffle)
@@ -324,7 +334,8 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
     ) {
       final isSelectMode = librarySearchResults.selecteMode;
       final selectedCount = librarySearchResults.selectedPosters.length;
-      void disableFilters(LibrarySearchModel librarySearchResults, LibrarySearchNotifier libraryProvider) {
+      void disableFilters(LibrarySearchModel librarySearchResults,
+          LibrarySearchNotifier libraryProvider) {
         libraryProvider.clearAllFilters();
         refreshKey.currentState?.show();
       }
@@ -342,7 +353,8 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
 
       final hasSelection = librarySearchResults.selectedPosters.isNotEmpty;
 
-      final selectedPostersId = librarySearchResults.selectedPosters.map((e) => e.id).toList();
+      final selectedPostersId =
+          librarySearchResults.selectedPosters.map((e) => e.id).toList();
 
       if (isSelectMode) {
         return [
@@ -370,10 +382,8 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     label: Text(
                       selectedCount.toString(),
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelMedium
-                          ?.copyWith(color: Theme.of(context).colorScheme.onPrimary),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onPrimary),
                     ),
                     child: const Icon(IconsaxPlusLinear.category_2),
                   )
@@ -431,7 +441,8 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
             label: Text(context.localized.markAsUnwatched),
             icon: const Icon(IconsaxPlusLinear.eye_slash),
           ),
-          if (librarySearchResults.folderOverwrite.included.firstOrNull is BoxSetModel)
+          if (librarySearchResults.folderOverwrite.included.firstOrNull
+              is BoxSetModel)
             ItemActionButton(
                 action: hasSelection
                     ? () async {
@@ -442,13 +453,15 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
                 label: Text(context.localized.removeFromCollection),
                 icon: Container(
                   decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onPrimary, borderRadius: BorderRadius.circular(6)),
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      borderRadius: BorderRadius.circular(6)),
                   child: const Padding(
                     padding: EdgeInsets.all(3.0),
                     child: Icon(IconsaxPlusLinear.save_remove, size: 20),
                   ),
                 )),
-          if (librarySearchResults.folderOverwrite.included.firstOrNull is PlaylistModel)
+          if (librarySearchResults.folderOverwrite.included.firstOrNull
+              is PlaylistModel)
             ItemActionButton(
               action: hasSelection
                   ? () async {
@@ -462,7 +475,8 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
           ItemActionButton(
             action: hasSelection
                 ? () async {
-                    await addItemToCollection(context, librarySearchResults.selectedPosters);
+                    await addItemToCollection(
+                        context, librarySearchResults.selectedPosters);
                     if (context.mounted) context.refreshData();
                   }
                 : null,
@@ -475,7 +489,8 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
           ItemActionButton(
             action: hasSelection
                 ? () async {
-                    await addItemToPlaylist(context, librarySearchResults.selectedPosters);
+                    await addItemToPlaylist(
+                        context, librarySearchResults.selectedPosters);
                     if (context.mounted) context.refreshData();
                   }
                 : null,
@@ -502,7 +517,10 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
                 context,
                 libraryProvider: libraryProvider,
                 uniqueKey: uniqueKey,
-                options: (librarySearchResults.filters.sortingOption, librarySearchResults.filters.sortOrder),
+                options: (
+                  librarySearchResults.filters.sortingOption,
+                  librarySearchResults.filters.sortOrder
+                ),
               );
               if (newOptions != null) {
                 if (newOptions.$1 != null) {
@@ -574,8 +592,10 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
 
     return MediaQuery(
       data: mediaQuery.copyWith(
-        padding: mediaQuery.padding.copyWith(top: mediaQuery.padding.top + adaptiveLayout.topBarHeight),
-        viewPadding: mediaQuery.viewPadding.copyWith(top: mediaQuery.viewPadding.top + adaptiveLayout.topBarHeight),
+        padding: mediaQuery.padding.copyWith(
+            top: mediaQuery.padding.top + adaptiveLayout.topBarHeight),
+        viewPadding: mediaQuery.viewPadding.copyWith(
+            top: mediaQuery.viewPadding.top + adaptiveLayout.topBarHeight),
       ),
       child: PopScope(
         key: uniqueKey,
@@ -586,7 +606,7 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
           }
         },
         child: NestedScaffold(
-          background: BackgroundImage(images: postersList.map((e) => e.images).nonNulls.toList()),
+          background: const ColoredBox(color: AppColors.background),
           body: Scaffold(
             extendBody: true,
             backgroundColor: Colors.transparent,
@@ -596,9 +616,12 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
             // vivent uniquement dans la barre d'outils du haut
             // (LibraryAppBar.quickActions), plus jamais dupliqués ici.
             body: PinchPosterZoom(
-              scaleDifference: (difference) => ref.read(clientSettingsProvider.notifier).addPosterSize(difference),
+              scaleDifference: (difference) => ref
+                  .read(clientSettingsProvider.notifier)
+                  .addPosterSize(difference),
               child: KinosScrollbar(
-                visible: AdaptiveLayout.inputDeviceOf(context) != InputDevice.pointer,
+                visible: AdaptiveLayout.inputDeviceOf(context) !=
+                    InputDevice.pointer,
                 controller: scrollController,
                 child: PullToRefresh(
                   refreshKey: refreshKey,
@@ -619,79 +642,24 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
                       controller: scrollController,
                       physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
-                        PinnedHeaderSliver(
-                          child: HideOnScroll(
-                            controller: scrollController,
-                            visibleBuilder: (visible) => Stack(
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  height: AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad ? 160 : 80,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Theme.of(context).colorScheme.surface.withAlpha(255),
-                                        Theme.of(context).colorScheme.surface.withAlpha(0),
-                                      ],
-                                    ),
-                                  ),
-                                  child: useBlurredBackground
-                                      ? ShaderMask(
-                                          shaderCallback: (bounds) {
-                                            return LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                Colors.white.withAlpha(255),
-                                                Colors.white.withAlpha(0),
-                                              ],
-                                            ).createShader(
-                                              Rect.fromLTRB(0, 10, bounds.width, bounds.height),
-                                            );
-                                          },
-                                          blendMode: BlendMode.dstIn,
-                                          child: const BackgroundImage(),
-                                        )
-                                      : null,
-                                ),
-                                AnimatedSlide(
-                                  duration: const Duration(milliseconds: 250),
-                                  offset: visible || floatingAppBar ? Offset.zero : const Offset(0, -1),
-                                  child: LibraryAppBar(
-                                    toolbarHeight: toolbarHeight,
-                                    menuActions: menuActions,
-                                    librarySearchResults: librarySearchResults,
-                                    quickActions: generateQuickActions(true),
-                                    isEmptySearchScreen: isEmptySearchScreen,
-                                    refreshKey: refreshKey,
-                                    uniqueKey: uniqueKey,
-                                    libraryProvider: libraryProvider,
-                                    scrollController: scrollController,
-                                  ),
-                                )
-                              ],
-                            ),
+                        SliverToBoxAdapter(
+                          child: LibraryAppBar(
+                            toolbarHeight: toolbarHeight,
+                            menuActions: menuActions,
+                            librarySearchResults: librarySearchResults,
+                            quickActions: generateQuickActions(true),
+                            isEmptySearchScreen: isEmptySearchScreen,
+                            refreshKey: refreshKey,
+                            uniqueKey: uniqueKey,
+                            libraryProvider: libraryProvider,
+                            scrollController: scrollController,
                           ),
                         ),
-                        if (AdaptiveLayout.of(context).isDesktop)
-                          const SliverToBoxAdapter(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                PosterSizeWidget(),
-                              ],
-                            ),
-                          ),
                         if (postersList.isNotEmpty)
                           SliverPadding(
-                            padding: EdgeInsets.only(
-                              left: mediaQuery.padding.left,
-                              right: mediaQuery.padding.right,
-                            ).add(
-                              EdgeInsetsDirectional.only(start: adaptiveLayout.sideBarWidth),
-                            ),
+                            padding: AdaptiveLayout.adaptivePadding(context,
+                                horizontalPadding:
+                                    AppSpacing.screenPadding - AppSpacing.xxs),
                             sliver: LibraryViews(
                               key: uniqueKey,
                               items: postersList,
@@ -704,7 +672,10 @@ class _LibrarySearchScreenState extends ConsumerState<LibrarySearchScreen> {
                               child: Text(context.localized.noItemsToShow),
                             ),
                           ),
-                        SliverPadding(padding: EdgeInsets.only(bottom: MediaQuery.sizeOf(context).height * 0.20))
+                        SliverPadding(
+                            padding: EdgeInsets.only(
+                                bottom:
+                                    MediaQuery.sizeOf(context).height * 0.20))
                       ],
                     );
                   },
@@ -742,166 +713,186 @@ class LibraryAppBar extends ConsumerWidget {
     super.key,
   });
 
+  String _heading(BuildContext context) {
+    final folders = librarySearchResults.folderOverwrite.included;
+    if (folders.length == 1) return folders.first.name;
+    final views = librarySearchResults.views.included;
+    if (views.length == 1) return views.first.name;
+    final types = librarySearchResults.filters.types.included;
+    if (types.length == 1) {
+      if (types.first == KinosItemType.movie) {
+        return context.localized.mediaTypeMovie(2);
+      }
+      if (types.first == KinosItemType.series) {
+        return context.localized.mediaTypeSeries(2);
+      }
+      return types.first.label(context.localized);
+    }
+    return isEmptySearchScreen
+        ? context.localized.search
+        : context.localized.library(2);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: EdgeInsets.only(
-        top: MediaQuery.paddingOf(context).top,
-        left: AdaptiveLayout.adaptivePadding(context).left,
-        bottom: 16,
-      ),
-      child: Column(
-        children: [
-          IntrinsicHeight(
-            child: Padding(
-              padding: EdgeInsets.only(
-                right: AdaptiveLayout.adaptivePadding(context).right,
-              ),
-              child: Row(
-                spacing: 4,
-                children: [
-                  if (AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad)
-                    SizedBox.square(
-                      dimension: toolbarHeight,
-                      child: PositionRoundedClip(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerLow,
-                          ),
-                          child: context.router.backButton(),
-                        ),
-                      ),
-                    ),
-                  Expanded(
-                    child: PositionRoundedClip(
-                      child: SuggestionSearchBar(
-                        autoFocus: isEmptySearchScreen,
-                        key: uniqueKey,
-                        title: librarySearchResults.searchBarTitle(context),
-                        debounceDuration: const Duration(seconds: 1),
-                        onItem: (value) async {
-                          await value.navigateTo(context);
-                          refreshKey.currentState?.show();
-                        },
-                        onSubmited: (value) async {
-                          if (librarySearchResults.filters.searchQuery != value) {
-                            libraryProvider.setSearch(value);
-                            refreshKey.currentState?.show();
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  SizedBox.square(
-                    dimension: toolbarHeight,
-                    child: PositionRoundedClip(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerLow,
-                        ),
-                        child: Tooltip(
-                          message: librarySearchResults.folderOverwrite.included.firstOrNull?.type
-                                  .label(context.localized) ??
-                              context.localized.library(1),
-                          child: AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer
-                              ? PopupMenuButton(
-                                  tooltip: context.localized.library(1),
-                                  icon: Icon(librarySearchResults.folderOverwrite.included.firstOrNull?.type.icon ??
-                                      IconsaxPlusLinear.document),
-                                  itemBuilder: (context) => menuActions.toList().popupMenuItems(useIcons: true),
-                                )
-                              : IconButton(
-                                  onPressed: () async {
-                                    await showBottomSheetPill(
-                                      context: context,
-                                      content: (context, scrollController) => ListView(
-                                        shrinkWrap: true,
-                                        controller: scrollController,
-                                        children: menuActions
-                                            .map(
-                                              (e) => e.toListItem(context, useIcons: true, shouldPop: true),
-                                            )
-                                            .toList(),
-                                      ),
-                                    );
-                                  },
-                                  icon: Padding(
-                                    padding: const EdgeInsets.all(6),
-                                    child: Icon(
-                                      librarySearchResults.folderOverwrite.included.firstOrNull?.type.icon ??
-                                          IconsaxPlusLinear.document,
-                                      color: librarySearchResults
-                                                  .folderOverwrite.included.firstOrNull?.userData.isFavourite ==
-                                              true
-                                          ? Theme.of(context).colorScheme.primary
-                                          : null,
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (AdaptiveLayout.layoutModeOf(context) == LayoutMode.single)
-                    SizedBox.square(
-                      dimension: toolbarHeight,
-                      child: const PositionRoundedClip(
-                        child: SettingsUserIcon(),
-                      ),
-                    ),
-                ].withPositionProvider(),
-              ),
-            ),
-          ),
-          Row(
-            spacing: 6,
-            children: [
-              if (AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad)
-                ScrollStatePosition(
-                  controller: scrollController,
-                  positionBuilder: (state) => AnimatedFadeSize(
-                    child: state != ScrollState.top
-                        ? Tooltip(
-                            message: context.localized.scrollToTop,
-                            child: IconButton.filled(
-                              onPressed: () => scrollController.animateTo(0,
-                                  duration: const Duration(milliseconds: 500), curve: Curves.easeInOutCubic),
-                              icon: const Icon(
-                                IconsaxPlusLinear.arrow_up,
-                              ),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 8).add(EdgeInsets.only(
-                    right: AdaptiveLayout.adaptivePadding(context).right,
+    Future<void> sort() async {
+      final options = await openSortByDialogue(context,
+          libraryProvider: libraryProvider,
+          uniqueKey: uniqueKey,
+          options: (
+            librarySearchResults.filters.sortingOption,
+            librarySearchResults.filters.sortOrder
+          ));
+      if (options?.$1 != null) libraryProvider.setSortBy(options!.$1!);
+      if (options?.$2 != null) libraryProvider.setSortOrder(options!.$2!);
+    }
+
+    void filters() => showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AdaptiveLayout(
+            data: AdaptiveLayout.of(context),
+            child: GlassDialog(
+              child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                      maxWidth: AppLibraryLayout.filterPanelWidth),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(children: [
+                                Expanded(
+                                    child: Text('Filtres',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge)),
+                                IconButton(
+                                    tooltip: 'Fermer',
+                                    onPressed: () =>
+                                        Navigator.of(dialogContext).pop(),
+                                    icon: const Icon(Icons.close))
+                              ]),
+                              const SizedBox(height: AppSpacing.md),
+                              LibraryFilterChips(key: uniqueKey, wrap: true),
+                              if (ref.watch(clientSettingsProvider.select(
+                                  (value) => value.pinchPosterZoom))) ...[
+                                const SizedBox(height: AppSpacing.md),
+                                const Text('Taille des affiches'),
+                                const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: PosterSizeWidget()),
+                              ],
+                            ])),
                   )),
-                  scrollDirection: Axis.horizontal,
-                  child: LibraryFilterChips(
-                    key: uniqueKey,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // Toujours visible (souris comme dPad) : seul point d'accès à
-          // lire/mélanger/sélectionner depuis que la barre du bas a été
-          // retirée (règle anti-mobile-first, CLAUDE.md).
-          if (quickActions.isNotEmpty)
-            Container(
-              padding: EdgeInsets.only(
-                right: AdaptiveLayout.adaptivePadding(context).right,
-              ),
-              child: Row(
-                spacing: 4,
-                children: quickActions.map((e) => e.toButton()).toList(),
-              ),
-            )
-        ],
-      ),
+            )));
+    final allActions = [
+      ...quickActions,
+      if (quickActions.isNotEmpty && menuActions.isNotEmpty)
+        ItemActionDivider(),
+      ...menuActions
+    ];
+    final search = SizedBox(
+        width: AppLibraryLayout.searchWidth,
+        child: ClipRRect(
+            borderRadius: AppRadii.controlBorder,
+            child: SuggestionSearchBar(
+              key: uniqueKey,
+              autoFocus: isEmptySearchScreen,
+              title: isEmptySearchScreen
+                  ? 'Rechercher dans vos films et séries…'
+                  : 'Rechercher dans ${_heading(context)}…',
+              onItem: (item) async {
+                await item.navigateTo(context);
+                refreshKey.currentState?.show();
+              },
+              onSubmited: (value) {
+                if (librarySearchResults.filters.searchQuery != value) {
+                  libraryProvider.setSearch(value);
+                  refreshKey.currentState?.show();
+                }
+              },
+            )));
+    final controls = LibraryFilterChips(key: uniqueKey, quickOnly: true);
+    final trailing = Row(mainAxisSize: MainAxisSize.min, children: [
+      TextButton(
+          onPressed: sort,
+          child: Text(
+              'Trier : ${librarySearchResults.filters.sortingOption.label(context)}')),
+      const SizedBox(width: AppSpacing.xs),
+      TextButton.icon(
+          onPressed: filters,
+          icon: const Icon(Icons.tune),
+          label: const Text('Filtres')),
+      if (allActions.isNotEmpty)
+        GlassPopupMenuButton(
+          tooltip: 'Actions',
+          borderRadius: AppNavigation.border,
+          itemBuilder: (_) => allActions.popupMenuItems(useIcons: true),
+          child: const Padding(
+              padding: EdgeInsets.all(AppSpacing.sm),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text('Actions'),
+                SizedBox(width: AppSpacing.xxs),
+                Icon(Icons.keyboard_arrow_down)
+              ])),
+        ),
+    ]);
+    final padding = AdaptiveLayout.adaptivePadding(context,
+        horizontalPadding: AppSpacing.screenPadding);
+    return Padding(
+      padding: padding.copyWith(
+          top: MediaQuery.paddingOf(context).top + AppSpacing.lg,
+          bottom: AppSpacing.lg),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Wrap(
+            spacing: AppSpacing.md,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (context.router.canPop())
+                IconButton(
+                    tooltip:
+                        MaterialLocalizations.of(context).backButtonTooltip,
+                    onPressed: () => context.router.maybePop(),
+                    icon: const Icon(Icons.arrow_back)),
+              Text(_heading(context),
+                  style: Theme.of(context).textTheme.headlineLarge),
+              Text(
+                  context.localized
+                      .itemCount(librarySearchResults.totalItemCount),
+                  style: Theme.of(context).textTheme.bodySmall),
+              if (librarySearchResults.selecteMode)
+                Text(context.localized.stopSelection(
+                    librarySearchResults.selectedPosters.length)),
+            ]),
+        const SizedBox(height: AppSpacing.md),
+        LayoutBuilder(builder: (context, constraints) {
+          final quick = SingleChildScrollView(
+              scrollDirection: Axis.horizontal, child: controls);
+          if (constraints.maxWidth >= AppLibraryLayout.inlineWidth &&
+              MediaQuery.textScalerOf(context).scale(1) <= 1) {
+            return Row(children: [
+              search,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: quick),
+              const SizedBox(width: AppSpacing.sm),
+              trailing
+            ]);
+          }
+          return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                search,
+                const SizedBox(height: AppSpacing.xs),
+                quick,
+                const SizedBox(height: AppSpacing.xs),
+                Align(
+                    alignment: AlignmentDirectional.centerEnd, child: trailing),
+              ]);
+        }),
+        LibraryActiveFilters(providerKey: uniqueKey),
+      ]),
     );
   }
 }

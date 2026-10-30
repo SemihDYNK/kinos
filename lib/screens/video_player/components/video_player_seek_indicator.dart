@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 import 'package:async/async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,9 @@ import 'package:kinos/util/localization_helper.dart';
 class SeekIndicatorController {
   VoidCallback? _seekBack;
   VoidCallback? _seekForward;
+  ValueChanged<int>? _show;
+
+  void show(int seconds) => _show?.call(seconds);
 
   void seekBack() => _seekBack?.call();
   void seekForward() => _seekForward?.call();
@@ -25,23 +29,55 @@ class SeekIndicatorController {
 
 class VideoPlayerSeekIndicator extends ConsumerStatefulWidget {
   final SeekIndicatorController? controller;
+  final bool handleKeyboard;
 
-  const VideoPlayerSeekIndicator({this.controller, super.key});
+  const VideoPlayerSeekIndicator(
+      {this.controller, this.handleKeyboard = true, super.key});
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => VideoPlayerSeekIndicatorState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      VideoPlayerSeekIndicatorState();
 }
 
-class VideoPlayerSeekIndicatorState extends ConsumerState<VideoPlayerSeekIndicator> {
+class VideoPlayerSeekIndicatorState
+    extends ConsumerState<VideoPlayerSeekIndicator> {
   RestartableTimer? timer;
 
   bool visible = false;
   int seekPosition = 0;
+  int _pendingSeek = 0;
 
   @override
   void initState() {
     super.initState();
+    _attachController();
+  }
+
+  void _attachController() {
     widget.controller?._seekBack = seekBack;
     widget.controller?._seekForward = seekForward;
+    widget.controller?._show = (seconds) => onSeekStart(seconds, seek: false);
+  }
+
+  void _detachController(SeekIndicatorController? controller) {
+    controller?._seekBack = null;
+    controller?._seekForward = null;
+    controller?._show = null;
+  }
+
+  @override
+  void didUpdateWidget(covariant VideoPlayerSeekIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      _detachController(oldWidget.controller);
+      _attachController();
+    }
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    _detachController(widget.controller);
+    super.dispose();
   }
 
   void onSeekEnd() {
@@ -50,17 +86,23 @@ class VideoPlayerSeekIndicatorState extends ConsumerState<VideoPlayerSeekIndicat
     });
     timer?.cancel();
     timer = null;
-    if (seekPosition == 0) return;
+    final pending = _pendingSeek;
+    _pendingSeek = 0;
+    if (pending == 0) return;
     final mediaPlayback = ref.read(mediaPlaybackProvider);
-    final newPosition = (mediaPlayback.position.inSeconds + seekPosition).clamp(0, mediaPlayback.duration.inSeconds);
+    final newPosition = (mediaPlayback.position.inSeconds + pending)
+        .clamp(0, mediaPlayback.duration.inSeconds);
     ref.read(videoPlayerProvider).seek(Duration(seconds: newPosition));
   }
 
-  void onSeekStart(int value) {
+  void onSeekStart(int value, {bool seek = true}) {
+    if (value == 0) return;
     if (timer == null) {
-      timer = RestartableTimer(const Duration(milliseconds: 500), () => onSeekEnd());
+      timer = RestartableTimer(
+          const Duration(milliseconds: 500), () => onSeekEnd());
       setState(() {
         seekPosition = 0;
+        _pendingSeek = 0;
       });
     } else {
       timer?.reset();
@@ -68,6 +110,7 @@ class VideoPlayerSeekIndicatorState extends ConsumerState<VideoPlayerSeekIndicat
     setState(() {
       visible = true;
       seekPosition += value;
+      if (seek) _pendingSeek += value;
     });
   }
 
@@ -78,36 +121,60 @@ class VideoPlayerSeekIndicatorState extends ConsumerState<VideoPlayerSeekIndicat
 
     return InputHandler<VideoHotKeys>(
       autoFocus: false,
-      listenRawKeyboard: true,
-      keyMap: ref.watch(videoPlayerSettingsProvider.select((value) => value.currentShortcuts)),
-      keyMapResult: (result) => _onKey(result),
+      listenRawKeyboard: widget.handleKeyboard,
+      keyMap: ref.watch(videoPlayerSettingsProvider
+          .select((value) => value.currentShortcuts)),
+      keyMapResult: (result) => widget.handleKeyboard && _onKey(result),
       child: IgnorePointer(
         child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 500),
+          duration:
+              AppMotion.enabled(context) ? AppDurations.popover : Duration.zero,
           opacity: (visible && seekPosition != 0) ? 1 : 0,
           child: Center(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(16),
+            child: AnimatedSwitcher(
+              duration: AppMotion.enabled(context)
+                  ? AppDurations.popover
+                  : Duration.zero,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: animation.drive(Tween(
+                    begin: Offset(
+                        (child.key as ValueKey<int>).value > 0
+                            ? -AppMotion.playerSeekTravel
+                            : AppMotion.playerSeekTravel,
+                        0),
+                    end: Offset.zero,
+                  ).chain(CurveTween(curve: AppMotion.easeOut))),
+                  child: child,
+                ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 12,
-                  children: [
-                    Icon(
-                      isForward ? IconsaxPlusLinear.forward : IconsaxPlusLinear.backward,
-                      color: Colors.white,
-                    ),
-                    Text(
-                      "$displayValue ${context.localized.seconds(displayValue)}",
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white,
-                          ),
-                    ),
-                  ],
+              child: Container(
+                key: ValueKey(seekPosition),
+                decoration: const BoxDecoration(
+                  color: AppPlayerStyle.surface,
+                  borderRadius: AppRadii.sheetBorder,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: AppSpacing.sm,
+                    children: [
+                      Icon(
+                        isForward
+                            ? IconsaxPlusLinear.forward
+                            : IconsaxPlusLinear.backward,
+                        color: AppColors.textPrimary,
+                      ),
+                      Text(
+                        "$displayValue ${context.localized.seconds(displayValue)}",
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textPrimary,
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -118,14 +185,18 @@ class VideoPlayerSeekIndicatorState extends ConsumerState<VideoPlayerSeekIndicat
   }
 
   void seekBack() {
-    final seconds = -ref.read(userProvider
-        .select((value) => (value?.userSettings?.skipBackDuration ?? UserSettings().skipBackDuration).inSeconds));
+    final seconds = -ref.read(userProvider.select((value) =>
+        (value?.userSettings?.skipBackDuration ??
+                UserSettings().skipBackDuration)
+            .inSeconds));
     onSeekStart(seconds);
   }
 
   void seekForward() {
-    final seconds = ref.read(userProvider
-        .select((value) => (value?.userSettings?.skipForwardDuration ?? UserSettings().skipForwardDuration).inSeconds));
+    final seconds = ref.read(userProvider.select((value) =>
+        (value?.userSettings?.skipForwardDuration ??
+                UserSettings().skipForwardDuration)
+            .inSeconds));
     onSeekStart(seconds);
   }
 

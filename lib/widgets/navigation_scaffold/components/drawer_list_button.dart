@@ -1,3 +1,4 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,7 +66,7 @@ class _DrawerListButtonState extends ConsumerState<DrawerListButton> {
               ? AnimatedOpacity(
                   duration: const Duration(milliseconds: 125),
                   opacity: showPopupButton ? 1 : 0,
-                  child: PopupMenuButton(
+                  child: GlassPopupMenuButton(
                     tooltip: "Options",
                     itemBuilder: (context) => widget.actions.popupMenuItems(useIcons: true),
                   ),

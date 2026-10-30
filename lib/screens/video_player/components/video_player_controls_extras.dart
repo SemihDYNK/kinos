@@ -1,10 +1,13 @@
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/models/items/media_segments_model.dart';
 import 'package:kinos/providers/video_player_provider.dart';
-import 'package:kinos/screens/shared/animated_fade_size.dart';
+import 'package:kinos/screens/video_player/components/player_motion.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/theme/app_icons.dart';
 import 'package:kinos/screens/video_player/components/video_player_chapters.dart';
 import 'package:kinos/screens/video_player/components/video_player_queue.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -15,7 +18,8 @@ class ChapterButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentChapters = ref.watch(playBackModel.select((value) => value?.chapters));
+    final currentChapters =
+        ref.watch(playBackModel.select((value) => value?.chapters));
     if (currentChapters != null) {
       return IconButton(
         onPressed: () {
@@ -53,13 +57,16 @@ class OpenQueueButton extends ConsumerWidget {
                 items: state?.queue ?? [],
                 currentItem: state?.item,
                 onSectionReorder: (section, oldIndex, newIndex) {
-                  return ref.read(videoPlayerProvider.notifier).reorderAudioQueueSection(
+                  return ref
+                      .read(videoPlayerProvider.notifier)
+                      .reorderAudioQueueSection(
                         section,
                         oldIndex,
                         newIndex,
                       );
                 },
-                playSelected: ref.read(videoPlayerProvider.notifier).playAudioQueueItem,
+                playSelected:
+                    ref.read(videoPlayerProvider.notifier).playAudioQueueItem,
               );
             }
           : null,
@@ -68,12 +75,11 @@ class OpenQueueButton extends ConsumerWidget {
   }
 }
 
-class SkipSegmentButton extends ConsumerWidget {
+class SkipSegmentButton extends StatefulWidget {
   final MediaSegment? segment;
   final SegmentSkip? skipType;
   final SegmentVisibility visibility;
-
-  final Function() pressedSkip;
+  final VoidCallback pressedSkip;
   const SkipSegmentButton({
     required this.segment,
     this.skipType,
@@ -83,32 +89,78 @@ class SkipSegmentButton extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AnimatedFadeSize(
-      child: segment != null && skipType != SegmentSkip.none
-          ? AnimatedOpacity(
-              opacity: switch (visibility) {
-                SegmentVisibility.hidden => 0,
-                SegmentVisibility.partially => 0.15,
-                SegmentVisibility.visible => 1.0,
-              },
-              duration: const Duration(milliseconds: 500),
-              child: ElevatedButton(
-                onPressed: pressedSkip,
-                style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5))),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(context.localized.skipButtonLabel(segment!.type.label(context))),
-                      const Icon(Icons.skip_next_rounded)
-                    ],
+  State<SkipSegmentButton> createState() => _SkipSegmentButtonState();
+}
+
+class _SkipSegmentButtonState extends State<SkipSegmentButton> {
+  MediaSegment? _lastSegment;
+  bool _pressed = false;
+
+  void _activate() {
+    if (AppMotion.enabled(context)) setState(() => _pressed = true);
+    widget.pressedSkip();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.segment != null) _lastSegment = widget.segment;
+    final segment = _lastSegment;
+    final visible = widget.segment != null &&
+        widget.skipType != SegmentSkip.none &&
+        widget.visibility != SegmentVisibility.hidden;
+    final duration =
+        AppMotion.enabled(context) ? AppDurations.hover : Duration.zero;
+    return PlayerControlsMotion(
+      visible: visible,
+      hiddenOffset: const Offset(AppSpacing.lg, 0),
+      child: AnimatedOpacity(
+        duration: duration,
+        opacity: widget.visibility == SegmentVisibility.partially
+            ? AppPlayerStyle.segmentPartialOpacity
+            : 1,
+        child: AnimatedScale(
+          duration: duration,
+          curve: AppMotion.easeOut,
+          scale: _pressed ? AppMotion.posterActionScale : 1,
+          onEnd: () {
+            if (mounted && _pressed) setState(() => _pressed = false);
+          },
+          child: segment == null
+              ? const SizedBox.shrink()
+              : FocusRing(
+                  borderRadius: AppRadii.controlBorder,
+                  onActivate: _activate,
+                  child: FrostedSurface(
+                    borderRadius: AppRadii.controlBorder,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: ExcludeFocus(
+                          child: TextButton(
+                        onPressed: _activate,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          backgroundColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm),
+                          shape: const RoundedRectangleBorder(
+                              borderRadius: AppRadii.controlBorder),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: AppSpacing.xs,
+                          children: [
+                            Text(context.localized
+                                .skipButtonLabel(segment.type.label(context))),
+                            const Icon(AppIcons.next),
+                          ],
+                        ),
+                      )),
+                    ),
                   ),
                 ),
-              ),
-            )
-          : const SizedBox.shrink(key: Key("Other")),
+        ),
+      ),
     );
   }
 }
