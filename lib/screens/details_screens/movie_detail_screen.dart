@@ -1,3 +1,4 @@
+import 'package:kinos/anilist/anilist_mapping_dialog.dart';
 import 'package:kinos/models/items/movie_model.dart';
 import 'package:flutter/material.dart';
 
@@ -188,6 +189,7 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
                     action: () => showMediaInfoSheet(
                         context, 'Informations techniques', technicalInfo),
                   ),
+                anilistMappingAction(context, details),
                 ...details.generateActions(
                   context,
                   ref,

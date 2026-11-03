@@ -23,8 +23,9 @@ String yearLabel(BuildContext context, (int? minYear, int? maxYear) yearRange) {
   final maxYear = yearRange.$2;
 
   if (minYear == null && maxYear == null) return context.localized.year(1);
-  if (minYear != null && maxYear != null)
+  if (minYear != null && maxYear != null) {
     return '${context.localized.year(1)}: $minYear-$maxYear';
+  }
   if (minYear != null) return '${context.localized.year(1)}: $minYear+';
   return '${context.localized.year(1)}: <=$maxYear';
 }
@@ -33,13 +34,15 @@ String ratingLabel(BuildContext context, SeerrFilterModel filters) {
   final minRating = filters.voteAverageGte;
   final maxRating = filters.voteAverageLte;
 
-  if (minRating == null && maxRating == null)
+  if (minRating == null && maxRating == null) {
     return context.localized.rating(1);
+  }
   if (minRating != null && maxRating != null) {
     return '${context.localized.rating(1)}: ${minRating.toStringAsFixed(1)}-${maxRating.toStringAsFixed(1)}';
   }
-  if (minRating != null)
+  if (minRating != null) {
     return '${context.localized.rating(1)}: ${minRating.toStringAsFixed(1)}+';
+  }
   return '${context.localized.rating(1)}: <=${maxRating?.toStringAsFixed(1)}';
 }
 
@@ -47,10 +50,12 @@ String runtimeLabel(BuildContext context, SeerrFilterModel filters) {
   final minRuntime = filters.runtimeGte;
   final maxRuntime = filters.runtimeLte;
 
-  if (minRuntime == null && maxRuntime == null)
+  if (minRuntime == null && maxRuntime == null) {
     return context.localized.runTime;
-  if (minRuntime != null && maxRuntime != null)
+  }
+  if (minRuntime != null && maxRuntime != null) {
     return '${context.localized.runTime}: $minRuntime-$maxRuntime';
+  }
   if (minRuntime != null) return '${context.localized.runTime}: $minRuntime+';
   return '${context.localized.runTime}: <=$maxRuntime';
 }

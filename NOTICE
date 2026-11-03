@@ -16,8 +16,8 @@ the license under which the original and derived code is distributed.
 What changed in this fork, relative to upstream Fladder:
   - Scope narrowed to movies and TV shows only (no music, Live TV,
     e-books, photos, SyncPlay, or remote control features).
-  - Platform narrowed to Linux desktop only (Android, iOS, macOS,
-    Windows and web builds are not maintained or verified here).
+  - Linux desktop is the primary target. Windows and macOS builds are
+    experimental; Android, iOS, TV and web builds are not maintained here.
   - Added an integrated Sonarr/Radarr module (library, queue, calendar,
     interactive search) for requesting and managing content directly
     from the client.
@@ -41,3 +41,10 @@ Barlow Condensed — Copyright 2017 The Barlow Project Authors.
 Source: https://github.com/google/fonts/tree/main/ofl/barlowcondensed
 License: SIL Open Font License, Version 1.1.
 The complete font license is bundled at assets/fonts/barlow_condensed/OFL.txt.
+
+AniList identity mapping
+-----------------------
+Public cross-reference data is fetched on demand from Fribb/anime-lists
+(https://github.com/Fribb/anime-lists).
+No copy of the full dataset is bundled with Kinos. Public anime metadata is
+queried from AniList (https://anilist.co); Kinos is not affiliated with AniList.

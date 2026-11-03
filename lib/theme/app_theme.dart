@@ -105,10 +105,11 @@ abstract final class AppMediaIcons {
 abstract final class AppBrand {
   static const markSize = 28.0;
   static const wordmarkWidth = 132.0;
-  static const startupWordmarkWidth = 280.0;
+  static const startupMarkSize = 128.0;
+  static const startupGuideWidth = 1.0;
+  static const startupGuideOpacity = .28;
+  static const startupApertureFeather = 28.0;
   static const wordmarkAspectRatio = 949 / 256;
-  // Centre du O dans le viewBox de kinos_wordmark_final.svg.
-  static const wordmarkOAnchor = Offset(641.19 / 949, 128.14 / 256);
 }
 
 abstract final class AppNavigation {
@@ -266,15 +267,32 @@ abstract final class AppDurations {
   static const heroTint = Duration(milliseconds: 300);
   static const heroSlide = Duration(milliseconds: 420);
   static const pageTransition = Duration(milliseconds: 220);
-  static const startupReveal = Duration(milliseconds: 1200);
+  static const startupLogo = Duration(milliseconds: 1300);
+  static const startupReveal = Duration(milliseconds: 900);
   static const startupLoadTimeout = Duration(seconds: 30);
 }
 
 abstract final class AppMotion {
-  static const startupScale = .97;
-  static const startupWordmarkMove = Interval(0, .30, curve: easeOut);
-  static const startupAperture =
-      Interval(.30, 1, curve: Cubic(.65, 0, .35, 1));
+  static const startupMarkCloseup = 7.0;
+  static const startupMarkTilt = .65;
+  static const startupMarkAngle = -.32;
+  static const startupMarkDepth = .075;
+  static const startupMarkOffsets = [
+    Offset(-.30, 0),
+    Offset(.34, -.25),
+    Offset(.34, .25),
+  ];
+  static const startupMarkAssembly = [
+    Interval(.06, .55, curve: easeOut),
+    Interval(.14, .66, curve: easeOut),
+    Interval(.22, .74, curve: easeOut),
+  ];
+  static const startupMarkTrace = Interval(0, .45, curve: easeOut);
+  static const startupMarkFill = Interval(.28, .78, curve: easeOut);
+  static const startupMarkCamera =
+      Interval(.12, .87, curve: Cubic(.65, 0, .2, 1));
+  static const startupMarkFade = Interval(.08, .25, curve: easeOut);
+  static const startupAperture = Interval(.08, 1, curve: Cubic(.65, 0, .35, 1));
   static const easeOut = Cubic(.23, 1, .32, 1);
   static const heroTitleReveal = Interval(0, .75, curve: easeOut);
   static const heroSynopsisReveal = Interval(.16, 1, curve: easeOut);

@@ -2136,20 +2136,156 @@
     },
     "leanBackModeTitle": "Mode Lean-back",
     "leanBackModeInfo": "Le mode Lean-back est réactivé par défaut sur les appareils AndroidTV. Activer cette option sur les appareils non-AndroidTV peut entraîner un comportement inattendu.",
-  "discoveryRowTitle": "À découvrir",
-  "discoveryRowSubtitle": "Hors de votre bibliothèque · À demander sur Seerr",
-  "discoveryToRequest": "À demander",
-  "discoveryCacheDays": "Cache découverte : {days} jours",
-  "discoveryShortcuts": "← → : défiler · Entrée : ouvrir · Maj+F10 : menu",
-  "discoveryMoviesTitle": "Films à découvrir",
-  "discoverySeriesTitle": "Séries à découvrir",
-  "discoveryScrollPrevious": "Défiler vers la gauche",
-  "discoveryScrollNext": "Défiler vers la droite",
-  "managementRequestsTitle": "Demandes",
-  "managementRequestsSubtitle": "Suivez les demandes récentes de votre serveur",
-  "managementRequestedBy": "Demandé par",
-  "managementSearchRequests": "Rechercher une demande…",
-  "managementApplication": "Application",
-  "managementSearchLibrary": "Rechercher dans la bibliothèque…",
-  "managementStatus": "Statut"
+    "discoveryRowTitle": "À découvrir",
+    "discoveryRowSubtitle": "Hors de votre bibliothèque · À demander sur Seerr",
+    "discoveryToRequest": "À demander",
+    "discoveryCacheDays": "Cache découverte : {days} jours",
+    "discoveryShortcuts": "← → : défiler · Entrée : ouvrir · Maj+F10 : menu",
+    "discoveryMoviesTitle": "Films à découvrir",
+    "discoverySeriesTitle": "Séries à découvrir",
+    "discoveryScrollPrevious": "Défiler vers la gauche",
+    "discoveryScrollNext": "Défiler vers la droite",
+    "managementRequestsTitle": "Demandes",
+    "managementRequestsSubtitle": "Suivez les demandes récentes de votre serveur",
+    "managementRequestedBy": "Demandé par",
+    "managementSearchRequests": "Rechercher une demande…",
+    "managementApplication": "Application",
+    "managementSearchLibrary": "Rechercher dans la bibliothèque…",
+    "managementStatus": "Statut",
+    "anilistTitle": "AniList",
+    "anilistExact": "Identité vérifiée",
+    "anilistUnconfirmed": "Confirmation nécessaire",
+    "anilistMissing": "Aucune correspondance trouvée",
+    "anilistUnavailable": "AniList est indisponible. Votre lien enregistré est conservé.",
+    "anilistConflict": "Les identifiants des sources divergent. Vérifiez les propositions avant de lier.",
+    "anilistSeasonWarning": "Une saison Jellyfin peut couvrir plusieurs fiches AniList. Ce lien identifie un titre ; il ne valide pas la correspondance des épisodes.",
+    "anilistSplit": "Plusieurs parties AniList partagent cette saison. Les décalages d’épisodes doivent être vérifiés séparément.",
+    "anilistChanged": "Les métadonnées ont changé. Confirmez à nouveau le lien.",
+    "anilistInvalid": "L’identifiant source n’a pas pu être vérifié. Recherchez la bonne fiche.",
+    "anilistSearch": "Rechercher sur AniList",
+    "anilistSearchHint": "Titre de l’anime",
+    "anilistConfirm": "Confirmer le lien",
+    "anilistRemove": "Supprimer le lien",
+    "anilistOpen": "Ouvrir sur AniList",
+    "anilistRetry": "Réessayer",
+    "anilistSaved": "Lien enregistré localement",
+    "anilistNoResults": "Aucun résultat",
+    "anilistNoSync": "Activez le suivi dans Paramètres → Profil → AniList.",
+    "anilistOffset": "Décalage d’épisodes : {offset}",
+    "@anilistOffset": {
+        "placeholders": {
+            "offset": {
+                "type": "int"
+            }
+        }
+    },
+    "anilistSeasonSource": "{source} · saison {season}",
+    "@anilistSeasonSource": {
+        "placeholders": {
+            "source": {
+                "type": "String"
+            },
+            "season": {
+                "type": "int"
+            }
+        }
+    },
+    "anilistRetryAt": "Réessayez après {time}.",
+    "@anilistRetryAt": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "anilistAccount": "Compte et synchronisation",
+    "anilistConnectBrowser": "Se connecter dans le navigateur",
+    "anilistAuthInstructions": "Autorisez Kinos sur AniList, puis collez le jeton affiché sur la page d’autorisation.",
+    "anilistAccessToken": "Jeton d’accès",
+    "anilistConnect": "Connecter le compte",
+    "anilistDisconnect": "Déconnecter",
+    "anilistDisconnected": "Aucun compte connecté",
+    "anilistSyncEnabled": "Synchroniser les épisodes vus",
+    "anilistSyncExplanation": "Met à jour la progression des titres regardés dans Kinos. Les notes existantes sont conservées.",
+    "anilistSyncReady": "Prêt à synchroniser en arrière-plan",
+    "anilistAuthError": "Reconnectez le compte pour reprendre la synchronisation.",
+    "anilistMappingError": "Un titre nécessite une correspondance d’épisodes. Ouvrez sa fiche → AniList → Correspondance des épisodes.",
+    "anilistNetworkError": "Synchronisation en attente. Kinos réessaiera automatiquement.",
+    "anilistRanges": "Correspondance des épisodes",
+    "anilistRangeHelp": "La correspondance est automatique lorsque les sources concordent. Ajoutez des plages ici uniquement pour corriger une saison ambiguë. Indiquez toutes les plages d’une saison corrigée.",
+    "anilistAutomaticInfo": "Le suivi choisit automatiquement la bonne partie à partir de l’épisode. Un lien de titre seul ne remplace pas les plages d’épisodes.",
+    "anilistSeasonNumber": "Saison Jellyfin",
+    "anilistFirstEpisode": "Premier épisode Jellyfin",
+    "anilistLastEpisode": "Dernier épisode Jellyfin",
+    "anilistMediaId": "Identifiant AniList",
+    "anilistFirstRemoteEpisode": "Premier épisode AniList",
+    "anilistAddRange": "Ajouter la plage",
+    "anilistSaveRanges": "Enregistrer la correspondance",
+    "anilistRangeInvalid": "Vérifiez les numéros d’épisodes, les chevauchements et le nombre d’épisodes AniList.",
+    "anilistDeleteRange": "Supprimer cette plage",
+    "anilistRangeLine": "S{season} · {first}–{last} → AniList #{id} · {remoteFirst}–{remoteLast}",
+    "@anilistRangeLine": {
+        "placeholders": {
+            "season": {
+                "type": "int"
+            },
+            "first": {
+                "type": "int"
+            },
+            "last": {
+                "type": "int"
+            },
+            "id": {
+                "type": "int"
+            },
+            "remoteFirst": {
+                "type": "int"
+            },
+            "remoteLast": {
+                "type": "int"
+            }
+        }
+    },
+    "anilistIncognitoPaused": "Le mode incognito suspend la synchronisation AniList.",
+    "anilistTokenRejected": "AniList a refusé le jeton. Reconnectez-vous dans le navigateur puis copiez le nouveau jeton.",
+    "anilistAccountSaveError": "Le compte a été validé par AniList, mais Kinos ne peut pas enregistrer la connexion dans le coffre sécurisé Linux. Vérifiez que le trousseau est déverrouillé puis réessayez.",
+    "anilistConnectFailed": "Connexion à AniList impossible ({code}). Aucun compte connecté. Réessayez.",
+    "@anilistConnectFailed": {
+        "placeholders": {
+            "code": {
+                "type": "String"
+            }
+        }
+    },
+    "letterboxdTitle": "Letterboxd",
+    "letterboxdHint": "Importer les films vus et les notes",
+    "letterboxdExplanation": "Choisissez le ZIP exporté par Letterboxd. Films vus, notes et revisionnages enrichissent uniquement vos goûts. Votre historique Jellyfin reste inchangé.",
+    "letterboxdChoose": "Choisir le ZIP exporté",
+    "letterboxdConfirm": "Confirmer l’import",
+    "letterboxdRead": "Lecture de l’export…",
+    "letterboxdMatch": "Identification des films…",
+    "letterboxdSave": "Enregistrement…",
+    "letterboxdSaved": "Import enregistré pour ce profil.",
+    "letterboxdFileError": "Impossible de lire cet export. Choisissez un ZIP Letterboxd valide (64 Mo maximum).",
+    "letterboxdStorageError": "Impossible d’enregistrer l’import. Votre import précédent est conservé.",
+    "letterboxdNetworkWarning": "Certaines métadonnées n’ont pas pu être chargées. Les films non identifiés n’influenceront pas les recommandations. Configurez Seerr pour identifier les films absents de votre bibliothèque.",
+    "letterboxdUnmatched": "Non identifié",
+    "letterboxdNotUsed": "Ne pas utiliser cette association",
+    "letterboxdRetry": "Relancer l’identification",
+    "letterboxdRemove": "Supprimer l’import",
+    "letterboxdRemoveQuestion": "Supprimer les données Letterboxd importées pour ce profil ? Vous pourrez réimporter le ZIP.",
+    "letterboxdSummary": "{total} films · {matched} identifiés · {unmatched} non identifiés",
+    "@letterboxdSummary": {
+        "placeholders": {
+            "total": {
+                "type": "int"
+            },
+            "matched": {
+                "type": "int"
+            },
+            "unmatched": {
+                "type": "int"
+            }
+        }
+    }
 }

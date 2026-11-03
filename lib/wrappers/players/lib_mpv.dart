@@ -386,6 +386,8 @@ class LibMPV extends BasePlayer {
   @override
   Future<void> open(BuildContext context) async => Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
+          // External mpv textures cannot be rasterized by route snapshots.
+          allowSnapshotting: false,
           builder: (context) => const video_screen.VideoPlayer(),
         ),
       );

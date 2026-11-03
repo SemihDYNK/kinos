@@ -21,8 +21,9 @@ cross-platform Jellyfin client built with Flutter. It keeps Fladder's
 playback engine and general design, narrowed to a single, opinionated
 target rather than trying to cover every platform:
 
-* **Linux desktop only.** Android, iOS, macOS, Windows and web builds
-  from upstream are not maintained or verified in this fork.
+* **Linux desktop is the primary target.** Experimental Windows and macOS
+  test builds are available through GitHub Actions; mobile, TV and web
+  builds are not maintained in this fork.
 * **Movies and TV shows only.** Music, Live TV, e-books, photos,
   SyncPlay and remote control are out of scope here.
 * **Added:** an integrated Sonarr/Radarr module — library, download
@@ -52,7 +53,7 @@ directly — this fork intentionally does less.
 
 ## Building & Running
 
-This fork targets Linux desktop exclusively and is built with
+This fork primarily targets Linux desktop and is built with
 [Flutter](https://flutter.dev/) via [FVM](https://fvm.app/). See
 `CLAUDE.md` for the project's technical constraints and conventions.
 
@@ -60,6 +61,10 @@ This fork targets Linux desktop exclusively and is built with
 fvm flutter pub get
 fvm flutter run -d linux
 ```
+
+For experimental Windows and macOS builds, downloads and test instructions,
+see [Desktop testing](docs/desktop-testing.md). These builds do not constitute
+a signed or notarized public release.
 
 ## License
 

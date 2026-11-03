@@ -1,3 +1,6 @@
+import 'package:kinos/letterboxd/letterboxd_model.dart';
+import 'package:kinos/letterboxd/letterboxd_matching.dart';
+import 'package:kinos/letterboxd/letterboxd_providers.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -295,6 +298,14 @@ typedef RecommendationResult = ({
 /// en cache par l'un profite immédiatement à l'autre.
 final recommendationResultProvider =
     FutureProvider.autoDispose<RecommendationResult>((ref) async {
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  final accountId = ref.watch(userProvider.select((u) => u?.id));
+  final settingsScope =
+      '$recommendationSettingsScope:${ref.watch(letterboxdScopeProvider) ?? accountId}';
+  final imported = ref.watch(letterboxdSnapshotProvider
+      .select((value) => value.asData?.value ?? const LetterboxdSnapshot()));
+
   final seed = ref.watch(homeRowRandomSeedProvider);
   final now = DateTime.now();
 
@@ -308,10 +319,11 @@ final recommendationResultProvider =
   final unwatched = await unwatchedFuture;
   final arrEntries = await arrFuture;
 
-  final events = [
+  final events = mergeLetterboxdEvents([
     ...buildJellyfinWatchEvents(played, now: now),
     ...buildJellyfinWatchEvents(resumable, now: now),
-  ];
+  ], imported.records,
+      letterboxdLibraryWorks([...played, ...resumable, ...unwatched]));
   final jellyfinCandidates = buildJellyfinCandidates(unwatched);
   final arrCandidatesRaw = buildArrCandidates(arrEntries);
   // `played` ∪ `unwatched` couvre toute la bibliothèque (cf.
@@ -329,7 +341,11 @@ final recommendationResultProvider =
   // (`isPlayed`) ; "en cours" (resumable) est exclu ici explicitement,
   // ces items pouvant réapparaître dans `unwatched` selon la version du
   // serveur.
-  final excludedIds = resumable.map((e) => e.id).toSet();
+  final excludedIds = {
+    ...resumable.map((e) => e.id),
+    ...letterboxdWatchedLibraryIds(
+        imported.records, letterboxdLibraryWorks(unwatched)),
+  };
 
   // Candidats Arr déjà connus de Jellyfin (peu importe l'état : joué, en
   // cours, ou déjà dans la bibliothèque non vue) — écartés avant tout
@@ -424,8 +440,8 @@ final recommendationResultProvider =
   // sert qu'au *prochain* lancement. Best-effort : une écriture qui
   // échoue laisse simplement le cache existant en l'état (cf.
   // `_syncRecommendationCache`, qui avale ses propres exceptions).
-  final userId = ref.read(userProvider)?.id;
-  if (userId != null && userId.isNotEmpty) {
+  final userId = accountId;
+  if (!disposed && userId != null && userId.isNotEmpty) {
     final db = ref.read(appDatabaseProvider);
     unawaited(_syncRecommendationCache(
       db: db,
@@ -448,11 +464,11 @@ final recommendationResultProvider =
     unawaited(db.setSetting(
       recommendationLastComputedSettingKey,
       now.toIso8601String(),
-      scope: recommendationSettingsScope,
+      scope: settingsScope,
     ));
   }
 
-  ref.keepAlive();
+  if (!disposed) ref.keepAlive();
   return (
     candidates: scoredJellyfin,
     arrOnlyCandidates: scoredArr,
@@ -506,7 +522,9 @@ const defaultRecommendationRecomputeThreshold = Duration(hours: 24);
 /// même mécanisme que les autres drapeaux ponctuels du projet (cf.
 /// `home_rows_provider.dart`). Publiques : [forceRecommendationRecompute]
 /// (bouton de réglages) doit pouvoir l'effacer sans dupliquer la clé.
-const recommendationLastComputedSettingKey = 'recommendation_last_computed_at';
+// Version 2 invalidates rankings computed before Letterboxd watched exclusions.
+const recommendationLastComputedSettingKey =
+    'recommendation_last_computed_at_v2';
 const recommendationSettingsScope = 'recommendations';
 
 /// `false` : un calcul a réussi il y a moins de
@@ -522,17 +540,22 @@ const recommendationSettingsScope = 'recommendations';
 /// recalcul par excès de prudence.
 final recommendationRecomputeNeededProvider =
     FutureProvider.autoDispose<bool>((ref) async {
-  final userId = ref.read(userProvider)?.id;
+  final imported = ref.watch(letterboxdSnapshotProvider
+      .select((value) => value.asData?.value ?? const LetterboxdSnapshot()));
+
+  final userId = ref.watch(userProvider.select((u) => u?.id));
+  final settingsScope =
+      '$recommendationSettingsScope:${ref.watch(letterboxdScopeProvider) ?? userId}';
   if (userId == null || userId.isEmpty) return true;
 
   final db = ref.read(appDatabaseProvider);
   try {
-    final lastComputed = await db.getSetting(
-        recommendationLastComputedSettingKey,
-        scope: recommendationSettingsScope);
+    final lastComputed = await db
+        .getSetting(recommendationLastComputedSettingKey, scope: settingsScope);
     if (lastComputed == null) return true;
     final lastComputedAt = DateTime.tryParse(lastComputed.value);
     if (lastComputedAt == null) return true;
+    if (imported.updatedAt?.isAfter(lastComputedAt) ?? false) return true;
     if (DateTime.now().difference(lastComputedAt) >=
         defaultRecommendationRecomputeThreshold) {
       return true;
@@ -566,8 +589,10 @@ Future<void> forceRecommendationRecompute(WidgetRef ref) async {
   final userId = ref.read(userProvider)?.id;
   if (userId != null && userId.isNotEmpty) {
     final db = ref.read(appDatabaseProvider);
+    final settingsScope =
+        '$recommendationSettingsScope:${ref.read(letterboxdScopeProvider) ?? userId}';
     await db.deleteSetting(recommendationLastComputedSettingKey,
-        scope: recommendationSettingsScope);
+        scope: settingsScope);
   }
   ref.invalidate(recommendationRecomputeNeededProvider);
   ref.invalidate(recommendationResultProvider);

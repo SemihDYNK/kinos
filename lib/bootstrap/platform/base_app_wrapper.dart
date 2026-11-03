@@ -1,3 +1,4 @@
+import 'package:kinos/anilist/anilist_runtime.dart';
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
@@ -148,6 +149,7 @@ abstract class BaseAppWrapperState<T extends BaseAppWrapper> extends ConsumerSta
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(anilistRuntimeProvider);
     return widget.builder(
       context,
       autoRouter,

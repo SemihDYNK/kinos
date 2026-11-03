@@ -21,7 +21,11 @@ class FrostedSurface extends m.StatelessWidget {
         borderRadius: borderRadius,
         border: m.Border.all(color: AppGlass.border),
       ),
-      child: child,
+      // Ink must paint above the tint rather than on the page's Material.
+      child: m.Material(
+          type: m.MaterialType.transparency,
+          textStyle: m.DefaultTextStyle.of(context).style,
+          child: child),
     );
     return m.ClipRRect(
         borderRadius: borderRadius,

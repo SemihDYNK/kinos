@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:kinos/services/platform_secure_storage.dart';
 
 import 'package:kinos/models/seerr_credentials_model.dart';
 
@@ -17,7 +18,7 @@ import 'package:kinos/models/seerr_credentials_model.dart';
 /// credentials already use, so the same device/profile pairing rules apply:
 /// one account can never read another profile's Seerr credentials.
 class SeerrCredentialsStore {
-  const SeerrCredentialsStore({FlutterSecureStorage? storage}) : _storage = storage ?? const FlutterSecureStorage();
+  const SeerrCredentialsStore({FlutterSecureStorage? storage}) : _storage = storage ?? platformSecureStorage;
 
   final FlutterSecureStorage _storage;
 

@@ -2869,7 +2869,13 @@
   "discoveryRowSubtitle": "Outside your library · Request on Seerr",
   "discoveryToRequest": "To request",
   "discoveryCacheDays": "Discovery cache: {days} days",
-  "@discoveryCacheDays": {"placeholders": {"days": {"type": "int"}}},
+  "@discoveryCacheDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "discoveryShortcuts": "← →: scroll · Enter: open · Shift+F10: menu",
   "discoveryMoviesTitle": "Movies to discover",
   "discoverySeriesTitle": "Series to discover",
@@ -2881,5 +2887,141 @@
   "managementSearchRequests": "Search requests…",
   "managementApplication": "Application",
   "managementSearchLibrary": "Search the library…",
-  "managementStatus": "Status"
+  "managementStatus": "Status",
+  "anilistTitle": "AniList",
+  "anilistExact": "Verified identity",
+  "anilistUnconfirmed": "Confirmation needed",
+  "anilistMissing": "No match found",
+  "anilistUnavailable": "AniList is unavailable. Your saved link is unchanged.",
+  "anilistConflict": "The source identifiers disagree. Check the candidates before linking.",
+  "anilistSeasonWarning": "A Jellyfin season can span several AniList entries. This link identifies a title; it does not establish episode correspondence.",
+  "anilistSplit": "Several AniList parts share this season. Episode offsets must be checked separately.",
+  "anilistChanged": "The source metadata changed. Confirm the link again.",
+  "anilistInvalid": "The source identifier could not be verified. Search for the correct entry.",
+  "anilistSearch": "Search AniList",
+  "anilistSearchHint": "Anime title",
+  "anilistConfirm": "Confirm link",
+  "anilistRemove": "Remove link",
+  "anilistOpen": "Open on AniList",
+  "anilistRetry": "Retry",
+  "anilistSaved": "Link saved locally",
+  "anilistNoResults": "No results",
+  "anilistNoSync": "Enable progress synchronization in Settings → Profile → AniList.",
+  "anilistOffset": "Episode offset: {offset}",
+  "@anilistOffset": {
+    "placeholders": {
+      "offset": {
+        "type": "int"
+      }
+    }
+  },
+  "anilistSeasonSource": "{source} · season {season}",
+  "@anilistSeasonSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "season": {
+        "type": "int"
+      }
+    }
+  },
+  "anilistRetryAt": "Try again after {time}.",
+  "@anilistRetryAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "anilistAccount": "Account and synchronization",
+  "anilistConnectBrowser": "Sign in with your browser",
+  "anilistAuthInstructions": "Authorize Kinos in AniList, then paste the access token shown on the authorization page.",
+  "anilistAccessToken": "Access token",
+  "anilistConnect": "Connect account",
+  "anilistDisconnect": "Disconnect",
+  "anilistDisconnected": "No account connected",
+  "anilistSyncEnabled": "Synchronize watched episodes",
+  "anilistSyncExplanation": "Updates watched progress for titles played in Kinos. Existing ratings are preserved.",
+  "anilistSyncReady": "Ready to synchronize in the background",
+  "anilistAuthError": "Sign in again to continue synchronization.",
+  "anilistMappingError": "A title needs episode mapping. Open its details → AniList → Episode mapping.",
+  "anilistNetworkError": "Synchronization is pending. Kinos will retry automatically.",
+  "anilistRanges": "Episode mapping",
+  "anilistRangeHelp": "Automatic mapping is used when sources agree. Add ranges here only to correct an ambiguous season. All ranges in an edited season must be specified.",
+  "anilistAutomaticInfo": "Progress synchronization automatically selects the matching part from the episode. A title link alone does not override episode ranges.",
+  "anilistSeasonNumber": "Jellyfin season",
+  "anilistFirstEpisode": "First Jellyfin episode",
+  "anilistLastEpisode": "Last Jellyfin episode",
+  "anilistMediaId": "AniList ID",
+  "anilistFirstRemoteEpisode": "First AniList episode",
+  "anilistAddRange": "Add range",
+  "anilistSaveRanges": "Save episode mapping",
+  "anilistRangeInvalid": "Check the episode numbers, overlaps and AniList episode count.",
+  "anilistDeleteRange": "Remove this range",
+  "anilistRangeLine": "S{season} · {first}–{last} → AniList #{id} · {remoteFirst}–{remoteLast}",
+  "@anilistRangeLine": {
+    "placeholders": {
+      "season": {
+        "type": "int"
+      },
+      "first": {
+        "type": "int"
+      },
+      "last": {
+        "type": "int"
+      },
+      "id": {
+        "type": "int"
+      },
+      "remoteFirst": {
+        "type": "int"
+      },
+      "remoteLast": {
+        "type": "int"
+      }
+    }
+  },
+  "anilistIncognitoPaused": "Incognito mode pauses AniList synchronization.",
+  "anilistTokenRejected": "AniList rejected the token. Sign in again in your browser and copy the new token.",
+  "anilistAccountSaveError": "AniList validated the account, but Kinos could not save the connection in the Linux secure vault. Check that your keyring is unlocked, then retry.",
+  "anilistConnectFailed": "Could not connect to AniList ({code}). No account connected. Please retry.",
+  "@anilistConnectFailed": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "letterboxdTitle": "Letterboxd",
+  "letterboxdHint": "Import watched films and ratings",
+  "letterboxdExplanation": "Choose your Letterboxd export ZIP. Watched films, ratings and rewatches enrich your taste profile only. Jellyfin history stays unchanged.",
+  "letterboxdChoose": "Choose export ZIP",
+  "letterboxdConfirm": "Confirm import",
+  "letterboxdRead": "Reading export…",
+  "letterboxdMatch": "Matching films…",
+  "letterboxdSave": "Saving…",
+  "letterboxdSaved": "Import saved for this profile.",
+  "letterboxdFileError": "Cannot read this export. Choose a valid Letterboxd ZIP (64 MB maximum).",
+  "letterboxdStorageError": "Cannot save the import. Your previous import is preserved.",
+  "letterboxdNetworkWarning": "Some metadata could not be loaded. Unmatched films will not influence recommendations until identified. Configure Seerr to identify films outside your library.",
+  "letterboxdUnmatched": "Not identified",
+  "letterboxdNotUsed": "Do not use this match",
+  "letterboxdRetry": "Retry identification",
+  "letterboxdRemove": "Remove import",
+  "letterboxdRemoveQuestion": "Remove imported Letterboxd data from this profile? You can import the ZIP again.",
+  "letterboxdSummary": "{total} films · {matched} identified · {unmatched} not identified",
+  "@letterboxdSummary": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "matched": {
+        "type": "int"
+      },
+      "unmatched": {
+        "type": "int"
+      }
+    }
+  }
 }

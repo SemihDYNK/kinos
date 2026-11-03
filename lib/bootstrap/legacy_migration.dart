@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:kinos/services/platform_secure_storage.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:kinos/bootstrap/startup_trace.dart';
@@ -167,7 +168,7 @@ Future<void> migrateLegacySecureStorage({
   ProcessStarter? processStarter,
 }) async {
   if (kIsWeb || !Platform.isLinux) return;
-  final secureStorage = storage ?? const FlutterSecureStorage();
+  final secureStorage = storage ?? platformSecureStorage;
 
   try {
     final existing = await secureStorage.readAll();

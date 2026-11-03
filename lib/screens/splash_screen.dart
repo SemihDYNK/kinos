@@ -28,6 +28,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
+  final _logoReady = Completer<void>();
   @override
   void initState() {
     super.initState();
@@ -73,6 +74,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         // An unavailable server must not trap the user behind the splash.
       }
     }
+    // Home preparation and the signature assembly run concurrently.
+    await _logoReady.future
+        .timeout(AppDurations.startupLoadTimeout, onTimeout: () {});
     if (!mounted) return;
     ref.read(startupPageReadyProvider.notifier).state = false;
     final overlay = Overlay.of(context, rootOverlay: true);
@@ -134,9 +138,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const RouteWrapper(
+    return RouteWrapper(
       child: Scaffold(
-        body: SizedBox.expand(child: StartupCurtain()),
+        body: SizedBox.expand(child: StartupCurtain(onLogoReady: () {
+          if (!_logoReady.isCompleted) _logoReady.complete();
+        })),
       ),
     );
   }

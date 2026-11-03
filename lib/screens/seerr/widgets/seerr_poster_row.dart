@@ -2,6 +2,9 @@ import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/text_metrics.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -70,9 +73,91 @@ class _DiscoverPosterRail extends StatefulWidget {
 
 class _DiscoverPosterRailState extends State<_DiscoverPosterRail> {
   final _scroll = ScrollController();
+  final _nodes = <String, FocusNode>{};
+  final _railFocus = FocusNode(skipTraversal: true);
+  int _focusGeneration = 0;
+  int? _pendingIndex;
+
+  @override
+  void didUpdateWidget(covariant _DiscoverPosterRail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final ids = widget.row.posters.map((poster) => poster.id).toList();
+    if (listEquals(
+        oldWidget.row.posters.map((poster) => poster.id).toList(), ids)) {
+      return;
+    }
+    _focusGeneration++;
+    _pendingIndex = null;
+    for (final id in _nodes.keys.where((id) => !ids.contains(id)).toList()) {
+      final node = _nodes.remove(id)!;
+      WidgetsBinding.instance.addPostFrameCallback((_) => node.dispose());
+    }
+  }
+
+  FocusNode _nodeFor(int index) =>
+      _nodes.putIfAbsent(widget.row.posters[index].id, () => FocusNode());
+
+  KeyEventResult _onKey(KeyEvent event, double extent) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final current = _railFocus.hasPrimaryFocus && _pendingIndex != null
+        ? _pendingIndex!
+        : widget.row.posters
+            .indexWhere((poster) => _nodes[poster.id]?.hasPrimaryFocus == true);
+    if (current < 0) return KeyEventResult.ignored;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final delta = event.logicalKey == LogicalKeyboardKey.arrowRight
+        ? (rtl ? -1 : 1)
+        : event.logicalKey == LogicalKeyboardKey.arrowLeft
+            ? (rtl ? 1 : -1)
+            : 0;
+    final next = current + delta;
+    if (delta == 0 || next < 0 || next >= widget.row.posters.length) {
+      return delta != 0 && _railFocus.hasPrimaryFocus
+          ? KeyEventResult.handled
+          : KeyEventResult.ignored;
+    }
+    _pendingIndex = next;
+    // Hold focus in the rail while its source card leaves the lazy viewport.
+    _railFocus.requestFocus();
+    _focusPoster(next, extent, ++_focusGeneration);
+    return KeyEventResult.handled;
+  }
+
+  Future<void> _focusPoster(int index, double extent, int generation) async {
+    final start = index * extent;
+    final end = start + extent;
+    final target = (start < _scroll.offset
+            ? start
+            : end > _scroll.offset + _scroll.position.viewportDimension
+                ? end - _scroll.position.viewportDimension
+                : _scroll.offset)
+        .clamp(0.0, _scroll.position.maxScrollExtent);
+    if (AppMotion.enabled(context)) {
+      await _scroll.animateTo(target,
+          duration: AppDurations.selection, curve: AppMotion.easeOut);
+    } else {
+      _scroll.jumpTo(target);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _focusGeneration) return;
+      _pendingIndex = null;
+      if (_railFocus.hasPrimaryFocus && index < widget.row.posters.length) {
+        _nodeFor(index).requestFocus();
+      }
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
   @override
   void dispose() {
+    _focusGeneration++;
     _scroll.dispose();
+    _railFocus.dispose();
+    for (final node in _nodes.values) {
+      node.dispose();
+    }
     super.dispose();
   }
 
@@ -139,39 +224,51 @@ class _DiscoverPosterRailState extends State<_DiscoverPosterRail> {
                 ScrollConfiguration(
                   behavior: ScrollConfiguration.of(context)
                       .copyWith(scrollbars: false),
-                  child: SingleChildScrollView(
-                    controller: _scroll,
-                    scrollDirection: Axis.horizontal,
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: Row(children: [
-                      for (final poster in widget.row.posters)
-                        Padding(
-                            padding: const EdgeInsetsDirectional.only(
-                                end: AppSpacing.gridGap),
-                            child: SizedBox(
-                              width: width,
-                              height: height,
-                              child: Builder(
-                                  builder: (context) => SeerrPosterCard(
-                                        key: ValueKey(poster.id),
-                                        poster: poster,
-                                        showStatus: true,
-                                        imageAspectRatio:
-                                            AppMedia.posterAspectRatio,
-                                        onFocusChanged: (focused) {
-                                          if (!focused) return;
-                                          Scrollable.ensureVisible(context,
-                                              alignmentPolicy:
-                                                  ScrollPositionAlignmentPolicy
-                                                      .keepVisibleAtEnd,
-                                              duration:
-                                                  AppMotion.enabled(context)
-                                                      ? AppDurations.selection
-                                                      : Duration.zero);
-                                        },
-                                      )),
-                            )),
-                    ]),
+                  child: Focus(
+                    focusNode: _railFocus,
+                    onKeyEvent: (_, event) =>
+                        _onKey(event, width + AppSpacing.gridGap),
+                    child: SizedBox(
+                      height: height,
+                      child: ListView.builder(
+                        controller: _scroll,
+                        scrollDirection: Axis.horizontal,
+                        physics: const NeverScrollableScrollPhysics(),
+                        scrollCacheExtent: ScrollCacheExtent.pixels(width),
+                        itemExtent: width + AppSpacing.gridGap,
+                        itemCount: widget.row.posters.length,
+                        itemBuilder: (context, index) {
+                          final poster = widget.row.posters[index];
+                          return Padding(
+                              padding: const EdgeInsetsDirectional.only(
+                                  end: AppSpacing.gridGap),
+                              child: SizedBox(
+                                width: width,
+                                height: height,
+                                child: Builder(
+                                    builder: (context) => SeerrPosterCard(
+                                          key: ValueKey(poster.id),
+                                          poster: poster,
+                                          focusNode: _nodeFor(index),
+                                          showStatus: true,
+                                          imageAspectRatio:
+                                              AppMedia.posterAspectRatio,
+                                          onFocusChanged: (focused) {
+                                            if (!focused) return;
+                                            Scrollable.ensureVisible(context,
+                                                alignmentPolicy:
+                                                    ScrollPositionAlignmentPolicy
+                                                        .keepVisibleAtEnd,
+                                                duration:
+                                                    AppMotion.enabled(context)
+                                                        ? AppDurations.selection
+                                                        : Duration.zero);
+                                          },
+                                        )),
+                              ));
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ]);

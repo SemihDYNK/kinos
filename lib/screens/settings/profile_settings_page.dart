@@ -1,3 +1,5 @@
+import 'package:kinos/letterboxd/letterboxd_import_dialog.dart';
+import 'package:kinos/anilist/anilist_account_dialog.dart';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -349,6 +351,16 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
           ],
         ),
         const SizedBox(height: 16),
+        SettingsListTile(
+          label: Text(context.localized.anilistTitle),
+          subLabel: Text(context.localized.anilistAccount),
+          onTap: () => showAnilistAccountDialog(context),
+        ),
+        SettingsListTile(
+          label: Text(context.localized.letterboxdTitle),
+          subLabel: Text(context.localized.letterboxdHint),
+          onTap: () => showLetterboxdImportDialog(context),
+        ),
         const LibraryOrderEditor(),
         const SizedBox(height: 16),
         ...settingsListGroup(

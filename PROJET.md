@@ -32,8 +32,8 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
 
 ## Vue d'ensemble technique
 
-- ~1850 commits depuis le fork d'amont. Stack : Flutter 3.35.7 (fvm),
-  Dart ≥3.1.3, Riverpod 2.6.1, Drift 2.28.1, auto_route 10.1.2,
+- ~1850 commits depuis le fork d'amont. Stack : Flutter 3.47.0 (fvm),
+  Dart 3.13.0, Riverpod 2.6.1, Drift 2.28.1, auto_route 10.1.2,
   dart_mappable 4.6.0, chopper 8.3.0 (clients API générés), media_kit
   1.2.2 (via mpv), flutter_secure_storage 10.3.1, Freezed 3.1.0.
 - **640 tests** passent (74 fichiers de tests, en forte hausse depuis le

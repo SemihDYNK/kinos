@@ -11,6 +11,8 @@ class WatchEvent {
   final String itemId;
   final List<TraitKey> traits;
   final WatchSignal signal;
+  final double? explicitWeight;
+  double get baseWeight => explicitWeight ?? signal.baseWeight;
 
   /// Date du signal (dernier visionnage/abandon) — sert à
   /// l'amortissement temporel. `null` : signal non daté, aucun
@@ -22,6 +24,7 @@ class WatchEvent {
     required this.itemId,
     required this.traits,
     required this.signal,
+    this.explicitWeight,
     this.occurredAt,
   });
 }

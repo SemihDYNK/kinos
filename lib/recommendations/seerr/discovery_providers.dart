@@ -1,3 +1,6 @@
+import 'package:kinos/letterboxd/letterboxd_model.dart';
+import 'package:kinos/letterboxd/letterboxd_matching.dart';
+import 'package:kinos/letterboxd/letterboxd_providers.dart';
 import 'dart:convert';
 import 'package:kinos/util/kinos_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,6 +46,9 @@ final discoveryRequestedProvider =
 
 final seerrDiscoveryProvider = FutureProvider.autoDispose
     .family<List<DiscoveryItem>, DiscoveryScope>((ref, scope) async {
+  final imported = ref.watch(letterboxdSnapshotProvider
+      .select((value) => value.asData?.value ?? const LetterboxdSnapshot()));
+
   final debug = DiscoveryDebug()..step('démarrage');
   // Profile refreshes (name, avatar, lastUsed...) do not change this job's
   // connection. Only identity/credentials changes should cancel its snapshot.
@@ -110,7 +116,10 @@ final seerrDiscoveryProvider = FutureProvider.autoDispose
     final library =
         snapshot.map((item) => ItemBaseModel.fromBaseDto(item, ref)).toList();
     debug.step('bibliothèque reçue', counts: {'titres': library.length});
-    final identities = <String>{};
+    final identities = <String>{
+      for (final record in imported.records)
+        if (record.work?.tmdbId != null) 'tmdb:movie:${record.work!.tmdbId}',
+    };
     final tvdbIds = <String>{};
     final imdbIds = <String>{};
     final seedIdentities = <String, DiscoveryKey>{};
@@ -192,13 +201,16 @@ final seerrDiscoveryProvider = FutureProvider.autoDispose
     final resumable = resumeResponse.body!.items!
         .map((item) => ItemBaseModel.fromBaseDto(item, ref))
         .toList();
-    final events = buildJellyfinWatchEvents([
+    final jellyfinEvents = buildJellyfinWatchEvents([
       ...library.where((item) => item.userData.played),
       ...resumable,
-    ], now: now)
+    ], now: now);
+    final events = mergeLetterboxdEvents(
+            jellyfinEvents, imported.records, letterboxdLibraryWorks(library))
         .map((event) => WatchEvent(
               itemId: event.itemId,
               signal: event.signal,
+              explicitWeight: event.explicitWeight,
               occurredAt: event.occurredAt,
               traits: event.traits.map(discoveryTrait).toSet().toList(),
             ))
@@ -212,7 +224,7 @@ final seerrDiscoveryProvider = FutureProvider.autoDispose
     }
     final stats = LibraryTraitStats(
         librarySize: library.length, traitDocFrequency: frequencies);
-    final seeds = selectDiscoverySeeds(events, seedIdentities, now);
+    final seeds = selectDiscoverySeeds(jellyfinEvents, seedIdentities, now);
     debug.step('profil calculé', counts: {
       'événements': events.length,
       'graines': seeds.length,

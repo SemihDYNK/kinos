@@ -17,7 +17,7 @@ import 'package:kinos/util/localization_helper.dart';
 class _Socials {
   final String label;
   final String url;
-  final IconData icon;
+  final FaIconData icon;
 
   const _Socials(this.label, this.url, this.icon);
 }
@@ -121,7 +121,7 @@ class _SocialsSection extends StatelessWidget {
                   onPressed: () => launchUrl(context, e.url),
                   icon: Column(
                     children: [
-                      Icon(e.icon),
+                      FaIcon(e.icon),
                       Text(e.label),
                     ],
                   ),

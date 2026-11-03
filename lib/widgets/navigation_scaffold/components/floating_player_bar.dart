@@ -56,7 +56,11 @@ class _CurrentlyPlayingBarState extends ConsumerState<FloatingPlayerBar> {
     _opening = true;
     try {
       await Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute(builder: (context) => const VideoPlayer()),
+        MaterialPageRoute(
+          // Keep both the mini player and the full-size texture live.
+          allowSnapshotting: false,
+          builder: (context) => const VideoPlayer(),
+        ),
       );
     } finally {
       _opening = false;

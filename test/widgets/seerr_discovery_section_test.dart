@@ -1,3 +1,4 @@
+import 'package:kinos/recommendations/seerr/discovery_registry.dart';
 import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'dart:async';
@@ -95,6 +96,64 @@ Widget shell(Widget sliver,
               child: Scaffold(body: CustomScrollView(slivers: [sliver])))),
     );
 void main() {
+  testWidgets('two retained discovery sections stop publishing once settled',
+      (tester) async {
+    final container = ProviderContainer(overrides: [
+      userProvider.overrideWith(TestUser.new),
+      offlineStateProvider.overrideWith((ref) => false),
+      seerrDiscoveryProvider(scope).overrideWith((ref) async => items),
+    ]);
+    var publications = 0;
+    final subscription = container.listen(
+        discoveryRegistryProvider(
+            discoveryAccountScope('server', 'a', 'https://seerr')),
+        (_, __) => publications++);
+    try {
+      Widget page(bool movies) => UncontrolledProviderScope(
+          container: container,
+          child: shell(SliverMainAxisGroup(slivers: [
+            if (movies)
+              const SeerrDiscoverySection(
+                  key: ValueKey('movies'),
+                  row: row,
+                  contentPadding: EdgeInsets.zero,
+                  mediaType: 'movie'),
+            const SeerrDiscoverySection(
+                key: ValueKey('series'),
+                row: row,
+                contentPadding: EdgeInsets.zero,
+                mediaType: 'tv'),
+          ])));
+      Set<String> registered() => container
+          .read(discoveryRegistryProvider(
+              discoveryAccountScope('server', 'a', 'https://seerr')))
+          .values
+          .expand((ids) => ids)
+          .toSet();
+      await tester.pumpWidget(page(true));
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(publications, lessThan(8));
+      final settled = publications;
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(publications, settled);
+      expect(registered(), {'tmdb:movie:1', 'tmdb:tv:1'});
+      await tester.pumpWidget(page(false));
+      await tester.pumpAndSettle();
+      expect(registered(), {'tmdb:tv:1'});
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(registered(), isEmpty);
+    } finally {
+      subscription.close();
+      container.dispose();
+    }
+  });
+
   for (final type in ['movie', 'tv']) {
     testWidgets('$type home discovery hides other media and descriptions',
         (tester) async {

@@ -1,3 +1,4 @@
+import 'package:kinos/anilist/anilist_mapping_dialog.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -205,6 +206,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
                     action: () => showMediaInfoSheet(
                         context, 'Informations techniques', technicalInfo),
                   ),
+                anilistMappingAction(context, details),
                 ...details.generateActions(
                   context,
                   ref,

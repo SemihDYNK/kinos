@@ -168,11 +168,7 @@ class _VideoPlayerState extends ConsumerState<VideoPlayer>
                     ref.watch(videoPlayerSettingsProvider
                         .select((value) => value.ambientBlur)))
                   AmbientBlur(
-                    child: playerController.videoWidget(
-                          const Key("VideoPlayerBlur"),
-                          BoxFit.cover,
-                        ) ??
-                        const SizedBox.shrink(),
+                    captureFrame: playerController.takeScreenshot,
                   ),
                 switch (currentPlaybackModel) {
                   TvPlaybackModel _ => VideoPlayerGuideWrapper(

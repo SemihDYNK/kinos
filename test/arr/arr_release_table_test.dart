@@ -52,7 +52,8 @@ void main() {
 
       final mouseRegion = tester.widget<MouseRegion>(find.ancestor(
         of: find.text('Movie.Title.2024'),
-        matching: find.byType(MouseRegion),
+        matching: find.byWidgetPredicate((widget) =>
+            widget is MouseRegion && widget.cursor == SystemMouseCursors.click),
       ));
       expect(mouseRegion.cursor, SystemMouseCursors.click);
 
@@ -84,7 +85,9 @@ void main() {
       expect(
         find.ancestor(
             of: find.text('Movie.Title.2024'),
-            matching: find.byType(MouseRegion)),
+            matching: find.byWidgetPredicate((widget) =>
+                widget is MouseRegion &&
+                widget.cursor == SystemMouseCursors.click)),
         findsNothing,
       );
 
@@ -102,7 +105,9 @@ void main() {
       expect(
         find.ancestor(
             of: find.text('Movie.Title.2024'),
-            matching: find.byType(MouseRegion)),
+            matching: find.byWidgetPredicate((widget) =>
+                widget is MouseRegion &&
+                widget.cursor == SystemMouseCursors.click)),
         findsNothing,
       );
     });

@@ -124,7 +124,7 @@ class DiscoveryItem {
       add(TraitKind.studio, studio['name']);
     }
     final credits = json['credits'] as Map<String, dynamic>? ?? const {};
-    final cast = objects(credits['cast']);
+    final cast = [...objects(credits['cast'])];
     cast.sort((a, b) =>
         ((a['order'] as num?) ?? 999).compareTo((b['order'] as num?) ?? 999));
     for (final actor in cast.take(4)) {

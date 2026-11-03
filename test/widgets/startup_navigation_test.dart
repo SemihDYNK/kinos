@@ -68,6 +68,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ready'));
     await tester.pump();
+    await tester.pump();
     await tester.pump(AppDurations.startupReveal ~/ 2);
     final boundary = boundaryKey.currentContext!.findRenderObject()!
         as RenderRepaintBoundary;

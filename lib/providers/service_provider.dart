@@ -1,3 +1,4 @@
+import 'package:kinos/anilist/anilist_runtime.dart';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -366,8 +367,9 @@ class JellyService {
           return false;
         }
 
-        if (excludeItemIds != null && excludeItemIds.contains(element.id))
+        if (excludeItemIds != null && excludeItemIds.contains(element.id)) {
           return false;
+        }
 
         if (includeItemTypes != null && includeItemTypes.isNotEmpty) {
           if (type == null || !includeItemTypes.contains(type)) return false;
@@ -750,8 +752,9 @@ class JellyService {
 
   Future<Response> sessionsPlayingPost(
       {required PlaybackStartInfo? body}) async {
-    if (ref.read(incognitoProvider))
+    if (ref.read(incognitoProvider)) {
       return Response(http.Response("", 200), null);
+    }
     return _reportPlayback(
       eventType: PlaybackQueueEventType.start,
       itemId: body?.itemId,
@@ -763,8 +766,9 @@ class JellyService {
   Future<Response> sessionsPlayingStoppedPost({
     required PlaybackStopInfo? body,
   }) async {
-    if (ref.read(incognitoProvider))
+    if (ref.read(incognitoProvider)) {
       return Response(http.Response("", 200), null);
+    }
     final positionTicks = body?.positionTicks;
     if (positionTicks != null) {
       ref.read(syncProvider.notifier).updatePlaybackPosition(
@@ -781,8 +785,9 @@ class JellyService {
 
   Future<Response> sessionsPlayingProgressPost(
       {required PlaybackProgressInfo? body}) async {
-    if (ref.read(incognitoProvider))
+    if (ref.read(incognitoProvider)) {
       return Response(http.Response("", 200), null);
+    }
     return _reportPlayback(
       eventType: PlaybackQueueEventType.progress,
       itemId: body?.itemId,
@@ -811,6 +816,7 @@ class JellyService {
     if (itemId == null || itemId.isEmpty) return send();
 
     final db = ref.read(appDatabaseProvider);
+    final rememberAnilist = captureAnilistPlayback(ref, eventType, itemId);
     final queueId = await db.enqueuePlaybackEvent(
       itemId: itemId,
       eventType: eventType,
@@ -818,9 +824,15 @@ class JellyService {
     );
 
     try {
+      final playbackProvenance = await rememberAnilist?.provenance;
+      if (playbackProvenance != null) {
+        await db.setSetting(anilistPlaybackKey(queueId), playbackProvenance, scope: anilistPlaybackScope);
+      }
       final response = await send();
       if (response.isSuccessful) {
+        await rememberAnilist?.remember();
         await db.deletePlaybackEvent(queueId);
+        await db.deleteSetting(anilistPlaybackKey(queueId), scope: anilistPlaybackScope);
       } else {
         await db.incrementPlaybackEventAttempts(queueId);
         await db.recordPlaybackEventFailure(
@@ -1707,8 +1719,9 @@ class JellyService {
                     (e) {
                       final parsed = Uri.tryParse(e);
                       if (parsed == null) return '';
-                      if (parsed.hasScheme && parsed.host.isNotEmpty)
+                      if (parsed.hasScheme && parsed.host.isNotEmpty) {
                         return parsed.toString();
+                      }
                       return buildServerUrl(
                         ref,
                         pathSegments: [
@@ -2067,86 +2080,116 @@ class JellyService {
     if ($static != null) queryParams['static'] = $static.toString();
     if (params != null) queryParams['params'] = params;
     if (tag != null) queryParams['tag'] = tag;
-    if (deviceProfileId != null)
+    if (deviceProfileId != null) {
       queryParams['deviceProfileId'] = deviceProfileId;
+    }
     if (playSessionId != null) queryParams['playSessionId'] = playSessionId;
-    if (segmentContainer != null)
+    if (segmentContainer != null) {
       queryParams['segmentContainer'] = segmentContainer;
-    if (segmentLength != null)
+    }
+    if (segmentLength != null) {
       queryParams['segmentLength'] = segmentLength.toString();
-    if (minSegments != null)
+    }
+    if (minSegments != null) {
       queryParams['minSegments'] = minSegments.toString();
+    }
     if (mediaSourceId != null) queryParams['mediaSourceId'] = mediaSourceId;
     if (deviceId != null) queryParams['deviceId'] = deviceId;
     if (audioCodec != null) queryParams['audioCodec'] = audioCodec;
-    if (enableAutoStreamCopy != null)
+    if (enableAutoStreamCopy != null) {
       queryParams['enableAutoStreamCopy'] = enableAutoStreamCopy.toString();
-    if (allowVideoStreamCopy != null)
+    }
+    if (allowVideoStreamCopy != null) {
       queryParams['allowVideoStreamCopy'] = allowVideoStreamCopy.toString();
-    if (allowAudioStreamCopy != null)
+    }
+    if (allowAudioStreamCopy != null) {
       queryParams['allowAudioStreamCopy'] = allowAudioStreamCopy.toString();
-    if (breakOnNonKeyFrames != null)
+    }
+    if (breakOnNonKeyFrames != null) {
       queryParams['breakOnNonKeyFrames'] = breakOnNonKeyFrames.toString();
-    if (audioSampleRate != null)
+    }
+    if (audioSampleRate != null) {
       queryParams['audioSampleRate'] = audioSampleRate.toString();
-    if (maxAudioBitDepth != null)
+    }
+    if (maxAudioBitDepth != null) {
       queryParams['maxAudioBitDepth'] = maxAudioBitDepth.toString();
-    if (audioBitRate != null)
+    }
+    if (audioBitRate != null) {
       queryParams['audioBitRate'] = audioBitRate.toString();
-    if (audioChannels != null)
+    }
+    if (audioChannels != null) {
       queryParams['audioChannels'] = audioChannels.toString();
-    if (maxAudioChannels != null)
+    }
+    if (maxAudioChannels != null) {
       queryParams['maxAudioChannels'] = maxAudioChannels.toString();
+    }
     if (profile != null) queryParams['profile'] = profile;
     if (level != null) queryParams['level'] = level;
     if (framerate != null) queryParams['framerate'] = framerate.toString();
-    if (maxFramerate != null)
+    if (maxFramerate != null) {
       queryParams['maxFramerate'] = maxFramerate.toString();
-    if (copyTimestamps != null)
+    }
+    if (copyTimestamps != null) {
       queryParams['copyTimestamps'] = copyTimestamps.toString();
-    if (startTimeTicks != null)
+    }
+    if (startTimeTicks != null) {
       queryParams['startTimeTicks'] = startTimeTicks.toString();
+    }
     if (width != null) queryParams['width'] = width.toString();
     if (height != null) queryParams['height'] = height.toString();
     if (maxWidth != null) queryParams['maxWidth'] = maxWidth.toString();
     if (maxHeight != null) queryParams['maxHeight'] = maxHeight.toString();
-    if (videoBitRate != null)
+    if (videoBitRate != null) {
       queryParams['videoBitRate'] = videoBitRate.toString();
-    if (subtitleStreamIndex != null)
+    }
+    if (subtitleStreamIndex != null) {
       queryParams['subtitleStreamIndex'] = subtitleStreamIndex.toString();
-    if (subtitleMethod != null)
+    }
+    if (subtitleMethod != null) {
       queryParams['subtitleMethod'] = subtitleMethod.value.toString();
-    if (maxRefFrames != null)
+    }
+    if (maxRefFrames != null) {
       queryParams['maxRefFrames'] = maxRefFrames.toString();
-    if (maxVideoBitDepth != null)
+    }
+    if (maxVideoBitDepth != null) {
       queryParams['maxVideoBitDepth'] = maxVideoBitDepth.toString();
+    }
     if (requireAvc != null) queryParams['requireAvc'] = requireAvc.toString();
-    if (deInterlace != null)
+    if (deInterlace != null) {
       queryParams['deInterlace'] = deInterlace.toString();
-    if (requireNonAnamorphic != null)
+    }
+    if (requireNonAnamorphic != null) {
       queryParams['requireNonAnamorphic'] = requireNonAnamorphic.toString();
+    }
     if (transcodingMaxAudioChannels != null) {
       queryParams['transcodingMaxAudioChannels'] =
           transcodingMaxAudioChannels.toString();
     }
-    if (cpuCoreLimit != null)
+    if (cpuCoreLimit != null) {
       queryParams['cpuCoreLimit'] = cpuCoreLimit.toString();
+    }
     if (liveStreamId != null) queryParams['liveStreamId'] = liveStreamId;
-    if (enableMpegtsM2TsMode != null)
+    if (enableMpegtsM2TsMode != null) {
       queryParams['enableMpegtsM2TsMode'] = enableMpegtsM2TsMode.toString();
+    }
     if (videoCodec != null) queryParams['videoCodec'] = videoCodec;
     if (subtitleCodec != null) queryParams['subtitleCodec'] = subtitleCodec;
-    if (transcodeReasons != null)
+    if (transcodeReasons != null) {
       queryParams['transcodeReasons'] = transcodeReasons;
-    if (audioStreamIndex != null)
+    }
+    if (audioStreamIndex != null) {
       queryParams['audioStreamIndex'] = audioStreamIndex.toString();
-    if (videoStreamIndex != null)
+    }
+    if (videoStreamIndex != null) {
       queryParams['videoStreamIndex'] = videoStreamIndex.toString();
+    }
     if (context != null) queryParams['context'] = context.value.toString();
-    if (streamOptions != null)
+    if (streamOptions != null) {
       queryParams['streamOptions'] = streamOptions.toString();
-    if (enableAudioVbrEncoding != null)
+    }
+    if (enableAudioVbrEncoding != null) {
       queryParams['enableAudioVbrEncoding'] = enableAudioVbrEncoding.toString();
+    }
 
     // Build the query string
     final queryString = queryParams.entries

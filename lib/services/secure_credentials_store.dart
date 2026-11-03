@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:kinos/services/platform_secure_storage.dart';
 
 import 'package:kinos/models/credentials_model.dart';
 
@@ -16,7 +17,7 @@ import 'package:kinos/models/credentials_model.dart';
 /// collisions - the same pair `AccountModel.sameIdentity` already uses to
 /// tell accounts apart.
 class SecureCredentialsStore {
-  const SecureCredentialsStore({FlutterSecureStorage? storage}) : _storage = storage ?? const FlutterSecureStorage();
+  const SecureCredentialsStore({FlutterSecureStorage? storage}) : _storage = storage ?? platformSecureStorage;
 
   final FlutterSecureStorage _storage;
 

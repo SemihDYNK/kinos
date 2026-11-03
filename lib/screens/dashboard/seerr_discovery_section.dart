@@ -69,7 +69,7 @@ class _DiscoveryResultState extends ConsumerState<_DiscoveryResult> {
   final int _view = ++_nextView;
   bool _started = false;
   late final String _accountScope;
-  StateController<({Object? owner, Set<String> ids})>? _registry;
+  StateController<Map<Object, Set<String>>>? _registry;
   @override
   void initState() {
     super.initState();
@@ -89,8 +89,8 @@ class _DiscoveryResultState extends ConsumerState<_DiscoveryResult> {
     scheduleMicrotask(() {
       if (registry != null &&
           registry.mounted &&
-          identical(registry.state.owner, this)) {
-        registry.state = (owner: null, ids: const {});
+          registry.state.containsKey(this)) {
+        registry.state = {...registry.state}..remove(this);
       }
     });
     super.dispose();
@@ -101,12 +101,13 @@ class _DiscoveryResultState extends ConsumerState<_DiscoveryResult> {
     final ids = reserveIds(items, (item) => item.key.identity, reserve: 30);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || registry == null || !registry.mounted) return;
-      if (registry.state.ids.length == ids.length &&
-          registry.state.ids.containsAll(ids) &&
-          identical(registry.state.owner, this)) {
+      final previous = registry.state[this];
+      if (previous != null &&
+          previous.length == ids.length &&
+          previous.containsAll(ids)) {
         return;
       }
-      registry.state = (owner: this, ids: ids);
+      registry.state = {...registry.state, this: ids};
     });
   }
 
@@ -143,7 +144,9 @@ class _DiscoveryResultState extends ConsumerState<_DiscoveryResult> {
             '[Seerr découverte] vue=$_view connexion=${next ? 'hors ligne' : 'en ligne'}');
       }
     });
-    ref.watch(discoveryRegistryProvider(_accountScope));
+    // Retained pages publish independently; another page must not rebuild this one.
+    ref.watch(discoveryRegistryProvider(_accountScope)
+        .select((entries) => entries[this]));
     _registry = ref.read(discoveryRegistryProvider(_accountScope).notifier);
     if (ref.watch(offlineStateProvider)) {
       _publish(const []);

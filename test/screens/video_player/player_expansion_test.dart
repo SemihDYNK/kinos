@@ -93,6 +93,10 @@ void main() {
         VideoPlayerState.minimized);
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(VideoPlayer), findsOneWidget);
+    expect(
+        ModalRoute.of(tester.element(find.byType(VideoPlayer)))!
+            .allowSnapshotting,
+        isFalse);
     final expandingWidth =
         tester.getSize(find.byKey(const Key('VideoPlayer'))).width;
     expect(expandingWidth, greaterThan(miniWidth));

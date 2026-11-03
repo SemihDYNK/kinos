@@ -10,10 +10,10 @@ List<DiscoveryKey> selectDiscoverySeeds(
   final weights = <DiscoveryKey, double>{};
   for (final event in events) {
     final key = identities[event.itemId];
-    if (key == null || event.signal.baseWeight <= 0 || event.traits.isEmpty) {
+    if (key == null || event.baseWeight <= 0 || event.traits.isEmpty) {
       continue;
     }
-    final weight = event.signal.baseWeight * decayFactor(event.occurredAt, now);
+    final weight = event.baseWeight * decayFactor(event.occurredAt, now);
     // Multiple Jellyfin editions never increase a work's contribution.
     if (weight > (weights[key] ?? 0)) weights[key] = weight;
   }

@@ -1,3 +1,6 @@
+import 'package:kinos/letterboxd/letterboxd_model.dart';
+import 'package:kinos/letterboxd/letterboxd_matching.dart';
+import 'package:kinos/letterboxd/letterboxd_providers.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/recommendations/seerr/discovery_providers.dart';
 import 'package:kinos/recommendations/seerr/discovery_registry.dart';
@@ -182,28 +185,47 @@ Set<String> _knownFromHigherRows({
 /// [_knownFromHigherRows], non bloquant).
 final homeSeedRowsResultProvider =
     FutureProvider.autoDispose<HomeSeedRowsResult>((ref) async {
+  final imported = ref.watch(letterboxdSnapshotProvider
+      .select((value) => value.asData?.value ?? const LetterboxdSnapshot()));
+
   final seed = ref.watch(homeRowRandomSeedProvider);
   final now = DateTime.now();
 
-  final played = await ref.watch(playedItemsProvider.future);
-  final resumable = await ref.watch(resumableItemsProvider.future);
-  final unwatched = await ref.watch(unwatchedLibraryProvider.future);
+  // Register every dependency before awaiting; late watches let autoDispose restart them on each rebuild.
+  final playedFuture = ref.watch(playedItemsProvider.future);
+  final resumableFuture = ref.watch(resumableItemsProvider.future);
+  final unwatchedFuture = ref.watch(unwatchedLibraryProvider.future);
+  final registrySeed =
+      ref.watch(recommendationRegistrySeedProvider).valueOrNull;
+  final continueWatching = _continueWatching(ref.watch(dashboardProvider));
+  final recentlyAdded = _recentlyAdded(ref.watch(viewsProvider));
+  var active = true;
+  ref.onDispose(() => active = false);
+  final played = await playedFuture;
+  final resumable = await resumableFuture;
+  final unwatched = await unwatchedFuture;
+  if (!active) {
+    return (
+      seedRows: const <SeedRow>[],
+      jellyfinItemsById: const <String, ItemBaseModel>{}
+    );
+  }
 
-  final events = [
+  final events = mergeLetterboxdEvents([
     ...buildJellyfinWatchEvents(played, now: now),
     ...buildJellyfinWatchEvents(resumable, now: now),
-  ];
-  final jellyfinCandidates = buildJellyfinCandidates(unwatched);
+  ], imported.records,
+      letterboxdLibraryWorks([...played, ...resumable, ...unwatched]));
+  final watchedIds = letterboxdWatchedLibraryIds(
+      imported.records, letterboxdLibraryWorks(unwatched));
+  final jellyfinCandidates = buildJellyfinCandidates(unwatched)
+      .where((c) => !watchedIds.contains(c.id))
+      .toList();
   final libraryStats = buildLibraryTraitStats([...played, ...unwatched]);
 
   const builder = TasteProfileBuilder();
   final profile = builder.build(events, libraryStats: libraryStats);
   final scorer = RecommendationScorer(libraryStats: libraryStats);
-
-  final registrySeed =
-      ref.watch(recommendationRegistrySeedProvider).valueOrNull;
-  final continueWatching = _continueWatching(ref.watch(dashboardProvider));
-  final recentlyAdded = _recentlyAdded(ref.watch(viewsProvider));
 
   final registry = _knownFromHigherRows(
     continueWatching: continueWatching,
@@ -212,7 +234,7 @@ final homeSeedRowsResultProvider =
   );
 
   final watchedItemsById = {
-    for (final item in [...played, ...resumable]) item.id: item,
+    for (final item in [...played, ...resumable, ...unwatched]) item.id: item,
   };
 
   // Graines : sélection déterministe par poids (cf. [selectSeedTraits]),
@@ -235,8 +257,14 @@ final homeSeedRowsResultProvider =
     ]..sort((a, b) => b.score.compareTo(a.score));
 
     final sourceEvent = sourceEventForTrait(seedTrait, events, now: now);
-    final sourceTitle =
-        sourceEvent == null ? null : watchedItemsById[sourceEvent.itemId]?.name;
+    final sourceTitle = sourceEvent == null
+        ? null
+        : watchedItemsById[sourceEvent.itemId]?.name ??
+            imported.records
+                .where((r) => r.work?.identity == sourceEvent.itemId)
+                .firstOrNull
+                ?.film
+                .title;
     final title = sourceTitle != null
         ? seedRowTitle(sourceTitle)
         : justificationLabel(seedTrait);
@@ -277,7 +305,7 @@ final homeCatalogInventoryResultProvider =
     FutureProvider.autoDispose<HomeCatalogInventoryResult>((ref) async {
   final seed = ref.watch(homeRowRandomSeedProvider);
 
-  final played = await ref.watch(playedItemsProvider.future);
+  final playedFuture = ref.watch(playedItemsProvider.future);
 
   // Diffusion progressive (cf. calibrage : "rends chaque page
   // exploitable dès son arrivée") — la première page ([firstPage],
@@ -291,6 +319,26 @@ final homeCatalogInventoryResultProvider =
   // la fin de cette attente.
   final firstPage = ref.watch(unwatchedLibraryFirstPageProvider);
   final unwatchedComplete = ref.watch(unwatchedLibraryProvider).valueOrNull;
+  final unwatchedFuture = ref.watch(unwatchedLibraryProvider.future);
+  final registrySeed =
+      ref.watch(recommendationRegistrySeedProvider).valueOrNull;
+  final seedRowsResult = ref.watch(homeSeedRowsResultProvider).valueOrNull;
+  final continueWatching = _continueWatching(ref.watch(dashboardProvider));
+  final recentlyAdded = _recentlyAdded(ref.watch(viewsProvider));
+  final account = ref.watch(userProvider);
+  final discoveryIds = account?.seerrCredentials == null
+      ? <String>{}
+      : ref
+          .watch(discoveryRegistryProvider(discoveryAccountScope(
+              account!.credentials.serverId,
+              account.id,
+              account.seerrCredentials!.serverUrl)))
+          .values
+          .expand((ids) => ids)
+          .toSet();
+  var active = true;
+  ref.onDispose(() => active = false);
+  final played = await playedFuture;
 
   final List<ItemBaseModel> unwatched;
   final bool isComplete;
@@ -306,17 +354,21 @@ final homeCatalogInventoryResultProvider =
     // exactement l'attente d'avant la diffusion progressive, pas une
     // régression, simplement rien à montrer avant que la première page
     // ne réponde.
-    unwatched = await ref.watch(unwatchedLibraryProvider.future);
+    unwatched = await unwatchedFuture;
     isComplete = true;
   }
 
+  if (!active) {
+    return (
+      wellRatedMovies: const <ItemBaseModel>[],
+      wellRatedSeries: const <ItemBaseModel>[],
+      narrowGenres: const <String, List<ItemBaseModel>>{},
+      decades: const <int, List<ItemBaseModel>>{},
+      longFilms: const <ItemBaseModel>[],
+      isComplete: false
+    );
+  }
   final libraryStats = buildLibraryTraitStats([...played, ...unwatched]);
-
-  final registrySeed =
-      ref.watch(recommendationRegistrySeedProvider).valueOrNull;
-  final seedRowsResult = ref.watch(homeSeedRowsResultProvider).valueOrNull;
-  final continueWatching = _continueWatching(ref.watch(dashboardProvider));
-  final recentlyAdded = _recentlyAdded(ref.watch(viewsProvider));
 
   final registry = _knownFromHigherRows(
     continueWatching: continueWatching,
@@ -340,15 +392,6 @@ final homeCatalogInventoryResultProvider =
   // Jellyfin") — appliqué seulement ici, pour l'inventaire, jamais sur
   // `unwatched`/`jellyfinCandidates` d'origine (rangées par graine,
   // calculées dans un provider séparé, cf. [homeSeedRowsResultProvider]).
-  final account = ref.watch(userProvider);
-  final discoveryIds = account?.seerrCredentials == null
-      ? <String>{}
-      : ref
-          .watch(discoveryRegistryProvider(discoveryAccountScope(
-              account!.credentials.serverId,
-              account.id,
-              account.seerrCredentials!.serverUrl)))
-          .ids;
   final unwatchedDeduped = dedupeByTmdbId(unwatched)
       .where((item) => !discoveryIds.contains(discoveryIdentityOf(item)))
       .toList();

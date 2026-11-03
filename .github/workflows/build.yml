@@ -38,6 +38,8 @@ env:
 jobs:
   # Check if workflow should run based on trigger conditions
   check-trigger:
+    # Upstream release pipeline; Kinos test builds use desktop-test.yml.
+    if: github.repository == 'DonutWare/Fladder'
     runs-on: ubuntu-latest
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}

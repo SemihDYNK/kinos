@@ -1,3 +1,4 @@
+import 'package:kinos/anilist/anilist_mapping_dialog.dart';
 import 'package:kinos/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 
@@ -45,9 +46,10 @@ class _SeasonDetailScreenState extends ConsumerState<SeasonDetailScreen> {
       label: details?.localizedName(context.localized) ?? "",
       windowTitle: details?.windowTitle(context.localized),
       item: details,
-      actions: (context) => details?.generateActions(context, ref, exclude: {
-        ItemActions.details,
-      }),
+      actions: (context) => details == null ? null : [
+        anilistMappingAction(context, details),
+        ...details.generateActions(context, ref, exclude: {ItemActions.details}),
+      ],
       onRefresh: () async {
         await ref.read(providerId.notifier).fetchDetails(widget.item.id);
       },

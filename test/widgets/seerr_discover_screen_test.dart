@@ -4,6 +4,7 @@ import 'package:kinos/providers/seerr_search_provider.dart';
 import 'package:kinos/screens/seerr/seerr_search_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:kinos/screens/seerr/widgets/seerr_poster_row.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_poster_card.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -56,6 +57,24 @@ class User extends SeerrUser {
   SeerrUserModel? build() => null;
 }
 
+class LargeDashboard extends Dashboard {
+  @override
+  SeerrDashboardModel build() {
+    final items = List.generate(
+        40,
+        (i) => poster(SeerrMediaType.movie).copyWith(
+            id: 'large-$i',
+            tmdbId: i,
+            images: ImagesData(primary: homeArtwork)));
+    return SeerrDashboardModel(
+        trending: items,
+        popularMovies: items,
+        popularSeries: items,
+        expectedMovies: items,
+        expectedSeries: items);
+  }
+}
+
 class RecoveringDashboard extends Dashboard {
   var calls = 0;
   @override
@@ -91,6 +110,85 @@ class Search extends SeerrSearch {
 }
 
 void main() {
+  testWidgets('discovery does not mount categories below the viewport',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(overrides: [
+      seerrDashboardProvider.overrideWith(LargeDashboard.new),
+      seerrUserProvider.overrideWith(User.new),
+    ], child: shell(const SliverFillRemaining(child: SeerrDiscoverScreen()))));
+    await tester.pumpAndSettle();
+    final scroll = tester.state<ScrollableState>(find
+        .descendant(
+            of: find.byType(SeerrDiscoverScreen),
+            matching: find.byType(Scrollable))
+        .first);
+    for (var i = 0; i < 5; i++) {
+      scroll.position.jumpTo(scroll.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+    }
+    scroll.position.jumpTo(0);
+    await tester.pumpAndSettle();
+    expect(find.byType(SeerrPosterRow).evaluate().length, lessThan(5));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+  for (final direction in TextDirection.values) {
+    testWidgets(
+        'discovery only mounts nearby posters and keeps every item keyboard reachable $direction',
+        (tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(ProviderScope(
+          overrides: [seerrUserProvider.overrideWith(User.new)],
+          child: shell(SliverToBoxAdapter(
+              child: Directionality(
+                  textDirection: direction,
+                  child: SeerrPosterRow(
+                    label: 'Tendances',
+                    showStatus: true,
+                    posters: List.generate(
+                        40,
+                        (index) => poster(SeerrMediaType.movie).copyWith(
+                            id: 'lazy-$index',
+                            tmdbId: index,
+                            title: 'Film $index')),
+                  ))))));
+      await tester.pumpAndSettle();
+      expect(find.byType(SeerrPosterCard).evaluate().length, lessThan(20));
+      tester
+          .state<FocusButtonState>(find.byType(FocusButton).first)
+          .focusNode
+          .requestFocus();
+      await tester.pumpAndSettle();
+      final forward = direction == TextDirection.ltr
+          ? LogicalKeyboardKey.arrowRight
+          : LogicalKeyboardKey.arrowLeft;
+      await tester.sendKeyDownEvent(forward);
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 30));
+        await tester.sendKeyRepeatEvent(forward);
+      }
+      await tester.sendKeyUpEvent(forward);
+      await tester.pumpAndSettle();
+      for (var i = 31; i < 39; i++) {
+        await tester.sendKeyEvent(forward);
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('Film 39'), findsOneWidget);
+      final last = tester.state<FocusButtonState>(find.descendant(
+          of: find.byWidgetPredicate(
+              (w) => w is SeerrPosterCard && w.poster.title == 'Film 39'),
+          matching: find.byType(FocusButton)));
+      expect(last.focusNode.hasFocus, isTrue);
+      expect(find.byType(SeerrPosterCard).evaluate().length, lessThan(20));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets(
       'discover reuses hero, filters types and opens external details with artwork',
       (tester) async {
@@ -181,8 +279,8 @@ void main() {
                   .copyWith(id: 'poster-$index', tmdbId: index)),
         )))));
     await tester.pumpAndSettle();
-    final horizontal = find.byType(SingleChildScrollView);
-    final scroll = tester.widget<SingleChildScrollView>(horizontal).controller!;
+    final horizontal = find.byType(ListView);
+    final scroll = tester.widget<ListView>(horizontal).controller!;
     expect(scroll.offset, 0);
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);

@@ -1,3 +1,4 @@
+import 'package:kinos/anilist/anilist_runtime.dart';
 import 'dart:async';
 import 'dart:developer';
 
@@ -112,6 +113,11 @@ class PlaybackReportQueueWorker extends _$PlaybackReportQueueWorker {
   /// `service.sessionsPlayingXxxPost`, which would re-enqueue this same
   /// entry instead of actually sending it.
   Future<void> _sendEntry(JellyService service, AppDatabase db, PlaybackQueueEntry entry) async {
+    final provenance = await db.getSetting(anilistPlaybackKey(entry.id), scope: anilistPlaybackScope);
+    final capture = captureAnilistPlayback(ref, entry.eventType, entry.itemId);
+    final currentProvenance = await capture?.provenance;
+    final rememberAnilist = currentProvenance != null && provenance?.value == currentProvenance
+        ? capture?.remember : null;
     final itemResponse = await service.usersUserIdItemsItemIdGet(itemId: entry.itemId);
     final serverUserData = itemResponse.body?.userData;
 
@@ -122,7 +128,9 @@ class PlaybackReportQueueWorker extends _$PlaybackReportQueueWorker {
     );
 
     if (!decision.shouldSend) {
+      await rememberAnilist?.call();
       await db.deletePlaybackEvent(entry.id);
+      await db.deleteSetting(anilistPlaybackKey(entry.id), scope: anilistPlaybackScope);
       return;
     }
 
@@ -166,6 +174,8 @@ class PlaybackReportQueueWorker extends _$PlaybackReportQueueWorker {
       throw Exception('HTTP ${response.statusCode} while sending playback_queue entry ${entry.id}');
     }
 
+    await rememberAnilist?.call();
     await db.deletePlaybackEvent(entry.id);
+    await db.deleteSetting(anilistPlaybackKey(entry.id), scope: anilistPlaybackScope);
   }
 }

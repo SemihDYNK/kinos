@@ -1,3 +1,4 @@
+import 'package:kinos/letterboxd/letterboxd_providers.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -178,6 +179,15 @@ Widget _cacheOnly({
 final _cachedRecommendationTilesProvider = FutureProvider.autoDispose
     .family<List<RecommendationTile>, RecommendationRowKind>(
         (ref, rowKind) async {
+  final imported = ref.watch(letterboxdSnapshotProvider);
+  // Old tiles lack the external IDs needed to exclude translated watched films.
+  if (rowKind == RecommendationRowKind.forYou &&
+      (imported.isLoading ||
+          (imported.asData?.value.records.isNotEmpty == true &&
+              ref.watch(recommendationRecomputeNeededProvider).valueOrNull !=
+                  false))) {
+    return const [];
+  }
   final userId = ref.read(userProvider)?.id;
   if (userId == null || userId.isEmpty) return const [];
 
@@ -185,7 +195,6 @@ final _cachedRecommendationTilesProvider = FutureProvider.autoDispose
   final rows =
       await db.getRecommendationCache(userId: userId, rowKind: rowKind).get();
   if (rows.isEmpty) return const [];
-
   final needsRadarr = rows.any((r) => r.arrService == 'radarr');
   final needsSonarr = rows.any((r) => r.arrService == 'sonarr');
   var radarrCredentials = (baseUrl: '', apiKey: '', configured: false);

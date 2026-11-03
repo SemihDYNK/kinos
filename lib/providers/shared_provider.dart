@@ -228,7 +228,7 @@ class SharedHelper {
 
     try {
       final accounts = savedAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
-      return Future.wait(accounts.map(_hydrateAccount));
+      return await Future.wait(accounts.map(_hydrateAccount));
     } catch (_, stacktrace) {
       log(stacktrace.toString());
       return [];

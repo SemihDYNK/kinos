@@ -52,9 +52,9 @@ WatchEvent? sourceEventForTrait(
   WatchEvent? best;
   double bestContribution = double.negativeInfinity;
   for (final event in events) {
-    if (event.signal.baseWeight == 0) continue;
+    if (event.baseWeight == 0) continue;
     if (!event.traits.contains(seed)) continue;
-    final contribution = event.signal.baseWeight *
+    final contribution = event.baseWeight *
         decayFactor(event.occurredAt, reference, halfLife: halfLife);
     if (contribution > bestContribution) {
       bestContribution = contribution;
@@ -105,7 +105,7 @@ class TasteProfileBuilder {
     // dans les scores de trait, ni dans la fréquence de l'historique —
     // un abandon tardif ne dit rien du goût dans un sens ou l'autre
     // (cf. WatchSignal.abandonedLate).
-    final relevant = events.where((e) => e.signal.baseWeight != 0).toList();
+    final relevant = events.where((e) => e.baseWeight != 0).toList();
 
     final rawScores = <TraitKey, double>{};
     final historyDocFrequency = <TraitKey, int>{};
@@ -115,7 +115,7 @@ class TasteProfileBuilder {
       catalogItemIds.add(event.itemId);
       final decay =
           decayFactor(event.occurredAt, reference, halfLife: halfLife);
-      final contribution = event.signal.baseWeight * decay;
+      final contribution = event.baseWeight * decay;
 
       // Un trait compté une seule fois par œuvre pour la fréquence
       // documentaire, même s'il apparaissait en double dans sa liste de

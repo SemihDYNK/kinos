@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:kinos/services/platform_secure_storage.dart';
 
 import 'package:kinos/arr/models/arr_credentials.dart';
 import 'package:kinos/arr/models/arr_service.dart';
@@ -12,7 +13,7 @@ import 'package:kinos/arr/models/arr_service.dart';
 /// service : `arr:radarr` / `arr:sonarr`.
 class ArrCredentialsStore {
   const ArrCredentialsStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+      : _storage = storage ?? platformSecureStorage;
 
   final FlutterSecureStorage _storage;
 

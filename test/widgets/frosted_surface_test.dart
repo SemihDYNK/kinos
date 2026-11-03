@@ -10,6 +10,19 @@ import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/frosted_surface.dart';
 
 void main() {
+  testWidgets('glass keeps list tile ink above its tinted background',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+            body: FrostedSurface(
+                child: ListTile(
+          title: const Text('Action'),
+          onTap: () {},
+        )))));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('dialogs clip blur to the panel and preserve dismissal',
       (tester) async {
     await tester.pumpWidget(MaterialApp(

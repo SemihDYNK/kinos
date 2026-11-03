@@ -1,0 +1,79 @@
+[
+  {
+    "anilist_id": 164,
+    "anidb_id": 7,
+    "mal_id": 164,
+    "type": "MOVIE",
+    "imdb_id": [
+      "tt0119698"
+    ],
+    "themoviedb_id": {
+      "movie": [
+        128
+      ]
+    }
+  },
+  {
+    "anilist_id": 1535,
+    "mal_id": 1535,
+    "type": "TV",
+    "themoviedb_id": {
+      "tv": 13916
+    },
+    "tvdb_id": 79481,
+    "season": {
+      "tmdb": 1,
+      "tvdb": 1
+    }
+  },
+  {
+    "anilist_id": 1735,
+    "mal_id": 1735,
+    "type": "TV",
+    "themoviedb_id": {
+      "tv": 31910
+    },
+    "tvdb_id": 79824
+  },
+  {
+    "anilist_id": 100,
+    "type": "TV",
+    "themoviedb_id": {
+      "tv": 128
+    },
+    "tvdb_id": 900,
+    "season": {
+      "tmdb": 1,
+      "tvdb": 2
+    }
+  },
+  {
+    "anilist_id": 101,
+    "type": "TV",
+    "themoviedb_id": {
+      "tv": 128
+    },
+    "tvdb_id": 900,
+    "season": {
+      "tmdb": 2,
+      "tvdb": 3
+    }
+  },
+  {
+    "anilist_id": 20474,
+    "tvdb_id": 262954,
+    "season": {
+      "tvdb": 2
+    }
+  },
+  {
+    "anilist_id": 20799,
+    "tvdb_id": 262954,
+    "season": {
+      "tvdb": 2
+    },
+    "episode_offset": {
+      "tvdb": 24
+    }
+  }
+]

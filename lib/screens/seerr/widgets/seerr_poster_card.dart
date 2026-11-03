@@ -29,6 +29,7 @@ class SeerrPosterCard extends ConsumerWidget {
   final bool showStatus;
   final double? imageAspectRatio;
   final Function(bool value)? onFocusChanged;
+  final FocusNode? focusNode;
 
   const SeerrPosterCard({
     required this.poster,
@@ -36,11 +37,13 @@ class SeerrPosterCard extends ConsumerWidget {
     this.aspectRatio,
     this.imageAspectRatio,
     this.onFocusChanged,
+    this.focusNode,
     super.key,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => MediaNavigation(
+      focusNode: focusNode,
       previewImage: poster.images.primary ?? poster.images.backDrop?.lastOrNull,
       builder: (context) => _buildCard(context, ref));
 

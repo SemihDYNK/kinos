@@ -1,10 +1,10 @@
 import 'dart:ui' as ui;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 class AmbientBlur extends StatefulWidget {
-  final Widget child;
+  final Future<Uint8List?> Function() captureFrame;
   final double sigmaX;
   final double sigmaY;
   final Duration duration;
@@ -18,7 +18,7 @@ class AmbientBlur extends StatefulWidget {
 
   const AmbientBlur({
     super.key,
-    required this.child,
+    required this.captureFrame,
     this.sigmaX = 64.0,
     this.sigmaY = 64.0,
     this.duration = const Duration(seconds: 4),
@@ -34,15 +34,13 @@ class AmbientBlur extends StatefulWidget {
   State<AmbientBlur> createState() => _AmbientBlurState();
 }
 
-class _AmbientBlurState extends State<AmbientBlur> with SingleTickerProviderStateMixin {
+class _AmbientBlurState extends State<AmbientBlur>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _blendController;
-  final GlobalKey _boundaryKey = GlobalKey();
 
   ui.Image? _oldImage;
   ui.Image? _currentImage;
   bool _isCapturing = false;
-
-  static const _hiddenFilter = ColorFilter.matrix([1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]);
 
   @override
   void initState() {
@@ -58,7 +56,8 @@ class _AmbientBlurState extends State<AmbientBlur> with SingleTickerProviderStat
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _captureAndBlur(isFirst: true));
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _captureAndBlur(isFirst: true));
   }
 
   @override
@@ -75,7 +74,7 @@ class _AmbientBlurState extends State<AmbientBlur> with SingleTickerProviderStat
   @override
   void dispose() {
     _blendController.dispose();
-    _oldImage?.dispose();
+    if (_oldImage != _currentImage) _oldImage?.dispose();
     _currentImage?.dispose();
     super.dispose();
   }
@@ -86,18 +85,29 @@ class _AmbientBlurState extends State<AmbientBlur> with SingleTickerProviderStat
 
     ui.Image? unblurredImage;
     ui.Image? blurredImage;
+    ui.Codec? codec;
+    ui.Picture? picture;
 
     try {
-      final boundary = _boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null || !boundary.hasSize) return;
-
+      final size = context.size;
+      if (size == null || size.isEmpty) return;
       final pixelRatio = MediaQuery.of(context).devicePixelRatio;
       final renderScale = pixelRatio / widget.downscaleFactor;
+      // Snapshot the decoded frame in mpv; Flutter cannot copy external GL textures.
+      final bytes = await widget.captureFrame();
+      if (!mounted) return;
+      if (bytes == null) {
+        _blendController.forward(from: 0.0);
+        return;
+      }
+      codec = await ui.instantiateImageCodec(bytes,
+          targetWidth: (size.width * renderScale).ceil());
+      unblurredImage = (await codec.getNextFrame()).image;
 
-      unblurredImage = await boundary.toImage(pixelRatio: renderScale);
-
-      final scaledSigmaX = (widget.sigmaX * pixelRatio) / widget.downscaleFactor;
-      final scaledSigmaY = (widget.sigmaY * pixelRatio) / widget.downscaleFactor;
+      final scaledSigmaX =
+          (widget.sigmaX * pixelRatio) / widget.downscaleFactor;
+      final scaledSigmaY =
+          (widget.sigmaY * pixelRatio) / widget.downscaleFactor;
 
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
@@ -109,7 +119,7 @@ class _AmbientBlurState extends State<AmbientBlur> with SingleTickerProviderStat
         );
 
       canvas.drawImage(unblurredImage, Offset.zero, paint);
-      final picture = recorder.endRecording();
+      picture = recorder.endRecording();
 
       blurredImage = await picture.toImage(
         unblurredImage.width,
@@ -132,7 +142,9 @@ class _AmbientBlurState extends State<AmbientBlur> with SingleTickerProviderStat
           _currentImage = blurredImage;
         }
 
-        if (oldToDispose != null && oldToDispose != _oldImage && oldToDispose != _currentImage) {
+        if (oldToDispose != null &&
+            oldToDispose != _oldImage &&
+            oldToDispose != _currentImage) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             oldToDispose.dispose();
           });
@@ -147,6 +159,8 @@ class _AmbientBlurState extends State<AmbientBlur> with SingleTickerProviderStat
         _blendController.forward(from: 0.0);
       }
     } finally {
+      picture?.dispose();
+      codec?.dispose();
       unblurredImage?.dispose();
       if (mounted) _isCapturing = false;
     }
@@ -157,12 +171,9 @@ class _AmbientBlurState extends State<AmbientBlur> with SingleTickerProviderStat
     final isReady = _currentImage != null;
 
     return Stack(
+      fit: StackFit.expand,
       alignment: Alignment.center,
       children: [
-        ColorFiltered(
-          colorFilter: _hiddenFilter,
-          child: RepaintBoundary(key: _boundaryKey, child: widget.child),
-        ),
         if (isReady)
           Positioned.fill(
             child: Opacity(
@@ -245,7 +256,8 @@ class _RoundedRectVignettePainter extends CustomPainter {
         Radius.circular(cornerRadius),
       );
 
-      final outerRect = Rect.fromLTWH(0, 0, size.width, size.height).inflate(feather * 3);
+      final outerRect =
+          Rect.fromLTWH(0, 0, size.width, size.height).inflate(feather * 3);
       final outerRRect = RRect.fromRectAndRadius(outerRect, Radius.zero);
 
       canvas.drawDRRect(outerRRect, safeRRect, paint);
