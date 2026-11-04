@@ -4,16 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   for (final configuration in ['DebugProfile', 'Release']) {
-    test('$configuration supports local signing without a provisioning profile',
-        () {
+    test('$configuration supports local Keychain access without a profile', () {
       final entitlements =
           File('macos/Runner/$configuration.entitlements').readAsStringSync();
       expect(entitlements, isNot(contains('<key>keychain-access-groups</key>')),
-          reason: 'The login Keychain needs no restricted sharing entitlement');
-      expect(
-          entitlements, contains('<key>com.apple.security.app-sandbox</key>'));
+          reason: 'Ad hoc builds cannot claim a provisioned Keychain group');
       expect(entitlements,
-          contains('<key>com.apple.security.network.client</key>'));
+          isNot(contains('<key>com.apple.security.app-sandbox</key>')),
+          reason:
+              'The sandboxed Keychain needs an Apple-provisioned entitlement');
     });
   }
 }

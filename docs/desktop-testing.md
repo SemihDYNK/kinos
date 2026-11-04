@@ -37,10 +37,10 @@ puis relancer Kinos.
 
 Extraire l’artefact, puis `kinos-macos-universal.zip`, et copier `Kinos.app`
 dans Applications. Cette version utilise une signature locale ad hoc : elle
-n’est ni signée avec un certificat Developer ID ni notariée par Apple.
-Les identifiants utilisent le trousseau de connexion macOS, compatible avec
-cette signature locale, et non le trousseau Data Protection réservé à une
-identité d’application provisionnée. macOS peut demander l’accès au trousseau.
+n’est ni signée avec un certificat Developer ID ni notariée par Apple. Elle
+n’est pas sandboxée, car une archive ad hoc ne peut pas obtenir l’autorisation
+Apple nécessaire au trousseau dans le sandbox. Les identifiants restent dans le
+trousseau de connexion macOS ; macOS peut demander l’accès au trousseau.
 
 Si macOS bloque l’ouverture, tenter de lancer l’app puis ouvrir
 **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**,
@@ -74,9 +74,10 @@ fvm flutter build macos --release --no-pub --flavor production
 ```
 
 Le workflow vérifie les architectures et la signature locale du bundle Mac.
-Il extrait aussi le ZIP sur macOS 26 et vérifie que le processus reste actif
-pendant 15 secondes : cela couvre le refus de lancement avant le rendu Flutter,
-sans remplacer les tests de connexion et de lecture sur un vrai appareil.
+Il extrait aussi le ZIP sur macOS 26, vérifie qu’il n’annonce ni sandbox ni
+groupe Keychain provisionné, puis confirme que le processus reste actif pendant
+15 secondes. Cela couvre le refus de lancement avant le rendu Flutter, sans
+remplacer les tests de connexion et de lecture sur un vrai appareil.
 Il inclut `LICENSE`, `NOTICE` et la référence exacte du code source dans chaque
 archive. La signature de distribution, la notarisation et les installateurs
 restent réservés à la version distribuable finale.

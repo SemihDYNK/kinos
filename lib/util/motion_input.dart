@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:kinos/util/focus_helper.dart';
+
 /// Le focus visible sur desktop n'indique pas si l'action vient de la souris.
 class MotionInputBoundary extends StatefulWidget {
   const MotionInputBoundary({required this.child, super.key});
@@ -21,6 +23,7 @@ class _MotionInputBoundaryState extends State<MotionInputBoundary> {
   bool _keyboard = false;
 
   bool _onKey(KeyEvent event) {
+    if (isEditableTextFocused()) return false;
     if (event is KeyDownEvent && !_keyboard) setState(() => _keyboard = true);
     return false;
   }
