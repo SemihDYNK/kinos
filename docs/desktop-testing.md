@@ -17,6 +17,9 @@ Il faut être connecté à GitHub et avoir accès au dépôt privé. Les artefac
 expirent après 14 jours. Le workflow s’exécute sur les pushes de `main`, la
 branche de préparation `codex/desktop-test-builds` et les PR vers `main`.
 Une fois présent sur `main`, il peut aussi être relancé avec **Run workflow**.
+Laisser `macos_artifact_run` vide pour recompiler. Pour diagnostiquer le
+lancement d'une archive existante, saisir son ID d'exécution : seul le test
+Mac est relancé, sans changer le binaire.
 Il ne crée aucune release, aucun tag et ne publie pas sur les stores.
 
 ## Windows
