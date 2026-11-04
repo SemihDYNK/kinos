@@ -242,7 +242,13 @@ class AnilistMappingController extends StateNotifier<AnilistPanelState> {
     final generation = ++_generation;
     state = state.copyWith(busy: true, failed: false);
     try {
-      final media = await client.media(id: id);
+      final known = [
+        for (final candidate in state.match.candidates)
+          if (candidate.id == id) candidate.media,
+        for (final media in state.searchResults)
+          if (media.id == id) media,
+      ].whereType<AnilistMedia>().toList();
+      final media = known.isNotEmpty ? known.first : await client.media(id: id);
       if (!_valid(generation)) return;
       if (media == null) throw const AnilistUnavailable();
       await store.save(state.target, id, isCurrent: () => _valid(generation));

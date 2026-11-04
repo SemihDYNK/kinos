@@ -145,4 +145,41 @@ void main() {
     expect(controller.state.match.status, AnilistMatchStatus.needsConfirmation);
     expect(controller.state.match.reason, AnilistMatchReason.changedIds);
   });
+  test(
+      'confirmation saves the candidate already resolved when AniList is offline',
+      () async {
+    var offline = false;
+    final store = AnilistStore(db, 'a');
+    final controller = AnilistMappingController(
+        target: t,
+        client: AnilistClient(
+            interval: Duration.zero,
+            client: MockClient((r) async {
+              if (offline) return http.Response('', 500);
+              final body = jsonDecode(r.body);
+              final id = body['variables']['id'] ?? 164;
+              return http.Response(
+                  jsonEncode({
+                    'data': {
+                      'Media': {
+                        'id': id,
+                        'type': 'ANIME',
+                        'title': {'english': 'Anime'}
+                      }
+                    }
+                  }),
+                  200);
+            })),
+        catalog: catalog(),
+        store: store,
+        isCurrent: () => true);
+    addTearDown(controller.dispose);
+
+    await controller.resolve();
+    offline = true;
+    await controller.confirm(164);
+
+    expect((await store.read(t))?.id, 164);
+    expect(controller.state.savedId, 164);
+  });
 }
