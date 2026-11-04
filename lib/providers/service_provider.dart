@@ -1645,6 +1645,8 @@ class JellyService {
             responseSuccessful: response?.isSuccessful ?? false,
           );
     }
+    await captureAnilistMarkedPlayed(ref, itemId,
+        responseSuccessful: response.isSuccessful);
     return response;
   }
 

@@ -70,8 +70,7 @@ class _Api extends JellyApi {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  test(
-      'actual runtime chooses part B, checks watched state and sends progress one',
+  test('manual marking queues AniList progress after Jellyfin confirms it',
       () async {
     final source = _Source();
     final writes = <Map>[];
@@ -124,12 +123,13 @@ void main() {
       await db.close();
     });
     final runtime = container.read(anilistRuntimeProvider);
-    final playbackRef=container.read(Provider<Ref>((ref)=>ref));
-    final initialScope=anilistScopeFor(playbackRef)!;
+    final playbackRef = container.read(Provider<Ref>((ref) => ref));
+    final initialScope = anilistScopeFor(playbackRef)!;
     await container.read(appDatabaseProvider).setSetting('configured',
-      jsonEncode({'id':9,'enabled':true,'generation':'original'}),scope:'$initialScope:account');
-    final productionCapture=captureAnilistPlayback(playbackRef,PlaybackQueueEventType.stop,'episode')!;
-    await productionCapture.remember();
+        jsonEncode({'id': 9, 'enabled': true, 'generation': 'original'}),
+        scope: '$initialScope:account');
+    await captureAnilistMarkedPlayed(playbackRef, 'episode',
+        responseSuccessful: true);
     await runtime.drain();
     await runtime.drain();
     expect(writes.single['mediaId'], 2);

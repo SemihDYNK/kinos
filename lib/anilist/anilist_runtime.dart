@@ -375,3 +375,15 @@ AnilistPlaybackCapture? captureAnilistPlayback(
     type != PlaybackQueueEventType.stop
         ? null
         : AnilistPlaybackCapture(ref.read(anilistRuntimeProvider), itemId);
+
+Future<void> captureAnilistMarkedPlayed(Ref ref, String? itemId,
+    {required bool responseSuccessful}) async {
+  if (!responseSuccessful || itemId == null || itemId.isEmpty) return;
+  try {
+    final runtime = ref.read(anilistRuntimeProvider);
+    await runtime.capture(itemId)();
+    unawaited(runtime.drain());
+  } on Exception {
+    // Marking an item in Jellyfin must not fail because AniList is unavailable.
+  }
+}
