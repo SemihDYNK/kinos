@@ -230,6 +230,8 @@ flutter:
   assets:
     - icons/
     - assets/fonts/
+    - assets/fonts/barlow_condensed/OFL.txt
+    - assets/fonts/inter/OFL.txt
     - config/
     - assets/mp-font.ttf
     - assets/

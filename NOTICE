@@ -42,6 +42,11 @@ Source: https://github.com/google/fonts/tree/main/ofl/barlowcondensed
 License: SIL Open Font License, Version 1.1.
 The complete font license is bundled at assets/fonts/barlow_condensed/OFL.txt.
 
+Inter — Copyright 2020 The Inter Project Authors.
+Source: https://github.com/rsms/inter
+License: SIL Open Font License, Version 1.1.
+The complete font license is bundled at assets/fonts/inter/OFL.txt.
+
 AniList identity mapping
 -----------------------
 Public cross-reference data is fetched on demand from Fribb/anime-lists
