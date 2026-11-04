@@ -182,4 +182,22 @@ void main() {
     expect((await store.read(t))?.id, 164);
     expect(controller.state.savedId, 164);
   });
+  test('a saved link remains confirmed when AniList is unavailable', () async {
+    final store = AnilistStore(db, 'a');
+    await store.save(t, 164);
+    final controller = AnilistMappingController(
+        target: t,
+        client: AnilistClient(
+            interval: Duration.zero,
+            client: MockClient((_) async => http.Response('', 500))),
+        catalog: catalog(),
+        store: store,
+        isCurrent: () => true);
+    addTearDown(controller.dispose);
+
+    await controller.resolve();
+
+    expect(controller.state.savedId, 164);
+    expect(controller.state.failed, isFalse);
+  });
 }

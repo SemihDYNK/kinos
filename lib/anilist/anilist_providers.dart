@@ -147,20 +147,26 @@ class AnilistMappingController extends StateNotifier<AnilistPanelState> {
       final saved = await store.read(target);
       if (!_valid(generation)) return;
       if (saved != null) {
-        final media = await client.media(id: saved.id);
+        AnilistMedia? media;
+        var unavailable = false;
+        try {
+          media = await client.media(id: saved.id);
+        } on AnilistUnavailable {
+          unavailable = true;
+        }
         if (!_valid(generation)) return;
         state = state.copyWith(
             busy: false,
             savedId: saved.id,
             selectedId: saved.id,
             match: AnilistMatch(
-                saved.confirmed && media != null
+                saved.confirmed && (media != null || unavailable)
                     ? AnilistMatchStatus.exact
                     : AnilistMatchStatus.needsConfirmation,
                 [
                   AnilistCandidate(saved.id, {'manual'}, media: media)
                 ],
-                media == null
+                media == null && !unavailable
                     ? AnilistMatchReason.invalidSource
                     : saved.confirmed
                         ? null
