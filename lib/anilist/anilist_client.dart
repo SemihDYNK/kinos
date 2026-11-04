@@ -208,10 +208,12 @@ class AnilistClient {
     if ((id == null) == (malId == null) || (id ?? malId ?? 0) <= 0) {
       throw ArgumentError('One positive ID required');
     }
+    final byId = id != null;
     final data = await _request(
-        r'query ($id: Int, $malId: Int) { Media(id: $id, idMal: $malId, type: ANIME) { '
-        '$_fields } }',
-        {'id': id, 'malId': malId});
+        byId
+            ? 'query (\$id: Int) { Media(id: \$id, type: ANIME) { $_fields } }'
+            : 'query (\$malId: Int) { Media(idMal: \$malId, type: ANIME) { $_fields } }',
+        byId ? {'id': id} : {'malId': malId});
     if (data['Media'] == null) return null;
     if (data['Media'] is! Map<String, dynamic>) {
       throw const AnilistUnavailable();

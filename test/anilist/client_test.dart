@@ -6,14 +6,17 @@ import 'package:http/testing.dart';
 import 'package:kinos/anilist/anilist_client.dart';
 
 void main() {
-  test('uses GraphQL variables, validates ANIME and MAL identities', () async {
+  test('uses only the requested GraphQL variable and validates MAL identities',
+      () async {
     final client = AnilistClient(
         interval: Duration.zero,
         client: MockClient((r) async {
           final request = jsonDecode(r.body) as Map;
           expect(r.method, 'POST');
           expect(request['query'], contains('ANIME'));
-          expect(request['variables'], {'id': null, 'malId': 1535});
+          expect(request['query'], contains(r'Media(idMal: $malId'));
+          expect(request['query'], isNot(contains(r'Media(id: $id,')));
+          expect(request['variables'], {'malId': 1535});
           return http.Response(
               jsonEncode({
                 'data': {
@@ -29,6 +32,22 @@ void main() {
         }));
     addTearDown(client.close);
     expect((await client.media(malId: 1535))!.title, 'Death Note');
+  });
+  test('uses only the AniList ID variable when looking up an AniList ID',
+      () async {
+    final client = AnilistClient(
+        interval: Duration.zero,
+        client: MockClient((r) async {
+          final request = jsonDecode(r.body) as Map;
+          expect(request['query'], contains(r'Media(id: $id'));
+          expect(request['query'], isNot(contains(r'idMal: $malId')));
+          expect(request['variables'], {'id': 177699});
+          return http.Response(
+              '{"data":{"Media":{"id":177699,"type":"ANIME","title":{"romaji":"Ghost"}}}}',
+              200);
+        }));
+    addTearDown(client.close);
+    expect((await client.media(id: 177699))!.title, 'Ghost');
   });
   test('distinguishes missing media from GraphQL and HTTP failures', () async {
     for (final response in [
