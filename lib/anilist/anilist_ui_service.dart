@@ -214,30 +214,14 @@ class AnilistUiService {
       AnilistTarget target, List<EpisodeRange> ranges) async {
     check();
     EpisodePlan.manual(ranges);
-    final client = ref.read(anilistClientFactoryProvider)();
-    clients.add(client);
-    try {
-      for (final id in ranges.map((r) => r.mediaId).toSet()) {
-        final media = await client.media(id: id);
-        check();
-        if (media == null ||
-            ranges.where((r) => r.mediaId == id).any((r) =>
-                media.episodes != null && r.anilistLast > media.episodes!)) {
-          throw ArgumentError('Invalid episode range');
-        }
-      }
-      await store.savePlan(target.itemId, target.fingerprint, ranges,
-          isCurrent: () => current);
-      check();
-      final account = await ref.read(anilistConnectionProvider.future);
-      check();
-      if (account != null) await store.retryNow(account.id);
-      check();
-      unawaitedDrain();
-    } finally {
-      clients.remove(client);
-      client.close();
-    }
+    await store.savePlan(target.itemId, target.fingerprint, ranges,
+        isCurrent: () => current);
+    check();
+    final account = await ref.read(anilistConnectionProvider.future);
+    check();
+    if (account != null) await store.retryNow(account.id);
+    check();
+    unawaitedDrain();
   }
 
   void unawaitedDrain() {

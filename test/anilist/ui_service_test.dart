@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:kinos/anilist/anilist_account.dart';
 import 'package:kinos/anilist/anilist_client.dart';
+import 'package:kinos/anilist/episode_mapping.dart';
+import 'package:kinos/anilist/mapping.dart';
 import 'package:kinos/anilist/anilist_runtime.dart';
 import 'package:kinos/anilist/anilist_ui_service.dart';
 import 'package:kinos/models/syncing/database_item.dart';
@@ -100,6 +102,38 @@ void main() {
     await operation;
     await c.pump();
     expect(c.read(anilistAccountUpdatingProvider), isFalse);
+    c.dispose();
+    await db.close();
+  });
+
+  test('manual episode ranges save without a second AniList lookup', () async {
+    late AppDatabase db;
+    final c = ProviderContainer(overrides: [
+      userProvider.overrideWith(TestUser.new),
+      appDatabaseProvider.overrideWith(
+          (ref) => db = AppDatabase(ref, NativeDatabase.memory())),
+      anilistClientFactoryProvider.overrideWithValue(({String? token}) =>
+          AnilistClient(
+              token: token,
+              interval: Duration.zero,
+              client: MockClient((_) async => http.Response('', 500)))),
+    ]);
+    final listener = c.listen(anilistUiServiceProvider, (_, __) {});
+    final service = c.read(anilistUiServiceProvider);
+    final target = AnilistTarget(
+        itemId: 'series',
+        title: 'THE GHOST IN THE SHELL',
+        kind: AnilistTargetKind.series,
+        ids: {'Tmdb': '255358'});
+
+    await service.saveRanges(target, [
+      EpisodeRange(
+          season: 1, first: 1, last: 10, mediaId: 177699, anilistFirst: 1)
+    ]);
+
+    final plan = await service.store.readPlan('series', target.fingerprint);
+    expect(plan?.resolve(1, 10), (mediaId: 177699, episode: 10));
+    listener.close();
     c.dispose();
     await db.close();
   });
