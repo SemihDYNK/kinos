@@ -2287,5 +2287,22 @@
                 "type": "int"
             }
         }
+    },
+    "leanBackModeDesc": "Activer le mode Lean-back sur les appareils Android, même si l’appareil indique ne pas le prendre en charge.",
+    "localNetworkPermissionRequest": "Autorisez l’accès au réseau local pour détecter les serveurs.",
+    "requestPermission": "Demander l’autorisation",
+    "localNetworkPermissionDenied": "L’accès au réseau local est requis. Activez l’autorisation des appareils à proximité dans les réglages système.",
+    "openSettings": "Ouvrir les réglages",
+    "lyrics": "Paroles",
+    "returnToSyncedLyrics": "Revenir aux paroles synchronisées",
+    "noSyncedLyrics": "Aucune parole synchronisée disponible",
+    "stopSelection": "Arrêter la sélection de {count}",
+    "@stopSelection": {
+        "description": "stopSelection",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
     }
 }

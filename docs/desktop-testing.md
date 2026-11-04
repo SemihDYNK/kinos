@@ -7,8 +7,8 @@ locaux à chaque installation ; aucun identifiant n’est inclus dans les archiv
 
 ## Télécharger
 
-Dans le dépôt GitHub Kinos, ouvrir **Actions → Kinos desktop tests**, puis
-une exécution réussie du commit souhaité. Les archives sont dans **Artifacts** :
+Dans le dépôt GitHub Kinos, les builds de test sont dans **Actions → Kinos
+desktop tests**, puis dans les **Artifacts** de l’exécution réussie souhaitée :
 
 - `kinos-windows-x64-portable` : Windows 64 bits Intel/AMD.
 - `kinos-macos-universal` : Mac Apple Silicon et Intel.
@@ -20,7 +20,12 @@ Une fois présent sur `main`, il peut aussi être relancé avec **Run workflow**
 Laisser `macos_artifact_run` vide pour recompiler. Pour diagnostiquer le
 lancement d'une archive existante, saisir son ID d'exécution : seul le test
 Mac est relancé, sans changer le binaire.
-Il ne crée aucune release, aucun tag et ne publie pas sur les stores.
+
+Pour une version durable, une poussée du tag `vX.Y.Z` lance les mêmes
+vérifications, puis crée une **GitHub Release** avec les archives Windows,
+macOS et `SHA256SUMS.txt`. Le workflow ne crée jamais le tag lui-même et ne
+publie rien sur les stores. Tant que le dépôt reste privé, seuls ses
+collaborateurs peuvent télécharger la release.
 
 ## Windows
 
