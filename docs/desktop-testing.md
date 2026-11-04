@@ -71,6 +71,9 @@ fvm flutter build macos --release --no-pub --flavor production
 ```
 
 Le workflow vérifie les architectures et la signature locale du bundle Mac.
+Il extrait aussi le ZIP sur macOS 26 et vérifie que le processus reste actif
+pendant 15 secondes : cela couvre le refus de lancement avant le rendu Flutter,
+sans remplacer les tests de connexion et de lecture sur un vrai appareil.
 Il inclut `LICENSE`, `NOTICE` et la référence exacte du code source dans chaque
 archive. La signature de distribution, la notarisation et les installateurs
 restent réservés à la version distribuable finale.
