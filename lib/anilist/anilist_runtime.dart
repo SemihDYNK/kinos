@@ -196,7 +196,8 @@ class AnilistRuntime {
       kind: AnilistTargetKind.series,
       ids: series.providerIds,
       seasonSource: series.displayOrder);
-  Future<List<AnilistCandidate>> candidates(AnilistTarget target) async {
+  Future<List<AnilistCandidate>> candidates(AnilistTarget target,
+      {int? selectedId}) async {
     final client = _client;
     if (client == null) throw const AnilistUnavailable();
     final lookup = <int, int>{};
@@ -210,14 +211,18 @@ class AnilistRuntime {
     final index = await ref.read(anilistCatalogProvider).load();
     check();
     final match = resolveAnilistTarget(target, index, malLookup: lookup);
-    if (match.reason == AnilistMatchReason.conflictingIds) {
+    if (match.reason == AnilistMatchReason.conflictingIds &&
+        selectedId == null) {
       throw const AnilistMappingNeeded();
     }
-    if (match.candidates.isEmpty) return [];
-    final media = await client.mediaByIds(match.candidates.map((c) => c.id));
+    final selected = selectedId == null
+        ? match.candidates
+        : match.candidates.where((c) => c.id == selectedId).toList();
+    if (selected.isEmpty) return [];
+    final media = await client.mediaByIds(selected.map((c) => c.id));
     check();
     return [
-      for (final c in match.candidates)
+      for (final c in selected)
         c.withMedia(media.where((m) => m.id == c.id).firstOrNull)
     ];
   }
@@ -263,21 +268,30 @@ class AnilistRuntime {
     }
     final series = await item(seriesId);
     final target = seriesTarget(series);
+    final linked =
+        await AnilistStore(ref.read(appDatabaseProvider), scope!).read(target);
     final manual = await store.readPlan(seriesId, target.fingerprint);
     check();
+    if (linked != null && !linked.confirmed) {
+      throw const AnilistMappingNeeded();
+    }
     if (manual == null && await store.hasPlan(seriesId)) {
       throw const AnilistMappingNeeded();
     }
     check();
     List<AnilistCandidate> matches;
     try {
-      matches = await candidates(target);
+      matches = await candidates(target,
+          selectedId: linked?.confirmed == true ? linked!.id : null);
     } on AnilistUnavailable {
       if (manual == null) rethrow;
       matches = [];
     }
     check();
-    if (matches.isEmpty && manual == null) return null;
+    if (matches.isEmpty && manual == null) {
+      if (linked?.confirmed == true) throw const AnilistMappingNeeded();
+      return null;
+    }
     final plan = EpisodePlan.overlay(EpisodePlan.automatic(matches), manual);
     final destination = plan.resolve(
         playing.parentIndexNumber, playing.indexNumber,

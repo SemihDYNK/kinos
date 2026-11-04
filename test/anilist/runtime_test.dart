@@ -11,6 +11,8 @@ import 'package:kinos/anilist/anilist_client.dart';
 import 'package:kinos/anilist/anilist_providers.dart';
 import 'package:kinos/anilist/anilist_runtime.dart';
 import 'package:kinos/anilist/episode_store.dart';
+import 'package:kinos/anilist/anilist_store.dart';
+import 'package:kinos/anilist/mapping.dart';
 import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/service_provider.dart';
@@ -35,7 +37,7 @@ class _Source implements JellyService {
                   id: 'series',
                   name: 'Anime',
                   type: BaseItemKind.series,
-                  providerIds: {'Tvdb': '900'})
+                  providerIds: {'Tvdb': '900', 'Tmdb': '1'})
               : BaseItemDto(
                   id: 'episode',
                   type: BaseItemKind.episode,
@@ -91,7 +93,7 @@ void main() {
           read: () async => null,
           write: (_) async {},
           fetch: () async =>
-              '[{"anilist_id":1,"tvdb_id":900,"season":{"tvdb":2}},{"anilist_id":2,"tvdb_id":900,"season":{"tvdb":2},"episode_offset":{"tvdb":24}}]')),
+              '[{"anilist_id":1,"tvdb_id":900,"season":{"tvdb":2}},{"anilist_id":2,"themoviedb_id":{"tv":1},"season":{"tmdb":2},"episode_offset":{"tmdb":24}}]')),
       anilistClientFactoryProvider
           .overrideWithValue(({String? token}) => AnilistClient(
               token: token,
@@ -128,6 +130,13 @@ void main() {
     await container.read(appDatabaseProvider).setSetting('configured',
         jsonEncode({'id': 9, 'enabled': true, 'generation': 'original'}),
         scope: '$initialScope:account');
+    await AnilistStore(db, initialScope).save(
+        AnilistTarget(
+            itemId: 'series',
+            title: 'Anime',
+            kind: AnilistTargetKind.series,
+            ids: const {'Tvdb': '900', 'Tmdb': '1'}),
+        2);
     await captureAnilistMarkedPlayed(playbackRef, 'episode',
         responseSuccessful: true);
     await runtime.drain();
