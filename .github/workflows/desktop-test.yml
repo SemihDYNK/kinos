@@ -81,7 +81,7 @@ jobs:
         run: |
           APP='build/macos/Build/Products/Release-production/Kinos.app'
           test -d "$APP"
-          lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/Kinos"
+          lipo "$APP/Contents/MacOS/Kinos" -verify_arch arm64 x86_64
           codesign --verify --deep --strict "$APP"
           mkdir -p dist/Kinos
           ditto "$APP" dist/Kinos/Kinos.app
