@@ -268,31 +268,33 @@ class AnilistRuntime {
     }
     final series = await item(seriesId);
     final target = seriesTarget(series);
-    final linked =
-        await AnilistStore(ref.read(appDatabaseProvider), scope!).read(target);
+    final links = AnilistStore(ref.read(appDatabaseProvider), scope!);
+    final linked = await links.read(target);
+    // A stored link or plan whose fingerprint moved is still an answer the user
+    // gave once: reuse it and refresh the fingerprint instead of asking again.
     final manual = await store.readPlan(seriesId, target.fingerprint);
-    check();
-    if (linked != null && !linked.confirmed) {
-      throw const AnilistMappingNeeded();
-    }
-    if (manual == null && await store.hasPlan(seriesId)) {
-      throw const AnilistMappingNeeded();
-    }
+    final stale = manual == null && await store.hasPlan(seriesId)
+        ? await store.readPlan(seriesId, target.fingerprint, allowStale: true)
+        : null;
     check();
     List<AnilistCandidate> matches;
     try {
-      matches = await candidates(target,
-          selectedId: linked?.confirmed == true ? linked!.id : null);
+      matches = await candidates(target, selectedId: linked?.id);
+      if (matches.isEmpty && linked != null) {
+        // The saved entry is no longer a candidate for the current metadata.
+        matches = await candidates(target);
+      }
     } on AnilistUnavailable {
-      if (manual == null) rethrow;
+      if (manual == null && stale == null) rethrow;
       matches = [];
     }
     check();
-    if (matches.isEmpty && manual == null) {
-      if (linked?.confirmed == true) throw const AnilistMappingNeeded();
+    if (matches.isEmpty && manual == null && stale == null) {
+      if (linked != null) throw const AnilistMappingNeeded();
       return null;
     }
-    final plan = EpisodePlan.overlay(EpisodePlan.automatic(matches), manual);
+    final saved = manual ?? stale;
+    final plan = EpisodePlan.overlay(EpisodePlan.automatic(matches), saved);
     final destination = plan.resolve(
         playing.parentIndexNumber, playing.indexNumber,
         end: playing.indexNumberEnd);
@@ -303,6 +305,15 @@ class AnilistRuntime {
         plan.ranges.where((r) => r.mediaId == destination.mediaId).any((r) =>
             metadata.episodes != null && r.anilistLast > metadata.episodes!)) {
       throw const AnilistMappingNeeded();
+    }
+    // The answer was only stale, not wrong: keep it for this fingerprint.
+    if (stale != null) {
+      await store.savePlan(seriesId, target.fingerprint, stale.ranges,
+          isCurrent: () => current);
+      check();
+    } else if (linked != null && !linked.confirmed) {
+      await links.save(target, linked.id, isCurrent: () => current);
+      check();
     }
     final watched = <int>{};
     final currentFirst =

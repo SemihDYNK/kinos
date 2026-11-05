@@ -115,6 +115,35 @@ void main() {
     await worker.drain();
     expect(mutations, 1);
   });
+  test('mapping failures stop retrying hourly after a few attempts', () async {
+    final client = AnilistClient(
+        token: 'secret',
+        interval: Duration.zero,
+        client: MockClient((_) async => http.Response('', 500)));
+    addTearDown(client.close);
+    final worker = AnilistProgressWorker(
+        store: store,
+        accountId: 1,
+        client: client,
+        isCurrent: () => true,
+        load: (_) async => throw const AnilistMappingNeeded());
+    await store.enqueue('e', 1);
+    // The job already failed three times: it must back off instead of retrying
+    // every hour forever on a title nobody mapped.
+    final key = 'job:1:e';
+    final row = await db.getSetting(key, scope: store.scope);
+    final raw = jsonDecode(row!.value) as Map<String, dynamic>;
+    raw['attempts'] = 3;
+    raw['nextAt'] = DateTime.now()
+        .toUtc()
+        .subtract(const Duration(minutes: 1))
+        .toIso8601String();
+    await db.setSetting(key, jsonEncode(raw), scope: store.scope);
+    await worker.drain();
+    final job = (await store.pending()).single;
+    expect(job.error, 'mapping');
+    expect(job.nextAt.difference(DateTime.now()).inDays, greaterThanOrEqualTo(6));
+  });
   test('switching profiles during a load prevents the mutation', () async {
     var active = true;
     var requests = 0;

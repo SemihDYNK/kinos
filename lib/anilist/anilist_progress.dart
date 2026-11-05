@@ -80,7 +80,11 @@ class AnilistProgressWorker {
           final delay = reason == 'auth'
               ? const Duration(days: 1)
               : reason == 'mapping'
-                  ? const Duration(hours: 1)
+                  // An unmapped title cannot heal by retrying hourly: back off
+                  // once the user has had a few chances to answer.
+                  ? (job.attempts >= 3
+                      ? const Duration(days: 7)
+                      : const Duration(hours: 1))
                   : Duration(
                       seconds:
                           (5 * (1 << job.attempts.clamp(0, 8))).clamp(5, 900));
