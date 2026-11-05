@@ -11,6 +11,8 @@ script:
   - cp -r build/linux/x64/release/bundle AppDir
   - mkdir -p AppDir/usr/share/icons/
   - cp icons/production/kinos_icon_desktop.png AppDir/usr/share/icons/
+  - mkdir -p AppDir/usr/share/licenses/kinos
+  - cp LICENSE NOTICE AppDir/usr/share/licenses/kinos/
 AppDir:
   path: ./AppDir
   app_info:
@@ -27,7 +29,5 @@ AppDir:
       - icons/production/kinos_icon_desktop.png
 AppImage:
   arch: x86_64
-  # TODO (hors dépôt) : remplacer DonutWare/Fladder par le propriétaire/dépôt
-  # GitHub réels de Kinos une fois publié.
-  update-information: gh-releases-zsync|DonutWare|Fladder|latest|Kinos-Linux-*.AppImage.zsync
-  file_name: Kinos_x86_64.AppImage
+  update-information: gh-releases-zsync|SemihDYNK|kinos|latest|kinos-linux-x86_64.AppImage.zsync
+  file_name: kinos-linux-x86_64.AppImage
