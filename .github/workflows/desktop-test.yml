@@ -250,6 +250,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             release/kinos-windows-x64-portable.zip \
             release/kinos-macos-universal.zip \
-            release/SHA256SUMS.txt \ \
+            release/SHA256SUMS.txt \ 
             --title "Kinos $GITHUB_REF_NAME" \
             --generate-notes
