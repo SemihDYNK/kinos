@@ -242,6 +242,24 @@ abstract final class AppPageLayout {
   static const requestPosterWidth = 64.0;
 }
 
+/// Écran de connexion : deux étapes (serveur, compte) sur une seule
+/// colonne de lecture. Les largeurs restent bornées pour que les rangées
+/// de serveurs et le formulaire ne s'étirent pas sur un écran 4K.
+abstract final class AppLoginLayout {
+  static const maxWidth = 1000.0;
+  static const contentWidth = 640.0;
+  static const descriptionWidth = 520.0;
+  static const dialogWidth = 440.0;
+  static const leadingBox = 40.0;
+  static const leadingIcon = 18.0;
+  static const trailingIcon = 18.0;
+  static const statusIcon = 20.0;
+  static const spinner = 18.0;
+  static const progressStroke = 2.0;
+  static const statusBorder = 1.0;
+  static const errorSurfaceOpacity = .12;
+}
+
 abstract final class AppRadii {
   static const card = 8.0;
   static const control = 10.0;

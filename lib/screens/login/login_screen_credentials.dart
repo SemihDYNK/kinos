@@ -1,6 +1,6 @@
-import 'dart:async';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -8,8 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
 import 'package:kinos/models/account_model.dart';
+import 'package:kinos/models/login_screen_model.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/auth_provider.dart';
+import 'package:kinos/providers/discovery_provider.dart';
 import 'package:kinos/providers/seerr_api_provider.dart';
 import 'package:kinos/providers/shared_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
@@ -17,18 +19,28 @@ import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/login/lock_screen.dart';
 import 'package:kinos/screens/login/login_code_dialog.dart';
 import 'package:kinos/screens/login/login_user_grid.dart';
+import 'package:kinos/screens/login/widgets/add_server_dialog.dart';
 import 'package:kinos/screens/login/widgets/advanced_login_options_dialog.dart';
 import 'package:kinos/screens/login/widgets/connect_link_dialog.dart';
-import 'package:kinos/screens/login/widgets/discover_servers_widget.dart';
+import 'package:kinos/screens/login/widgets/login_account_actions.dart';
+import 'package:kinos/screens/login/widgets/login_focus_action.dart';
+import 'package:kinos/screens/login/widgets/login_server_step.dart';
+import 'package:kinos/screens/login/widgets/login_step_parts.dart';
 import 'package:kinos/screens/shared/animated_fade_size.dart';
 import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/screens/shared/passcode_input.dart';
 import 'package:kinos/services/local_network_permission.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/auth_service.dart';
 import 'package:kinos/util/deep_link_helper.dart';
 import 'package:kinos/util/kinos_config.dart';
 import 'package:kinos/util/localization_helper.dart';
+
+enum _LoginStep {
+  server,
+  account,
+}
 
 class LoginScreenCredentials extends ConsumerStatefulWidget {
   final AuthLinkData? authLinkData;
@@ -38,335 +50,433 @@ class LoginScreenCredentials extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _LoginScreenCredentialsState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _LoginScreenCredentialsState();
 }
 
-class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials> {
-  TextEditingController serverTextController = TextEditingController(text: '');
-  TextEditingController usernameController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
-  final FocusNode focusNode = FocusNode();
+class _LoginScreenCredentialsState
+    extends ConsumerState<LoginScreenCredentials> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final FocusNode _passwordFocus = FocusNode();
 
-  bool loggingIn = false;
+  _LoginStep _step = _LoginStep.server;
+  String? _selectedServerAddress;
+  String? _connectingAddress;
+  String? _serverError;
+  String? _credentialsError;
+  bool _loggingIn = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (widget.authLinkData != null) {
-        loginUsingAuthLink(widget.authLinkData!);
+    _step = ref.read(authProvider).serverLoginModel == null
+        ? _LoginStep.server
+        : _LoginStep.account;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final link = widget.authLinkData;
+      if (link != null) {
+        _loginUsingAuthLink(link);
       }
     });
   }
 
-  Future<void> loginUsingAuthLink(AuthLinkData link) async {
-    final pendingLink = link;
-    serverTextController.text = pendingLink.serverUrl;
-    usernameController.text = pendingLink.userName;
-    passwordController.text = pendingLink.password ?? "";
-    ref.read(authProvider.notifier).setServer(pendingLink.serverUrl);
-    try {
-      if (passwordController.text.isNotEmpty) {
-        setState(() {
-          loggingIn = true;
-        });
-        await loginUsingCredentials();
-      } else {
-        focusNode.requestFocus();
-      }
-    } catch (e) {
-      log("Error during auto-login with auth link: $e");
-      KinosSnack.show(context.localized.error);
-    } finally {
-      setState(() {
-        loggingIn = false;
-      });
-    }
-  }
-
   @override
   void dispose() {
-    serverTextController.dispose();
-    usernameController.dispose();
-    passwordController.dispose();
-    focusNode.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final existingUsers = ref.watch(authProvider.select((value) => value.accounts));
-    final otherCredentials = existingUsers.map((e) => e.credentials).toList();
-    final serverCredentials = ref.watch(authProvider.select((value) => value.serverLoginModel));
-    final users = serverCredentials?.accounts ?? [];
-    final provider = ref.read(authProvider.notifier);
+    final accounts = ref.watch(authProvider.select((value) => value.accounts));
+    final serverCredentials =
+        ref.watch(authProvider.select((value) => value.serverLoginModel));
     final loading = ref.watch(authProvider.select((value) => value.loading));
-    final hasBaseUrl = ref.watch(authProvider.select((value) => value.hasBaseUrl));
-    final urlError = ref.watch(authProvider.select((value) => value.errorMessage));
-    final hasQuickConnect = ref.watch(authProvider.select((value) => value.serverLoginModel?.hasQuickConnect ?? false));
+    final hasBaseUrl =
+        ref.watch(authProvider.select((value) => value.hasBaseUrl));
+    final authError =
+        ref.watch(authProvider.select((value) => value.errorMessage));
+    final hasQuickConnect = serverCredentials?.hasQuickConnect ?? false;
 
-    ref.listen(
-      authProvider.select((value) => value.serverLoginModel),
-      (previous, next) {
-        if (next?.tempCredentials.url.isNotEmpty == true) {
-          serverTextController.text = next?.tempCredentials.url ?? "";
-        }
-      },
+    final step = _step == _LoginStep.account && serverCredentials == null
+        ? _LoginStep.server
+        : _step;
+    final allowDiscovery =
+        !hasBaseUrl && KinosConfig.baseUrl?.isNotEmpty != true && !kIsWeb;
+    final discoveredServers = allowDiscovery
+        ? ref.watch(serverDiscoveryProvider)
+        : const AsyncData<List<DiscoveryInfo>>(<DiscoveryInfo>[]);
+
+    return Center(
+      child: ConstrainedBox(
+        constraints:
+            const BoxConstraints(maxWidth: AppLoginLayout.contentWidth),
+        child: AnimatedFadeSize(
+          child: KeyedSubtree(
+            key: ValueKey(step),
+            child: switch (step) {
+              _LoginStep.server => LoginServerStep(
+                  savedServers: _savedServers(accounts),
+                  discoveredServers: discoveredServers,
+                  onServerSelected: _onServerSelected,
+                  onAddServer: _openAddServer,
+                  onRetryDiscovery: () =>
+                      ref.invalidate(serverDiscoveryProvider),
+                  onRequestPermission: _requestDiscoveryPermission,
+                  onBackToProfiles: accounts.isNotEmpty && !hasBaseUrl
+                      ? () => ref.read(authProvider.notifier).goUserSelect()
+                      : null,
+                  connectingAddress: _connectingAddress,
+                  selectedAddress: _selectedServerAddress,
+                  errorMessage: _connectingAddress == null
+                      ? (_serverError ?? authError)
+                      : _serverError,
+                  allowDiscovery: allowDiscovery,
+                ),
+              _LoginStep.account => _buildAccountStep(
+                  context,
+                  serverCredentials: serverCredentials!,
+                  loading: loading,
+                  hasBaseUrl: hasBaseUrl,
+                  hasQuickConnect: hasQuickConnect,
+                ),
+            },
+          ),
+        ),
+      ),
     );
+  }
+
+  List<DiscoveryInfo> _savedServers(List<AccountModel> accounts) {
+    return [
+      for (final account in accounts)
+        DiscoveryInfo(
+          id: account.credentials.serverId,
+          name: account.credentials.serverName,
+          address: account.credentials.url,
+          endPointAddress: null,
+        ),
+    ];
+  }
+
+  Widget _buildAccountStep(
+    BuildContext context, {
+    required ServerLoginModel serverCredentials,
+    required bool loading,
+    required bool hasBaseUrl,
+    required bool hasQuickConnect,
+  }) {
+    final localized = context.localized;
+    final tempCredentials = serverCredentials.tempCredentials;
+    final serverName = tempCredentials.serverName.trim().isEmpty
+        ? tempCredentials.url
+        : tempCredentials.serverName.trim();
+    final users = serverCredentials.accounts;
+    final canGoBack = !hasBaseUrl;
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      spacing: 16,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        IntrinsicHeight(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 8,
-            children: [
-              AspectRatio(
-                aspectRatio: 1,
-                child: IconButton.filledTonal(
-                  onPressed: () => provider.goUserSelect(),
-                  icon: const Icon(
-                    IconsaxPlusLinear.arrow_left_2,
-                  ),
-                ),
+        if (canGoBack)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: LoginFocusAction(
+              onActivate: () => _goToServerStep(),
+              child: TextButton.icon(
+                key: const Key('login.backToServers'),
+                onPressed: _goToServerStep,
+                icon: const Icon(IconsaxPlusLinear.arrow_left_2),
+                label: Text(localized.backToServers),
               ),
-              if (!hasBaseUrl)
-                Expanded(
-                  child: OutlinedTextField(
-                    controller: serverTextController,
-                    onSubmitted: (value) => provider.setServer(value),
-                    autoFillHints: const [AutofillHints.url],
-                    keyboardType: TextInputType.url,
-                    autocorrect: false,
-                    textInputAction: TextInputAction.go,
-                    label: context.localized.server,
-                    errorText: urlError,
-                  ),
-                ),
-              AspectRatio(
-                aspectRatio: 1,
-                child: Tooltip(
-                  message: context.localized.retrievePublicListOfUsers,
-                  waitDuration: const Duration(seconds: 1),
-                  child: IconButton.filled(
-                    onPressed: () => provider.setServer(serverTextController.text),
-                    icon: const Icon(
-                      IconsaxPlusLinear.refresh,
+            ),
+          ),
+        LoginStepHeader(
+          step: 2,
+          total: 2,
+          title: localized.loginAccountStepTitle,
+          description: localized.loginAccountStepDescription(serverName),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        LoginServerSummary(
+          name: serverName,
+          address: tempCredentials.url,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        if (loading || users.isNotEmpty) ...[
+          LoginSectionLabel(localized.selectProfile),
+          const SizedBox(height: AppSpacing.xs),
+          AnimatedFadeSize(
+            duration: AppDurations.selection,
+            alignment: Alignment.centerLeft,
+            child: loading
+                ? LoginStatusBlock(
+                    key: const Key('login.account.loading'),
+                    showProgress: true,
+                    title: localized.loading,
+                  )
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: LoginUserGrid(
+                      users: users,
+                      onPressed: _selectUser,
                     ),
                   ),
-                ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
+        LoginSectionLabel(localized.loginCredentialsTitle),
+        const SizedBox(height: AppSpacing.xs),
+        AutofillGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              OutlinedTextField(
+                controller: _usernameController,
+                autoFocus: users.isEmpty,
+                autoFillHints: const [AutofillHints.username],
+                textInputAction: TextInputAction.next,
+                autocorrect: false,
+                onChanged: (_) => setState(() => _credentialsError = null),
+                label: localized.userName,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedTextField(
+                controller: _passwordController,
+                focusNode: _passwordFocus,
+                autoFillHints: const [AutofillHints.password],
+                keyboardType: TextInputType.visiblePassword,
+                autocorrect: false,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) {
+                  if (_canSubmit) _loginWithCredentials();
+                },
+                onChanged: (_) {
+                  if (_credentialsError != null) {
+                    setState(() => _credentialsError = null);
+                  }
+                },
+                label: localized.password,
               ),
             ],
           ),
         ),
-        if (serverCredentials == null)
-          Column(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              DiscoverServersWidget(
-                serverCredentials: otherCredentials,
-                onPressed: (info) => provider.setServer(info.address),
-              ),
-              FilledButton(
-                onPressed: () {
-                  showConnectLinkDialog(
-                    context,
-                    (link) => loginUsingAuthLink(link),
-                  );
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(context.localized.connectWithAuthLink),
-                    const SizedBox(width: 8),
-                    const Icon(IconsaxPlusBold.link_square),
-                  ],
-                ),
-              ),
-            ],
-          )
-        else ...[
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            spacing: 16,
-            children: [
-              if (loading || users.isNotEmpty)
-                AnimatedFadeSize(
-                  duration: const Duration(milliseconds: 250),
-                  child: loading
-                      ? CircularProgressIndicator(key: UniqueKey(), strokeCap: StrokeCap.round)
-                      : LoginUserGrid(
-                          users: users,
-                          onPressed: (value) {
-                            usernameController.text = value.name;
-                            passwordController.text = "";
-                            focusNode.requestFocus();
-                            setState(() {});
-                          },
-                        ),
-                ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 8,
-                children: [
-                  Flexible(
-                    child: AutofillGroup(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        spacing: 8,
-                        children: [
-                          Flexible(
-                            child: OutlinedTextField(
-                              controller: usernameController,
-                              autoFillHints: const [AutofillHints.username],
-                              textInputAction: TextInputAction.next,
-                              autocorrect: false,
-                              onChanged: (value) => setState(() {}),
-                              label: context.localized.userName,
-                            ),
-                          ),
-                          Flexible(
-                            child: OutlinedTextField(
-                              controller: passwordController,
-                              autoFillHints: const [AutofillHints.password],
-                              keyboardType: TextInputType.visiblePassword,
-                              focusNode: focusNode,
-                              autocorrect: false,
-                              textInputAction: TextInputAction.send,
-                              onSubmitted: (value) => enterCredentialsTryLogin?.call(),
-                              onChanged: (value) => setState(() {}),
-                              label: context.localized.password,
-                            ),
-                          ),
-                        ],
+        const SizedBox(height: AppSpacing.md),
+        LoginFocusAction(
+          onActivate: _canSubmit ? _loginWithCredentials : null,
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              key: const Key('login.submit'),
+              onPressed: _canSubmit ? _loginWithCredentials : null,
+              child: _loggingIn
+                  ? const SizedBox.square(
+                      dimension: AppLoginLayout.spinner,
+                      child: CircularProgressIndicator(
+                        strokeWidth: AppLoginLayout.progressStroke,
+                        strokeCap: StrokeCap.round,
+                        color: AppColors.background,
                       ),
-                    ),
-                  ),
-                  const Divider(
-                    indent: 32,
-                    endIndent: 32,
-                  ),
-                  Row(
-                    spacing: 8,
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: enterCredentialsTryLogin,
-                          child: loggingIn
-                              ? SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                      color: Theme.of(context).colorScheme.inversePrimary, strokeCap: StrokeCap.round),
-                                )
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(context.localized.login),
-                                    const SizedBox(width: 8),
-                                    const Icon(IconsaxPlusBold.send_1),
-                                  ],
-                                ),
-                        ),
-                      ),
-                      if (KinosConfig.seerrBaseUrl?.isNotEmpty != true)
-                        IconButton.filledTonal(
-                          onPressed: () async {
-                            final tempSeerrUrl = ref.read(authProvider.select((value) => value.tempSeerrUrl));
-                            final result = await showAdvancedLoginOptionsDialog(
-                              context,
-                              initialSeerrUrl: tempSeerrUrl,
-                            );
-                            if (result != null) {
-                              ref.read(authProvider.notifier).setTempSeerrUrl(result);
-                            }
-                          },
-                          icon: const Icon(IconsaxPlusLinear.setting_3),
-                        ),
-                    ],
-                  ),
-                  if (hasQuickConnect)
-                    FilledButton(
-                      onPressed: () async {
-                        final result = await ref.read(jellyApiProvider).quickConnectInitiate();
-                        if (result.body != null) {
-                          await openLoginCodeDialog(
-                            context,
-                            quickConnectInfo: result.body!,
-                            onAuthenticated: (context, secret) async {
-                              context.pop();
-                              if (secret.isNotEmpty) {
-                                await loginUsingSecret(secret);
-                              }
-                            },
-                          );
-                        } else {
-                          KinosSnack.show(context.localized.quickConnectPostFailed, context: context);
-                        }
-                      },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(context.localized.quickConnectLoginUsingCode),
-                          const SizedBox(width: 8),
-                          const Icon(IconsaxPlusBold.scan_barcode),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              if (serverCredentials.serverMessage?.isEmpty == false) ...[
-                const Divider(),
-                SelectableText(
-                  serverCredentials.serverMessage ?? "",
-                  style: Theme.of(context).textTheme.bodyLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ],
+                    )
+                  : Text(localized.login),
+            ),
+          ),
+        ),
+        if (_credentialsError != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          LoginInlineError(_credentialsError!),
+        ],
+        const SizedBox(height: AppSpacing.xl),
+        LoginAlternateMethods(
+          onAuthLink: _openAuthLinkDialog,
+          onQuickConnect: hasQuickConnect ? _openQuickConnect : null,
+          onAdvanced: KinosConfig.seerrBaseUrl?.isNotEmpty == true
+              ? null
+              : _openAdvancedLoginOptions,
+        ),
+        if (serverCredentials.serverMessage?.isNotEmpty == true) ...[
+          const SizedBox(height: AppSpacing.xl),
+          const Divider(),
+          const SizedBox(height: AppSpacing.md),
+          SelectableText(
+            serverCredentials.serverMessage!,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
           ),
         ],
       ],
     );
   }
 
-  Future<void> Function()? get enterCredentialsTryLogin => emptyFields() ? null : () => loginUsingCredentials();
+  bool get _canSubmit =>
+      _usernameController.text.trim().isNotEmpty && !_loggingIn;
 
-  Future<void> loginUsingCredentials() async {
+  void _goToServerStep() {
+    if (!mounted) return;
     setState(() {
-      loggingIn = true;
+      _step = _LoginStep.server;
+      _credentialsError = null;
+    });
+  }
+
+  void _selectUser(AccountModel user) {
+    _usernameController.text = user.name;
+    _passwordController.text = '';
+    setState(() => _credentialsError = null);
+    _passwordFocus.requestFocus();
+  }
+
+  void _onServerSelected(DiscoveryInfo server) {
+    _usernameController.clear();
+    _passwordController.clear();
+    _credentialsError = null;
+    _selectServer(server);
+  }
+
+  Future<void> _selectServer(DiscoveryInfo server) async {
+    if (_connectingAddress != null) return;
+    setState(() {
+      _connectingAddress = server.address;
+      _selectedServerAddress = server.address;
+      _serverError = null;
+      _credentialsError = null;
+    });
+
+    final before = ref.read(authProvider).serverLoginModel;
+    await ref.read(authProvider.notifier).setServer(server.address);
+    if (!mounted) return;
+
+    final state = ref.read(authProvider);
+    final serverChanged = !identical(state.serverLoginModel, before);
+    if (serverChanged &&
+        state.serverLoginModel != null &&
+        state.errorMessage == null) {
+      setState(() {
+        _connectingAddress = null;
+        _step = _LoginStep.account;
+      });
+      return;
+    }
+
+    setState(() {
+      _connectingAddress = null;
+      _serverError =
+          state.errorMessage ?? context.localized.serverConnectionFailed;
+    });
+  }
+
+  Future<void> _openAddServer() async {
+    final address = await showAddServerDialog(context);
+    if (!mounted || address == null || address.trim().isEmpty) return;
+    _usernameController.clear();
+    _passwordController.clear();
+    _credentialsError = null;
+    await _selectServer(
+      DiscoveryInfo(
+        id: '',
+        name: address,
+        address: address,
+        endPointAddress: null,
+      ),
+    );
+  }
+
+  Future<void> _requestDiscoveryPermission() async {
+    var status = await requestLocalNetworkPermission();
+    if (status == LocalNetworkPermissionStatus.denied) {
+      await openLocalNetworkPermissionSettings();
+    }
+    if (mounted) {
+      ref.invalidate(serverDiscoveryProvider);
+    }
+  }
+
+  Future<void> _loginUsingAuthLink(AuthLinkData link) async {
+    _usernameController.text = link.userName;
+    _passwordController.text = link.password ?? '';
+    setState(() => _serverError = null);
+
+    await _selectServer(
+      DiscoveryInfo(
+        id: '',
+        name: link.serverUrl,
+        address: link.serverUrl,
+        endPointAddress: null,
+      ),
+    );
+    if (!mounted || ref.read(authProvider).serverLoginModel == null) return;
+
+    if ((link.password ?? '').isNotEmpty) {
+      await _loginWithCredentials();
+    } else {
+      _passwordFocus.requestFocus();
+    }
+  }
+
+  void _openAuthLinkDialog() {
+    showConnectLinkDialog(context, _loginUsingAuthLink);
+  }
+
+  Future<void> _openQuickConnect() async {
+    final result = await ref.read(jellyApiProvider).quickConnectInitiate();
+    if (!mounted) return;
+    if (result.body == null) {
+      KinosSnack.show(context.localized.quickConnectPostFailed,
+          context: context);
+      return;
+    }
+    await openLoginCodeDialog(
+      context,
+      quickConnectInfo: result.body!,
+      onAuthenticated: (context, secret) async {
+        context.pop();
+        if (secret.isNotEmpty) {
+          await _loginUsingSecret(secret);
+        }
+      },
+    );
+  }
+
+  Future<void> _openAdvancedLoginOptions() async {
+    final tempSeerrUrl =
+        ref.read(authProvider.select((value) => value.tempSeerrUrl));
+    final result = await showAdvancedLoginOptionsDialog(
+      context,
+      initialSeerrUrl: tempSeerrUrl,
+    );
+    if (result != null) {
+      ref.read(authProvider.notifier).setTempSeerrUrl(result);
+    }
+  }
+
+  Future<void> _loginWithCredentials() async {
+    if (!_canSubmit) return;
+    setState(() {
+      _loggingIn = true;
+      _credentialsError = null;
     });
 
     final response = await ref.read(authProvider.notifier).authenticateByName(
-          usernameController.text,
-          passwordController.text,
+          _usernameController.text.trim(),
+          _passwordController.text,
         );
+    if (!mounted) return;
 
-    if (response?.isSuccessful == false) {
-      KinosSnack.show(
-          "(${response?.base.statusCode}) ${response?.base.reasonPhrase ?? context.localized.somethingWentWrongPasswordCheck}",
-          context: context);
+    if (response?.isSuccessful == false || response?.body == null) {
       setState(() {
-        loggingIn = false;
+        _loggingIn = false;
+        _credentialsError = response?.isSuccessful == false
+            ? '(${response?.base.statusCode}) ${response?.base.reasonPhrase ?? context.localized.loginFailed}'
+            : context.localized.loginFailed;
       });
       return;
     }
 
-    if (response?.body == null) {
-      setState(() {
-        loggingIn = false;
-      });
-      return;
-    }
-
-    final tempSeerrUrl = ref.read(authProvider.select((value) => value.tempSeerrUrl));
+    final tempSeerrUrl =
+        ref.read(authProvider.select((value) => value.tempSeerrUrl));
     if (tempSeerrUrl != null && tempSeerrUrl.isNotEmpty) {
       await _tryAuthenticateSeerr(tempSeerrUrl);
     }
@@ -376,15 +486,35 @@ class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials>
     }
   }
 
+  Future<void> _loginUsingSecret(String secret) async {
+    setState(() {
+      _loggingIn = true;
+      _credentialsError = null;
+    });
+    final response = await KinosSnack.showResponse(
+      ref.read(authProvider.notifier).authenticateUsingSecret(secret),
+    );
+    if (!mounted) return;
+    if (response.isSuccess) {
+      await loggedInGoToHome(context, ref);
+      return;
+    }
+    setState(() {
+      _loggingIn = false;
+      _credentialsError = context.localized.loginFailed;
+    });
+  }
+
   Future<void> _tryAuthenticateSeerr(String seerrUrl) async {
     try {
-      final username = usernameController.text.trim();
-      final password = passwordController.text;
+      final username = _usernameController.text.trim();
+      final password = _passwordController.text;
 
       final effectiveSeerrUrl = KinosConfig.seerrBaseUrl ?? seerrUrl;
       ref.read(userProvider.notifier).setSeerrServerUrl(effectiveSeerrUrl);
 
-      final tempCookie = ref.read(authProvider.select((value) => value.tempSeerrSessionCookie));
+      final tempCookie = ref
+          .read(authProvider.select((value) => value.tempSeerrSessionCookie));
       final cookie = tempCookie ??
           await ref.read(seerrApiProvider).authenticateJellyfin(
                 username: username,
@@ -398,32 +528,16 @@ class _LoginScreenCredentialsState extends ConsumerState<LoginScreenCredentials>
       if (context.mounted) {
         KinosSnack.show(context.localized.seerrLoggedIn, context: context);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Seerr authentication failed', error: e, stackTrace: stackTrace);
       if (context.mounted) {
         KinosSnack.show(
-          "${context.localized.seerrAuthenticateLocal}: ${e.toString()}",
+          '${context.localized.seerrAuthenticateLocal}: $e',
           context: context,
         );
       }
     }
   }
-
-  Future<void> loginUsingSecret(String secret) async {
-    setState(() {
-      loggingIn = true;
-    });
-    final response = await KinosSnack.showResponse(
-      ref.read(authProvider.notifier).authenticateUsingSecret(secret),
-    );
-    if (response.isSuccess && context.mounted) {
-      loggedInGoToHome(context, ref);
-    }
-    setState(() {
-      loggingIn = false;
-    });
-  }
-
-  bool emptyFields() => usernameController.text.isEmpty;
 }
 
 Future<void> loggedInGoToHome(BuildContext context, WidgetRef ref) async {
@@ -433,12 +547,15 @@ Future<void> loggedInGoToHome(BuildContext context, WidgetRef ref) async {
   }
 }
 
-Future<void> _handleLogin(BuildContext context, AccountModel user, WidgetRef ref) async {
+Future<void> _handleLogin(
+    BuildContext context, AccountModel user, WidgetRef ref) async {
   await ref.read(authProvider.notifier).switchUser();
   await ref.read(sharedUtilityProvider).updateAccountInfo(user.copyWith(
         lastUsed: DateTime.now(),
       ));
-  ref.read(userProvider.notifier).updateUser(user.copyWith(lastUsed: DateTime.now()));
+  ref
+      .read(userProvider.notifier)
+      .updateUser(user.copyWith(lastUsed: DateTime.now()));
 
   await ensureLocalNetworkPermissions(
     [user.credentials.url, user.credentials.localUrl],
@@ -448,7 +565,8 @@ Future<void> _handleLogin(BuildContext context, AccountModel user, WidgetRef ref
   loggedInGoToHome(context, ref);
 }
 
-void tapLoggedInAccount(BuildContext context, AccountModel user, WidgetRef ref) async {
+void tapLoggedInAccount(
+    BuildContext context, AccountModel user, WidgetRef ref) async {
   Future<void> loginFunction() => _handleLogin(context, user, ref);
   switch (user.authMethod) {
     case Authentication.autoLogin:
@@ -466,7 +584,8 @@ void tapLoggedInAccount(BuildContext context, AccountModel user, WidgetRef ref) 
           if (newPin == user.localPin) {
             loginFunction();
           } else {
-            KinosSnack.show(context.localized.incorrectPinTryAgain, context: context);
+            KinosSnack.show(context.localized.incorrectPinTryAgain,
+                context: context);
           }
         });
       }

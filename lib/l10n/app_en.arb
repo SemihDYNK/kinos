@@ -406,6 +406,92 @@
   "@loggedIn": {},
   "login": "Log in",
   "@login": {},
+  "loginAccountStepDescription": "Sign in to {server}.",
+  "@loginAccountStepDescription": {
+    "description": "Account step subtitle on the login screen",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "loginAccountStepTitle": "Account",
+  "@loginAccountStepTitle": {},
+  "loginCredentialsTitle": "Username and password",
+  "@loginCredentialsTitle": {},
+  "loginFailed": "Sign-in failed. Check your username and password.",
+  "@loginFailed": {},
+  "loginOtherMethods": "Or sign in another way",
+  "@loginOtherMethods": {},
+  "loginServerStepDescription": "Choose the server that hosts your library, or add its address.",
+  "@loginServerStepDescription": {},
+  "loginServerStepTitle": "Server",
+  "@loginServerStepTitle": {},
+  "loginStepCounter": "Step {current} of {total}",
+  "@loginStepCounter": {
+    "description": "Progress label on the login screen",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "addProfile": "Add a profile",
+  "@addProfile": {},
+  "addServer": "Add a server",
+  "@addServer": {},
+  "addServerDescription": "Enter the address of your Jellyfin server.",
+  "@addServerDescription": {},
+  "addServerTitle": "Add a server",
+  "@addServerTitle": {},
+  "backToProfiles": "Profiles",
+  "@backToProfiles": {},
+  "backToServers": "Servers",
+  "@backToServers": {},
+  "connectToServer": "Connecting to {server}…",
+  "@connectToServer": {
+    "description": "Status while probing a server address",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "discoveredServers": "Discovered servers",
+  "@discoveredServers": {},
+  "discoveringServers": "Searching for servers on the network…",
+  "@discoveringServers": {},
+  "discoveryFailed": "Server discovery failed.",
+  "@discoveryFailed": {},
+  "discoveryFailedDescription": "Check your network connection and try again.",
+  "@discoveryFailedDescription": {},
+  "editProfiles": "Edit profiles",
+  "@editProfiles": {},
+  "finishEditingProfiles": "Finish",
+  "@finishEditingProfiles": {},
+  "localNetworkPermissionTitle": "Local network access required",
+  "@localNetworkPermissionTitle": {},
+  "noNewServersDescription": "Your saved servers are already listed above.",
+  "@noNewServersDescription": {},
+  "noServersFoundDescription": "Check that the server is on and connected to the same network.",
+  "@noServersFoundDescription": {},
+  "retryDiscovery": "Search again",
+  "@retryDiscovery": {},
+  "savedServers": "Saved servers",
+  "@savedServers": {},
+  "selectProfile": "Choose a profile",
+  "@selectProfile": {},
+  "serverAddress": "Server address",
+  "@serverAddress": {},
+  "serverAddressHint": "https://jellyfin.example.com",
+  "@serverAddressHint": {},
+  "serverAddressRequired": "Enter a server address.",
+  "@serverAddressRequired": {},
+  "serverConnectionFailed": "Could not connect. Check the address and try again.",
+  "@serverConnectionFailed": {},
   "logout": "Log out",
   "@logout": {},
   "logoutUserPopupContent": "This will log out {userName} and delete the user from the app.\nYou will have to log back in on {serverName}.",

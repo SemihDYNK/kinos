@@ -10,14 +10,16 @@ import 'package:kinos/providers/auth_provider.dart';
 import 'package:kinos/screens/login/login_edit_user.dart';
 import 'package:kinos/screens/login/login_screen_credentials.dart';
 import 'package:kinos/screens/login/login_user_grid.dart';
+import 'package:kinos/screens/login/widgets/login_focus_action.dart';
 import 'package:kinos/screens/shared/animated_fade_size.dart';
 import 'package:kinos/screens/shared/kinos_logo.dart';
 import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
 import 'package:kinos/screens/shared/route_wrapper.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/deep_link_helper.dart';
+import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/keyboard/slide_in_keyboard.dart';
-import 'package:kinos/widgets/navigation_scaffold/components/adaptive_fab.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/kinos_app_bar.dart';
 
 @RoutePage()
@@ -33,12 +35,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginScreen> {
-  late final TextEditingController serverTextController = TextEditingController(text: '');
-  final usernameController = TextEditingController();
-  final passwordController = TextEditingController();
-  final FocusNode focusNode = FocusNode();
   bool editUsersMode = false;
-  bool loggingIn = false;
 
   AuthLinkData? parsedAuthLink;
 
@@ -52,7 +49,7 @@ class _LoginPageState extends ConsumerState<LoginScreen> {
         if (data != null) {
           initLink(data);
         } else {
-          KinosSnack.show("Invalid auth link");
+          KinosSnack.show(context.localized.invalidAuthLink);
         }
       }
     });
@@ -75,63 +72,91 @@ class _LoginPageState extends ConsumerState<LoginScreen> {
           ),
           extendBody: true,
           extendBodyBehindAppBar: true,
-          floatingActionButton: switch (screen) {
-            LoginScreenType.users => Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                spacing: 16,
-                children: [
-                  AdaptiveFab(
-                    context: context,
-                    key: const Key("new_user_button"),
-                    heroTag: "new_user_button",
-                    child: const Icon(IconsaxPlusLinear.add_square),
-                    onPressed: () => ref.read(authProvider.notifier).addNewUser(),
-                  ).normal,
-                  if (accounts.isNotEmpty)
-                    AdaptiveFab(
-                      context: context,
-                      key: const Key("edit_user_button"),
-                      heroTag: "edit_user_button",
-                      backgroundColor: editUsersMode ? Theme.of(context).colorScheme.errorContainer : null,
-                      child: const Icon(IconsaxPlusLinear.edit_2),
-                      onPressed: () => setState(() => editUsersMode = !editUsersMode),
-                    ).normal,
-                ],
-              ),
-            _ => null,
-          },
           body: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(
-                maxWidth: 1000,
+                maxWidth: AppLoginLayout.maxWidth,
               ),
-              child: loggingIn
-                  ? const CircularProgressIndicator()
-                  : ListView(
-                      shrinkWrap: true,
-                      padding: MediaQuery.paddingOf(context).add(const EdgeInsetsGeometry.all(16)),
-                      children: [
-                        const KinosLogo(),
-                        const SizedBox(height: 24),
-                        AnimatedFadeSize(
-                          child: switch (screen) {
-                            LoginScreenType.login || LoginScreenType.code => LoginScreenCredentials(
-                                authLinkData: parsedAuthLink,
-                              ),
-                            _ => LoginUserGrid(
-                                users: accounts,
-                                editMode: editUsersMode,
-                                onPressed: (user) => tapLoggedInAccount(context, user, ref),
-                                onLongPress: (user) => openUserEditDialogue(context, user),
-                              ),
-                          },
-                        )
-                      ],
-                    ),
+              child: ListView(
+                shrinkWrap: true,
+                padding: MediaQuery.paddingOf(context).add(
+                  const EdgeInsets.all(AppSpacing.screenPadding),
+                ),
+                children: [
+                  const KinosLogo(),
+                  const SizedBox(height: AppSpacing.lg),
+                  AnimatedFadeSize(
+                    child: switch (screen) {
+                      LoginScreenType.login ||
+                      LoginScreenType.code =>
+                        LoginScreenCredentials(
+                          authLinkData: parsedAuthLink,
+                        ),
+                      _ => Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            LoginUserGrid(
+                              users: accounts,
+                              editMode: editUsersMode,
+                              onPressed: (user) =>
+                                  tapLoggedInAccount(context, user, ref),
+                              onLongPress: (user) =>
+                                  openUserEditDialogue(context, user),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            _profileActions(context, accounts.length),
+                          ],
+                        ),
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _profileActions(BuildContext context, int accountCount) {
+    final localized = context.localized;
+    void onAdd() => ref.read(authProvider.notifier).addNewUser();
+    void onToggleEdit() => setState(() => editUsersMode = !editUsersMode);
+    return Wrap(
+      alignment: WrapAlignment.center,
+      runAlignment: WrapAlignment.center,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        LoginFocusAction(
+          onActivate: onAdd,
+          child: OutlinedButton.icon(
+            key: const Key('new_user_button'),
+            onPressed: onAdd,
+            icon: const Icon(IconsaxPlusLinear.add_square),
+            label: Text(localized.addProfile),
+          ),
+        ),
+        if (accountCount > 0)
+          LoginFocusAction(
+            onActivate: onToggleEdit,
+            child: OutlinedButton.icon(
+              key: const Key('edit_user_button'),
+              onPressed: onToggleEdit,
+              icon: Icon(
+                editUsersMode
+                    ? IconsaxPlusBold.tick_circle
+                    : IconsaxPlusLinear.edit_2,
+              ),
+              label: Text(
+                editUsersMode
+                    ? localized.finishEditingProfiles
+                    : localized.editProfiles,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
