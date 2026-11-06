@@ -51,6 +51,14 @@ directly — this fork intentionally does less.
 * Seerr/Jellyseerr integration
 * Sonarr/Radarr integration (library, queue, calendar, interactive search)
 
+## Download
+
+Distributable builds are published in
+[Releases](https://github.com/SemihDYNK/kinos/releases): the Linux AppImage
+(`kinos-linux-x86_64.AppImage`), the Linux tarball, and experimental Windows
+and macOS archives, together with `SHA256SUMS.txt`. Linux is the primary
+target; the Windows and macOS builds are not signed or notarized.
+
 ## Building & Running
 
 This fork primarily targets Linux desktop and is built with
@@ -62,8 +70,8 @@ fvm flutter pub get
 fvm flutter run -d linux
 ```
 
-For experimental Windows and macOS builds, downloads and test instructions,
-see [Desktop testing](docs/desktop-testing.md). These builds do not constitute
+For installation, checksums and platform notes, see
+[Desktop testing](docs/desktop-testing.md). These builds do not constitute
 a signed or notarized public release.
 
 ## License

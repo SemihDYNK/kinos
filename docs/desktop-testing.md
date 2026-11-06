@@ -1,4 +1,4 @@
-# Versions de test Kinos : Windows et macOS
+# Versions distribuables Kinos : Linux, Windows et macOS
 
 Linux reste la plateforme principale. Les builds Windows et macOS sont
 expérimentaux : une compilation réussie ne garantit pas encore la lecture
@@ -7,25 +7,47 @@ locaux à chaque installation ; aucun identifiant n’est inclus dans les archiv
 
 ## Télécharger
 
-Dans le dépôt GitHub Kinos, les builds de test sont dans **Actions → Kinos
-desktop tests**, puis dans les **Artifacts** de l’exécution réussie souhaitée :
+Les versions durables sont dans les **Releases** du dépôt GitHub Kinos.
+Chaque release publie aussi les artefacts de l’exécution **Kinos desktop tests**
+correspondante :
 
+- `kinos-linux-x86_64.AppImage` : Linux 64 bits, archive exécutable.
+- `kinos-linux-x86_64.tar.gz` : Linux 64 bits, archive à extraire.
 - `kinos-windows-x64-portable` : Windows 64 bits Intel/AMD.
 - `kinos-macos-universal` : Mac Apple Silicon et Intel.
+- `SHA256SUMS.txt` : empreintes SHA-256 des archives.
 
-Il faut être connecté à GitHub et avoir accès au dépôt privé. Les artefacts
-expirent après 14 jours. Le workflow s’exécute sur les pushes de `main`, la
-branche de préparation `codex/desktop-test-builds` et les PR vers `main`.
-Une fois présent sur `main`, il peut aussi être relancé avec **Run workflow**.
-Laisser `macos_artifact_run` vide pour recompiler. Pour diagnostiquer le
-lancement d'une archive existante, saisir son ID d'exécution : seul le test
-Mac est relancé, sans changer le binaire.
+Les artefacts Actions expirent après 14 jours ; la Release reste la référence.
+Le workflow s’exécute sur les pushes de `main`, la branche de préparation
+`codex/desktop-test-builds` et les PR vers `main`. Une fois présent sur `main`,
+il peut aussi être relancé avec **Run workflow**. Laisser `macos_artifact_run`
+vide pour recompiler. Pour diagnostiquer le lancement d’une archive existante,
+saisir son ID d’exécution : seul le test Mac est relancé, sans changer le binaire.
 
-Pour une version durable, une poussée du tag `vX.Y.Z` lance les mêmes
-vérifications, puis crée une **GitHub Release** avec les archives Windows,
-macOS et `SHA256SUMS.txt`. Le workflow ne crée jamais le tag lui-même et ne
-publie rien sur les stores. Tant que le dépôt reste privé, seuls ses
-collaborateurs peuvent télécharger la release.
+Une poussée du tag `vX.Y.Z` lance les mêmes vérifications, puis crée une
+**GitHub Release** avec les archives Linux, Windows, macOS et
+`SHA256SUMS.txt`. Le workflow ne crée jamais le tag lui-même et ne publie rien
+sur les stores. Tant que le dépôt reste privé, seuls ses collaborateurs peuvent
+télécharger la release.
+
+## Linux
+
+Télécharger `kinos-linux-x86_64.AppImage`, puis :
+
+```sh
+chmod +x kinos-linux-x86_64.AppImage
+./kinos-linux-x86_64.AppImage
+```
+
+Si FUSE 2 n’est pas disponible sur la distribution, lancer directement :
+
+```sh
+./kinos-linux-x86_64.AppImage --appimage-extract-and-run
+```
+
+L’archive `kinos-linux-x86_64.tar.gz` reste disponible pour les systèmes où
+l’AppImage ne convient pas : extraire le dossier, puis lancer
+`bundle/kinos`. Vérifier `SHA256SUMS.txt` avant la première ouverture.
 
 ## Windows
 
@@ -67,16 +89,24 @@ Ne pas joindre de jeton, mot de passe ou URL contenant des identifiants.
 ## Compiler localement
 
 Utiliser la version Flutter indiquée dans `.fvmrc`, avec les outils de
-compilation natifs : Visual Studio avec la charge C++ sur Windows ; Xcode
-et CocoaPods sur Mac. Les fichiers générés Dart nécessaires sont suivis
-dans Git ; les traductions sont générées par Flutter.
+compilation natifs : GTK 3, libmpv, libsecret, ninja et patchelf sur Linux ;
+Visual Studio avec la charge C++ sur Windows ; Xcode et CocoaPods sur Mac.
+Les fichiers générés Dart nécessaires sont suivis dans Git ; les traductions
+sont générées par Flutter.
 
 ```sh
 fvm flutter pub get --enforce-lockfile
+# Linux (plateforme principale) :
+fvm flutter build linux --release --no-pub
+# Windows :
 fvm flutter build windows --release --no-pub
 # Sur Mac, à la place de la commande Windows :
 fvm flutter build macos --release --no-pub --flavor production
 ```
+
+L’AppImage Linux de release est produite par le job `linux` à partir de
+`AppImageBuilder.yml` ; le workflow corrige le RPATH, inclut `LICENSE` et
+`NOTICE`, puis valide le contenu de l’AppImage avant publication.
 
 Le workflow vérifie les architectures et la signature locale du bundle Mac.
 Il extrait aussi le ZIP sur macOS 26, vérifie qu’il n’annonce ni sandbox ni
