@@ -26,6 +26,7 @@ import 'package:kinos/providers/update_notifications_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/services/secure_credentials_store.dart';
 import 'package:kinos/services/seerr_credentials_store.dart';
+import 'package:kinos/services/platform_secure_storage.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError();
@@ -39,7 +40,8 @@ final sharedUtilityProvider = Provider<SharedUtility>((ref) {
   return SharedUtility(ref: ref, sharedPreferences: sharedPrefs)..init();
 });
 
-SharedHelper get sharedHelper => SharedHelper(sharedPreferences: SharedPreferences.getInstance() as SharedPreferences);
+SharedHelper get sharedHelper => SharedHelper(
+    sharedPreferences: SharedPreferences.getInstance() as SharedPreferences);
 
 class SharedUtility extends SharedHelper {
   SharedUtility({
@@ -56,7 +58,8 @@ class SharedUtility extends SharedHelper {
       await Future.delayed(const Duration(milliseconds: 500));
       switch (key) {
         case SharedKeys.lastSeenNotificationsKey:
-          _ref.read(notificationsProvider.notifier).state = lastSeenNotifications;
+          _ref.read(notificationsProvider.notifier).state =
+              lastSeenNotifications;
           break;
       }
     });
@@ -87,8 +90,10 @@ class SharedKeys {
   static final SharedKeys instance = SharedKeys._();
 
   static const String _loginCredentialsKey = 'loginCredentialsKey';
-  static const String _credentialsMigratedToSecureStorageKey = 'credentialsMigratedToSecureStorageKey';
-  static const String _seerrCredentialsMigratedToSecureStorageKey = 'seerrCredentialsMigratedToSecureStorageKey';
+  static const String _credentialsMigratedToSecureStorageKey =
+      'credentialsMigratedToSecureStorageKey';
+  static const String _seerrCredentialsMigratedToSecureStorageKey =
+      'seerrCredentialsMigratedToSecureStorageKey';
   static const String _clientSettingsKey = 'clientSettings';
   static const String _homeSettingsKey = 'homeSettings';
   static const String _videoPlayerSettingsKey = 'videoPlayerSettings';
@@ -155,7 +160,8 @@ class SharedHelper {
   /// successful [getAccounts] once the vault is back.
   final Set<String> _unhydratedAccountKeys = {};
 
-  static String _accountKey(AccountModel account) => '${account.credentials.serverId}:${account.id}';
+  static String _accountKey(AccountModel account) =>
+      '${account.credentials.serverId}:${account.id}';
 
   SharedHelper({
     this.ref,
@@ -223,12 +229,19 @@ class SharedHelper {
     await _migrateCredentialsIfNeeded();
     await _migrateSeerrCredentialsIfNeeded();
 
-    final savedAccounts = sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
+    final savedAccounts =
+        sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
     if (savedAccounts == null) return [];
 
     try {
-      final accounts = savedAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
-      return await Future.wait(accounts.map(_hydrateAccount));
+      final accounts = savedAccounts
+          .map((e) => AccountModel.fromJson(jsonDecode(e)))
+          .toList();
+      final hydrated = await Future.wait(accounts.map(_hydrateAccount));
+      if (!usesSessionSecureStorage) return hydrated;
+      return hydrated
+          .where((account) => account.credentials.token.isNotEmpty)
+          .toList();
     } catch (_, stacktrace) {
       log(stacktrace.toString());
       return [];
@@ -251,12 +264,14 @@ class SharedHelper {
     var fullyHydrated = true;
 
     try {
-      final storedCredentials = await secureCredentials.read(account.credentials.serverId, account.id);
+      final storedCredentials = await secureCredentials.read(
+          account.credentials.serverId, account.id);
       // No vault entry (e.g. it was cleared outside the app) leaves the
       // account's placeholder credentials as-is rather than dropping it -
       // failing to log in with an empty token is easier to recover from
       // than an account silently disappearing from the list.
-      if (storedCredentials != null) hydrated = hydrated.copyWith(credentials: storedCredentials);
+      if (storedCredentials != null)
+        hydrated = hydrated.copyWith(credentials: storedCredentials);
     } catch (e, stacktrace) {
       fullyHydrated = false;
       // Never interpolate `storedCredentials`/`e`'s payload here - only
@@ -268,7 +283,8 @@ class SharedHelper {
     }
 
     try {
-      final storedSeerrCredentials = await seerrCredentials.read(account.credentials.serverId, account.id);
+      final storedSeerrCredentials =
+          await seerrCredentials.read(account.credentials.serverId, account.id);
       if (storedSeerrCredentials != null) {
         hydrated = hydrated.copyWith(seerrCredentials: storedSeerrCredentials);
       }
@@ -301,14 +317,18 @@ class SharedHelper {
   }
 
   Future<void> _runCredentialsMigration() async {
-    if (sharedPreferences.getBool(SharedKeys._credentialsMigratedToSecureStorageKey) ?? false) {
+    if (sharedPreferences
+            .getBool(SharedKeys._credentialsMigratedToSecureStorageKey) ??
+        false) {
       _migrationChecked = true;
       return;
     }
 
-    final rawAccounts = sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
+    final rawAccounts =
+        sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
     if (rawAccounts == null || rawAccounts.isEmpty) {
-      await sharedPreferences.setBool(SharedKeys._credentialsMigratedToSecureStorageKey, true);
+      await sharedPreferences.setBool(
+          SharedKeys._credentialsMigratedToSecureStorageKey, true);
       _migrationChecked = true;
       return;
     }
@@ -316,17 +336,20 @@ class SharedHelper {
     try {
       // At this point credentials are still the old plaintext payload, as
       // written by every version of the app before this migration existed.
-      final accounts = rawAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
+      final accounts =
+          rawAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
 
       for (final account in accounts) {
-        await secureCredentials.save(account.credentials.serverId, account.id, account.credentials);
+        await secureCredentials.save(
+            account.credentials.serverId, account.id, account.credentials);
       }
 
       await sharedPreferences.setStringList(
         SharedKeys._loginCredentialsKey,
         accounts.map((e) => jsonEncode(_stripCredentials(e))).toList(),
       );
-      await sharedPreferences.setBool(SharedKeys._credentialsMigratedToSecureStorageKey, true);
+      await sharedPreferences.setBool(
+          SharedKeys._credentialsMigratedToSecureStorageKey, true);
     } catch (e, stacktrace) {
       log('Failed to migrate stored credentials to secure storage, will retry next launch: $e\n$stacktrace');
     } finally {
@@ -363,21 +386,26 @@ class SharedHelper {
   }
 
   Future<void> _runSeerrCredentialsMigration() async {
-    if (sharedPreferences.getBool(SharedKeys._seerrCredentialsMigratedToSecureStorageKey) ?? false) {
+    if (sharedPreferences
+            .getBool(SharedKeys._seerrCredentialsMigratedToSecureStorageKey) ??
+        false) {
       _seerrMigrationChecked = true;
       return;
     }
 
-    final rawAccounts = sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
+    final rawAccounts =
+        sharedPreferences.getStringList(SharedKeys._loginCredentialsKey);
     if (rawAccounts == null || rawAccounts.isEmpty) {
-      await sharedPreferences.setBool(SharedKeys._seerrCredentialsMigratedToSecureStorageKey, true);
+      await sharedPreferences.setBool(
+          SharedKeys._seerrCredentialsMigratedToSecureStorageKey, true);
       _seerrMigrationChecked = true;
       return;
     }
 
     List<AccountModel> accounts;
     try {
-      accounts = rawAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
+      accounts =
+          rawAccounts.map((e) => AccountModel.fromJson(jsonDecode(e))).toList();
     } catch (e, stacktrace) {
       log('Failed to decode stored accounts for Seerr credentials migration, will retry next launch: $e\n$stacktrace');
       _seerrMigrationChecked = true;
@@ -394,14 +422,18 @@ class SharedHelper {
       }
 
       try {
-        await seerrCredentials.save(account.credentials.serverId, account.id, seerr);
-        final readBack = await seerrCredentials.read(account.credentials.serverId, account.id);
+        await seerrCredentials.save(
+            account.credentials.serverId, account.id, seerr);
+        final readBack = await seerrCredentials.read(
+            account.credentials.serverId, account.id);
         // Freezed equality is disabled project-wide (`build.yaml`,
         // `freezed: equal: false`) - `readBack != seerr` would always be
         // true (identity comparison) even for identical data, so the
         // round-trip is checked via its JSON form instead.
-        if (readBack == null || jsonEncode(readBack.toJson()) != jsonEncode(seerr.toJson())) {
-          throw StateError('Vault read-back did not match what was just written.');
+        if (readBack == null ||
+            jsonEncode(readBack.toJson()) != jsonEncode(seerr.toJson())) {
+          throw StateError(
+              'Vault read-back did not match what was just written.');
         }
         updatedAccounts.add(_stripSeerrCredentials(account));
       } catch (e, stacktrace) {
@@ -418,7 +450,8 @@ class SharedHelper {
     );
 
     if (allMigrated) {
-      await sharedPreferences.setBool(SharedKeys._seerrCredentialsMigratedToSecureStorageKey, true);
+      await sharedPreferences.setBool(
+          SharedKeys._seerrCredentialsMigratedToSecureStorageKey, true);
     }
     // Set regardless of `allMigrated`: this session's one attempt is spent
     // either way - a partial/total failure is retried on the next app
@@ -430,10 +463,13 @@ class SharedHelper {
     try {
       final accounts = await getAccounts();
       AccountModel recentUsedAccount = accounts.reduce((lastLoggedIn, element) {
-        return (element.lastUsed.compareTo(lastLoggedIn.lastUsed)) > 0 ? element : lastLoggedIn;
+        return (element.lastUsed.compareTo(lastLoggedIn.lastUsed)) > 0
+            ? element
+            : lastLoggedIn;
       });
 
-      if (recentUsedAccount.authMethod == Authentication.autoLogin) return recentUsedAccount;
+      if (recentUsedAccount.authMethod == Authentication.autoLogin)
+        return recentUsedAccount;
       return null;
     } catch (e) {
       log(e.toString());
@@ -463,16 +499,20 @@ class SharedHelper {
   Future<bool?> saveAccounts(List<AccountModel> accounts) async {
     for (final account in accounts) {
       if (_unhydratedAccountKeys.contains(_accountKey(account))) continue;
-      await secureCredentials.save(account.credentials.serverId, account.id, account.credentials);
+      await secureCredentials.save(
+          account.credentials.serverId, account.id, account.credentials);
       if (account.seerrCredentials?.isConfigured == true) {
-        await seerrCredentials.save(account.credentials.serverId, account.id, account.seerrCredentials!);
+        await seerrCredentials.save(account.credentials.serverId, account.id,
+            account.seerrCredentials!);
       } else {
         await seerrCredentials.delete(account.credentials.serverId, account.id);
       }
     }
     return sharedPreferences.setStringList(
       SharedKeys._loginCredentialsKey,
-      accounts.map((e) => jsonEncode(_stripSeerrCredentials(_stripCredentials(e)))).toList(),
+      accounts
+          .map((e) => jsonEncode(_stripSeerrCredentials(_stripCredentials(e))))
+          .toList(),
     );
   }
 
@@ -480,7 +520,8 @@ class SharedHelper {
   /// [secureCredentials]) and blanks out everything else - token, both URLs,
   /// serverName, deviceId - before an account is written to SharedPreferences.
   AccountModel _stripCredentials(AccountModel account) => account.copyWith(
-        credentials: CredentialsModel.internal(serverId: account.credentials.serverId),
+        credentials:
+            CredentialsModel.internal(serverId: account.credentials.serverId),
       );
 
   /// Blanks [AccountModel.seerrCredentials] entirely before an account is
@@ -489,35 +530,40 @@ class SharedHelper {
   /// [seerrCredentials]: that lookup key comes from `credentials.serverId`
   /// and `id`, both independent of this field.
   AccountModel _stripSeerrCredentials(AccountModel account) =>
-      account.seerrCredentials == null ? account : account.copyWith(seerrCredentials: null);
+      account.seerrCredentials == null
+          ? account
+          : account.copyWith(seerrCredentials: null);
 
   ClientSettingsModel get clientSettings {
     try {
-      return ClientSettingsModel.fromJson(jsonDecode(sharedPreferences.getString(SharedKeys._clientSettingsKey) ?? ""));
+      return ClientSettingsModel.fromJson(jsonDecode(
+          sharedPreferences.getString(SharedKeys._clientSettingsKey) ?? ""));
     } catch (e) {
       log(e.toString());
       return ClientSettingsModel.defaultModel();
     }
   }
 
-  set clientSettings(ClientSettingsModel settings) =>
-      sharedPreferences.setString(SharedKeys._clientSettingsKey, jsonEncode(settings.toJson()));
+  set clientSettings(ClientSettingsModel settings) => sharedPreferences
+      .setString(SharedKeys._clientSettingsKey, jsonEncode(settings.toJson()));
 
   HomeSettingsModel get homeSettings {
     try {
-      return HomeSettingsModel.fromJson(jsonDecode(sharedPreferences.getString(SharedKeys._homeSettingsKey) ?? ""));
+      return HomeSettingsModel.fromJson(jsonDecode(
+          sharedPreferences.getString(SharedKeys._homeSettingsKey) ?? ""));
     } catch (e) {
       log(e.toString());
       return HomeSettingsModel.defaultModel();
     }
   }
 
-  set homeSettings(HomeSettingsModel settings) =>
-      sharedPreferences.setString(SharedKeys._homeSettingsKey, jsonEncode(settings.toJson()));
+  set homeSettings(HomeSettingsModel settings) => sharedPreferences.setString(
+      SharedKeys._homeSettingsKey, jsonEncode(settings.toJson()));
 
   BookViewerSettingsModel get bookViewSettings {
     try {
-      return BookViewerSettingsModel.fromJson(sharedPreferences.getString(SharedKeys._bookViewSettingsKey) ?? "");
+      return BookViewerSettingsModel.fromJson(
+          sharedPreferences.getString(SharedKeys._bookViewSettingsKey) ?? "");
     } catch (e) {
       log(e.toString());
       return BookViewerSettingsModel();
@@ -525,7 +571,8 @@ class SharedHelper {
   }
 
   set bookViewSettings(BookViewerSettingsModel settings) {
-    sharedPreferences.setString(SharedKeys._bookViewSettingsKey, settings.toJson());
+    sharedPreferences.setString(
+        SharedKeys._bookViewSettingsKey, settings.toJson());
   }
 
   Future<void> updateAccountInfo(AccountModel account) async {
@@ -545,22 +592,26 @@ class SharedHelper {
 
   LastSeenNotificationsModel get lastSeenNotifications {
     try {
-      return LastSeenNotificationsModel.fromJson(
-          jsonDecode(sharedPreferences.getString(SharedKeys.lastSeenNotificationsKey) ?? ""));
+      return LastSeenNotificationsModel.fromJson(jsonDecode(
+          sharedPreferences.getString(SharedKeys.lastSeenNotificationsKey) ??
+              ""));
     } catch (e) {
       log(e.toString());
       return const LastSeenNotificationsModel();
     }
   }
 
-  Future<void> setLastSeenNotifications(LastSeenNotificationsModel serverLastSeen) async {
-    await sharedPreferences.setString(SharedKeys.lastSeenNotificationsKey, jsonEncode(serverLastSeen.toJson()));
+  Future<void> setLastSeenNotifications(
+      LastSeenNotificationsModel serverLastSeen) async {
+    await sharedPreferences.setString(SharedKeys.lastSeenNotificationsKey,
+        jsonEncode(serverLastSeen.toJson()));
     SharedKeys.instance._keyChanged.add(SharedKeys.lastSeenNotificationsKey);
   }
 
   SubtitleSettingsModel get subtitleSettings {
     try {
-      return SubtitleSettingsModel.fromJson(sharedPreferences.getString(SharedKeys._subtitleSettingsKey) ?? "");
+      return SubtitleSettingsModel.fromJson(
+          sharedPreferences.getString(SharedKeys._subtitleSettingsKey) ?? "");
     } catch (e) {
       log(e.toString());
       return const SubtitleSettingsModel();
@@ -568,13 +619,15 @@ class SharedHelper {
   }
 
   set subtitleSettings(SubtitleSettingsModel settings) {
-    sharedPreferences.setString(SharedKeys._subtitleSettingsKey, settings.toJson());
+    sharedPreferences.setString(
+        SharedKeys._subtitleSettingsKey, settings.toJson());
   }
 
   VideoPlayerSettingsModel get videoPlayerSettings {
     try {
-      return VideoPlayerSettingsModel.fromJson(
-          jsonDecode(sharedPreferences.getString(SharedKeys._videoPlayerSettingsKey) ?? ""));
+      return VideoPlayerSettingsModel.fromJson(jsonDecode(
+          sharedPreferences.getString(SharedKeys._videoPlayerSettingsKey) ??
+              ""));
     } catch (e) {
       log(e.toString());
       return VideoPlayerSettingsModel();
@@ -582,7 +635,8 @@ class SharedHelper {
   }
 
   set videoPlayerSettings(VideoPlayerSettingsModel settings) {
-    sharedPreferences.setString(SharedKeys._videoPlayerSettingsKey, jsonEncode(settings.toJson()));
+    sharedPreferences.setString(
+        SharedKeys._videoPlayerSettingsKey, jsonEncode(settings.toJson()));
   }
 
   /// Dernier volume non nul connu (`VideoPlayerSettingsProviderNotifier
@@ -598,7 +652,8 @@ class SharedHelper {
 
   PhotoViewSettingsModel get photoViewSettings {
     try {
-      return PhotoViewSettingsModel.fromJson(sharedPreferences.getString(SharedKeys._photoViewSettingsKey) ?? "");
+      return PhotoViewSettingsModel.fromJson(
+          sharedPreferences.getString(SharedKeys._photoViewSettingsKey) ?? "");
     } catch (e) {
       log(e.toString());
       return PhotoViewSettingsModel();
@@ -606,6 +661,7 @@ class SharedHelper {
   }
 
   set photoViewSettings(PhotoViewSettingsModel settings) {
-    sharedPreferences.setString(SharedKeys._photoViewSettingsKey, settings.toJson());
+    sharedPreferences.setString(
+        SharedKeys._photoViewSettingsKey, settings.toJson());
   }
 }

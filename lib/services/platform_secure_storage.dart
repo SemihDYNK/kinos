@@ -18,6 +18,9 @@ void configurePlatformSecureStorage() {
   FlutterSecureStoragePlatform.instance = _SessionSecureStorage();
 }
 
+bool get usesSessionSecureStorage =>
+    FlutterSecureStoragePlatform.instance is _SessionSecureStorage;
+
 class _SessionSecureStorage extends FlutterSecureStoragePlatform {
   final _values = <String, String>{};
 
