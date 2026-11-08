@@ -45,14 +45,13 @@ class AppBootstrapResult {
 }
 
 Future<AppBootstrapResult> bootstrapApplication(List<String> args) async {
-  configurePlatformSecureStorage();
-
   // En tout premier, avant tout accès à SharedPreferences ou à la base
   // Drift (juste en dessous, et dans database_item.dart) : les deux
   // vivent sous getApplicationSupportDirectory(), dérivée de
   // APPLICATION_ID côté natif (cf. legacy_migration.dart) — trop tard
   // une fois l'un des deux déjà ouvert sous la nouvelle identité.
   await migrateLegacyDataDirectory();
+  await configurePlatformSecureStorage();
   await migrateLegacySecureStorage();
 
   final crashProvider = CrashLogNotifier();

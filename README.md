@@ -58,8 +58,9 @@ Distributable builds are published in
 (`kinos-linux-x86_64.AppImage`), the Linux tarball, and experimental Windows
 and macOS archives, together with `SHA256SUMS.txt`. Linux is the primary
 target; the Windows and macOS builds are not signed or notarized. The macOS
-archive asks users to reconnect after each app launch because its ad hoc
-signature cannot use the Keychain safely.
+archive stores account secrets in a local file accessible to applications
+running as that macOS user, because its ad hoc signature cannot use the
+Keychain safely.
 
 ## Building & Running
 

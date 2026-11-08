@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +11,6 @@ import 'package:kinos/models/seerr_credentials_model.dart';
 import 'package:kinos/providers/shared_provider.dart';
 import 'package:kinos/services/secure_credentials_store.dart';
 import 'package:kinos/services/seerr_credentials_store.dart';
-import 'package:kinos/services/platform_secure_storage.dart';
 
 import '../support/fake_secure_storage_platform.dart';
 
@@ -63,32 +61,6 @@ const _seerrCreds = SeerrCredentialsModel(
 
 void main() {
   group('degraded vault reads', () {
-    test(
-        'macOS session storage does not restore an account without its expired session token',
-        () async {
-      final previousPlatform = FlutterSecureStoragePlatform.instance;
-      final previousTarget = debugDefaultTargetPlatformOverride;
-      addTearDown(() {
-        FlutterSecureStoragePlatform.instance = previousPlatform;
-        debugDefaultTargetPlatformOverride = previousTarget;
-      });
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      configurePlatformSecureStorage();
-
-      SharedPreferences.setMockInitialValues({
-        'loginCredentialsKey': [
-          jsonEncode(
-              _account(id: 'user-1', serverId: 'server-1', token: '').toJson())
-        ],
-        'credentialsMigratedToSecureStorageKey': true,
-        'seerrCredentialsMigratedToSecureStorageKey': true,
-      });
-      final helper = SharedHelper(
-          sharedPreferences: await SharedPreferences.getInstance());
-
-      expect(await helper.getAccounts(), isEmpty);
-    });
-
     test('a read failure for one account never empties the whole list',
         () async {
       final failing =

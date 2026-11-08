@@ -26,7 +26,6 @@ import 'package:kinos/providers/update_notifications_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/services/secure_credentials_store.dart';
 import 'package:kinos/services/seerr_credentials_store.dart';
-import 'package:kinos/services/platform_secure_storage.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError();
@@ -237,11 +236,7 @@ class SharedHelper {
       final accounts = savedAccounts
           .map((e) => AccountModel.fromJson(jsonDecode(e)))
           .toList();
-      final hydrated = await Future.wait(accounts.map(_hydrateAccount));
-      if (!usesSessionSecureStorage) return hydrated;
-      return hydrated
-          .where((account) => account.credentials.token.isNotEmpty)
-          .toList();
+      return await Future.wait(accounts.map(_hydrateAccount));
     } catch (_, stacktrace) {
       log(stacktrace.toString());
       return [];
@@ -270,8 +265,9 @@ class SharedHelper {
       // account's placeholder credentials as-is rather than dropping it -
       // failing to log in with an empty token is easier to recover from
       // than an account silently disappearing from the list.
-      if (storedCredentials != null)
+      if (storedCredentials != null) {
         hydrated = hydrated.copyWith(credentials: storedCredentials);
+      }
     } catch (e, stacktrace) {
       fullyHydrated = false;
       // Never interpolate `storedCredentials`/`e`'s payload here - only
@@ -468,8 +464,9 @@ class SharedHelper {
             : lastLoggedIn;
       });
 
-      if (recentUsedAccount.authMethod == Authentication.autoLogin)
+      if (recentUsedAccount.authMethod == Authentication.autoLogin) {
         return recentUsedAccount;
+      }
       return null;
     } catch (e) {
       log(e.toString());

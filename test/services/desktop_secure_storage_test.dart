@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
@@ -28,20 +30,71 @@ class _RecordingVault extends FakeSecureStoragePlatform {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('macOS keeps credentials only for the current app session', () async {
+  test('macOS persists credentials in a private local file across app restarts',
+      () async {
     final original = FlutterSecureStoragePlatform.instance;
+    final directory =
+        await Directory.systemTemp.createTemp('kinos-macos-storage-test');
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    try {
-      configurePlatformSecureStorage();
-      const storage = FlutterSecureStorage();
-
-      await storage.write(key: 'token', value: 'secret');
-
-      expect(await storage.read(key: 'token'), 'secret');
-    } finally {
+    addTearDown(() async {
       debugDefaultTargetPlatformOverride = null;
       FlutterSecureStoragePlatform.instance = original;
-    }
+      await directory.delete(recursive: true);
+    });
+
+    await configurePlatformSecureStorage(storageDirectory: directory);
+    const storage = FlutterSecureStorage();
+    await storage.write(key: 'token', value: 'secret');
+    await storage.write(key: 'token', value: 'rotated-secret');
+
+    FlutterSecureStoragePlatform.instance = original;
+    await configurePlatformSecureStorage(storageDirectory: directory);
+
+    expect(await storage.read(key: 'token'), 'rotated-secret');
+    expect(
+        (await File('${directory.path}/credentials.json').stat()).mode & 0x1ff,
+        0x180);
+  });
+
+  test('macOS deletes local credentials permanently', () async {
+    final original = FlutterSecureStoragePlatform.instance;
+    final directory =
+        await Directory.systemTemp.createTemp('kinos-macos-storage-test');
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() async {
+      debugDefaultTargetPlatformOverride = null;
+      FlutterSecureStoragePlatform.instance = original;
+      await directory.delete(recursive: true);
+    });
+
+    await configurePlatformSecureStorage(storageDirectory: directory);
+    const storage = FlutterSecureStorage();
+    await storage.write(key: 'token', value: 'secret');
+    await storage.delete(key: 'token');
+
+    FlutterSecureStoragePlatform.instance = original;
+    await configurePlatformSecureStorage(storageDirectory: directory);
+
+    expect(await storage.read(key: 'token'), isNull);
+    expect(await File('${directory.path}/credentials.json').exists(), isFalse);
+  });
+
+  test('macOS ignores malformed local credential entries', () async {
+    final original = FlutterSecureStoragePlatform.instance;
+    final directory =
+        await Directory.systemTemp.createTemp('kinos-macos-storage-test');
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() async {
+      debugDefaultTargetPlatformOverride = null;
+      FlutterSecureStoragePlatform.instance = original;
+      await directory.delete(recursive: true);
+    });
+    await File('${directory.path}/credentials.json')
+        .writeAsString('{"token":42}');
+
+    await configurePlatformSecureStorage(storageDirectory: directory);
+
+    expect(await const FlutterSecureStorage().read(key: 'token'), isNull);
   });
 
   for (final platform in [
