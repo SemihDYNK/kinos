@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kinos/bootstrap/legacy_migration.dart';
 import 'package:kinos/models/settings/arguments_model.dart';
 import 'package:kinos/providers/crash_log_provider.dart';
+import 'package:kinos/services/platform_secure_storage.dart';
 import 'package:kinos/src/video_player_helper.g.dart';
 import 'package:kinos/util/application_info.dart';
 import 'package:kinos/util/kinos_config.dart';
@@ -44,6 +45,8 @@ class AppBootstrapResult {
 }
 
 Future<AppBootstrapResult> bootstrapApplication(List<String> args) async {
+  configurePlatformSecureStorage();
+
   // En tout premier, avant tout accès à SharedPreferences ou à la base
   // Drift (juste en dessous, et dans database_item.dart) : les deux
   // vivent sous getApplicationSupportDirectory(), dérivée de

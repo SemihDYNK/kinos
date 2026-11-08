@@ -8,6 +8,7 @@ import 'package:kinos/arr/services/arr_credentials_store.dart';
 import 'package:kinos/arr/services/qbittorrent_credentials_store.dart';
 import 'package:kinos/services/secure_credentials_store.dart';
 import 'package:kinos/services/seerr_credentials_store.dart';
+import 'package:kinos/services/platform_secure_storage.dart';
 
 import '../support/fake_secure_storage_platform.dart';
 
@@ -26,6 +27,22 @@ class _RecordingVault extends FakeSecureStoragePlatform {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('macOS keeps credentials only for the current app session', () async {
+    final original = FlutterSecureStoragePlatform.instance;
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      configurePlatformSecureStorage();
+      const storage = FlutterSecureStorage();
+
+      await storage.write(key: 'token', value: 'secret');
+
+      expect(await storage.read(key: 'token'), 'secret');
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+      FlutterSecureStoragePlatform.instance = original;
+    }
+  });
 
   for (final platform in [
     TargetPlatform.macOS,

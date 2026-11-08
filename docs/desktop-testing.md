@@ -66,8 +66,8 @@ Extraire l’artefact, puis `kinos-macos-universal.zip`, et copier `Kinos.app`
 dans Applications. Cette version utilise une signature locale ad hoc : elle
 n’est ni signée avec un certificat Developer ID ni notariée par Apple. Elle
 n’est pas sandboxée, car une archive ad hoc ne peut pas obtenir l’autorisation
-Apple nécessaire au trousseau dans le sandbox. Les identifiants restent dans le
-trousseau de connexion macOS ; macOS peut demander l’accès au trousseau.
+Apple nécessaire au trousseau. Les identifiants restent uniquement en mémoire :
+se reconnecter après chaque fermeture de Kinos.
 
 Si macOS bloque l’ouverture, tenter de lancer l’app puis ouvrir
 **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**,
@@ -78,9 +78,11 @@ pour l’ensemble du système.
 
 Tester la connexion Jellyfin, la navigation et le défilement, puis la lecture
 d’un film et d’un épisode : son, sous-titres, recherche dans la vidéo,
-réduction/réouverture du lecteur et plein écran. Fermer puis rouvrir l’app
-pour vérifier la conservation des comptes. Si utilisés, vérifier aussi Seerr,
-Arr, AniList et l’import Letterboxd avec un fichier choisi sur cet appareil.
+réduction/réouverture du lecteur et plein écran. Sous macOS, fermer puis
+rouvrir l’app pour vérifier que la reconnexion est bien demandée ; sous Linux
+et Windows, vérifier la conservation des comptes. Si utilisés, vérifier aussi
+Seerr, Arr, AniList et l’import Letterboxd avec un fichier choisi sur cet
+appareil.
 
 Pour signaler un problème, joindre le commit de `BUILD.txt`, la version du
 système, le type de Mac ou GPU Windows et les étapes de reproduction.
