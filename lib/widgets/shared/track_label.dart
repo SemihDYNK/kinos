@@ -58,6 +58,7 @@ TrackLabelInfo formatSubtitleTrackLabel(
       if (stream.isForced) 'Forcé',
       if (stream.isDefault) 'Par défaut',
       if (stream.isHearingImpaired) 'SDH',
+      if (stream.isExternal) 'OpenSubtitles',
       if (container != null) container,
     ],
   );

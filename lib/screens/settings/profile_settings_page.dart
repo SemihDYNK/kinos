@@ -210,6 +210,30 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        ...settingsListGroup(
+          context,
+          SettingsLabelDivider(label: context.localized.audio(2)),
+          [
+            Builder(builder: (context) {
+              final anyLanguageLabel = context.localized.anyLanguage;
+              final preference = user?.userConfiguration?.audioLanguagePreference?.trim().toLowerCase();
+              final culture = cultures.firstWhereOrNull((e) => e.matchesLanguageCode(preference));
+              return SettingsListTileEnum(
+                label: const Text('Préférence de piste audio'),
+                current: preference?.isEmpty ?? true ? anyLanguageLabel : culture?.displayName ?? context.localized.unknown,
+                itemBuilder: (context) => [
+                  ItemActionButton(selected: preference?.isEmpty ?? true, label: Text(anyLanguageLabel), action: () => ref.read(userProvider.notifier).updateAudioLanguagePreference(null)),
+                  ...cultures.map((e) => ItemActionButton(
+                    selected: e.matchesLanguageCode(preference),
+                    label: Text(e.displayName ?? e.name ?? context.localized.unknown),
+                    action: () => ref.read(userProvider.notifier).updateAudioLanguagePreference(e.threeLetterISOLanguageName?.toLowerCase() ?? e.twoLetterISOLanguageName?.toLowerCase()),
+                  )),
+                ],
+              );
+            }),
+          ],
+        ),
         if (ref.watch(supportsNotificationsProvider)) ...[
           const SizedBox(height: 16),
           ...settingsListGroup(

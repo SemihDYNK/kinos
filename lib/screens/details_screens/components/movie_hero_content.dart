@@ -10,10 +10,12 @@ class MovieHeroContent extends StatelessWidget {
       {required this.summary,
       required this.streams,
       required this.onStreamsChanged,
+      this.onSearchSubtitles,
       super.key});
   final String summary;
   final MediaStreamsModel streams;
   final ValueChanged<MediaStreamsModel> onStreamsChanged;
+  final VoidCallback? onSearchSubtitles;
   @override
   Widget build(BuildContext context) => Column(
         mainAxisSize: MainAxisSize.min,
@@ -37,7 +39,9 @@ class MovieHeroContent extends StatelessWidget {
                 child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.xs),
                     child: MediaStreamSelectors(
-                        mediaStream: streams, onChanged: onStreamsChanged))),
+                        mediaStream: streams,
+                        onChanged: onStreamsChanged,
+                        onSearchSubtitles: onSearchSubtitles))),
           ],
         ],
       );

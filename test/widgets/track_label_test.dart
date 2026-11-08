@@ -163,6 +163,24 @@ void main() {
       });
     });
 
+    testWidgets('subtitle externe: indique OpenSubtitles', (tester) async {
+      await withContext(tester, (context) {
+        final stream = SubStreamModel(
+          name: '',
+          id: '3',
+          title: '',
+          displayTitle: '',
+          language: 'fre',
+          codec: 'subrip',
+          isDefault: false,
+          isExternal: true,
+          index: 5,
+        );
+        final info = formatSubtitleTrackLabel(context, stream);
+        expect(info.secondaryFlags, ['OpenSubtitles', 'SRT']);
+      });
+    });
+
     testWidgets('une piste "off" affiche le libellé localisé, sans drapeau',
         (tester) async {
       await withContext(tester, (context) {

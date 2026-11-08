@@ -100,6 +100,8 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
 
   bool _speedBoostActive = false;
   double? _originalSpeed;
+  Timer? _spaceHoldTimer;
+  Duration _subtitleDelay = Duration.zero;
 
   Offset? _doubleTapPosition;
 
@@ -123,6 +125,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
 
   @override
   void dispose() {
+    _spaceHoldTimer?.cancel();
     _deactivateSpeedBoost();
     timer.cancel();
     _progressFocusNode.dispose();
@@ -957,8 +960,10 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
   List<PopoverOption> _subtitleOptions() {
     final playbackModel = ref.watch(playBackModel);
     final currentIndex = playbackModel?.mediaStreams?.defaultSubStreamIndex;
-    final streams = [SubStreamModel.no(), ...?playbackModel?.subStreams];
-    return streams
+    // PlaybackModel.subStreams inclut déjà l'option désactivée.
+    final streams = playbackModel?.subStreams ?? const <SubStreamModel>[];
+    return [
+      ...streams
         .map((stream) => PopoverOption(
               content: TrackLabelText(
                 info: formatSubtitleTrackLabel(context, stream),
@@ -966,9 +971,25 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
               ),
               selected: stream.index == (currentIndex ?? -1),
               onSelect: () => _selectSubtitle(stream),
-            ))
-        .toList();
+            )),
+      PopoverOption(
+        content: const Text('Personnaliser les sous-titres'),
+        onSelect: _showSubtitleDelayDialog,
+      ),
+      PopoverOption(content: const Text('Rechercher des sous-titres'), onSelect: _showRemoteSubtitleSearch),
+    ];
   }
+
+  Future<void> _showSubtitleDelayDialog() => showSubtitleQuickControls(
+        context,
+        initialDelay: _subtitleDelay,
+        onDelayChanged: (delay) async {
+          setState(() => _subtitleDelay = delay);
+          await ref.read(videoPlayerProvider).setSubtitleDelay(delay);
+        },
+      );
+
+  Future<void> _showRemoteSubtitleSearch() => showRemoteSubtitleSearch(context);
 
   List<PopoverOption> _imageOptions() {
     final settings = ref.watch(videoPlayerSettingsProvider);
@@ -1656,6 +1677,10 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
 
   KeyEventResult _handleSpacebarEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
+      _spaceHoldTimer ??= Timer(const Duration(milliseconds: 200), () {
+        _spaceHoldTimer = null;
+        if (ref.read(mediaPlaybackProvider).playing) _activateSpeedBoost();
+      });
       return KeyEventResult.handled;
     } else if (event is KeyRepeatEvent) {
       final isPlaying =
@@ -1665,6 +1690,8 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
       }
       return KeyEventResult.handled;
     } else if (event is KeyUpEvent) {
+      _spaceHoldTimer?.cancel();
+      _spaceHoldTimer = null;
       if (_speedBoostActive) {
         _deactivateSpeedBoost();
       } else {

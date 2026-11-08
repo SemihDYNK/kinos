@@ -14,10 +14,12 @@ import 'package:kinos/widgets/shared/track_label.dart';
 class MediaStreamSelectors extends StatelessWidget {
   final MediaStreamsModel mediaStream;
   final ValueChanged<MediaStreamsModel> onChanged;
+  final VoidCallback? onSearchSubtitles;
 
   const MediaStreamSelectors({
     required this.mediaStream,
     required this.onChanged,
+    this.onSearchSubtitles,
     super.key,
   });
 
@@ -62,31 +64,44 @@ class MediaStreamSelectors extends StatelessWidget {
             );
           }).toList(),
         ),
-      if (mediaStream.subStreams.isNotEmpty)
-        LabeledSelector(
-          label: context.localized.subtitle,
-          value: formatSubtitleTrackLabel(
-                  context, mediaStream.currentSubStream ?? SubStreamModel.no())
-              .primary,
-          options: [SubStreamModel.no(), ...mediaStream.subStreams]
-              .mapIndexed((index, e) {
-            final selected =
-                (mediaStream.currentSubStream ?? SubStreamModel.no()) == e;
-            final info = formatSubtitleTrackLabel(context, e);
-            return (
-              label: info.primary,
-              selected: selected,
-              subtitle: info.secondaryFlags.isEmpty
-                  ? null
-                  : Text(info.secondaryLine,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: AppColors.textSecondary)),
-              onSelect: () => onChanged(
-                  mediaStream.copyWith(defaultSubStreamIndex: e.index)),
-            );
-          }).toList(),
+      if (mediaStream.subStreams.isNotEmpty || onSearchSubtitles != null)
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (mediaStream.subStreams.isNotEmpty)
+              LabeledSelector(
+                label: context.localized.subtitle,
+                value: formatSubtitleTrackLabel(context,
+                        mediaStream.currentSubStream ?? SubStreamModel.no())
+                    .primary,
+                options: [SubStreamModel.no(), ...mediaStream.subStreams]
+                    .mapIndexed((index, e) {
+                  final selected =
+                      (mediaStream.currentSubStream ?? SubStreamModel.no()) ==
+                          e;
+                  final info = formatSubtitleTrackLabel(context, e);
+                  return (
+                    label: info.primary,
+                    selected: selected,
+                    subtitle: info.secondaryFlags.isEmpty
+                        ? null
+                        : Text(info.secondaryLine,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: AppColors.textSecondary)),
+                    onSelect: () => onChanged(
+                        mediaStream.copyWith(defaultSubStreamIndex: e.index)),
+                  );
+                }).toList(),
+              ),
+            if (onSearchSubtitles != null)
+              IconButton(
+                tooltip: 'Rechercher des sous-titres',
+                onPressed: onSearchSubtitles,
+                icon: const Icon(Icons.search_rounded),
+              ),
+          ],
         ),
     ];
 

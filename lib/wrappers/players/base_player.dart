@@ -38,6 +38,7 @@ abstract class BasePlayer {
   Stream<int> get playlistIndexStream => const Stream<int>.empty();
   Future<Uint8List?> takeScreenshot();
   Future<int> setSubtitleTrack(SubStreamModel? model, PlaybackModel playbackModel);
+  Future<void> setSubtitleDelay(Duration delay) async {}
   Future<int> setAudioTrack(AudioStreamModel? model, PlaybackModel playbackModel);
   void applySubtitleSettings(SubtitleSettingsModel settings) {}
 

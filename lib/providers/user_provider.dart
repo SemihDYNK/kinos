@@ -104,6 +104,18 @@ class User extends _$User {
     }
   }
 
+  void updateAudioLanguagePreference(String? language) async {
+    final currentUserConfiguration = state?.userConfiguration;
+    if (currentUserConfiguration == null) return;
+    final normalizedLanguage = language?.trim().toLowerCase();
+    final updated = currentUserConfiguration.copyWithWrapped(
+      audioLanguagePreference:
+          Wrapped<String?>.value((normalizedLanguage?.isEmpty ?? true) ? null : normalizedLanguage),
+    );
+    final newUserConfiguration = await api.updateUserConfiguration(updated);
+    if (newUserConfiguration != null) userState = state?.copyWith(userConfiguration: newUserConfiguration);
+  }
+
   void updateSubtitleMode(enums.SubtitlePlaybackMode? mode) async {
     final currentUserConfiguration = state?.userConfiguration;
     if (currentUserConfiguration == null) return;

@@ -16,6 +16,7 @@ import 'package:kinos/screens/details_screens/components/media_info_section.dart
 import 'package:kinos/screens/details_screens/components/media_meta_line.dart';
 import 'package:kinos/screens/details_screens/components/movie_hero_content.dart';
 import 'package:kinos/screens/shared/media_detail_scaffold.dart';
+import 'package:kinos/screens/video_player/components/video_player_options_sheet.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/humanize_duration.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
@@ -150,6 +151,15 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
               onStreamsChanged: (changed) => ref
                   .read(providerInstance.notifier)
                   .setMediaStreamHelper(changed),
+              onSearchSubtitles: () => showRemoteSubtitleSearch(
+                context,
+                itemId: details.id,
+                onDownloaded: () async {
+                  await ref
+                      .read(providerInstance.notifier)
+                      .fetchDetails(widget.item);
+                },
+              ),
             ),
       onPlay: details == null
           ? null

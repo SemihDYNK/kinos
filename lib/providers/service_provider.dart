@@ -608,6 +608,43 @@ class JellyService {
     );
   }
 
+  Future<Response<List<RemoteSubtitleInfo>>>
+      itemsItemIdRemoteSearchSubtitlesLanguageGet({
+    required String itemId,
+    required String language,
+  }) =>
+          api.itemsItemIdRemoteSearchSubtitlesLanguageGet(
+              itemId: itemId, language: language);
+
+  Future<Response> itemsItemIdRemoteSearchSubtitlesSubtitleIdPost({
+    required String itemId,
+    required String subtitleId,
+  }) =>
+      api.itemsItemIdRemoteSearchSubtitlesSubtitleIdPost(
+          itemId: itemId, subtitleId: subtitleId);
+
+  Future<int> downloadRemoteSubtitle({
+    required String itemId,
+    required String subtitleId,
+  }) async {
+    final serverUrl = ref.read(serverUrlProvider);
+    final credentials = ref.read(userProvider)?.credentials ??
+        ref.read(authProvider).serverLoginModel?.tempCredentials;
+    if (serverUrl == null || serverUrl.isEmpty || credentials == null) {
+      throw StateError('Connexion Jellyfin indisponible.');
+    }
+
+    final baseUri =
+        Uri.parse(serverUrl.endsWith('/') ? serverUrl : '$serverUrl/');
+    final response = await http.post(
+      baseUri.resolve(
+        'Items/${Uri.encodeComponent(itemId)}/RemoteSearch/Subtitles/${Uri.encodeComponent(subtitleId)}',
+      ),
+      headers: credentials.header(ref),
+    );
+    return response.statusCode;
+  }
+
   Future<Response> itemsItemIdImagesImageTypeDelete({
     required String? itemId,
     required ImageType? imageType,
@@ -826,13 +863,15 @@ class JellyService {
     try {
       final playbackProvenance = await rememberAnilist?.provenance;
       if (playbackProvenance != null) {
-        await db.setSetting(anilistPlaybackKey(queueId), playbackProvenance, scope: anilistPlaybackScope);
+        await db.setSetting(anilistPlaybackKey(queueId), playbackProvenance,
+            scope: anilistPlaybackScope);
       }
       final response = await send();
       if (response.isSuccessful) {
         await rememberAnilist?.remember();
         await db.deletePlaybackEvent(queueId);
-        await db.deleteSetting(anilistPlaybackKey(queueId), scope: anilistPlaybackScope);
+        await db.deleteSetting(anilistPlaybackKey(queueId),
+            scope: anilistPlaybackScope);
       } else {
         await db.incrementPlaybackEventAttempts(queueId);
         await db.recordPlaybackEventFailure(
