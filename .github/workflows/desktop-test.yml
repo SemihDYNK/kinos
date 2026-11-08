@@ -98,8 +98,8 @@ jobs:
           app = pathlib.Path(sys.argv[1]).resolve()
           entitlements = plistlib.loads(subprocess.check_output(
               ['codesign', '--display', '--entitlements', '-', '--xml', str(app)]))
-          assert 'keychain-access-groups' not in entitlements, (
-              'Local builds cannot claim a provisioning-only Keychain group')
+          assert entitlements.get('keychain-access-groups') == [], (
+              'Local builds must declare Keychain Sharing without a provisioning group')
           assert 'com.apple.security.app-sandbox' not in entitlements, (
               'An ad hoc sandboxed app cannot persist credentials in Keychain')
           info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
