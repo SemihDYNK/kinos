@@ -212,17 +212,7 @@ class SideNavigationRail extends ConsumerWidget {
                                           child: SizedBox(
                                             height: AppNavigation.rowHeight,
                                             child: Center(
-                                                child: AnimatedSwitcher(
-                                                    duration: AppMotion.enabled(
-                                                            context)
-                                                        ? AppDurations
-                                                            .navigationSelection
-                                                        : Duration.zero,
-                                                    child: expanded
-                                                        ? const KinosWordmark()
-                                                        : const KinosIcon(
-                                                            size: AppBrand
-                                                                .markSize))),
+                                                child: _BrandSwap(progress: progress)),
                                           ),
                                         ),
                                       ),
@@ -669,4 +659,29 @@ class _RailTraversalPolicy extends ReadingOrderTraversalPolicy {
 bool _isLaidOut(FocusNode node) {
   final ro = node.context?.findRenderObject();
   return ro is RenderBox && ro.hasSize;
+}
+
+/// Le logo suit la même progression que la barre : l'icône s'efface pendant
+/// que le mot apparaît au même endroit, sans disparition intermédiaire.
+class _BrandSwap extends StatelessWidget {
+  const _BrandSwap({required this.progress});
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = progress.clamp(0.0, 1.0);
+    final wordmark = Curves.easeIn.transform(p);
+    final icon = 1 - Curves.easeOut.transform(p);
+    return ClipRect(
+      child: Stack(alignment: Alignment.center, children: [
+        if (icon > 0)
+          Opacity(
+              opacity: icon, child: const KinosIcon(size: AppBrand.markSize)),
+        if (wordmark > 0)
+          OverflowBox(
+              maxWidth: AppBrand.wordmarkWidth,
+              child: Opacity(opacity: wordmark, child: const KinosWordmark())),
+      ]),
+    );
+  }
 }
