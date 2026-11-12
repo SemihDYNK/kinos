@@ -2,6 +2,7 @@ import 'package:kinos/widgets/shared/animated_media_icon.dart';
 import 'package:flutter/services.dart';
 import 'package:kinos/util/motion_input.dart';
 import 'package:flutter/material.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinos/widgets/shared/anchored_popover.dart';
 
@@ -144,6 +145,55 @@ void main() {
     reduced.value = true;
     await tester.pumpAndSettle();
     expect(find.text('Contenu'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a tall menu keeps one side and one direction while unrolling',
+      (tester) async {
+    // 900 px de haut : un menu de 400 px ne tient pas au-dessus du
+    // déclencheur (à 300 px du haut) mais tient en dessous. Quand il se
+    // déroulait avec une hauteur qui grandit, il tenait d'abord au-dessus,
+    // puis basculait en dessous.
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final controller = AnchoredPopoverController();
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: Padding(
+      padding: const EdgeInsets.only(top: 300),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: AnchoredPopover(
+            controller: controller,
+            popoverBuilder: (_, close) => const SizedBox(
+                height: 400, width: 240, child: Center(child: Text('Long'))),
+            child: const SizedBox(width: 120, height: 40, child: Text('Menu'))),
+      ),
+    ))));
+    controller.show();
+    await tester.pump();
+    final tops = <double>[];
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 40));
+      tops.add(tester.getTopLeft(find.byType(FrostedSurface)).dy);
+    }
+    // Trop haut pour tenir au-dessus : en dessous dès la première image,
+    // jamais de saut d'un côté à l'autre pendant le déroulé.
+    expect(tops.toSet(), hasLength(1), reason: 'placement is stable: $tops');
+    expect(tops.first, greaterThan(300 + 40));
+    await tester.pumpAndSettle();
+    controller.hide();
+    final closing = <double>[];
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 30));
+      if (find.byType(FrostedSurface).evaluate().isNotEmpty) {
+        closing.add(tester.getTopLeft(find.byType(FrostedSurface)).dy);
+      }
+    }
+    expect(closing.toSet().length, lessThanOrEqualTo(1),
+        reason: 'closing does not jump either: $closing');
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 }

@@ -285,11 +285,24 @@ void main() {
             of: find.byType(CircularProgressIndicator),
             matching: find.byType(FrostedSurface))
         .first);
+    // La taille annoncée reste complète (le placement se calcule dessus) ;
+    // seule la part révélée grandit, depuis le bord proche de la capsule.
+    double revealed() => (find
+            .byWidgetPredicate(
+                (w) => w.runtimeType.toString() == '_UnrollReveal')
+            .evaluate()
+            .single
+            .widget as dynamic)
+        .factor as double;
     final opening = panel();
+    final partial = revealed();
+    expect(partial, greaterThan(0));
+    expect(partial, lessThan(1));
     await tester.pump(AppDurations.unroll);
     final open = panel();
-    expect(opening.top, closeTo(open.top, .5));
-    expect(opening.height, lessThan(open.height));
+    expect(opening.top, closeTo(open.top, .5), reason: 'the panel stays put');
+    expect(opening.height, open.height);
+    expect(revealed(), 1);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });

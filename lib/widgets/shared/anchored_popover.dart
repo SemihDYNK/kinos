@@ -397,27 +397,80 @@ extension on _PopoverOverlay {
         child: AnimatedBuilder(
           animation: reveal,
           child: content,
-          builder: (context, child) {
-            // Le voile se déroule depuis le bord accroché au déclencheur :
-            // d'après sa place réelle, car il se retourne de l'autre côté
-            // quand la place manque.
-            final panel = panelKey.currentContext?.findRenderObject();
-            final placedAbove =
-                panel is RenderBox && panel.attached && panel.hasSize
-                    ? panel.localToGlobal(panel.size.center(Offset.zero)).dy <
-                        anchor.center.dy
-                    : !preferredTop;
-            return ClipRect(
-              child: Align(
-                alignment:
-                    placedAbove ? Alignment.bottomCenter : Alignment.topCenter,
-                heightFactor: reveal.value.clamp(0.0, 1.0),
-                child: child,
-              ),
-            );
-          },
+          builder: (context, child) => _UnrollReveal(
+              factor: reveal.value.clamp(0.0, 1.0),
+              anchorY: anchor.center.dy,
+              child: child),
         ),
       ),
+    );
+  }
+}
+
+/// Révèle une part ([factor]) de son enfant depuis le bord proche du
+/// déclencheur, sans changer la taille qu'il annonce : le placement du menu
+/// se calcule donc toujours sur sa hauteur complète. Avec une hauteur qui
+/// grandit, un long menu passait du côté « au-dessus » à « en dessous » en
+/// plein déroulé, et le sens s'inversait.
+///
+/// Le sens vient de la place réelle du menu au moment de peindre : au-dessus
+/// du déclencheur ([anchorY]), le rideau monte depuis le bas ; en dessous, il
+/// descend depuis le haut.
+class _UnrollReveal extends SingleChildRenderObjectWidget {
+  const _UnrollReveal(
+      {required this.factor, required this.anchorY, super.child});
+  final double factor;
+  final double anchorY;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderUnrollReveal(factor, anchorY);
+
+  @override
+  void updateRenderObject(
+      BuildContext context, _RenderUnrollReveal renderObject) {
+    renderObject
+      ..factor = factor
+      ..anchorY = anchorY;
+  }
+}
+
+class _RenderUnrollReveal extends RenderProxyBox {
+  _RenderUnrollReveal(this._factor, this._anchorY);
+
+  double _factor;
+  double _anchorY;
+
+  set factor(double value) {
+    if (value == _factor) return;
+    _factor = value;
+    markNeedsPaint();
+  }
+
+  set anchorY(double value) {
+    if (value == _anchorY) return;
+    _anchorY = value;
+    markNeedsPaint();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (child == null) return;
+    if (_factor >= 1) {
+      layer = null;
+      super.paint(context, offset);
+      return;
+    }
+    final above = localToGlobal(size.center(Offset.zero)).dy < _anchorY;
+    final shown = size.height * _factor;
+    final rect =
+        Rect.fromLTWH(0, above ? size.height - shown : 0, size.width, shown);
+    layer = context.pushClipRect(
+      needsCompositing,
+      offset,
+      rect,
+      super.paint,
+      oldLayer: layer as ClipRectLayer?,
     );
   }
 }
