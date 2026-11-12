@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/dashboard/recommendation_tile.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 
 import 'letterboxd_home_providers.dart';
 import 'letterboxd_home_sections.dart' show letterboxdTiles;
@@ -22,7 +23,9 @@ class LetterboxdWatchlistScreen extends ConsumerWidget {
     final canRequest = ref.watch(
         userProvider.select((u) => u?.seerrCredentials?.isConfigured ?? false));
     final text = Theme.of(context).textTheme;
-    const padding = EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding);
+    // Réserve la place de la capsule latérale, posée par-dessus la page.
+    final padding = AdaptiveLayout.adaptivePadding(context,
+        horizontalPadding: AppSpacing.screenPadding);
 
     List<RecommendationTile> tiles(List<LetterboxdHomeEntry> entries) =>
         letterboxdTiles(entries, canRequest: canRequest);
