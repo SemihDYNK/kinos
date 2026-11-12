@@ -139,9 +139,9 @@ abstract final class AppLibraryLayout {
 abstract final class AppTopNavigation {
   static const indicatorHeight = 2.0;
 
-  /// Les onglets sont des pastilles : même famille de forme que la capsule.
-  static const tabBorder =
-      BorderRadius.all(Radius.circular(AppNavigation.rowHeight));
+  /// Rayon concentrique à la capsule : le sien moins l'espace qui les sépare.
+  static const tabBorder = BorderRadius.all(
+      Radius.circular(AppNavigation.radius - AppSpacing.xxs));
   static const searchFieldWidth = 280.0;
 
   /// Hauteur commune du bouton loupe et du champ ouvert : celle des onglets.
