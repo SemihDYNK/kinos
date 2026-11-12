@@ -42,6 +42,7 @@ class CatalogNavigationBar extends ConsumerWidget {
 
     Widget tab(String label, bool active, VoidCallback action) => FocusRing(
           onActivate: action,
+          hoverFill: true,
           borderRadius: AppNavigation.selection,
           child: SizedBox(
             height: AppNavigation.rowHeight,
@@ -190,10 +191,13 @@ class _CatalogTabsState extends State<_CatalogTabs> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
     return Stack(children: [
-      Row(key: _rowKey, mainAxisSize: MainAxisSize.min, children: [
-        for (var i = 0; i < widget.children.length; i++)
-          KeyedSubtree(key: _tabKeys[i], child: widget.children[i]),
-      ]),
+      // Le survol ne repeint que cette couche, jamais le flou en dessous.
+      RepaintBoundary(
+        child: Row(key: _rowKey, mainAxisSize: MainAxisSize.min, children: [
+          for (var i = 0; i < widget.children.length; i++)
+            KeyedSubtree(key: _tabKeys[i], child: widget.children[i]),
+        ]),
+      ),
       if (_indicatorX != null && widget.activeIndex != null)
         Positioned(
           left: 0,

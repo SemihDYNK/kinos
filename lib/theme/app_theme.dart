@@ -870,8 +870,12 @@ class FocusRing extends StatefulWidget {
     this.autofocus = false,
     this.focusNode,
     this.posterMotion = false,
+    this.hoverFill = false,
   });
 
+  /// Au survol : un fond doux plutôt qu'un contour, pour les onglets où le
+  /// contour se confondrait avec l'anneau de focus.
+  final bool hoverFill;
   final Widget child;
   final VoidCallback? onActivate;
   final BorderRadius borderRadius;
@@ -937,10 +941,13 @@ class _FocusRingState extends State<FocusRing> {
       curve: Curves.easeOut,
       decoration: BoxDecoration(
         borderRadius: widget.borderRadius,
+        color: widget.hoverFill && _hovered && !_focused
+            ? AppColors.surfaceHover
+            : Colors.transparent,
         border: Border.all(
           color: _focused
               ? AppColors.focus
-              : _hovered
+              : _hovered && !widget.hoverFill
                   ? widget.posterMotion
                       ? AppColors.posterHoverBorder
                       : AppColors.borderStrong
