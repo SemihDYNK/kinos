@@ -9,6 +9,11 @@ import 'package:kinos/models/items/movie_model.dart';
 import 'package:kinos/providers/service_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
+import 'package:kinos/providers/seerr_api_provider.dart';
+import 'package:kinos/providers/seerr_service_provider.dart';
+import 'package:kinos/seerr/seerr_models.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
 import '../widgets/seerr_discovery_section_test.dart' show TestUser;
 
 class CatalogApi implements JellyService {
@@ -24,6 +29,70 @@ class CatalogApi implements JellyService {
         Response(http.Response('', 200), ServerQueryResult(items: items)));
   }
 }
+
+/// Jellyfin ne connaît que le titre original ; les identifiants demandés
+/// explicitement sont renvoyés tels quels.
+class TitleApi extends CatalogApi {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName != #itemsGet) {
+      return super.noSuchMethod(invocation);
+    }
+    calls.add(invocation.namedArguments);
+    final ids = invocation.namedArguments[#ids] as List<String>?;
+    final term = invocation.namedArguments[#searchTerm] as String?;
+    final found = ids != null
+        ? [for (final id in ids) movie(id)]
+        : term == 'Slow Horses'
+            ? [movie('slow-horses')]
+            : <ItemBaseModel>[];
+    return Future.value(
+        Response(http.Response('', 200), ServerQueryResult(items: found)));
+  }
+}
+
+ItemBaseModel movie(String id) =>
+    MovieModel.fromBaseDto(BaseItemDto(id: id, name: id), null);
+
+class FakeSeerrService implements SeerrService {
+  FakeSeerrService(this.results, {this.fails = false});
+  final List<SeerrDashboardPosterModel> results;
+  final bool fails;
+  final queries = <(String, String?)>[];
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName != #searchPosters) {
+      return super.noSuchMethod(invocation);
+    }
+    queries.add((
+      invocation.namedArguments[#query] as String,
+      invocation.namedArguments[#language] as String?
+    ));
+    if (fails) return Future<List<SeerrDashboardPosterModel>>.error('down');
+    return Future.value(results);
+  }
+}
+
+class FakeSeerrApi extends SeerrApi {
+  FakeSeerrApi(this.service);
+  final FakeSeerrService service;
+  @override
+  SeerrService build() => service;
+}
+
+SeerrDashboardPosterModel seerrHit(String? jellyfinId,
+        {String title = 'Titre', int tmdbId = 1}) =>
+    SeerrDashboardPosterModel(
+        id: '$tmdbId',
+        type: SeerrMediaType.tvshow,
+        tmdbId: tmdbId,
+        title: title,
+        overview: '',
+        images: ImagesData(),
+        mediaStatus: SeerrMediaStatus.unknown,
+        jellyfinItemId: jellyfinId);
+
+const fr = 'fr';
 
 class Api extends JellyApi {
   Api(this.api);
@@ -85,19 +154,79 @@ void main() {
   test('empty quick search makes no request; results are profile scoped',
       () async {
     final api = CatalogApi();
+    final seerr = FakeSeerrService([]);
     final container = ProviderContainer(overrides: [
       userProvider.overrideWith(TestUser.new),
-      jellyApiProvider.overrideWith(() => Api(api))
+      jellyApiProvider.overrideWith(() => Api(api)),
+      seerrApiProvider.overrideWith(() => FakeSeerrApi(seerr)),
     ]);
     addTearDown(container.dispose);
-    await container.read(quickSearchProvider('   ').future);
+    await container
+        .read(quickSearchProvider((query: '   ', language: fr)).future);
     expect(api.calls, isEmpty);
-    await container.read(quickSearchProvider('Dune').future);
+    expect(seerr.queries, isEmpty);
+    await container
+        .read(quickSearchProvider((query: 'Dune', language: fr)).future);
     expect(api.calls.single[#searchTerm], 'Dune');
     expect(api.calls.single[#includeItemTypes],
         [BaseItemKind.movie, BaseItemKind.series]);
     (container.read(userProvider.notifier) as TestUser).change('b');
-    await container.read(quickSearchProvider('Dune').future);
+    await container
+        .read(quickSearchProvider((query: 'Dune', language: fr)).future);
     expect(api.calls, hasLength(2));
+  });
+
+  group('translated titles', () {
+    Future<(QuickSearchResults, TitleApi, FakeSeerrService)> run(
+        String query, FakeSeerrService seerr) async {
+      final api = TitleApi();
+      final container = ProviderContainer(overrides: [
+        userProvider.overrideWith(TestUser.new),
+        jellyApiProvider.overrideWith(() => Api(api)),
+        seerrApiProvider.overrideWith(() => FakeSeerrApi(seerr)),
+      ]);
+      addTearDown(container.dispose);
+      final results = await container
+          .read(quickSearchProvider((query: query, language: fr)).future);
+      return (results, api, seerr);
+    }
+
+    test('a French title finds the library entry through Seerr', () async {
+      final (results, api, seerr) = await run('Les Déshonorés',
+          FakeSeerrService([seerrHit('slow-horses'), seerrHit('')]));
+      expect(seerr.queries, [('Les Déshonorés', fr)]);
+      expect(results.library.map((item) => item.id), ['slow-horses']);
+      expect(api.calls.last[#ids], ['slow-horses']);
+    });
+
+    test('titles already found by Jellyfin are not duplicated', () async {
+      final (results, api, _) = await run('Slow Horses',
+          FakeSeerrService([seerrHit('SLOW-HORSES'), seerrHit('other')]));
+      expect(results.library.map((item) => item.id), ['slow-horses', 'other']);
+      expect(results.outside, isEmpty);
+      expect(api.calls.last[#ids], ['other']);
+    });
+
+    test('titles Jellyfin does not have are grouped apart, in Seerr order',
+        () async {
+      final (results, _, _) = await run(
+          'Dune',
+          FakeSeerrService([
+            for (var i = 0; i < 10; i++)
+              seerrHit(i == 3 ? 'dune' : null, title: 'Dune $i', tmdbId: i),
+          ]));
+      expect(results.library.map((item) => item.id), ['dune']);
+      expect(results.outside.map((poster) => poster.title), [
+        for (final i in [0, 1, 2, 4, 5, 6, 7, 8]) 'Dune $i'
+      ]);
+    });
+
+    test('a Seerr failure keeps the Jellyfin results', () async {
+      final (results, api, _) = await run(
+          'Slow Horses', FakeSeerrService([seerrHit('x')], fails: true));
+      expect(results.library.map((item) => item.id), ['slow-horses']);
+      expect(results.outside, isEmpty);
+      expect(api.calls, hasLength(1));
+    });
   });
 }

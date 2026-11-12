@@ -138,9 +138,16 @@ abstract final class AppLibraryLayout {
 
 abstract final class AppTopNavigation {
   static const indicatorHeight = 2.0;
-  static const fullSearchWidth = 1100.0;
-  static const searchPanelWidth = 760.0;
-  static const searchHeightFraction = .70;
+  static const searchFieldWidth = 280.0;
+
+  /// Hauteur commune du bouton loupe et du champ ouvert : celle des onglets.
+  static const searchControlHeight = AppNavigation.rowHeight;
+
+  /// Écart entre le bas de la capsule et le voile de résultats.
+  static const searchPopoverGap = AppSpacing.xs;
+  static const searchPopoverWidth = 460.0;
+  static const searchPopoverHeightFraction = .60;
+  static const searchPopoverEmptyHeight = 96.0;
   static const resultPosterWidth = 48.0;
   static const contentInset = 100.0;
 }
@@ -187,6 +194,11 @@ abstract final class AppHeroLayout {
 }
 
 abstract final class AppDetailLayout {
+  /// Avatars des amis Letterboxd, dans le bandeau d'un film : une seule
+  /// rangée qui tient dans la largeur du synopsis.
+  static const friendAvatarSize = 40.0;
+  static const friendCellWidth = 56.0;
+  static const friendsVisible = 9;
   static const seriesViewportFraction = .68;
   static const seriesMinHeight = 560.0;
   static const seriesTintTailHeight = 64.0;
@@ -205,6 +217,7 @@ abstract final class AppDetailLayout {
   static const popoverCheckSize = 18.0;
   static const popoverHighlight = Color(0x1AFFFFFF);
   static const movieSynopsisWidth = 680.0;
+  static const synopsisCollapsedLines = 4;
   static const castWidthFraction = .70;
   static const castMaxWidth = 152.0;
   static const infoLabelWidth = 104.0;
@@ -281,6 +294,7 @@ abstract final class AppDurations {
   static const navigationSelection = Duration(milliseconds: 240);
   static const favouriteRemoval = Duration(milliseconds: 180);
   static const popover = Duration(milliseconds: 180);
+  static const unroll = Duration(milliseconds: 260);
   static const focusRing = Duration(milliseconds: 100);
   static const heroTint = Duration(milliseconds: 300);
   static const heroSlide = Duration(milliseconds: 420);
@@ -319,6 +333,9 @@ abstract final class AppMotion {
   static const playerVolumePulse = 1.12;
   static const heroTextTravel = AppSpacing.sm;
   static const menuScale = .95;
+
+  /// Part du déroulé pendant laquelle le voile finit d'apparaître en fondu.
+  static const unrollFadeEnd = .35;
   static const navigationReveal = Cubic(.2, 1, .3, 1);
   static const navigationLabels = Interval(.25, 1, curve: Curves.easeOut);
   static const posterReveal = Cubic(.2, 1.3, .35, 1);

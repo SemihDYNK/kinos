@@ -7,12 +7,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
 import 'package:kinos/models/views_model.dart';
 import 'package:kinos/models/view_model.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
+import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/views_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/catalog_navigation_bar.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:kinos/util/motion_input.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/screens/shared/global_hotkeys.dart';
@@ -54,6 +59,8 @@ class CatalogRouter extends RootStackRouter {
       ];
 }
 
+final searchButton = find.byIcon(Icons.search);
+
 void main() {
   setUpAll(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -81,10 +88,35 @@ void main() {
         overrides: [
           userProvider.overrideWith(TestUser.new),
           viewsProvider.overrideWith(Views.new),
-          quickSearchProvider('Dune').overrideWith(
-              (_) async => withResults ? fixtureMovies().take(2).toList() : []),
-          quickSearchProvider('All')
-              .overrideWith((_) async => List.filled(24, fixtureMovies().first))
+          quickSearchProvider((query: 'Dune', language: 'fr'))
+              .overrideWith((_) async => (
+                    library: withResults
+                        ? fixtureMovies().take(2).toList()
+                        : <ItemBaseModel>[],
+                    outside: <SeerrDashboardPosterModel>[]
+                  )),
+          quickSearchProvider((query: 'Dune 2', language: 'fr'))
+              .overrideWith((_) async => (
+                    library: fixtureMovies().take(1).toList(),
+                    outside: [
+                      SeerrDashboardPosterModel(
+                          id: '1',
+                          type: SeerrMediaType.movie,
+                          tmdbId: 1,
+                          title: 'Dune : Deuxième partie',
+                          overview: '',
+                          images: ImagesData(),
+                          mediaStatus: SeerrMediaStatus.pending,
+                          jellyfinItemId: null,
+                          releaseYear: '2024')
+                    ]
+                  )),
+          quickSearchProvider((query: 'All', language: 'fr'))
+              .overrideWith((_) async => (
+                    library:
+                        List<ItemBaseModel>.filled(24, fixtureMovies().first),
+                    outside: <SeerrDashboardPosterModel>[]
+                  ))
         ],
         child: StackRouterScope(
             controller: router,
@@ -197,9 +229,9 @@ void main() {
   testWidgets('search opens over the page and Escape returns to navigation',
       (tester) async {
     await mount(tester);
-    await tester.tap(find.text('Rechercher'));
+    await tester.tap(searchButton);
     await tester.pumpAndSettle();
-    expect(find.text('Recherchez dans vos films et séries'), findsOneWidget);
+    expect(find.byType(EditableText), findsOneWidget);
     await tester.enterText(find.byType(EditableText), 'Dune');
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pumpAndSettle();
@@ -210,11 +242,122 @@ void main() {
     expect(find.text('À la une'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('the button becomes the field; results hang below it',
+      (tester) async {
+    await mount(tester);
+    expect(find.text('Ctrl K'), findsNothing);
+    final button = tester.getRect(
+        find.ancestor(of: searchButton, matching: find.byType(FocusRing)));
+    await tester.tap(searchButton);
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.byTooltip('Rechercher · Ctrl K'), findsNothing);
+    final field = tester.getRect(find.byType(EditableText));
+    expect(field.center.dy, closeTo(button.center.dy, 2));
+    expect(find.text('Aucun résultat'), findsNothing);
+    await tester.enterText(find.byType(EditableText), 'Dune');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    final message = tester.getRect(find.text('Aucun résultat'));
+    expect(message.top, greaterThan(field.bottom));
+    final capsule = tester.getRect(find
+        .ancestor(of: find.text('Films'), matching: find.byType(FrostedSurface))
+        .first);
+    final popover = tester.getRect(find
+        .ancestor(
+            of: find.text('Aucun résultat'),
+            matching: find.byType(FrostedSurface))
+        .first);
+    expect(popover.top - capsule.bottom,
+        closeTo(AppTopNavigation.searchPopoverGap, 1));
+    expect(popover.right, closeTo(capsule.right, 1));
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('results unroll downward from the capsule', (tester) async {
+    await mount(tester);
+    await tester.tap(searchButton);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'Dune');
+    await tester.pump();
+    await tester.pump(AppDurations.unroll * .3);
+    Rect panel() => tester.getRect(find
+        .ancestor(
+            of: find.byType(CircularProgressIndicator),
+            matching: find.byType(FrostedSurface))
+        .first);
+    final opening = panel();
+    await tester.pump(AppDurations.unroll);
+    final open = panel();
+    expect(opening.top, closeTo(open.top, .5));
+    expect(opening.height, lessThan(open.height));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('the unrolled panel follows its results height smoothly',
+      (tester) async {
+    await mount(tester);
+    await tester.tap(searchButton);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'Dune');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    Rect panel(Finder inside) => tester.getRect(
+        find.ancestor(of: inside, matching: find.byType(FrostedSurface)).first);
+    final small = panel(find.text('Aucun résultat'));
+    await tester.enterText(find.byType(EditableText), 'All');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+    await tester.pump(AppDurations.unroll * .3);
+    final growing = panel(find.byType(ListView));
+    await tester.pumpAndSettle();
+    final grown = panel(find.byType(ListView));
+    expect(growing.top, closeTo(small.top, .5));
+    expect(growing.height, greaterThan(small.height));
+    expect(growing.height, lessThan(grown.height));
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('clearing the field hides results; leaving it empty closes it',
+      (tester) async {
+    await mount(tester);
+    await tester.tap(searchButton);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'Dune');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(find.text('Aucun résultat'), findsOneWidget);
+    await tester.enterText(find.byType(EditableText), '');
+    await tester.pumpAndSettle();
+    expect(find.text('Aucun résultat'), findsNothing);
+    expect(find.byType(EditableText), findsOneWidget);
+    await tester.tap(find.text('Films'));
+    await tester.pumpAndSettle();
+    expect(find.byType(EditableText), findsNothing);
+    expect(searchButton, findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('results are grouped into library and titles to request',
+      (tester) async {
+    await mount(tester);
+    await tester.tap(searchButton);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'Dune 2');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    final library = find.text('Dans la bibliothèque');
+    final outside = find.text('À demander');
+    expect(library, findsOneWidget);
+    expect(outside, findsOneWidget);
+    expect(
+        tester.getTopLeft(library).dy, lessThan(tester.getTopLeft(outside).dy));
+    expect(find.text('Dune : Deuxième partie'), findsOneWidget);
+    expect(find.textContaining('Film · 2024'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('large text keeps the search accessible without overflow',
       (tester) async {
     await mount(tester, scale: 1.5, width: 1100);
     expect(tester.takeException(), isNull);
-    await tester.tap(find.text('Rechercher'));
+    await tester.tap(searchButton);
     await tester.pumpAndSettle();
     expect(find.byType(EditableText), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -227,7 +370,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(container.read(catalogScopeProvider).kind, BaseItemKind.movie);
-    await tester.tap(find.text('Rechercher'));
+    await tester.tap(searchButton);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText), 'Dune');
     await tester.pump(const Duration(milliseconds: 350));
@@ -260,7 +403,7 @@ void main() {
   });
   testWidgets('large searches retain access to all results', (tester) async {
     await mount(tester);
-    await tester.tap(find.text('Rechercher'));
+    await tester.tap(searchButton);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText), 'All');
     await tester.pump(const Duration(milliseconds: 350));
@@ -278,9 +421,11 @@ void main() {
     final glass = tester.getRect(find.byType(BackdropFilter));
     expect(glass.width, lessThan(1200));
     final baseline = tester.getCenter(find.text('Films')).dy;
-    for (final label in ['À la une', 'Séries', 'Découvrir', 'Rechercher']) {
+    for (final label in ['À la une', 'Séries', 'Découvrir']) {
       expect(tester.getCenter(find.text(label)).dy, closeTo(baseline, 1));
     }
+    expect(tester.getCenter(searchButton).dy, closeTo(baseline, 1));
+    expect(find.text('Rechercher'), findsNothing);
   });
   testWidgets(
       'library content scrolls behind chrome instead of a fixed top gap',

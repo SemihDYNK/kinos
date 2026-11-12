@@ -1,6 +1,7 @@
 import 'package:kinos/widgets/shared/animated_media_icon.dart';
 import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'package:kinos/theme/app_theme.dart';
@@ -35,12 +36,44 @@ class AnchoredPopover extends StatefulWidget {
   /// visuellement.
   final ValueChanged<bool>? onOpenChanged;
 
+  /// Aligne le bord droit du voile sur celui du déclencheur plutôt que
+  /// leurs bords gauches — pour un déclencheur posé en fin de rangée.
+  final bool alignEnd;
+
+  /// Remplace les bornes par défaut d'un choix simple (largeur
+  /// [AppDetailLayout.popoverMinWidth]–[AppDetailLayout.popoverMaxWidth],
+  /// demi-hauteur d'écran) pour un contenu plus riche, comme la recherche.
+  final BoxConstraints? constraints;
+
+  /// Faux quand le déclencheur garde lui-même le focus (un champ de saisie
+  /// dont le voile n'affiche que les résultats) : le voile ne prend alors
+  /// pas le focus à l'ouverture et ne le rend pas à la fermeture.
+  final bool manageFocus;
+
+  /// Écart entre le déclencheur (ou [anchorKey]) et le voile.
+  final double gap;
+
+  /// Positionne le voile par rapport à un autre widget que le déclencheur
+  /// (ex. toute la barre qui le contient) ; le déclencheur reste celui dont
+  /// les clics ne referment pas le voile.
+  final GlobalKey? anchorKey;
+
+  /// Le voile se déroule depuis son bord accroché (de haut en bas quand il
+  /// pend sous le déclencheur) au lieu de grandir depuis le déclencheur.
+  final bool unroll;
+
   const AnchoredPopover({
     required this.child,
     required this.popoverBuilder,
     this.controller,
     this.preferredDirection = AxisDirection.up,
     this.onOpenChanged,
+    this.alignEnd = false,
+    this.constraints,
+    this.manageFocus = true,
+    this.gap = AppSpacing.xxs,
+    this.anchorKey,
+    this.unroll = false,
     super.key,
   });
 
@@ -57,6 +90,9 @@ class AnchoredPopoverController {
   void hide() => _state?._hide();
   void toggle() => (_state?._open ?? false) ? hide() : show();
   bool get isOpen => _state?._open ?? false;
+
+  /// Vrai tant qu'un [AnchoredPopover] monté utilise ce contrôleur.
+  bool get isAttached => _state != null;
 }
 
 class _AnchoredPopoverState extends State<AnchoredPopover>
@@ -68,7 +104,7 @@ class _AnchoredPopoverState extends State<AnchoredPopover>
   AnimationController? _revealController;
   AnimationController get _reveal => _revealController ??= AnimationController(
       vsync: this,
-      duration: AppDurations.popover,
+      duration: widget.unroll ? AppDurations.unroll : AppDurations.popover,
       reverseDuration: AppDurations.hover)
     ..addStatusListener((status) {
       if (status == AnimationStatus.dismissed) {
@@ -117,7 +153,8 @@ class _AnchoredPopoverState extends State<AnchoredPopover>
 
   void _show() {
     if (_open) return;
-    _returnFocus = FocusManager.instance.primaryFocus;
+    _returnFocus =
+        widget.manageFocus ? FocusManager.instance.primaryFocus : null;
     setState(() => _open = true);
     _overlayController.show();
     if (AppMotion.enabled(context)) {
@@ -127,7 +164,7 @@ class _AnchoredPopoverState extends State<AnchoredPopover>
     }
     widget.onOpenChanged?.call(true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_open) return;
+      if (!mounted || !_open || !widget.manageFocus) return;
       // Ne prend le focus que si rien à l'intérieur ne l'a déjà réclamé
       // lui-même (ex. l'auto-focus de PopoverOptionList) — sinon on le
       // lui disputerait au lieu de le lui laisser (bug constaté : les
@@ -166,9 +203,15 @@ class _AnchoredPopoverState extends State<AnchoredPopover>
               excluding: !_open,
               child: _PopoverOverlay(
                 targetKey: _targetKey,
+                anchorKey: widget.anchorKey ?? _targetKey,
                 panelKey: _panelKey,
                 reveal: _reveal,
                 preferredDirection: widget.preferredDirection,
+                alignEnd: widget.alignEnd,
+                constraints: widget.constraints,
+                manageFocus: widget.manageFocus,
+                gap: widget.gap,
+                unroll: widget.unroll,
                 scopeNode: _scopeNode,
                 onDismiss: _hide,
                 builder: (context) => widget.popoverBuilder(context, _hide),
@@ -180,18 +223,30 @@ class _AnchoredPopoverState extends State<AnchoredPopover>
 
 class _PopoverOverlay extends StatelessWidget {
   final GlobalKey targetKey;
+  final GlobalKey anchorKey;
   final GlobalKey panelKey;
   final Animation<double> reveal;
   final AxisDirection preferredDirection;
+  final bool alignEnd;
+  final BoxConstraints? constraints;
+  final bool manageFocus;
+  final double gap;
+  final bool unroll;
   final FocusScopeNode scopeNode;
   final VoidCallback onDismiss;
   final WidgetBuilder builder;
 
   const _PopoverOverlay({
     required this.targetKey,
+    required this.anchorKey,
     required this.panelKey,
     required this.reveal,
     required this.preferredDirection,
+    required this.alignEnd,
+    required this.constraints,
+    required this.manageFocus,
+    required this.gap,
+    required this.unroll,
     required this.scopeNode,
     required this.onDismiss,
     required this.builder,
@@ -201,27 +256,43 @@ class _PopoverOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final targetBox =
         targetKey.currentContext?.findRenderObject() as RenderBox?;
-    if (targetBox == null || !targetBox.attached) {
+    // Un déclencheur tout juste remplacé (ex. bouton devenu champ) n'a pas
+    // encore de taille pendant cette construction : on attend sa mise en
+    // page plutôt que de lire une taille qui n'existe pas.
+    if (targetBox == null || !targetBox.attached || !targetBox.hasSize) {
       return const SizedBox.shrink();
     }
     final targetPosition = targetBox.localToGlobal(Offset.zero);
     final targetSize = targetBox.size;
+    final anchorBox =
+        anchorKey.currentContext?.findRenderObject() as RenderBox? ?? targetBox;
+    final anchorReady = anchorBox.attached && anchorBox.hasSize;
+    final anchorPosition =
+        anchorReady ? anchorBox.localToGlobal(Offset.zero) : targetPosition;
+    final anchorSize = anchorReady ? anchorBox.size : targetSize;
 
     return Stack(
       children: [
         // Clic extérieur : ferme, ne consomme pas le clic lui-même
-        // (l'utilisateur peut agir directement sur ce qu'il visait).
+        // (l'utilisateur peut agir directement sur ce qu'il visait). Sans
+        // gestion du focus, le déclencheur (un champ) reste hors de cette
+        // zone : ses clics lui reviennent entièrement.
         Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: onDismiss,
+          child: _HitTestHole(
+            hole: manageFocus ? null : targetPosition & targetSize,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: onDismiss,
+            ),
           ),
         ),
         CustomSingleChildLayout(
           delegate: _PopoverLayoutDelegate(
-            targetGlobalPosition: targetPosition,
-            targetSize: targetSize,
+            targetGlobalPosition: anchorPosition,
+            targetSize: anchorSize,
             preferredDirection: preferredDirection,
+            alignEnd: alignEnd,
+            gap: gap,
           ),
           // FocusScope, pas Focus : Échap doit être attrapé qu'importe
           // quel descendant détient le focus réel (ex. l'option en
@@ -250,38 +321,44 @@ class _PopoverOverlay extends StatelessWidget {
                 // Largeur dictée par le contenu (bornée pour rester
                 // lisible et tenir sur un petit écran) — jamais pleine
                 // hauteur : un choix simple, pas un panneau.
-                constraints: BoxConstraints(
-                  minWidth: AppDetailLayout.popoverMinWidth,
-                  maxWidth: AppDetailLayout.popoverMaxWidth,
-                  maxHeight: MediaQuery.sizeOf(context).height * 0.5,
-                ),
-                child: FadeTransition(
-                  opacity: reveal,
-                  child: AnimatedBuilder(
-                    animation: reveal,
-                    child: FrostedSurface(child: builder(context)),
-                    builder: (context, child) {
-                      final panel = panelKey.currentContext?.findRenderObject()
-                          as RenderBox?;
-                      var pivot = Offset.zero;
-                      if (panel != null && panel.hasSize) {
-                        final origin = panel.globalToLocal(
-                            targetPosition + targetSize.center(Offset.zero));
-                        pivot = Offset(origin.dx.clamp(0, panel.size.width),
-                            origin.dy.clamp(0, panel.size.height));
-                      }
-                      return Transform.translate(
-                          offset: Offset(0, AppSpacing.xs * (1 - reveal.value)),
-                          child: Transform.scale(
-                            alignment: Alignment.topLeft,
-                            origin: pivot,
-                            scale: AppMotion.menuScale +
-                                (1 - AppMotion.menuScale) * reveal.value,
-                            child: child,
-                          ));
-                    },
-                  ),
-                ),
+                constraints: constraints ??
+                    BoxConstraints(
+                      minWidth: AppDetailLayout.popoverMinWidth,
+                      maxWidth: AppDetailLayout.popoverMaxWidth,
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+                    ),
+                child: unroll
+                    ? _unrolled(context)
+                    : FadeTransition(
+                        opacity: reveal,
+                        child: AnimatedBuilder(
+                          animation: reveal,
+                          child: FrostedSurface(child: builder(context)),
+                          builder: (context, child) {
+                            final panel = panelKey.currentContext
+                                ?.findRenderObject() as RenderBox?;
+                            var pivot = Offset.zero;
+                            if (panel != null && panel.hasSize) {
+                              final origin = panel.globalToLocal(
+                                  targetPosition +
+                                      targetSize.center(Offset.zero));
+                              pivot = Offset(
+                                  origin.dx.clamp(0, panel.size.width),
+                                  origin.dy.clamp(0, panel.size.height));
+                            }
+                            return Transform.translate(
+                                offset: Offset(
+                                    0, AppSpacing.xs * (1 - reveal.value)),
+                                child: Transform.scale(
+                                  alignment: Alignment.topLeft,
+                                  origin: pivot,
+                                  scale: AppMotion.menuScale +
+                                      (1 - AppMotion.menuScale) * reveal.value,
+                                  child: child,
+                                ));
+                          },
+                        ),
+                      ),
               ),
             ),
           ),
@@ -291,18 +368,85 @@ class _PopoverOverlay extends StatelessWidget {
   }
 }
 
+extension on _PopoverOverlay {
+  /// Le cadre s'allonge depuis son bord accroché, contenu découvert au fur
+  /// et à mesure : un rideau qui descend (ou remonte, au-dessus).
+  Widget _unrolled(BuildContext context) {
+    final fromTop = preferredDirection != AxisDirection.up;
+    final alignment = fromTop ? Alignment.topCenter : Alignment.bottomCenter;
+    // Une fois déroulé, le voile suit aussi les changements de hauteur de
+    // son contenu (résultats qui arrivent, qui changent) au lieu de sauter.
+    // Jamais d'AnimatedSize à durée nulle : sans mouvement, pas d'animation.
+    final content = AppMotion.enabled(context)
+        ? AnimatedSize(
+            duration: AppDurations.unroll,
+            curve: AppMotion.easeOut,
+            alignment: alignment,
+            child: builder(context))
+        : builder(context);
+    return FadeTransition(
+      opacity: CurvedAnimation(
+          parent: reveal, curve: const Interval(0, AppMotion.unrollFadeEnd)),
+      child: FrostedSurface(
+        child: AnimatedBuilder(
+          animation: reveal,
+          child: content,
+          builder: (context, child) => ClipRect(
+            child: Align(
+              alignment: alignment,
+              heightFactor: reveal.value.clamp(0.0, 1.0),
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Laisse passer les pointeurs dans [hole] (coordonnées globales), comme si
+/// son enfant n'y était pas.
+class _HitTestHole extends SingleChildRenderObjectWidget {
+  const _HitTestHole({required this.hole, super.child});
+  final Rect? hole;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderHitTestHole(hole);
+
+  @override
+  void updateRenderObject(
+          BuildContext context, _RenderHitTestHole renderObject) =>
+      renderObject.hole = hole;
+}
+
+class _RenderHitTestHole extends RenderProxyBox {
+  _RenderHitTestHole(this.hole);
+  Rect? hole;
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final hole = this.hole;
+    if (hole != null && hole.contains(localToGlobal(position))) return false;
+    return super.hitTest(result, position: position);
+  }
+}
+
 class _PopoverLayoutDelegate extends SingleChildLayoutDelegate {
   final Offset targetGlobalPosition;
   final Size targetSize;
   final AxisDirection preferredDirection;
+  final bool alignEnd;
+  final double gap;
 
   static const margin = AppSpacing.xs;
-  static const gap = AppSpacing.xxs;
 
   const _PopoverLayoutDelegate({
     required this.targetGlobalPosition,
     required this.targetSize,
     required this.preferredDirection,
+    required this.alignEnd,
+    required this.gap,
   });
 
   @override
@@ -311,9 +455,11 @@ class _PopoverLayoutDelegate extends SingleChildLayoutDelegate {
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
-    // Aligné sur le bord gauche du déclencheur, borné pour ne jamais
-    // déborder à droite ni à gauche.
-    var dx = targetGlobalPosition.dx;
+    // Aligné sur le bord gauche du déclencheur (ou droit, [alignEnd]),
+    // borné pour ne jamais déborder à droite ni à gauche.
+    var dx = alignEnd
+        ? targetGlobalPosition.dx + targetSize.width - childSize.width
+        : targetGlobalPosition.dx;
     final maxDx = size.width - childSize.width - margin;
     dx = dx.clamp(margin, maxDx < margin ? margin : maxDx);
 
@@ -337,7 +483,9 @@ class _PopoverLayoutDelegate extends SingleChildLayoutDelegate {
   bool shouldRelayout(covariant _PopoverLayoutDelegate oldDelegate) =>
       oldDelegate.targetGlobalPosition != targetGlobalPosition ||
       oldDelegate.targetSize != targetSize ||
-      oldDelegate.preferredDirection != preferredDirection;
+      oldDelegate.preferredDirection != preferredDirection ||
+      oldDelegate.alignEnd != alignEnd ||
+      oldDelegate.gap != gap;
 }
 
 /// Une option d'un [PopoverOptionList].
