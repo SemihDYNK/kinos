@@ -59,7 +59,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('my own rating shows above friends, and alone if need be',
+  testWidgets(
+      'my own rating and the friends share one header line, or stand alone',
       (tester) async {
     Future<void> pump(List<({LetterboxdFriend friend, int rating})> ratings) =>
         tester.pumpWidget(ProviderScope(
@@ -70,6 +71,12 @@ void main() {
                 (ref) async => (slug: 'x', ratings: ratings, mine: 9)),
           ],
           child: MaterialApp(
+              // Police d'essai très large : on réduit le texte pour que
+              // l'en-tête tienne sur la largeur du synopsis, comme en vrai.
+              builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(textScaler: const TextScaler.linear(.55)),
+                  child: child!),
               theme: buildAppTheme(density: AppDensity.desk),
               home:
                   const Scaffold(body: LetterboxdFriendsSection(tmdbId: '1'))),
@@ -84,9 +91,19 @@ void main() {
       (friend: const LetterboxdFriend(username: 'a', name: 'Ana'), rating: 6)
     ]);
     await tester.pumpAndSettle();
-    final mine = tester.getTopLeft(find.textContaining('Votre note')).dy;
-    final friends = tester.getTopLeft(find.textContaining('Vos amis')).dy;
-    expect(mine, lessThan(friends));
+    // Même ligne : sa note d'abord, une barre verticale, puis les amis.
+    final mine = tester.getTopLeft(find.textContaining('Votre note'));
+    final friends = tester.getTopLeft(find.textContaining('Vos amis'));
+    expect((mine.dy - friends.dy).abs(), lessThan(6));
+    expect(mine.dx, lessThan(friends.dx));
+    final bar = find.byWidgetPredicate((w) =>
+        w is SizedBox &&
+        w.width == 1 &&
+        w.height == AppDetailLayout.friendHeaderDividerHeight);
+    expect(bar, findsOneWidget);
+    final barX = tester.getTopLeft(bar).dx;
+    expect(barX, greaterThan(mine.dx));
+    expect(barX, lessThan(friends.dx));
     expect(tester.takeException(), isNull);
   });
 

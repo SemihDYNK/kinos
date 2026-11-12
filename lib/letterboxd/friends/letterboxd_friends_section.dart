@@ -72,36 +72,51 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Sa propre note, au-dessus de celles des amis.
-          if (mine != null) ...[
-            Semantics(
-              label: 'Votre note : ${mine / 2} sur 5',
-              excludeSemantics: true,
-              child: Text.rich(TextSpan(children: [
-                TextSpan(
-                    text: 'Votre note  ',
-                    style: text.titleSmall
-                        ?.copyWith(color: AppColors.textPrimary)),
-                TextSpan(
-                    text: letterboxdStars(mine),
-                    style: text.titleSmall
-                        ?.copyWith(color: AppColors.textPrimary)),
-              ])),
-            ),
-            if (ratings.isNotEmpty) const SizedBox(height: AppSpacing.sm),
-          ],
+          // Une seule ligne d'en-tête : sa propre note d'abord, une barre
+          // verticale, puis les amis. Elle passe à la ligne si la place
+          // manque.
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xxs,
+            children: [
+              if (mine != null)
+                Semantics(
+                  label: 'Votre note : ${mine / 2} sur 5',
+                  excludeSemantics: true,
+                  child: Text.rich(TextSpan(children: [
+                    TextSpan(
+                        text: 'Votre note  ',
+                        style: text.titleSmall
+                            ?.copyWith(color: AppColors.textPrimary)),
+                    TextSpan(
+                        text: letterboxdStars(mine),
+                        style: text.titleSmall
+                            ?.copyWith(color: AppColors.textPrimary)),
+                  ])),
+                ),
+              if (mine != null && ratings.isNotEmpty)
+                SizedBox(
+                    width: 1,
+                    height: AppDetailLayout.friendHeaderDividerHeight,
+                    child: ColoredBox(
+                        color: AppColors.textPrimary.withValues(alpha: .35))),
+              if (ratings.isNotEmpty)
+                Text.rich(TextSpan(children: [
+                  TextSpan(
+                      text: 'Vos amis sur Letterboxd',
+                      style: text.titleSmall
+                          ?.copyWith(color: AppColors.textPrimary)),
+                  TextSpan(
+                      text:
+                          '  ·  $count ${count > 1 ? 'notes' : 'note'} · moyenne '
+                          '${(average / 2).toStringAsFixed(1).replaceAll('.', ',')} / 5',
+                      style: text.bodySmall?.copyWith(
+                          color: AppColors.textPrimary.withValues(alpha: .75))),
+                ])),
+            ],
+          ),
           if (ratings.isNotEmpty) ...[
-            Text.rich(TextSpan(children: [
-              TextSpan(
-                  text: 'Vos amis sur Letterboxd',
-                  style:
-                      text.titleSmall?.copyWith(color: AppColors.textPrimary)),
-              TextSpan(
-                  text: '  ·  $count ${count > 1 ? 'notes' : 'note'} · moyenne '
-                      '${(average / 2).toStringAsFixed(1).replaceAll('.', ',')} / 5',
-                  style: text.bodySmall?.copyWith(
-                      color: AppColors.textPrimary.withValues(alpha: .75))),
-            ])),
             const SizedBox(height: AppSpacing.xs),
             // Dépliage animé, sauf sans mouvement (clavier, mouvement réduit) :
             // jamais d'AnimatedSize à durée nulle.
