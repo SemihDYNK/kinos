@@ -1,6 +1,6 @@
 # État des lieux — Kinos
 
-Dernière mise à jour : 2026-11-12 (v0.13.0). Les sections
+Dernière mise à jour : 2026-11-12 (v0.14.0). Les sections
 détaillées plus bas datent pour l'essentiel du 2026-10-08 ; ce qui a changé
 depuis est résumé dans « Travail depuis le 8 octobre ». Ce document est un instantané factuel
 pour reprendre le travail sans repartir de zéro. Il ne répète pas les
@@ -95,6 +95,24 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
 - `f0fe54be` (8 nov., v0.12.4) — téléchargement des sous-titres distants
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
+
+## v0.14.0 (12 novembre)
+
+- **Genres** : rangée de tuiles paysage « Genres » sous le bandeau des trois
+  accueils (remplace une rangée par genre ; fusion « Action » / « Action &
+  Adventure » propre à la rangée). Page de genre = vraie route
+  (`GenrePageRoute`, écrite à la main dans `auto_router.gr.dart`) : bandeau
+  à 42 % de la fenêtre, rangées (mieux notés, récents, pas encore vus, films
+  et séries sur « À la une », décennies) et rangées Letterboxd du genre
+  (watchlist et Top 500 via les pages filtrées par genre, conseils d'amis via
+  les genres lus sur les fiches). Transition partagée tuile ↔ bandeau
+  (`genre_hero.dart`). La watchlist « tout voir » est aussi une route.
+- **Affiches** : titre et année sous toutes (`PosterCaption`).
+- **Notes d'amis** : étoiles de taille fixe, sept amis et « +N » sur une ligne.
+- **Connu, non résolu** : un trait d'un pixel apparaît au bas de certains
+  bandeaux (accueil, fiche de film) dans les dernières captures ; cause non
+  trouvée (couture entre couches à position fractionnaire), à revérifier sur
+  une version fraîchement compilée.
 
 ## v0.13.0 (12 novembre)
 

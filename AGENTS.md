@@ -130,6 +130,7 @@ releases Windows/macOS sont livrés (v0.12.4 au 8 novembre 2026).
 v0.13.0 (12 novembre) ajoute la recherche intégrée à la capsule, les
 langues retenues par série et l'intégration Letterboxd publique (notes des
 amis, rangées d'accueil) — détail dans `PROJET.md`.
+v0.14.0 (12 novembre) ajoute la rangée « Genres » et les pages de genre.
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 
