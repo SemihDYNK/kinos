@@ -3,6 +3,8 @@ import 'package:kinos/screens/shared/kinos_icon.dart';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_providers.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 
 import 'package:auto_route/auto_route.dart';
@@ -97,11 +99,20 @@ class SideNavigationRail extends ConsumerWidget {
 
     final seerrAvailable = ref.watch(userProvider
         .select((value) => value?.seerrCredentials?.isConfigured ?? false));
+    // Le bouton Arr n'apparaît que si Radarr ou Sonarr est configuré
+    // (comme « Demandes » pour Seerr) ; on les configure dans les réglages.
+    final arrAvailable = ArrService.values.any((service) =>
+        ref
+            .watch(arrCredentialsProvider(service))
+            .valueOrNull
+            ?.isConfigured ??
+        false);
     final user = ref.watch(userProvider);
 
     final destinations = _railDestinations(
       context: context,
       seerrAvailable: seerrAvailable,
+      arrAvailable: arrAvailable,
       views: ref
           .watch(viewsProvider)
           .views
@@ -367,6 +378,7 @@ class SideNavigationRail extends ConsumerWidget {
   List<_RailDestination> _railDestinations({
     required BuildContext context,
     required bool seerrAvailable,
+    required bool arrAvailable,
     required List<ViewModel> views,
   }) {
     final currentRouteName = context.router.current.name;
@@ -394,13 +406,14 @@ class SideNavigationRail extends ConsumerWidget {
           selected: currentRouteName == SeerrRoute.name,
           onTap: () => context.router.navigate(const SeerrRoute()),
         ),
-      _RailDestination(
-        label: 'Arr',
-        icon: AppIcons.activity,
-        selectedIcon: AppIcons.activitySelected,
-        selected: currentRouteName.startsWith('Arr'),
-        onTap: () => context.router.push(const ArrHomeRoute()),
-      ),
+      if (arrAvailable)
+        _RailDestination(
+          label: 'Arr',
+          icon: AppIcons.activity,
+          selectedIcon: AppIcons.activitySelected,
+          selected: currentRouteName.startsWith('Arr'),
+          onTap: () => context.router.push(const ArrHomeRoute()),
+        ),
     ];
   }
 

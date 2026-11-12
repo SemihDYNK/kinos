@@ -10,6 +10,8 @@ import 'package:kinos/models/items/season_model.dart';
 import 'package:kinos/screens/shared/media/season_episode_section.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:kinos/arr/providers/arr_providers.dart';
+import '../side_navigation_style_test.dart' show FakeArrStore;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/arr/models/arr_queue_item.dart';
 import 'package:kinos/arr/screens/widgets/arr_queue_table.dart';
@@ -70,6 +72,9 @@ Widget restVisualFixture(
   }
   return ProviderScope(
       overrides: [
+        // Les images de référence montrent la barre latérale avec Arr :
+        // un utilisateur qui l'a configuré.
+        arrCredentialsStoreProvider.overrideWithValue(const FakeArrStore()),
         userProvider.overrideWith(TestUser.new),
         seerrUserProvider.overrideWith(_SeerrUser.new),
         sideBarForceCollapsedProvider.overrideWith((ref) => false),

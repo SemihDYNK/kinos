@@ -11,6 +11,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kinos/arr/models/arr_credentials.dart';
+import 'package:kinos/arr/models/arr_service.dart';
+import 'package:kinos/arr/providers/arr_providers.dart';
+import 'package:kinos/arr/services/arr_credentials_store.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/shared_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +28,19 @@ import 'package:kinos/screens/shared/user_icon.dart';
 import 'package:kinos/widgets/navigation_scaffold/components/side_navigation_bar.dart';
 import 'seerr_discovery_section_test.dart'
     show shell, TestUser, PendingDetailsRouter;
+
+/// Coffre Arr sans plugin : Radarr configuré, ou rien.
+class FakeArrStore implements ArrCredentialsStore {
+  const FakeArrStore({this.configured = true});
+  final bool configured;
+  @override
+  Future<ArrCredentials?> read(ArrService service) async =>
+      configured && service == ArrService.radarr
+          ? const ArrCredentials(baseUrl: 'https://radarr', apiKey: 'key')
+          : null;
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   setUpAll(() {
@@ -198,6 +215,37 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
+  for (final configured in [false, true]) {
+    testWidgets(
+        'the Arr button is ${configured ? 'shown' : 'hidden'} when Arr is '
+        '${configured ? '' : 'not '}configured', (tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final router = PendingDetailsRouter();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(ProviderScope(
+          overrides: [
+            userProvider.overrideWith(TestUser.new),
+            sideBarForceCollapsedProvider.overrideWith((ref) => false),
+            arrCredentialsStoreProvider
+                .overrideWithValue(FakeArrStore(configured: configured)),
+          ],
+          child: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: shell(const SliverToBoxAdapter(
+                  child: SizedBox(
+                      height: 750,
+                      child: SideNavigationRail(child: SizedBox.expand())))))));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(AppIcons.activity),
+          configured ? findsOneWidget : findsNothing);
+      expect(find.byIcon(AppIcons.settings), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('short rail keeps Arr and footer reachable by arrow keys',
       (tester) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -210,6 +258,8 @@ void main() {
         overrides: [
           userProvider.overrideWith(TestUser.new),
           sideBarForceCollapsedProvider.overrideWith((ref) => false),
+          arrCredentialsStoreProvider
+              .overrideWithValue(const FakeArrStore()),
         ],
         child: StackRouterScope(
             controller: router,
@@ -310,6 +360,8 @@ void main() {
         overrides: [
           userProvider.overrideWith(TestUser.new),
           sideBarForceCollapsedProvider.overrideWith((ref) => false),
+          arrCredentialsStoreProvider
+              .overrideWithValue(const FakeArrStore()),
         ],
         child: StackRouterScope(
             controller: router,

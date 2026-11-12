@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:kinos/arr/providers/arr_providers.dart';
+import '../side_navigation_style_test.dart' show FakeArrStore;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/l10n/generated/app_localizations.dart';
@@ -69,6 +71,9 @@ Widget homeVisualFixture(
   }
   return ProviderScope(
       overrides: [
+        // Les images de référence montrent la barre latérale avec Arr :
+        // un utilisateur qui l'a configuré.
+        arrCredentialsStoreProvider.overrideWithValue(const FakeArrStore()),
         userProvider.overrideWith(TestUser.new),
         if (expandedNavigation)
           clientSettingsProvider.overrideWith((ref) => _ExpandedSettings(ref)),
