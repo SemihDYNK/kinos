@@ -393,15 +393,16 @@ extension on _PopoverOverlay {
     return FadeTransition(
       opacity: CurvedAnimation(
           parent: reveal, curve: const Interval(0, AppMotion.unrollFadeEnd)),
-      child: FrostedSurface(
-        child: AnimatedBuilder(
-          animation: reveal,
-          child: content,
-          builder: (context, child) => _UnrollReveal(
-              factor: reveal.value.clamp(0.0, 1.0),
-              anchorY: anchor.center.dy,
-              child: child),
-        ),
+      // Le rideau couvre le cadre lui-même (bordure, coins, fond flouté),
+      // pas seulement son contenu : sinon le cadre apparaît à pleine taille
+      // dès la première image et l'animation ne se voit plus.
+      child: AnimatedBuilder(
+        animation: reveal,
+        child: FrostedSurface(child: content),
+        builder: (context, child) => _UnrollReveal(
+            factor: reveal.value.clamp(0.0, 1.0),
+            anchorY: anchor.center.dy,
+            child: child),
       ),
     );
   }

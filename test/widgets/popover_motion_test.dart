@@ -196,4 +196,40 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('the whole frame is revealed, not only its content',
+      (tester) async {
+    final controller = AnchoredPopoverController();
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: Padding(
+      padding: const EdgeInsets.only(top: 200),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: AnchoredPopover(
+            controller: controller,
+            preferredDirection: AxisDirection.down,
+            popoverBuilder: (_, close) => const SizedBox(
+                height: 200, width: 240, child: Center(child: Text('Plein'))),
+            child: const SizedBox(width: 120, height: 40, child: Text('Menu'))),
+      ),
+    ))));
+    controller.show();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 40));
+    // Le rideau (facteur révélé) enveloppe le cadre : c'est lui, pas une
+    // couche intérieure, qui limite ce qu'on voit.
+    final reveal = find
+        .byWidgetPredicate((w) => w.runtimeType.toString() == '_UnrollReveal');
+    expect(reveal, findsOneWidget);
+    expect(find.descendant(of: reveal, matching: find.byType(FrostedSurface)),
+        findsOneWidget,
+        reason: 'the frame is inside the reveal, so it is revealed too');
+    final factor =
+        (reveal.evaluate().single.widget as dynamic).factor as double;
+    expect(factor, greaterThan(0));
+    expect(factor, lessThan(1));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }
