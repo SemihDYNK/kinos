@@ -40,6 +40,8 @@ class MovieHeroContent extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             FrostedSurface(
                 borderRadius: AppRadii.controlBorder,
+                // Même translucidité que la barre latérale.
+                color: AppNavigation.surface,
                 child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.xs),
                     child: Column(
