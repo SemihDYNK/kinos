@@ -176,6 +176,10 @@ abstract final class AppPlayerStyle {
 }
 
 abstract final class AppHeroLayout {
+  /// Débord, en pixels, de la couche masquée du bandeau sous sa zone
+  /// affichée : le bord fractionnaire de son calque n'y laisse plus de ligne.
+  static const seamGuard = 3.0;
+
   static const minHeight = 520.0;
   static const couchHeight = 620.0;
   static const viewportHeightFraction = .75;

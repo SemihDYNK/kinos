@@ -58,73 +58,102 @@ class _HomeHeroBackdropState extends State<HomeHeroBackdrop> {
   }
 
   @override
-  // Le ShaderMask peut laisser une rangée sombre au bord fractionnaire de
-  // son calque sur le rendu Linux. Un clip rectangulaire sans anticrénelage
-  // empêche cette rangée de déborder sur le fond de la section suivante.
+  // Le ShaderMask (dstIn) ne couvre qu'une fraction de la dernière rangée
+  // de pixels quand le bord de son calque est fractionnaire (40 % par
+  // exemple) : il y laisse passer 60 % de l'image assombrie, d'où une ligne
+  // sombre au bas du bandeau, plus ou moins visible selon le défilement.
+  // Le calque masqué dépasse donc de [AppHeroLayout.seamGuard] sous le
+  // contenu visible : son bord fractionnaire tombe hors du clip, et le
+  // dégradé reste identique sur la zone affichée.
   Widget build(BuildContext context) {
     final imageWidget = KinosImage(
         key: ValueKey(_shown?.key),
         image: _shown,
         alignment: AppHeroLayout.imageAlignment,
         disableBlur: true);
+    const guard = AppHeroLayout.seamGuard;
     return ClipRect(
-        child: ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (rect) => LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        stops: [
-          0,
-          cinematic
-              ? AppDetailLayout.movieImageFadeStart
-              : AppHeroLayout.imageFadeStart,
-          1
-        ],
-        colors: const [Colors.white, Colors.white, Colors.transparent],
-      ).createShader(rect),
-      child: Stack(fit: StackFit.expand, children: [
-        if (AppMotion.enabled(context))
-          AnimatedSwitcher(
-            duration:
-                cinematic ? AppDurations.heroTint : AppDurations.heroSlide,
-            reverseDuration: AppDurations.pageTransition,
-            switchInCurve: AppMotion.easeOut,
-            switchOutCurve: AppMotion.easeOut,
-            // Sans clé sur la transition : A → B → A peut garder deux sorties A.
-            transitionBuilder: (child, animation) =>
-                FadeTransition(opacity: animation, child: child),
-            child: imageWidget,
-          )
-        else
-          imageWidget,
-        ColoredBox(
-            color: AppColors.scrim.withValues(
-                alpha: cinematic
-                    ? AppDetailLayout.movieImageScrim
-                    : AppHeroLayout.imageUniformScrimOpacity)),
-        DecoratedBox(
-            decoration: BoxDecoration(
-                gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          stops: [
-            0,
-            AppHeroLayout.imageUpperScrimStart,
-            cinematic
-                ? AppDetailLayout.movieReadingScrimStart
-                : AppHeroLayout.imageReadingScrimStart,
-            1
-          ],
-          colors: [
-            AppColors.scrim.withValues(alpha: 0),
-            AppColors.scrim
-                .withValues(alpha: AppHeroLayout.imageUpperScrimOpacity),
-            AppColors.scrim
-                .withValues(alpha: AppHeroLayout.imageReadingScrimOpacity),
-            AppColors.scrim.withValues(alpha: AppHeroLayout.imageScrimOpacity),
-          ],
-        ))),
+      child: Stack(clipBehavior: Clip.none, fit: StackFit.expand, children: [
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: -guard,
+          child: ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (rect) {
+              // Fractions relatives à la zone affichée, pas à la garde.
+              final visible = (rect.height - guard) / rect.height;
+              return LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [
+                  0,
+                  (cinematic
+                          ? AppDetailLayout.movieImageFadeStart
+                          : AppHeroLayout.imageFadeStart) *
+                      visible,
+                  visible,
+                ],
+                colors: const [Colors.white, Colors.white, Colors.transparent],
+              ).createShader(rect);
+            },
+            child: Stack(fit: StackFit.expand, children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: guard,
+                child: Stack(fit: StackFit.expand, children: [
+                  if (AppMotion.enabled(context))
+                    AnimatedSwitcher(
+                      duration: cinematic
+                          ? AppDurations.heroTint
+                          : AppDurations.heroSlide,
+                      reverseDuration: AppDurations.pageTransition,
+                      switchInCurve: AppMotion.easeOut,
+                      switchOutCurve: AppMotion.easeOut,
+                      // Sans clé sur la transition : A → B → A peut garder deux sorties A.
+                      transitionBuilder: (child, animation) =>
+                          FadeTransition(opacity: animation, child: child),
+                      child: imageWidget,
+                    )
+                  else
+                    imageWidget,
+                  ColoredBox(
+                      color: AppColors.scrim.withValues(
+                          alpha: cinematic
+                              ? AppDetailLayout.movieImageScrim
+                              : AppHeroLayout.imageUniformScrimOpacity)),
+                  DecoratedBox(
+                      decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [
+                      0,
+                      AppHeroLayout.imageUpperScrimStart,
+                      cinematic
+                          ? AppDetailLayout.movieReadingScrimStart
+                          : AppHeroLayout.imageReadingScrimStart,
+                      1
+                    ],
+                    colors: [
+                      AppColors.scrim.withValues(alpha: 0),
+                      AppColors.scrim.withValues(
+                          alpha: AppHeroLayout.imageUpperScrimOpacity),
+                      AppColors.scrim.withValues(
+                          alpha: AppHeroLayout.imageReadingScrimOpacity),
+                      AppColors.scrim
+                          .withValues(alpha: AppHeroLayout.imageScrimOpacity),
+                    ],
+                  ))),
+                ]),
+              ),
+            ]),
+          ),
+        ),
       ]),
-    ));
+    );
   }
 }
