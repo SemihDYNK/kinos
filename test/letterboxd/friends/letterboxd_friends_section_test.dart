@@ -5,7 +5,10 @@ import 'package:kinos/letterboxd/friends/letterboxd_friends_parser.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_providers.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_section.dart';
 import 'package:kinos/letterboxd/letterboxd_providers.dart';
+import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/theme/app_theme.dart';
+
+import '../../widgets/seerr_discovery_section_test.dart' show TestUser;
 
 void main() {
   testWidgets('+N unfolds every friend rating, then folds back',
@@ -59,51 +62,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-      'my own rating and the friends share one header line, or stand alone',
+  testWidgets('your photo and rating lead the row, then a bar, then friends',
       (tester) async {
     Future<void> pump(List<({LetterboxdFriend friend, int rating})> ratings) =>
         tester.pumpWidget(ProviderScope(
           key: UniqueKey(),
           overrides: [
+            userProvider.overrideWith(TestUser.new),
             letterboxdScopeProvider.overrideWith((ref) => null),
             letterboxdFriendsFilmProvider('1').overrideWith(
                 (ref) async => (slug: 'x', ratings: ratings, mine: 9)),
           ],
           child: MaterialApp(
-              // Police d'essai très large : on réduit le texte pour que
-              // l'en-tête tienne sur la largeur du synopsis, comme en vrai.
-              builder: (context, child) => MediaQuery(
-                  data: MediaQuery.of(context)
-                      .copyWith(textScaler: const TextScaler.linear(.55)),
-                  child: child!),
               theme: buildAppTheme(density: AppDensity.desk),
               home:
                   const Scaffold(body: LetterboxdFriendsSection(tmdbId: '1'))),
         ));
+    final mineCell = find.byTooltip('Vous · ★★★★½');
+
     await pump(const []);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Votre note'), findsOneWidget);
-    expect(find.textContaining('★★★★½'), findsOneWidget);
+    expect(mineCell, findsOneWidget);
+    expect(find.textContaining('Votre note sur Letterboxd'), findsOneWidget);
     expect(find.textContaining('Vos amis'), findsNothing);
 
     await pump([
       (friend: const LetterboxdFriend(username: 'a', name: 'Ana'), rating: 6)
     ]);
     await tester.pumpAndSettle();
-    // Même ligne : sa note d'abord, une barre verticale, puis les amis.
-    final mine = tester.getTopLeft(find.textContaining('Votre note'));
-    final friends = tester.getTopLeft(find.textContaining('Vos amis'));
-    expect((mine.dy - friends.dy).abs(), lessThan(6));
-    expect(mine.dx, lessThan(friends.dx));
+    expect(find.textContaining('Vos amis'), findsOneWidget);
+    final mine = tester.getTopLeft(mineCell);
+    final friend = tester.getTopLeft(find.byTooltip('Ana · ★★★'));
+    expect(mine.dy, friend.dy, reason: 'same row');
+    expect(
+        tester.getSize(mineCell), tester.getSize(find.byTooltip('Ana · ★★★')),
+        reason: 'same cell size as a friend');
+    expect(mine.dx, lessThan(friend.dx), reason: 'your cell comes first');
     final bar = find.byWidgetPredicate((w) =>
         w is SizedBox &&
         w.width == 1 &&
-        w.height == AppDetailLayout.friendHeaderDividerHeight);
+        w.height == AppDetailLayout.friendDividerHeight);
     expect(bar, findsOneWidget);
     final barX = tester.getTopLeft(bar).dx;
     expect(barX, greaterThan(mine.dx));
-    expect(barX, lessThan(friends.dx));
+    expect(barX, lessThan(friend.dx));
     expect(tester.takeException(), isNull);
   });
 

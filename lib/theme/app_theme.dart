@@ -214,8 +214,8 @@ abstract final class AppDetailLayout {
   /// Taille d'une étoile de note : fixe pour toutes les notes.
   static const friendStarSize = 12.0;
 
-  /// Barre verticale entre sa note et celle des amis, dans l'en-tête.
-  static const friendHeaderDividerHeight = 14.0;
+  /// Barre verticale entre ta cellule (photo et note) et celles des amis.
+  static const friendDividerHeight = 52.0;
 
   /// Amis affichés avant « +N ».
   static const friendsVisible = 7;

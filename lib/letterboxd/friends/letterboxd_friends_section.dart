@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/shared/media/external_urls.dart';
 import 'package:kinos/theme/app_theme.dart';
 
@@ -43,16 +44,32 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
     final average = ratings.isEmpty
         ? 0.0
         : ratings.map((r) => r.rating).reduce((a, b) => a + b) / ratings.length;
-    final folded = ratings.length > AppDetailLayout.friendsVisible;
-    final visible = _expanded
-        ? ratings
-        : ratings.take(AppDetailLayout.friendsVisible).toList();
+    // Ta cellule prend la place d'un ami : la rangée reste sur une ligne.
+    final limit = AppDetailLayout.friendsVisible - (mine != null ? 1 : 0);
+    final folded = ratings.length > limit;
+    final visible = _expanded ? ratings : ratings.take(limit).toList();
+    final username =
+        ref.watch(letterboxdFriendsAccountProvider).valueOrNull?.username;
     final text = Theme.of(context).textTheme;
     final count = ratings.length;
     final friends = Wrap(
       spacing: AppSpacing.xxs,
       runSpacing: AppSpacing.xxs,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
+        // Ta photo et ta note d'abord, puis une barre verticale, puis les
+        // amis.
+        if (mine != null)
+          _MyRatingCell(rating: mine, slug: film.slug, username: username),
+        if (mine != null && ratings.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            child: SizedBox(
+                width: 1,
+                height: AppDetailLayout.friendDividerHeight,
+                child: ColoredBox(
+                    color: AppColors.textPrimary.withValues(alpha: .35))),
+          ),
         for (final rating in visible)
           _FriendRatingCell(rating: rating, slug: film.slug),
         if (folded)
@@ -72,51 +89,20 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Une seule ligne d'en-tête : sa propre note d'abord, une barre
-          // verticale, puis les amis. Elle passe à la ligne si la place
-          // manque.
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xxs,
-            children: [
-              if (mine != null)
-                Semantics(
-                  label: 'Votre note : ${mine / 2} sur 5',
-                  excludeSemantics: true,
-                  child: Text.rich(TextSpan(children: [
-                    TextSpan(
-                        text: 'Votre note  ',
-                        style: text.titleSmall
-                            ?.copyWith(color: AppColors.textPrimary)),
-                    TextSpan(
-                        text: letterboxdStars(mine),
-                        style: text.titleSmall
-                            ?.copyWith(color: AppColors.textPrimary)),
-                  ])),
-                ),
-              if (mine != null && ratings.isNotEmpty)
-                SizedBox(
-                    width: 1,
-                    height: AppDetailLayout.friendHeaderDividerHeight,
-                    child: ColoredBox(
-                        color: AppColors.textPrimary.withValues(alpha: .35))),
-              if (ratings.isNotEmpty)
-                Text.rich(TextSpan(children: [
-                  TextSpan(
-                      text: 'Vos amis sur Letterboxd',
-                      style: text.titleSmall
-                          ?.copyWith(color: AppColors.textPrimary)),
-                  TextSpan(
-                      text:
-                          '  ·  $count ${count > 1 ? 'notes' : 'note'} · moyenne '
-                          '${(average / 2).toStringAsFixed(1).replaceAll('.', ',')} / 5',
-                      style: text.bodySmall?.copyWith(
-                          color: AppColors.textPrimary.withValues(alpha: .75))),
-                ])),
-            ],
-          ),
-          if (ratings.isNotEmpty) ...[
+          Text.rich(TextSpan(children: [
+            TextSpan(
+                text: ratings.isEmpty
+                    ? 'Votre note sur Letterboxd'
+                    : 'Vos amis sur Letterboxd',
+                style: text.titleSmall?.copyWith(color: AppColors.textPrimary)),
+            if (ratings.isNotEmpty)
+              TextSpan(
+                  text: '  ·  $count ${count > 1 ? 'notes' : 'note'} · moyenne '
+                      '${(average / 2).toStringAsFixed(1).replaceAll('.', ',')} / 5',
+                  style: text.bodySmall?.copyWith(
+                      color: AppColors.textPrimary.withValues(alpha: .75))),
+          ])),
+          ...[
             const SizedBox(height: AppSpacing.xs),
             // Dépliage animé, sauf sans mouvement (clavier, mouvement réduit) :
             // jamais d'AnimatedSize à durée nulle.
@@ -250,4 +236,54 @@ class _Stars extends StatelessWidget {
                 color: AppColors.textPrimary),
         ],
       );
+}
+
+/// Ta photo de profil et ta note, comme une cellule d'ami : ouvre ta page
+/// du film sur letterboxd.com quand ton pseudo est connu.
+class _MyRatingCell extends ConsumerWidget {
+  const _MyRatingCell(
+      {required this.rating, required this.slug, required this.username});
+  final int rating;
+  final String slug;
+  final String? username;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final account = ref.watch(userProvider);
+    return Tooltip(
+      message: 'Vous · ${letterboxdStars(rating)}',
+      child: FocusRing(
+        borderRadius: AppRadii.controlBorder,
+        onActivate: username == null
+            ? null
+            : () => launchUrl(
+                context, 'https://letterboxd.com/$username/film/$slug/'),
+        child: Semantics(
+          label: 'Votre note, ${rating / 2} sur 5',
+          excludeSemantics: true,
+          child: SizedBox(
+            width: AppDetailLayout.friendCellWidth,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+              child: Column(
+                children: [
+                  // Même avatar rond que les amis (pas UserIcon : son Hero
+                  // porte le même nom que l'avatar de la barre latérale).
+                  _Avatar(
+                      friend: LetterboxdFriend(
+                          username: username ?? '',
+                          name: account?.name ?? 'Vous',
+                          avatarUrl: (account?.avatar.isEmpty ?? true)
+                              ? null
+                              : account!.avatar)),
+                  const SizedBox(height: AppSpacing.xxs),
+                  _Stars(rating: rating),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
