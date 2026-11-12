@@ -81,6 +81,27 @@ void main() {
       expect(filmSlugFromPage('<html></html>'), isNull);
     });
 
+    test('your profile picture is read from your public page', () {
+      const photo =
+          'https://a.ltrbxd.com/resized/avatar/upload/8/8/shard/avtr-0-220-0-220-crop.jpg?v=abc';
+      expect(parseProfileAvatar('<a><img src="$photo" alt="Me" /></a>'), photo);
+      expect(
+          parseProfileAvatar(
+              '<img src="https://s.ltrbxd.com/static/img/avatar220.png" alt="Me" />'),
+          isNull,
+          reason: 'the default picture says nothing');
+    });
+
+    test('an account keeps its picture through storage', () {
+      final account = LetterboxdFriendsAccount.fromJson(
+          const LetterboxdFriendsAccount(
+                  username: 'me', friendCount: 3, avatarUrl: 'https://x/a.jpg')
+              .toJson());
+      expect((account!.username, account.friendCount, account.avatarUrl),
+          ('me', 3, 'https://x/a.jpg'));
+      expect(LetterboxdFriendsAccount.fromJson({'u': 'me'})!.avatarUrl, isNull);
+    });
+
     test('usernames from a pseudo, a handle or a profile address', () {
       expect(normalizeLetterboxdUsername(' DavidEhrlich '), 'davidehrlich');
       expect(normalizeLetterboxdUsername('@ana_b'), 'ana_b');
@@ -122,6 +143,17 @@ void main() {
           unorderedEquals([('ana', 10), ('bob', 7)]));
       expect(index['heat']!.single.rating, 9);
       expect((await store.account())!.friendCount, 2);
+    });
+
+    test('a sync keeps your profile picture', () async {
+      await store.saveAccount(const LetterboxdFriendsAccount(
+          username: 'me', avatarUrl: 'https://x/a.jpg'));
+      final client = FakeClient([friend('ana')], {});
+      await LetterboxdFriendsSync(client, store)
+          .run('me', cancelled: () => false);
+      final account = await store.account();
+      expect(account!.avatarUrl, 'https://x/a.jpg');
+      expect(account.friendCount, 1);
     });
 
     test('my own ratings are kept apart from the friends index', () async {

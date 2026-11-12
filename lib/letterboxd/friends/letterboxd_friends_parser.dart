@@ -135,6 +135,14 @@ String? filmSlugFromPage(String html) {
 String letterboxdStars(int rating) =>
     '${'★' * (rating ~/ 2)}${rating.isOdd ? '½' : ''}';
 
+final _profileAvatar = RegExp(
+    r'<img src="(https://a\.ltrbxd\.com/resized/avatar/[^"]+?-0-220-0-220-crop[^"]*)"');
+
+/// Photo de profil (en 220 px) lue sur la page d'un membre, null s'il n'en
+/// a pas (le site affiche alors une image par défaut, sans intérêt).
+String? parseProfileAvatar(String html) =>
+    _profileAvatar.firstMatch(html)?.group(1);
+
 final _slug = RegExp(r'data-item-slug="([^"]+)"');
 
 /// Page d'une liste de jaquettes (watchlist, films vus, liste publique) :

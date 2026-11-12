@@ -125,6 +125,31 @@ class LetterboxdFriendsSyncController
 
   final Ref ref;
   int _generation = 0;
+  bool _avatarTried = false;
+
+  /// Lit ta photo de profil Letterboxd si on ne l'a pas, une fois par
+  /// session (un compte sans photo ne la redemande pas sans cesse).
+  Future<void> ensureAvatar() async {
+    if (_avatarTried) return;
+    final store = ref.read(letterboxdFriendsStoreProvider);
+    final account = await store?.account();
+    if (store == null || account == null || account.avatarUrl != null) return;
+    _avatarTried = true;
+    try {
+      final url = await ref
+          .read(letterboxdFriendsClientProvider)
+          .profileAvatar(account.username);
+      if (url == null || !mounted) return;
+      await store.saveAccount(LetterboxdFriendsAccount(
+          username: account.username,
+          syncedAt: account.syncedAt,
+          friendCount: account.friendCount,
+          avatarUrl: url));
+      ref.invalidate(letterboxdFriendsAccountProvider);
+    } catch (_) {
+      _avatarTried = false;
+    }
+  }
 
   /// Relie [rawUsername] au profil et lance une première synchronisation.
   /// Faux si le pseudo n'est pas valide.

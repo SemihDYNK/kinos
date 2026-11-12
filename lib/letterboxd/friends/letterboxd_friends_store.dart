@@ -8,24 +8,32 @@ import 'letterboxd_friends_parser.dart';
 /// de sa dernière synchronisation.
 class LetterboxdFriendsAccount {
   const LetterboxdFriendsAccount(
-      {required this.username, this.syncedAt, this.friendCount = 0});
+      {required this.username,
+      this.syncedAt,
+      this.friendCount = 0,
+      this.avatarUrl});
   final String username;
   final DateTime? syncedAt;
   final int friendCount;
+
+  /// Ta photo de profil Letterboxd, lue une fois sur ta page publique.
+  final String? avatarUrl;
 
   Map<String, Object?> toJson() => {
         'u': username,
         if (syncedAt != null) 't': syncedAt!.millisecondsSinceEpoch,
         'n': friendCount,
+        if (avatarUrl != null) 'a': avatarUrl,
       };
 
   static LetterboxdFriendsAccount? fromJson(Object? json) {
     if (json is! Map || json['u'] is! String) return null;
-    final t = json['t'], n = json['n'];
+    final t = json['t'], n = json['n'], a = json['a'];
     return LetterboxdFriendsAccount(
         username: json['u'] as String,
         syncedAt: t is int ? DateTime.fromMillisecondsSinceEpoch(t) : null,
-        friendCount: n is int ? n : 0);
+        friendCount: n is int ? n : 0,
+        avatarUrl: a is String ? a : null);
   }
 }
 

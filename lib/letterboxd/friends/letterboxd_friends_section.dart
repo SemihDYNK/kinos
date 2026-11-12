@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/shared/media/external_urls.dart';
 import 'package:kinos/theme/app_theme.dart';
 
@@ -28,7 +27,10 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
     super.initState();
     // Rafraîchit en arrière-plan si la dernière synchronisation est vieille.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(letterboxdFriendsSyncProvider.notifier).sync();
+      if (!mounted) return;
+      final controller = ref.read(letterboxdFriendsSyncProvider.notifier);
+      controller.sync();
+      controller.ensureAvatar();
     });
   }
 
@@ -48,8 +50,7 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
     final limit = AppDetailLayout.friendsVisible - (mine != null ? 1 : 0);
     final folded = ratings.length > limit;
     final visible = _expanded ? ratings : ratings.take(limit).toList();
-    final username =
-        ref.watch(letterboxdFriendsAccountProvider).valueOrNull?.username;
+    final account = ref.watch(letterboxdFriendsAccountProvider).valueOrNull;
     final text = Theme.of(context).textTheme;
     final count = ratings.length;
     final friends = Wrap(
@@ -60,7 +61,7 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
         // Ta photo et ta note d'abord, puis une barre verticale, puis les
         // amis.
         if (mine != null)
-          _MyRatingCell(rating: mine, slug: film.slug, username: username),
+          _MyRatingCell(rating: mine, slug: film.slug, account: account),
         if (mine != null && ratings.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
@@ -240,16 +241,16 @@ class _Stars extends StatelessWidget {
 
 /// Ta photo de profil et ta note, comme une cellule d'ami : ouvre ta page
 /// du film sur letterboxd.com quand ton pseudo est connu.
-class _MyRatingCell extends ConsumerWidget {
+class _MyRatingCell extends StatelessWidget {
   const _MyRatingCell(
-      {required this.rating, required this.slug, required this.username});
+      {required this.rating, required this.slug, required this.account});
   final int rating;
   final String slug;
-  final String? username;
+  final LetterboxdFriendsAccount? account;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final account = ref.watch(userProvider);
+  Widget build(BuildContext context) {
+    final username = account?.username;
     return Tooltip(
       message: 'Vous · ${letterboxdStars(rating)}',
       child: FocusRing(
@@ -267,15 +268,12 @@ class _MyRatingCell extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
               child: Column(
                 children: [
-                  // Même avatar rond que les amis (pas UserIcon : son Hero
-                  // porte le même nom que l'avatar de la barre latérale).
+                  // Ta photo Letterboxd, dans le même rond que les amis.
                   _Avatar(
                       friend: LetterboxdFriend(
                           username: username ?? '',
-                          name: account?.name ?? 'Vous',
-                          avatarUrl: (account?.avatar.isEmpty ?? true)
-                              ? null
-                              : account!.avatar)),
+                          name: username ?? 'Vous',
+                          avatarUrl: account?.avatarUrl)),
                   const SizedBox(height: AppSpacing.xxs),
                   _Stars(rating: rating),
                 ],

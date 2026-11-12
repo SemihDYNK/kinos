@@ -45,10 +45,12 @@ class LetterboxdFriendsSync {
       onFriend?.call(i + 1, friends.length);
     }
     if (cancelled()) return;
+    final known = await store.account();
     await store.saveAccount(LetterboxdFriendsAccount(
         username: username,
         syncedAt: DateTime.now(),
-        friendCount: friends.length));
+        friendCount: friends.length,
+        avatarUrl: known?.username == username ? known?.avatarUrl : null));
   }
 
   Future<void> syncFriend(LetterboxdFriend friend,

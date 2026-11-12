@@ -122,6 +122,12 @@ class LetterboxdFriendsClient {
     return html == null ? null : filmSlugFromPage(html);
   }
 
+  /// Photo de profil de [username], null s'il n'en a pas.
+  Future<String?> profileAvatar(String username) async {
+    final html = await _page('$username/', urgent: true);
+    return html == null ? null : parseProfileAvatar(html);
+  }
+
   /// Une page d'une liste de jaquettes : `<pseudo>/watchlist/`,
   /// `<pseudo>/films/by/date/`, `official/list/<liste>/`…
   Future<LetterboxdPage<List<String>>> slugList(String path, int page,
