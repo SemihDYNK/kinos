@@ -12,6 +12,8 @@ import 'package:kinos/arr/models/arr_library_entry.dart';
 import 'package:kinos/arr/models/arr_service.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
+import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/kinos_image.dart';
@@ -92,6 +94,42 @@ class RecommendationTile {
               ? null
               : _ArrPosterImage(entry.posterUrl!),
           knownMatch: jellyfinMatch),
+    );
+  }
+
+  /// Film absent de la bibliothèque, à demander : ouvre sa fiche Seerr.
+  /// Jaquette distante (Letterboxd), marquée « À demander » sur un voile.
+  factory RecommendationTile.request({
+    required int tmdbId,
+    required String title,
+    int? year,
+    String? posterUrl,
+  }) {
+    final image = posterUrl == null
+        ? null
+        : ImageData(path: posterUrl, key: 'request:$tmdbId');
+    return RecommendationTile(
+      identity: ('request', tmdbId),
+      previewImage: image,
+      title: title,
+      buildPoster: (context) => RequestPoster(image: image),
+      navigate: (context) => pushMediaRoute(
+          context,
+          SeerrDetailsRoute(
+            tag: MediaNavigationScope.tagOf(context),
+            mediaType: 'movie',
+            tmdbId: tmdbId,
+            poster: SeerrDashboardPosterModel(
+                id: 'tmdb:movie:$tmdbId',
+                type: SeerrMediaType.movie,
+                tmdbId: tmdbId,
+                title: title,
+                overview: '',
+                images: ImagesData(primary: image),
+                mediaStatus: SeerrMediaStatus.unknown,
+                jellyfinItemId: null,
+                releaseYear: year?.toString()),
+          )),
     );
   }
 
@@ -253,6 +291,59 @@ class _ArrPosterImage extends ImageData {
       headers: apiKey == null ? null : {'X-Api-Key': apiKey!});
 }
 
+/// Jaquette d'un titre à demander : libellé « À demander » sur voile sombre
+/// dégradé, lisible quelle que soit l'affiche (cf. CLAUDE.md § Texte sur
+/// image). Commune à toutes les rangées de l'accueil.
+class RequestPoster extends StatelessWidget {
+  const RequestPoster({required this.image, super.key});
+  final ImageData? image;
+
+  @override
+  Widget build(BuildContext context) =>
+      Stack(fit: StackFit.expand, children: [
+        if (image case final image?)
+          KinosImage(
+              image: image,
+              fit: BoxFit.cover,
+              imageErrorBuilder: (_, __, ___) => _missingPoster())
+        else
+          _missingPoster(),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: FractionallySizedBox(
+            heightFactor: .6,
+            widthFactor: 1,
+            child: DecoratedBox(
+                decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                  AppColors.scrim.withValues(alpha: .85),
+                  Colors.transparent
+                ]))),
+          ),
+        ),
+        Positioned(
+          left: AppSpacing.xs,
+          right: AppSpacing.xs,
+          bottom: AppSpacing.xs,
+          child: Row(children: [
+            Icon(Icons.add_rounded,
+                size: AppTypography.meta.fontSize,
+                color: AppColors.textPrimary),
+            const SizedBox(width: AppSpacing.xxs),
+            Expanded(
+                child: Text(context.localized.discoveryToRequest,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.meta
+                        .copyWith(color: AppColors.textPrimary))),
+          ]),
+        ),
+      ]);
+}
+
 Widget _missingPoster() => const Center(
       child: Icon(Icons.movie_creation_outlined,
           color: AppColors.textDisabled, size: 32),
@@ -266,10 +357,14 @@ class RecommendationRowGrid extends StatelessWidget {
   final List<RecommendationTile> tiles;
   final EdgeInsets contentPadding;
 
+  /// Accès au surplus (« tout voir »), comme `SingleRowSection`.
+  final VoidCallback? onSeeAll;
+
   const RecommendationRowGrid({
     required this.title,
     required this.tiles,
     required this.contentPadding,
+    this.onSeeAll,
     super.key,
   });
 
@@ -284,8 +379,25 @@ class RecommendationRowGrid extends StatelessWidget {
         SliverPadding(
           padding: contentPadding,
           sliver: SliverToBoxAdapter(
-            child:
-                Text(title, style: Theme.of(context).textTheme.headlineMedium),
+            child: Row(children: [
+              Expanded(
+                  child: Text(title,
+                      style: Theme.of(context).textTheme.headlineMedium)),
+              if (onSeeAll != null)
+                FocusRing(
+                  borderRadius: AppRadii.controlBorder,
+                  onActivate: onSeeAll,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs, vertical: AppSpacing.xxs),
+                    child: Text('tout voir',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppColors.textPrimary)),
+                  ),
+                ),
+            ]),
           ),
         ),
         SliverPadding(
@@ -304,6 +416,38 @@ class RecommendationRowGrid extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Toutes les tuiles sur autant de lignes que nécessaire (page « tout
+/// voir ») — même cellule et même navigation clavier que
+/// [RecommendationRowGrid].
+class RecommendationTileGrid extends StatelessWidget {
+  final List<RecommendationTile> tiles;
+  final EdgeInsets contentPadding;
+
+  const RecommendationTileGrid(
+      {required this.tiles, required this.contentPadding, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width - contentPadding.horizontal;
+    final columns = context.tokens.density.columnsFor(width);
+    return SliverPadding(
+      padding: contentPadding,
+      sliver: GridFocusTraveler(
+        itemCount: tiles.length,
+        crossAxisCount: columns,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          crossAxisSpacing: AppSpacing.gridGap,
+          mainAxisSpacing: AppSpacing.gridGap,
+          childAspectRatio: 2 / 3,
+        ),
+        itemBuilder: (context, selectedIndex, index) =>
+            _RecommendationTileWidget(tile: tiles[index]),
+      ),
     );
   }
 }

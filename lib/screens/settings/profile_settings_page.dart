@@ -1,3 +1,4 @@
+import 'package:kinos/letterboxd/friends/letterboxd_friends_dialog.dart';
 import 'package:kinos/letterboxd/letterboxd_import_dialog.dart';
 import 'package:kinos/anilist/anilist_account_dialog.dart';
 import 'dart:io';
@@ -384,6 +385,11 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
           label: Text(context.localized.letterboxdTitle),
           subLabel: Text(context.localized.letterboxdHint),
           onTap: () => showLetterboxdImportDialog(context),
+        ),
+        SettingsListTile(
+          label: const Text('Amis Letterboxd'),
+          subLabel: const Text('Notes des comptes que vous suivez, sur les fiches des films'),
+          onTap: () => showLetterboxdFriendsDialog(context),
         ),
         const LibraryOrderEditor(),
         const SizedBox(height: 16),

@@ -19,6 +19,7 @@ import 'package:kinos/recommendations/seerr/discovery_models.dart';
 import 'package:kinos/recommendations/seerr/discovery_providers.dart';
 import 'package:kinos/recommendations/seerr/discovery_registry.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/dashboard/recommendation_tile.dart' show RequestPoster;
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/localization_helper.dart';
 
@@ -255,16 +256,8 @@ class _HorizontalDiscoveryRowState extends State<_HorizontalDiscoveryRow> {
         final width =
             (constraints.maxWidth - AppSpacing.gridGap * (columns - 1)) /
                 columns;
-        final scaler = MediaQuery.textScalerOf(context);
-        final captionHeight = scaler.scale(AppTypography.cardTitle.fontSize!) *
-                AppTypography.cardTitle.height! +
-            scaler.scale(AppTypography.meta.fontSize!) *
-                AppTypography.meta.height! +
-            AppSpacing.xs +
-            AppSpacing.xxs;
         final height = (width - FocusRing.contentInset(context)) *
                 AppMedia.posterHeightRatio +
-            captionHeight +
             FocusRing.contentInset(context);
         return FocusTraversalGroup(
             policy: OrderedTraversalPolicy(),
@@ -411,46 +404,19 @@ class _DiscoveryCard extends StatelessWidget {
                         posterMotion: true,
                         focusNode: focusNode,
                         onActivate: () => onOpen(context),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                  child: ClipRRect(
-                                      borderRadius: AppRadii.cardBorder,
-                                      child: ColoredBox(
-                                        color: AppColors.surface,
-                                        child: MediaArtwork(
-                                            child: image == null
-                                                ? const Icon(
-                                                    Icons.movie_outlined)
-                                                : Image(
-                                                    image: image.imageProvider,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (_, __,
-                                                            ___) =>
-                                                        const Icon(Icons
-                                                            .movie_outlined),
-                                                  )),
-                                      ))),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(item.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.cardTitle),
-                              const SizedBox(height: AppSpacing.xxs),
-                              Row(children: [
-                                Icon(Icons.add_rounded,
-                                    size: AppTypography.meta.fontSize,
-                                    color: AppColors.textSecondary),
-                                const SizedBox(width: AppSpacing.xxs),
-                                Expanded(
-                                    child: Text(
-                                        context.localized.discoveryToRequest,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: AppTypography.meta)),
-                              ]),
-                            ])),
+                        // Même tuile que les autres rangées « à demander » :
+                        // l'affiche seule, libellé sur voile (cf.
+                        // RequestPoster), le titre restant dans l'infobulle.
+                        child: Tooltip(
+                          message: item.title,
+                          child: ClipRRect(
+                              borderRadius: AppRadii.cardBorder,
+                              child: ColoredBox(
+                                color: AppColors.surface,
+                                child: MediaArtwork(
+                                    child: RequestPoster(image: image)),
+                              )),
+                        )),
                   )),
             ));
   }

@@ -1,3 +1,4 @@
+import 'package:kinos/letterboxd/friends/letterboxd_friends_section.dart';
 import 'package:kinos/anilist/anilist_mapping_dialog.dart';
 import 'package:kinos/models/items/movie_model.dart';
 import 'package:flutter/material.dart';
@@ -160,6 +161,10 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       .fetchDetails(widget.item);
                 },
               ),
+              footer: switch (details.overview.tmdbId) {
+                final tmdbId? => LetterboxdFriendsSection(tmdbId: tmdbId),
+                null => null,
+              },
             ),
       onPlay: details == null
           ? null

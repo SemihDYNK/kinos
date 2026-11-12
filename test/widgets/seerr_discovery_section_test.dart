@@ -209,9 +209,9 @@ void main() {
       final hero = tester.widget<Hero>(find.byType(Hero));
       final ring = tester.widget<FocusRing>(find
           .ancestor(
-              of: find.text('Transition'), matching: find.byType(FocusRing))
+              of: find.byTooltip('Transition'), matching: find.byType(FocusRing))
           .first);
-      await tester.tap(find.text('Transition'));
+      await tester.tap(find.byTooltip('Transition'));
       await tester.pump();
       final args = (router.opened as SeerrDetailsRoute).args!;
       expect(args.mediaType, type == 'tv' ? 'tvshow' : 'movie');
@@ -261,19 +261,19 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     expect(opened?.title, 'movie 14');
     expect(
-        tester.getRect(find.text('movie 14')).right, lessThanOrEqualTo(1400));
+        tester.getRect(find.byTooltip('movie 14')).right, lessThanOrEqualTo(1400));
     final previous = find.byTooltip('Défiler vers la gauche').first;
     final next = find.byTooltip('Défiler vers la droite').first;
     expect(tester.getCenter(previous).dy,
         tester.getCenter(find.text('Films à découvrir')).dy);
-    final before = tester.getRect(find.text('movie 0')).left;
+    final before = tester.getRect(find.byTooltip('movie 0')).left;
     await tester.tap(previous);
     await tester.pumpAndSettle();
-    expect(tester.getRect(find.text('movie 0')).left, greaterThan(before));
-    final shifted = tester.getRect(find.text('movie 0')).left;
+    expect(tester.getRect(find.byTooltip('movie 0')).left, greaterThan(before));
+    final shifted = tester.getRect(find.byTooltip('movie 0')).left;
     await tester.tap(next);
     await tester.pumpAndSettle();
-    expect(tester.getRect(find.text('movie 0')).left, lessThan(shifted));
+    expect(tester.getRect(find.byTooltip('movie 0')).left, lessThan(shifted));
     expect(tester.takeException(), isNull);
   });
   testWidgets(
@@ -300,7 +300,7 @@ void main() {
               row: row, contentPadding: EdgeInsets.zero))),
     ));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Premier'));
+    await tester.tap(find.byTooltip('Premier'));
     await tester.pumpAndSettle();
     expect(router.opened?.routeName, 'SeerrDetailsRoute');
     expect(find.text('Films à découvrir'), findsOneWidget);
@@ -313,8 +313,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(starts, 1,
         reason: 'A detail visit must not reload the full library');
-    expect(find.text('Premier'), findsNothing);
-    expect(find.text('Deuxième'), findsOneWidget);
+    expect(find.byTooltip('Premier'), findsNothing);
+    expect(find.byTooltip('Deuxième'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
@@ -410,8 +410,8 @@ void main() {
             .notifier)
         .update((ids) => {...ids, 'tmdb:movie:1'});
     await tester.pumpAndSettle();
-    expect(find.text('Premier'), findsNothing);
-    expect(find.text('Deuxième'), findsOneWidget);
+    expect(find.byTooltip('Premier'), findsNothing);
+    expect(find.byTooltip('Deuxième'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   });
@@ -433,11 +433,11 @@ void main() {
         child: shell(const SeerrDiscoverySection(
             row: row, contentPadding: EdgeInsets.zero))));
     await tester.pumpAndSettle();
-    expect(find.text('Premier'), findsOneWidget);
+    expect(find.byTooltip('Premier'), findsOneWidget);
     fail = true;
     container.invalidate(seerrDiscoveryProvider(scope));
     await tester.pumpAndSettle();
-    expect(find.text('Premier'), findsNothing);
+    expect(find.byTooltip('Premier'), findsNothing);
     expect(find.text('Films à découvrir'), findsNothing);
     expect(find.textContaining('secret error'), findsNothing);
     await tester.pumpWidget(const SizedBox());
@@ -461,7 +461,7 @@ void main() {
         child: shell(const SeerrDiscoverySection(
             row: row, contentPadding: EdgeInsets.zero))));
     await tester.pumpAndSettle();
-    expect(find.text('Premier'), findsOneWidget);
+    expect(find.byTooltip('Premier'), findsOneWidget);
     container.read(offline.notifier).state = true;
     await tester.pumpAndSettle();
     expect(find.text('Films à découvrir'), findsNothing);
@@ -519,7 +519,7 @@ void main() {
     expect(disposed, true);
     pending.complete(items);
     await tester.pumpAndSettle();
-    expect(find.text('Premier'), findsNothing);
+    expect(find.byTooltip('Premier'), findsNothing);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   });

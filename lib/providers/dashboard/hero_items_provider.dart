@@ -27,7 +27,9 @@ final heroItemsProvider = FutureProvider<List<ItemBaseModel>>((ref) async {
         fields: [
           ItemFields.overview,
           ItemFields.mediastreams,
-          ItemFields.mediasources
+          ItemFields.mediasources,
+          // Identifiant TMDB : précharge les notes Letterboxd des amis.
+          ItemFields.providerids,
         ],
       )
       .timeout(const Duration(seconds: 30));

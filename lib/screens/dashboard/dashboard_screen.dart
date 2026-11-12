@@ -1,3 +1,4 @@
+import 'package:kinos/letterboxd/home/letterboxd_home_sections.dart';
 import 'package:kinos/widgets/shared/page_motion.dart';
 import 'dart:async';
 import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
@@ -190,8 +191,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               SliverPadding(
                 padding: const EdgeInsets.only(top: AppSpacing.xl),
                 sliver: switch (row.type) {
-                  HomeRowType.forYou =>
-                    ForYouRowSection(row: row, contentPadding: padding),
+                  // Rangées Letterboxd juste après « Pour vous ».
+                  HomeRowType.forYou => SliverMainAxisGroup(slivers: [
+                      ForYouRowSection(row: row, contentPadding: padding),
+                      LetterboxdHomeSections(contentPadding: padding),
+                    ]),
                   HomeRowType.setAside =>
                     SetAsideRowSection(row: row, contentPadding: padding),
                   _ => const SliverToBoxAdapter(child: SizedBox.shrink()),
