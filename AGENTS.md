@@ -127,6 +127,9 @@ Module Arr, réécriture UI (langage visuel du projet), renommage
 Fladder → Kinos (package, identité, icônes), AniList (`lib/anilist/`),
 import Letterboxd (`lib/letterboxd/`), connexion en deux étapes et
 releases Windows/macOS sont livrés (v0.12.4 au 8 novembre 2026).
+v0.13.0 (12 novembre) ajoute la recherche intégrée à la capsule, les
+langues retenues par série et l'intégration Letterboxd publique (notes des
+amis, rangées d'accueil) — détail dans `PROJET.md`.
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 

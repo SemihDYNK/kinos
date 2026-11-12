@@ -1,6 +1,6 @@
 # État des lieux — Kinos
 
-Dernière mise à jour : 2026-11-12 (v0.12.4, `f0fe54be`). Les sections
+Dernière mise à jour : 2026-11-12 (v0.13.0). Les sections
 détaillées plus bas datent pour l'essentiel du 2026-10-08 ; ce qui a changé
 depuis est résumé dans « Travail depuis le 8 octobre ». Ce document est un instantané factuel
 pour reprendre le travail sans repartir de zéro. Il ne répète pas les
@@ -90,11 +90,35 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   états de découverte explicites), Quick Connect en secondaire, actions
   de profil sous la grille, focus clavier et tests de widgets.
 - Releases : v0.12.0 (6 nov.), puis v0.12.1 → v0.12.4 (8 nov.). Attention : ces quatre
-  versions portent par erreur les tags git `v1.12.1` → `v1.12.4`, et
-  `pubspec.yaml` est en `1.12.4+1`.
+  versions portent par erreur les tags git `v1.12.1` → `v1.12.4` ;
+  `pubspec.yaml` est revenu à la bonne numérotation avec 0.13.0.
 - `f0fe54be` (8 nov., v0.12.4) — téléchargement des sous-titres distants
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
+
+## v0.13.0 (12 novembre)
+
+- **Recherche** (`ae84b562`) : le bouton loupe devient le champ dans la
+  capsule du haut ; résultats dans un voile ancré qui se déroule sous la
+  capsule, groupés « Dans la bibliothèque » / « À demander ». Titres
+  traduits retrouvés via Seerr (TMDB, langue de l'interface).
+  `AnchoredPopover` gagne alignement à droite, ancre externe, écart,
+  déroulé et un mode sans prise de focus.
+- **Fiches** (`e995fe75`) : langues audio et sous-titres retenues par
+  série et par profil (`lib/playback/series_track_preferences.dart`,
+  table `Settings`), appliquées au lancement suivant ; synopsis replié à
+  4 lignes avec « Voir plus » animé.
+- **Letterboxd** (`ddc5967f`, `lib/letterboxd/friends/`,
+  `lib/letterboxd/home/`) : pseudo public relié au profil ; notes des
+  comptes suivis et de soi synchronisées depuis les pages publiques (une
+  requête par seconde, incrémental, requêtes visibles prioritaires) ;
+  bloc de notes dans le bandeau des films, carrousel préchargé ; rangées
+  d'accueil après « Pour vous » (conseils des amis, watchlist disponible /
+  à demander avec page « tout voir », tirage du Top 500), tirages
+  tournants tous les 3 jours. Une seule tuile « À demander » partagée.
+- Dépendance assumée aux pages publiques de letterboxd.com (pas d'API
+  ouverte) : un changement de HTML vide les blocs sans erreur ; à
+  remplacer par l'API officielle si l'accès est accordé.
 
 ## Travail committé depuis le dernier instantané (23 sept → 24 sept)
 
@@ -371,6 +395,8 @@ Livré. Analyse de l'export Letterboxd, rapprochement avec la bibliothèque,
 instantané par profil (`letterboxdSnapshotProvider`), dialogue d'import
 depuis les réglages du profil. Conformément à la feuille de route, il
 alimente le profil de goût des recommandations, jamais les candidats.
+Il sert aussi, depuis v0.13.0, à écarter les films déjà vus des rangées
+Letterboxd de l'accueil et à afficher sa propre note en repli.
 
 ### Persistance locale (Drift, `lib/models/syncing/`)
 
