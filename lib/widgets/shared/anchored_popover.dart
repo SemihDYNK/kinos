@@ -50,7 +50,10 @@ class AnchoredPopover extends StatefulWidget {
   /// pas le focus à l'ouverture et ne le rend pas à la fermeture.
   final bool manageFocus;
 
-  /// Écart entre le déclencheur (ou [anchorKey]) et le voile.
+  /// Écart entre le déclencheur (ou [anchorKey]) et le voile. Plus large que
+  /// le cadre d'une barre qui porte le déclencheur (8 px de marge autour de
+  /// lui, plus 8 px de respiration), pour ne jamais empiéter
+  /// dessus.
   final double gap;
 
   /// Positionne le voile par rapport à un autre widget que le déclencheur
@@ -59,7 +62,9 @@ class AnchoredPopover extends StatefulWidget {
   final GlobalKey? anchorKey;
 
   /// Le voile se déroule depuis son bord accroché (de haut en bas quand il
-  /// pend sous le déclencheur) au lieu de grandir depuis le déclencheur.
+  /// pend sous le déclencheur, de bas en haut quand il s'ouvre au-dessus)
+  /// au lieu de grandir depuis le déclencheur. C'est l'animation de tous les
+  /// menus ancrés de l'app.
   final bool unroll;
 
   const AnchoredPopover({
@@ -71,9 +76,9 @@ class AnchoredPopover extends StatefulWidget {
     this.alignEnd = false,
     this.constraints,
     this.manageFocus = true,
-    this.gap = AppSpacing.xxs,
+    this.gap = AppSpacing.md,
     this.anchorKey,
-    this.unroll = false,
+    this.unroll = true,
     super.key,
   });
 
@@ -328,7 +333,7 @@ class _PopoverOverlay extends StatelessWidget {
                       maxHeight: MediaQuery.sizeOf(context).height * 0.5,
                     ),
                 child: unroll
-                    ? _unrolled(context)
+                    ? _unrolled(context, anchorPosition & anchorSize)
                     : FadeTransition(
                         opacity: reveal,
                         child: AnimatedBuilder(
@@ -371,9 +376,10 @@ class _PopoverOverlay extends StatelessWidget {
 extension on _PopoverOverlay {
   /// Le cadre s'allonge depuis son bord accroché, contenu découvert au fur
   /// et à mesure : un rideau qui descend (ou remonte, au-dessus).
-  Widget _unrolled(BuildContext context) {
-    final fromTop = preferredDirection != AxisDirection.up;
-    final alignment = fromTop ? Alignment.topCenter : Alignment.bottomCenter;
+  Widget _unrolled(BuildContext context, Rect anchor) {
+    final preferredTop = preferredDirection != AxisDirection.up;
+    final alignment =
+        preferredTop ? Alignment.topCenter : Alignment.bottomCenter;
     // Une fois déroulé, le voile suit aussi les changements de hauteur de
     // son contenu (résultats qui arrivent, qui changent) au lieu de sauter.
     // Jamais d'AnimatedSize à durée nulle : sans mouvement, pas d'animation.
@@ -391,13 +397,25 @@ extension on _PopoverOverlay {
         child: AnimatedBuilder(
           animation: reveal,
           child: content,
-          builder: (context, child) => ClipRect(
-            child: Align(
-              alignment: alignment,
-              heightFactor: reveal.value.clamp(0.0, 1.0),
-              child: child,
-            ),
-          ),
+          builder: (context, child) {
+            // Le voile se déroule depuis le bord accroché au déclencheur :
+            // d'après sa place réelle, car il se retourne de l'autre côté
+            // quand la place manque.
+            final panel = panelKey.currentContext?.findRenderObject();
+            final placedAbove =
+                panel is RenderBox && panel.attached && panel.hasSize
+                    ? panel.localToGlobal(panel.size.center(Offset.zero)).dy <
+                        anchor.center.dy
+                    : !preferredTop;
+            return ClipRect(
+              child: Align(
+                alignment:
+                    placedAbove ? Alignment.bottomCenter : Alignment.topCenter,
+                heightFactor: reveal.value.clamp(0.0, 1.0),
+                child: child,
+              ),
+            );
+          },
         ),
       ),
     );

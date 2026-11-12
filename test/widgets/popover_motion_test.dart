@@ -83,7 +83,8 @@ void main() {
       if (immediate) await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
       controller.show();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      // Le fondu du déroulé finit dans le premier tiers de l'animation.
+      await tester.pump(const Duration(milliseconds: 10));
       final reveal = find
           .ancestor(
               of: find.text('Choix'), matching: find.byType(FadeTransition))
