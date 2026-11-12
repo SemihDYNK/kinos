@@ -49,4 +49,47 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
+
+  testWidgets('a long synopsis folds to four lines and unfolds smoothly',
+      (tester) async {
+    final summary = List.filled(40, 'Un synopsis très long qui déborde.').join(' ');
+    await tester.pumpWidget(ProviderScope(
+        child: shell(SliverToBoxAdapter(
+            child: MovieHeroContent(
+      summary: summary,
+      streams: MediaStreamsModel(versionStreams: const []),
+      onStreamsChanged: (_) {},
+    )))));
+    await tester.pumpAndSettle();
+    final synopsis = find.text(summary);
+    final folded = tester.getSize(synopsis).height;
+    expect(find.text('Voir plus'), findsOneWidget);
+    await tester.tap(find.text('Voir plus'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+    final unfolding = tester.getSize(find.byType(AnimatedSize)).height;
+    await tester.pumpAndSettle();
+    final unfolded = tester.getSize(synopsis).height;
+    expect(unfolding, greaterThan(folded));
+    expect(unfolding, lessThan(unfolded));
+    expect(find.text('Voir moins'), findsOneWidget);
+    await tester.ensureVisible(find.text('Voir moins'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Voir moins'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(synopsis).height, folded);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a short synopsis has nothing to unfold', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+        child: shell(SliverToBoxAdapter(
+            child: MovieHeroContent(
+      summary: 'Court.',
+      streams: MediaStreamsModel(versionStreams: const []),
+      onStreamsChanged: (_) {},
+    )))));
+    await tester.pumpAndSettle();
+    expect(find.text('Voir plus'), findsNothing);
+  });
 }

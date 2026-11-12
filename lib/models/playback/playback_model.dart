@@ -43,6 +43,7 @@ import 'package:kinos/util/duration_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/map_bool_helper.dart';
 import 'package:kinos/util/streams_selection.dart';
+import 'package:kinos/playback/series_track_preferences.dart';
 import 'package:kinos/wrappers/media_control_wrapper.dart';
 
 class Media {
@@ -378,17 +379,23 @@ class PlaybackModelHelper {
         ),
       );
 
+      // Kinos : sans épisode précédent dans la session, les langues
+      // retenues pour la série priment sur celles du profil.
+      final seriesTracks = oldModel == null
+          ? await ref.read(seriesTracksProvider).defaultsFor(item, newStreamModel)
+          : null;
+
       final audioStreamIndex = selectAudioStream(
           ref.read(userProvider.select((value) => value?.userConfiguration?.rememberAudioSelections ?? true)),
           oldModel?.mediaStreams?.currentAudioStream,
           newStreamModel?.audioStreams,
-          newStreamModel?.defaultAudioStreamIndex);
+          seriesTracks?.audio ?? newStreamModel?.defaultAudioStreamIndex);
 
       final subStreamIndex = selectSubStream(
           ref.read(userProvider.select((value) => value?.userConfiguration?.rememberSubtitleSelections ?? true)),
           oldModel?.mediaStreams?.currentSubStream,
           newStreamModel?.subStreams,
-          newStreamModel?.defaultSubStreamIndex);
+          seriesTracks?.sub ?? newStreamModel?.defaultSubStreamIndex);
 
 //Native player does not allow for loading external subtitles with transcoding
       final isNativePlayer =
@@ -544,6 +551,10 @@ class PlaybackModelHelper {
   }
 
   Future<void> shouldReload(PlaybackModel playbackModel) async {
+    // Kinos : un changement de piste pendant un épisode est retenu pour sa
+    // série (cf. series_track_preferences.dart).
+    await ref.read(seriesTracksProvider).remember(playbackModel.item, playbackModel.mediaStreams);
+
     if (playbackModel is OfflinePlaybackModel) {
       return;
     }

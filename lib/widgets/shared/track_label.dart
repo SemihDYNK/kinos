@@ -176,6 +176,23 @@ const _languageNames = <String, String>{
   'mis': 'Inconnu',
 };
 
+/// Nom français d'une langue de piste (« jpn », « ja » → « Japonais »),
+/// ou null si le code est vide.
+String? trackLanguageName(String rawLanguage) => _languageName(rawLanguage);
+
+/// Vrai si deux codes de langue désignent la même langue, quelle que soit
+/// leur forme (« fre »/« fra »/« fr »). Un code vide ou indéterminé
+/// (« und ») ne correspond à rien.
+bool sameTrackLanguage(String a, String b) {
+  final x = a.trim().toLowerCase(), y = b.trim().toLowerCase();
+  if (x.isEmpty || y.isEmpty || _undetermined.contains(x)) return false;
+  if (x == y) return true;
+  final nx = _languageNames[x], ny = _languageNames[y];
+  return nx != null && nx == ny;
+}
+
+const _undetermined = {'und', 'unk', 'mis', 'zxx'};
+
 String? _languageName(String rawLanguage) {
   final code = rawLanguage.trim();
   if (code.isEmpty) return null;

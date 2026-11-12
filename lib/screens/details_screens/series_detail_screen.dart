@@ -16,6 +16,8 @@ import 'package:kinos/screens/details_screens/components/media_meta_line.dart';
 import 'package:kinos/screens/details_screens/components/movie_hero_content.dart';
 import 'package:kinos/models/items/media_streams_model.dart';
 import 'package:kinos/screens/shared/media/season_episode_section.dart';
+import 'package:kinos/playback/series_track_preferences.dart';
+import 'package:kinos/screens/details_screens/components/series_track_memory.dart';
 import 'package:kinos/screens/shared/media_detail_scaffold.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/humanize_duration.dart';
@@ -54,7 +56,12 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
     // le chargement n'est pas terminé.
     final item = details ?? widget.item;
 
-    final currentEpisode = details?.nextUp;
+    final nextUp = details?.nextUp;
+    // Langues retenues pour la série, appliquées à l'épisode « à suivre ».
+    final seriesTracks =
+        ref.watch(seriesTrackPreferenceProvider(item.id)).valueOrNull;
+    final currentEpisode = nextUp?.copyWith(
+        mediaStreams: applySeriesTracks(nextUp.mediaStreams, seriesTracks));
     // Saison de l'épisode "à suivre" : la section saisons/épisodes s'y
     // ouvre directement, plutôt que sur la première saison par défaut.
     final initialSeasonId = details?.seasons
@@ -162,10 +169,14 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
               summary: details.overview.summary,
               streams: currentEpisode?.mediaStreams ??
                   MediaStreamsModel(versionStreams: const []),
+              trackMemory: SeriesTrackMemory(seriesId: item.id),
               onStreamsChanged: (changed) {
                 if (currentEpisode != null) {
                   ref.read(providerId.notifier).updateEpisodeInfo(
                       currentEpisode.copyWith(mediaStreams: changed));
+                  ref
+                      .read(seriesTracksProvider)
+                      .remember(currentEpisode, changed);
                 }
               },
             ),

@@ -11,6 +11,8 @@ import 'package:kinos/screens/details_screens/components/media_info_formatters.d
 import 'package:kinos/screens/details_screens/components/media_info_section.dart';
 import 'package:kinos/screens/details_screens/components/media_meta_line.dart';
 import 'package:kinos/screens/details_screens/components/movie_hero_content.dart';
+import 'package:kinos/playback/series_track_preferences.dart';
+import 'package:kinos/screens/details_screens/components/series_track_memory.dart';
 import 'package:kinos/screens/shared/media_detail_scaffold.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/humanize_duration.dart';
@@ -51,7 +53,17 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
     final series = state.series;
     final item = details ?? widget.item;
 
-    final version = details?.mediaStreams.currentVersionStream;
+    // Langues retenues pour la série : les sélecteurs les montrent, et y
+    // changer de piste les retient (comme pendant la lecture).
+    final seriesId = details == null ? null : seriesIdOf(details);
+    final seriesTracks = seriesId == null
+        ? null
+        : ref.watch(seriesTrackPreferenceProvider(seriesId)).valueOrNull;
+    final streams = details == null
+        ? null
+        : applySeriesTracks(details.mediaStreams, seriesTracks);
+
+    final version = streams?.currentVersionStream;
     final metaLine = details == null
         ? ''
         : buildMediaMetaLine(
@@ -109,12 +121,10 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
                 label: 'Codec vidéo',
                 value: version!.videoStreams.first.codec.toUpperCase()
               ),
-            if (details.mediaStreams.currentAudioStream?.codec.isNotEmpty ??
-                false)
+            if (streams!.currentAudioStream?.codec.isNotEmpty ?? false)
               (
                 label: 'Codec audio',
-                value:
-                    details.mediaStreams.currentAudioStream!.codec.toUpperCase()
+                value: streams.currentAudioStream!.codec.toUpperCase()
               ),
             if (formatFileSize(version?.size) != null)
               (label: 'Taille', value: formatFileSize(version?.size)!),
@@ -141,10 +151,16 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
           ? null
           : MovieHeroContent(
               summary: details.overview.summary,
-              streams: details.mediaStreams,
-              onStreamsChanged: (changed) => ref
-                  .read(providerId.notifier)
-                  .updateEpisode(details.copyWith(mediaStreams: changed)),
+              streams: streams!,
+              onStreamsChanged: (changed) {
+                ref
+                    .read(providerId.notifier)
+                    .updateEpisode(details.copyWith(mediaStreams: changed));
+                ref.read(seriesTracksProvider).remember(details, changed);
+              },
+              trackMemory: seriesId == null
+                  ? null
+                  : SeriesTrackMemory(seriesId: seriesId),
             ),
       onPlay: details == null
           ? null
