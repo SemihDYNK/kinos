@@ -2,7 +2,11 @@
 
 Kinos, fork de Fladder (client Jellyfin Flutter, GPL-3.0-only — cf.
 NOTICE pour l'attribution complète).
-Cible : Linux desktop uniquement — CachyOS / Ryoku (Arch + Hyprland) / AMD RDNA2.
+Cible : desktop. Développement et usage principal sous Linux — CachyOS /
+Ryoku (Arch + Hyprland) / AMD RDNA2. Depuis v0.12.0 (6 novembre 2026), les
+versions publiées sur GitHub sont pour Windows (x64 portable) et macOS
+(universel, signature ad hoc) — `.github/workflows/desktop-test.yml`, sur
+tag `v*`. L'AppImage Linux est construite par la CI mais pas publiée.
 
 ## Règles de fork
 
@@ -23,7 +27,9 @@ chaque divergence coûte à chaque merge.
   Wayland. Le tonemapping libplacebo vers SDR est définitif. Ne pas
   proposer de chemin passthrough.
 - **Moteur mpv obligatoire** sur Linux (`lib/wrappers/players/lib_mpv.dart`),
-  jamais MDK. Vérifier que `gpu-next` reste actif.
+  jamais MDK. Vérifier que `gpu-next` reste actif. mpv est aussi le moteur
+  par défaut sous Windows et macOS (MDK y reste sélectionnable, hérité
+  d'amont).
 - Le `DeviceProfile` natif est volontairement permissif (direct play sans
   restriction de codec). Ne pas y ajouter de `codecProfiles`.
 
@@ -93,6 +99,10 @@ l'image.
 - Drift pour la base locale. Toute nouvelle table passe par une migration.
 - Les rapports de lecture passent par `playback_queue`, jamais en appel direct.
 - Les secrets vont dans `flutter_secure_storage`, jamais dans SharedPreferences.
+  Exception temporaire macOS : sans profil Developer ID, le Trousseau est
+  inaccessible aux versions ad hoc ; `lib/services/platform_secure_storage.dart`
+  remplace le backend par un fichier `credentials.json` local à permissions
+  restreintes. À remplacer par le Trousseau dès qu'un Developer ID existe.
 - Répondre en français.
 - Retouches UI : privilégier le rechargement à chaud Flutter sur l’instance
   ouverte (`flutter attach` si nécessaire), sans relancer Kinos à chaque retouche.
@@ -113,8 +123,10 @@ même titre que Jellyfin et Arr — jamais dans `SharedPreferences`.
 
 ## Reste à faire
 
-Module Arr, réécriture UI (langage visuel du projet) et renommage
-Fladder → Kinos (package, identité, icônes) sont livrés.
+Module Arr, réécriture UI (langage visuel du projet), renommage
+Fladder → Kinos (package, identité, icônes), AniList (`lib/anilist/`),
+import Letterboxd (`lib/letterboxd/`), connexion en deux étapes et
+releases Windows/macOS sont livrés (v0.12.4 au 8 novembre 2026).
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 
@@ -122,12 +134,12 @@ Feuille de route, priorité validée le 29 octobre 2026 :
 
 - [ ] Stabilisation de Kinos normal : fluidité, navigation, lecteur et
       validation Seerr sur les vrais serveurs
-- [ ] AniList : mapping d'identifiants d'abord
-- [ ] Import Letterboxd : alimente le profil de goût, jamais les
+- [x] AniList : mapping d'identifiants, plages manuelles, liens conservés
+      hors ligne, synchronisation des épisodes marqués à la main
+- [x] Import Letterboxd : alimente le profil de goût, jamais les
       candidats recommandés
 - [ ] Mode salon (double densité, déjà porté par le thème — reste
-      l'activation/bascule de bout en bout), après stabilisation, AniList
-      et Letterboxd
+      l'activation/bascule de bout en bout), après stabilisation
 - [ ] Version distribuable propre, en toute fin : validation globale,
       rangement des modifications, traductions, sécurité et licences
 
@@ -145,3 +157,5 @@ Dette connue :
 - [ ] `localPin` (verrouillage local de l'app) stocké en clair sur
       disque — risque moindre qu'un secret de compte distant, mais pas
       blanchi
+- [ ] Identifiants macOS dans un fichier local plutôt que le Trousseau
+      (cf. Conventions), en attendant un Developer ID

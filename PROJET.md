@@ -1,6 +1,8 @@
 # État des lieux — Kinos
 
-Dernière mise à jour : 2026-10-08. Ce document est un instantané factuel
+Dernière mise à jour : 2026-11-12 (v0.12.4, `f0fe54be`). Les sections
+détaillées plus bas datent pour l'essentiel du 2026-10-08 ; ce qui a changé
+depuis est résumé dans « Travail depuis le 8 octobre ». Ce document est un instantané factuel
 pour reprendre le travail sans repartir de zéro. Il ne répète pas les
 règles et contraintes de `CLAUDE.md` (zones de fork, contraintes mpv/HDR,
 direction UI, conventions, feuille de route déclarée) — seulement l'état
@@ -8,8 +10,9 @@ réel du code : ce qui est implémenté, comment, et ce qui reste à faire.
 
 ## Concept de l'app
 
-Kinos est un client Jellyfin desktop (Linux uniquement — CachyOS/Hyprland,
-AMD RDNA2), fork de Fladder (GPL-3.0-only). Périmètre : **films et séries
+Kinos est un client Jellyfin desktop, fork de Fladder (GPL-3.0-only).
+Développé et utilisé d'abord sous Linux (CachyOS/Hyprland, AMD RDNA2) ;
+les versions publiées depuis v0.12.0 visent Windows et macOS. Périmètre : **films et séries
 uniquement** — musique, Live TV, livres, photos, SyncPlay et contrôle à
 distance sont explicitement hors scope, bien que largement présents dans
 le code hérité d'amont (jamais retiré, juste jamais utilisé par ce fork).
@@ -23,6 +26,9 @@ Trois intégrations serveur composent l'app :
   depuis l'app plutôt que depuis les interfaces Sonarr/Radarr natives.
 - **Seerr (Overseerr/Jellyseerr)** — demander l'ajout d'un titre absent
   de la bibliothèque, suivre son statut, gérer les demandes côté admin.
+
+Deux intégrations de compte externes s'y ajoutent : **AniList** (suivi
+de progression des séries) et **import Letterboxd** (profil de goût).
 
 Direction produit : UI desktop sans concession (pas de navigation basse,
 survol partout, clic droit, raccourcis visibles, focus clavier directionnel
@@ -51,11 +57,44 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   `service_provider.dart`, un `prefer_const_constructors`, un
   `unused_import` dans un test Arr). Origine jamais tracée précisément,
   seulement confirmées non régressives à chaque session.
+  *Au 2026-11-12 : 156 fichiers de test (dont `test/anilist/` et
+  `test/letterboxd/`, 26 fichiers à eux deux) ; le nombre de tests n'a pas
+  été recompté.*
 - CI : `.github/workflows/checks.yaml` (lint/format), `build.yml`,
-  `prepare-release.yml`, `validate-fastlane.yml` — déclenchés sur PR
-  vers `develop`.
-- **Lot découverte Seerr implémenté, non committé** au 2026-10-08.
-  Le fichier `AGENTS.md` non suivi était déjà présent avant ce lot.
+  `prepare-release.yml`, `validate-fastlane.yml` hérités d'amont
+  (déclenchés sur PR vers `develop`). La chaîne propre à Kinos est
+  `desktop-test.yml` : builds Windows/macOS/Linux et tests bornés, puis,
+  sur tag `v*`, release GitHub avec `kinos-windows-x64-portable.zip`,
+  `kinos-macos-universal.zip` et `SHA256SUMS.txt`. Le tarball et
+  l'AppImage Linux sont construits et validés mais pas publiés.
+- Le lot découverte Seerr, non committé au 2026-10-08, a été intégré
+  depuis (`1c0d0942` / `35216f93`). `AGENTS.md` est une copie de
+  `CLAUDE.md`.
+
+## Travail depuis le 8 octobre (→ v0.12.4, 8 novembre)
+
+- `1c0d0942` (30 oct.) — refonte desktop, mouvement et stabilisation
+  intégrés.
+- `35216f93` (3 nov.) — consolidation des intégrations Kinos et premiers
+  builds de test desktop.
+- 4–5 nov. — **AniList** : correspondance d'identifiants (requête par
+  identifiant unique), plages manuelles d'épisodes enregistrées hors
+  ligne, liens conservés hors ligne, liens de série respectés à la
+  synchronisation, épisodes marqués à la main synchronisés, réutilisation
+  d'une correspondance périmée plutôt qu'une nouvelle demande.
+- **Letterboxd** : import livré (`lib/letterboxd/`).
+- 4–8 nov. — CI de release desktop, licences des polices embarquées,
+  série de correctifs macOS (entitlements, signature ad hoc, stockage des
+  identifiants — cf. Secrets).
+- `dfde798e` (6 nov.) — connexion en deux étapes (serveur puis compte,
+  états de découverte explicites), Quick Connect en secondaire, actions
+  de profil sous la grille, focus clavier et tests de widgets.
+- Releases : v0.12.0 (6 nov.), puis v0.12.1 → v0.12.4 (8 nov.). Attention : ces quatre
+  versions portent par erreur les tags git `v1.12.1` → `v1.12.4`, et
+  `pubspec.yaml` est en `1.12.4+1`.
+- `f0fe54be` (8 nov., v0.12.4) — téléchargement des sous-titres distants
+  amélioré, options du lecteur enrichies
+  (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
 ## Travail committé depuis le dernier instantané (23 sept → 24 sept)
 
@@ -170,8 +209,8 @@ navigation clavier sur ces nouvelles rangées.
 ### Lecteur vidéo (`lib/screens/video_player/`, `lib/wrappers/players/`)
 
 - Deux moteurs derrière `base_player.dart` : `lib_mpv.dart` (imposé sur
-  Linux) et `lib_mdk.dart` (hérité, jamais utilisé sur la cible de ce
-  fork). `media_control_wrapper.dart` fait le pont commun ;
+  Linux, défaut sur tous les desktops) et `lib_mdk.dart` (hérité, encore
+  sélectionnable sous Windows/macOS via `PlayerOptions.available`). `media_control_wrapper.dart` fait le pont commun ;
   `pip_manager.dart`/`audio_queue_handler.dart` gèrent PIP et la file
   audio.
 - Voile desktop repris au langage visuel du projet : titre/métadonnées,
@@ -316,6 +355,23 @@ vérifient l'absence d'attente du premier rendu et les débordements bureau/salo
 pas une absence absolue de contention réseau/CPU. La garantie d'exclusion reste
 limitée par les identifiants et la fraîcheur des données exposées côté serveurs.
 
+### AniList (`lib/anilist/`)
+
+Livré début novembre. Compte AniList (jeton via `flutter_secure_storage`,
+`anilist_account.dart`), client API, correspondance Jellyfin → AniList
+(`mapping.dart`, dialogue de choix parmi les candidats résolus), plages
+d'épisodes manuelles (`episode_store.dart`, table Drift `Settings`
+scopée), progression remontée depuis `playback_report_queue_provider.dart`
+(jamais en appel direct). Liens et plages restent utilisables hors ligne.
+Points d'entrée UI : fiches série/saison/film, réglages du profil.
+
+### Import Letterboxd (`lib/letterboxd/`)
+
+Livré. Analyse de l'export Letterboxd, rapprochement avec la bibliothèque,
+instantané par profil (`letterboxdSnapshotProvider`), dialogue d'import
+depuis les réglages du profil. Conformément à la feuille de route, il
+alimente le profil de goût des recommandations, jamais les candidats.
+
 ### Persistance locale (Drift, `lib/models/syncing/`)
 
 `AppDatabase`, schéma v4, 6 tables : `DatabaseItems` (cache Jellyfin
@@ -341,6 +397,15 @@ composite, tous sur `flutter_secure_storage`. **Exception restante :
 `localPin`** (verrouillage local de l'app, champ d'`AccountModel`) —
 toujours en clair dans `SharedPreferences`, jamais traité (risque jugé
 moindre qu'un secret de compte distant, mais pas blanchi).
+
+**Exception macOS (depuis `084af800`, v0.12.3)** : sans profil Developer ID,
+les builds ad hoc n'ont pas accès au Trousseau.
+`lib/services/platform_secure_storage.dart` remplace alors le backend de
+`flutter_secure_storage` par un fichier `credentials.json` dans le dossier
+Application Support, aux permissions restreintes mais non chiffré. Tous les
+coffres (Jellyfin, Arr, Seerr, AniList) en dépendent sur macOS. Raccourci
+documenté dans le code, à remplacer par le Trousseau dès qu'un Developer ID
+existe.
 
 ### Synchronisation / téléchargement offline (`lib/providers/sync_provider.dart` et alentours)
 
@@ -427,6 +492,8 @@ courante et son texte secondaire dérivé.
 6. **Statut visuel non reconfirmé** : le recentrage piste/pouce de la
    barre de progression vidéo et l'icône du bouton d'arrêt (`a0f887d8`)
    n'ont jamais été revérifiés à l'écran depuis leur commit.
+7. **Identifiants macOS en fichier local non chiffré** (cf. Secrets) —
+   choix assumé pour les builds ad hoc, à lever avec un Developer ID.
 
 ## Mesures de performance actuelles
 
@@ -447,16 +514,15 @@ courante et son texte secondaire dérivé.
 
 Feuille de route produit (ordre, justification) : voir `CLAUDE.md` §
 Feuille de route. Priorités validées le 29 octobre 2026 : stabilisation
-de Kinos normal (y compris validation Seerr) → AniList (mapping
-d'identifiants d'abord) → import Letterboxd (alimente le profil de goût,
-jamais les candidats recommandés) → mode salon → préparation de la version
-distribuable propre, en toute fin. Le Lab Plezy/Plex reste de côté.
+de Kinos normal (y compris validation Seerr) → AniList → import
+Letterboxd → mode salon → préparation de la version distribuable propre,
+en toute fin. **AniList et Letterboxd sont livrés** (novembre 2026). Le Lab
+Plezy/Plex reste de côté.
 
 Ouverts côté code, dans un ordre de priorité suggéré :
 
-- **Lot Seerr "découverte hors catalogue"** — implémentation livrée dans le
-  working tree ; valider contre les vrais serveurs et mesurer le rendu avant
-  publication. Ce lot conserve son délai propre ; le client Seerr historique
+- **Lot Seerr "découverte hors catalogue"** — committé et publié ; reste à
+  valider contre les vrais serveurs et à mesurer le rendu. Ce lot conserve son délai propre ; le client Seerr historique
   est désormais borné à 30 secondes. La présentation des erreurs HTTP reste
   à améliorer.
 - **Fixtures Seerr réelles** à capturer (`discover/trending`,
@@ -479,5 +545,6 @@ Ouverts côté code, dans un ordre de priorité suggéré :
 - **Déconnexion Discord au play** — idée notée, mis de côté, aucun code
   (vérifier `pactl list sinks` avant/pendant lecture avec Discord en
   vocal).
+- **Trousseau macOS** (Bugs connus 7) — dès qu'un Developer ID existe.
 - **9 messages non traduits** et **relecture du `NOTICE`** avant
   publication (déjà notés dans `CLAUDE.md` § En attente).
