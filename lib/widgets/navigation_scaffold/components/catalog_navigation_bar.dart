@@ -42,7 +42,6 @@ class CatalogNavigationBar extends ConsumerWidget {
 
     Widget tab(String label, bool active, VoidCallback action) => FocusRing(
           onActivate: action,
-          hoverFill: true,
           borderRadius: AppTopNavigation.tabBorder,
           child: SizedBox(
             height: AppNavigation.rowHeight,
