@@ -1,3 +1,4 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,11 +6,11 @@ import 'package:kinos/letterboxd/friends/letterboxd_friends_providers.dart';
 import 'package:kinos/providers/connectivity_provider.dart'
     show offlineStateProvider;
 import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/dashboard/recommendation_tile.dart';
 import 'package:kinos/theme/app_theme.dart';
 
 import 'letterboxd_home_providers.dart';
-import 'letterboxd_watchlist_screen.dart';
 
 /// Les quatre rangées Letterboxd de l'accueil, juste après « Pour vous » :
 /// conseils des amis, watchlist disponible, watchlist à demander, tirage
@@ -50,20 +51,11 @@ class _SectionsState extends ConsumerState<LetterboxdHomeSections> {
     final canRequest = ref.watch(
         userProvider.select((u) => u?.seerrCredentials?.isConfigured ?? false));
 
-    List<RecommendationTile> tiles(List<LetterboxdHomeEntry> entries) => [
-          for (final entry in entries)
-            if (entry.item case final item?)
-              RecommendationTile.jellyfin(item: item)
-            else if (canRequest)
-              if (int.tryParse(entry.film.tmdbId) case final tmdbId?)
-                RecommendationTile.request(
-                    tmdbId: tmdbId,
-                    title: entry.film.title,
-                    year: entry.film.year,
-                    posterUrl: entry.film.posterUrl),
-        ];
+    List<RecommendationTile> tiles(List<LetterboxdHomeEntry> entries) =>
+        letterboxdTiles(entries, canRequest: canRequest);
 
-    void seeWatchlist() => openLetterboxdWatchlist(context);
+    void seeWatchlist() =>
+        context.router.push(const LetterboxdWatchlistRoute());
     final sections = [
       ('Vos amis conseillent', tiles(rows.friends), null),
       ('Votre watchlist', tiles(rows.watchlistLibrary), seeWatchlist),
@@ -81,6 +73,63 @@ class _SectionsState extends ConsumerState<LetterboxdHomeSections> {
                 tiles: list,
                 onSeeAll: onSeeAll,
                 contentPadding: widget.contentPadding),
+          ),
+    ]);
+  }
+}
+
+/// Tuiles d'une rangée Letterboxd : la fiche de la bibliothèque quand le
+/// film y est, sinon la tuile « À demander » (seulement si Seerr est
+/// configuré).
+List<RecommendationTile> letterboxdTiles(List<LetterboxdHomeEntry> entries,
+        {required bool canRequest}) =>
+    [
+      for (final entry in entries)
+        if (entry.item case final item?)
+          RecommendationTile.jellyfin(item: item)
+        else if (canRequest)
+          if (int.tryParse(entry.film.tmdbId) case final tmdbId?)
+            RecommendationTile.request(
+                tmdbId: tmdbId,
+                title: entry.film.title,
+                year: entry.film.year,
+                posterUrl: entry.film.posterUrl),
+    ];
+
+/// Rangées Letterboxd d'une page de genre : conseils des amis, watchlist
+/// (disponible, à demander) et Top 500, limités au genre. Elles arrivent
+/// quand elles sont prêtes, sans retarder le reste de la page.
+class LetterboxdGenreSections extends ConsumerWidget {
+  const LetterboxdGenreSections(
+      {required this.label, required this.contentPadding, super.key});
+  final String label;
+  final EdgeInsets contentPadding;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(offlineStateProvider)) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+    final rows = ref.watch(letterboxdGenreRowsProvider(label)).valueOrNull;
+    if (rows == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    final canRequest = ref.watch(
+        userProvider.select((u) => u?.seerrCredentials?.isConfigured ?? false));
+    final sections = [
+      ('Vos amis conseillent', letterboxdTiles(rows.friends, canRequest: canRequest)),
+      ('Votre watchlist', letterboxdTiles(rows.watchlistLibrary, canRequest: canRequest)),
+      ('Watchlist · à demander', letterboxdTiles(rows.watchlistRequest, canRequest: canRequest)),
+      ('Les grands films de Letterboxd', letterboxdTiles(rows.top, canRequest: canRequest)),
+    ];
+    return SliverMainAxisGroup(slivers: [
+      for (final (title, list) in sections)
+        if (list.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.only(top: AppSpacing.xl),
+            sliver: RecommendationRowGrid(
+                key: ValueKey(title),
+                title: title,
+                tiles: list,
+                contentPadding: contentPadding),
           ),
     ]);
   }

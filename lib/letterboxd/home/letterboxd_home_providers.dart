@@ -9,6 +9,7 @@ import 'package:kinos/models/items/movie_model.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/database_provider.dart';
 
+import 'letterboxd_genres.dart';
 import 'letterboxd_home.dart';
 
 /// Un film d'une rangée Letterboxd et sa fiche Jellyfin s'il est dans la
@@ -217,5 +218,74 @@ final letterboxdWatchlistProvider = FutureProvider.autoDispose<
         if (e.item == null) e
     ],
     pending: pending,
+  );
+});
+
+/// Graine propre à un libellé, identique d'un lancement à l'autre (le
+/// `hashCode` des chaînes n'est pas garanti stable).
+int _stableSalt(String label) =>
+    label.codeUnits.fold<int>(0, (sum, unit) => (sum * 31 + unit) & 0xffff);
+
+/// Rangées Letterboxd d'une page de genre (libellé affiché du genre) :
+/// conseils des amis, watchlist (disponible / à demander) et Top 500 dans
+/// ce genre. Vide sans compte relié ni genre connu de Letterboxd. Les
+/// lectures passent devant la synchronisation de fond : la page attend ses
+/// propres rangées, pas les 3 000 notes d'amis.
+final letterboxdGenreRowsProvider = FutureProvider.autoDispose
+    .family<LetterboxdHomeRows, String>((ref, label) async {
+  final seen = _seenFilter(ref);
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  bool cancelled() => disposed;
+  final store = ref.watch(letterboxdHomeStoreProvider);
+  final account = await ref.watch(letterboxdFriendsAccountProvider.future);
+  final genre = letterboxdGenreSlug(label);
+  if (store == null || account == null || genre == null) {
+    return const LetterboxdHomeRows();
+  }
+  final index = await ref.watch(letterboxdFriendsIndexProvider.future);
+  final refresh =
+      LetterboxdHomeRefresh(ref.read(letterboxdFriendsClientProvider), store);
+  final watched = (await store.list('watched')).slugs.toSet();
+  final now = refresh.now;
+
+  final results = await Future.wait([
+    refresh.watchlistInGenre(account.username, genre, cancelled: cancelled),
+    refresh.topInGenre(genre, cancelled: cancelled),
+  ]);
+  final watchlistPick = rotationPick(results[0], now,
+      count: genreRowCount, salt: 2 + _stableSalt(label));
+  final topPick = dailyPick(results[1], watched, now, count: genreRowCount);
+
+  // Conseils d'amis : le réservoir dont on connaît déjà les genres.
+  final candidates = <String>[];
+  for (final slug in friendPicks(index, watched, limit: friendGenrePoolSize)) {
+    final film = (await store.film(slug))?.film;
+    if (film != null && filmInGenre(film, label)) candidates.add(slug);
+  }
+  final friendsPick = weightedRotationPick(candidates, now,
+      count: genreRowCount, salt: 1 + _stableSalt(label));
+
+  await refresh
+      .resolve([...watchlistPick, ...topPick], cancelled, urgent: true);
+  if (cancelled()) return const LetterboxdHomeRows();
+  final films =
+      await store.films([...watchlistPick, ...topPick, ...friendsPick]);
+  final library =
+      await _libraryByTmdb(ref, films.values.where((film) => film.isMovie));
+  List<LetterboxdHomeEntry> entries(Iterable<String> slugs) =>
+      _entries(slugs, films, library, seen);
+  final watchlist = entries(watchlistPick);
+  return LetterboxdHomeRows(
+    friends: entries(friendsPick),
+    watchlistLibrary: [
+      for (final e in watchlist)
+        if (e.item != null) e
+    ],
+    watchlistRequest: [
+      for (final e in watchlist)
+        if (e.item == null) e
+    ],
+    top: entries(topPick),
   );
 });

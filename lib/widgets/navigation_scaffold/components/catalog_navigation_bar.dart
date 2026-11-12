@@ -58,7 +58,9 @@ class CatalogNavigationBar extends ConsumerWidget {
           ),
         );
     return Stack(children: [
-      if (route == DashboardRoute.name || route == SeerrSearchRoute.name)
+      if (route == DashboardRoute.name ||
+          route == SeerrSearchRoute.name ||
+          route == GenrePageRoute.name)
         child
       else if ({
         LibrarySearchRoute.name,

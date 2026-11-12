@@ -102,6 +102,14 @@ final List<AutoRoute> detailsRoutes = [
   ),
   AutoRoute(page: LiveTvRoute.page, path: 'live-tv'),
   CustomRoute(
+      page: GenrePageRoute.page,
+      path: 'genre',
+      customRouteBuilder: mediaPageRoute),
+  CustomRoute(
+      page: LetterboxdWatchlistRoute.page,
+      path: 'letterboxd-watchlist',
+      customRouteBuilder: catalogPageRoute),
+  CustomRoute(
       page: SeerrSearchRoute.page,
       path: 'seerr-search',
       customRouteBuilder: catalogPageRoute),

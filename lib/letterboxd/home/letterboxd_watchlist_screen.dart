@@ -1,3 +1,4 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,13 +8,11 @@ import 'package:kinos/screens/dashboard/recommendation_tile.dart';
 import 'package:kinos/theme/app_theme.dart';
 
 import 'letterboxd_home_providers.dart';
-
-Future<void> openLetterboxdWatchlist(BuildContext context) =>
-    Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => const LetterboxdWatchlistScreen()));
+import 'letterboxd_home_sections.dart' show letterboxdTiles;
 
 /// Toute la watchlist Letterboxd : les films disponibles, puis ceux à
 /// demander. Échap ou la flèche reviennent à l'accueil.
+@RoutePage()
 class LetterboxdWatchlistScreen extends ConsumerWidget {
   const LetterboxdWatchlistScreen({super.key});
 
@@ -25,18 +24,8 @@ class LetterboxdWatchlistScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     const padding = EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding);
 
-    List<RecommendationTile> tiles(List<LetterboxdHomeEntry> entries) => [
-          for (final entry in entries)
-            if (entry.item case final item?)
-              RecommendationTile.jellyfin(item: item)
-            else if (canRequest)
-              if (int.tryParse(entry.film.tmdbId) case final tmdbId?)
-                RecommendationTile.request(
-                    tmdbId: tmdbId,
-                    title: entry.film.title,
-                    year: entry.film.year,
-                    posterUrl: entry.film.posterUrl),
-        ];
+    List<RecommendationTile> tiles(List<LetterboxdHomeEntry> entries) =>
+        letterboxdTiles(entries, canRequest: canRequest);
 
     final library = tiles(watchlist?.library ?? const []);
     final request = tiles(watchlist?.request ?? const []);
@@ -57,7 +46,7 @@ class LetterboxdWatchlistScreen extends ConsumerWidget {
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): () =>
-            Navigator.of(context).maybePop(),
+            context.router.maybePop(),
       },
       child: Focus(
         autofocus: true,
@@ -72,7 +61,7 @@ class LetterboxdWatchlistScreen extends ConsumerWidget {
                     message: 'Retour · Échap',
                     child: FocusRing(
                       borderRadius: AppRadii.controlBorder,
-                      onActivate: () => Navigator.of(context).maybePop(),
+                      onActivate: () => context.router.maybePop(),
                       child: const Padding(
                         padding: EdgeInsets.all(AppSpacing.xs),
                         child: Icon(Icons.arrow_back, semanticLabel: 'Retour'),

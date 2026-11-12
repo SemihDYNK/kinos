@@ -19,6 +19,7 @@ import 'package:kinos/recommendations/seerr/discovery_models.dart';
 import 'package:kinos/recommendations/seerr/discovery_providers.dart';
 import 'package:kinos/recommendations/seerr/discovery_registry.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/widgets/shared/poster_caption.dart';
 import 'package:kinos/screens/dashboard/recommendation_tile.dart' show RequestPoster;
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -258,6 +259,7 @@ class _HorizontalDiscoveryRowState extends State<_HorizontalDiscoveryRow> {
                 columns;
         final height = (width - FocusRing.contentInset(context)) *
                 AppMedia.posterHeightRatio +
+            posterCaptionHeight(context) +
             FocusRing.contentInset(context);
         return FocusTraversalGroup(
             policy: OrderedTraversalPolicy(),
@@ -405,18 +407,25 @@ class _DiscoveryCard extends StatelessWidget {
                         focusNode: focusNode,
                         onActivate: () => onOpen(context),
                         // Même tuile que les autres rangées « à demander » :
-                        // l'affiche seule, libellé sur voile (cf.
-                        // RequestPoster), le titre restant dans l'infobulle.
-                        child: Tooltip(
-                          message: item.title,
-                          child: ClipRRect(
-                              borderRadius: AppRadii.cardBorder,
-                              child: ColoredBox(
-                                color: AppColors.surface,
-                                child: MediaArtwork(
-                                    child: RequestPoster(image: image)),
-                              )),
-                        )),
+                        // l'affiche avec son libellé sur voile (cf.
+                        // RequestPoster), puis le titre et l'année dessous
+                        // — beaucoup d'affiches n'ont pas leur titre.
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                    borderRadius: AppRadii.cardBorder,
+                                    child: ColoredBox(
+                                      color: AppColors.surface,
+                                      child: MediaArtwork(
+                                          child: RequestPoster(image: image)),
+                                    )),
+                              ),
+                              PosterCaption(
+                                  title: item.title,
+                                  subtitle: item.year?.toString()),
+                            ])),
                   )),
             ));
   }

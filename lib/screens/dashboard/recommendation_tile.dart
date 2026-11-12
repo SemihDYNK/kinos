@@ -18,6 +18,7 @@ import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/widgets/shared/grid_focus_traveler.dart';
+import 'package:kinos/widgets/shared/poster_caption.dart';
 
 /// Une entrée affichable dans une rangée de recommandation — pont entre
 /// le résultat du moteur (id/score, sans notion d'affichage) et ce
@@ -46,6 +47,9 @@ class RecommendationTile {
   final Object identity;
   final ImageData? previewImage;
   final String title;
+
+  /// Année (ou autre mention) sous le titre, quand on la connaît.
+  final String? subtitle;
   final Widget Function(BuildContext context) buildPoster;
   final Future<void> Function(BuildContext context) navigate;
 
@@ -53,6 +57,7 @@ class RecommendationTile {
     required this.identity,
     this.previewImage,
     required this.title,
+    this.subtitle,
     required this.buildPoster,
     required this.navigate,
   });
@@ -64,6 +69,7 @@ class RecommendationTile {
           item.getPosters?.thumb ??
           item.getPosters?.randomBackDrop,
       title: item.name,
+      subtitle: item.subText,
       buildPoster: (context) => _jellyfinPoster(item),
       navigate: (context) => openMediaDetails(context, item),
     );
@@ -84,6 +90,7 @@ class RecommendationTile {
       previewImage:
           entry.posterUrl == null ? null : _ArrPosterImage(entry.posterUrl!),
       title: entry.title,
+      subtitle: entry.year?.toString(),
       buildPoster: (context) => _arrPoster(entry.posterUrl),
       navigate: (context) => _openArrTitle(context,
           id: entry.id,
@@ -112,6 +119,7 @@ class RecommendationTile {
       identity: ('request', tmdbId),
       previewImage: image,
       title: title,
+      subtitle: year?.toString(),
       buildPoster: (context) => RequestPoster(image: image),
       navigate: (context) => pushMediaRoute(
           context,
@@ -168,6 +176,7 @@ class RecommendationTile {
       previewImage:
           posterUrl.isEmpty ? null : _ArrPosterImage(posterUrl, apiKey: apiKey),
       title: title,
+      subtitle: year?.toString(),
       buildPoster: (context) => _arrPoster(posterUrl, apiKey: apiKey),
       navigate: (context) => _openArrTitle(context,
           id: arrId,
@@ -370,12 +379,15 @@ class RecommendationRowGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width - contentPadding.horizontal;
-    final columns = context.tokens.density.columnsFor(width);
-    final visible = tiles.take(columns).toList();
+    return SliverLayoutBuilder(builder: (context, constraints) {
+      final width = constraints.crossAxisExtent - contentPadding.horizontal;
+      final columns = context.tokens.density.columnsFor(width);
+      final visible = tiles.take(columns).toList();
+      final tileWidth =
+          (width - (columns - 1) * AppSpacing.gridGap) / columns;
 
-    return SliverMainAxisGroup(
-      slivers: [
+      return SliverMainAxisGroup(
+        slivers: [
         SliverPadding(
           padding: contentPadding,
           sliver: SliverToBoxAdapter(
@@ -409,14 +421,15 @@ class RecommendationRowGrid extends StatelessWidget {
               crossAxisCount: columns,
               crossAxisSpacing: AppSpacing.gridGap,
               mainAxisSpacing: AppSpacing.gridGap,
-              childAspectRatio: 2 / 3,
+              mainAxisExtent: captionedPosterHeight(context, tileWidth),
             ),
             itemBuilder: (context, selectedIndex, index) =>
                 _RecommendationTileWidget(tile: visible[index]),
           ),
         ),
       ],
-    );
+      );
+    });
   }
 }
 
@@ -432,23 +445,27 @@ class RecommendationTileGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width - contentPadding.horizontal;
-    final columns = context.tokens.density.columnsFor(width);
-    return SliverPadding(
-      padding: contentPadding,
-      sliver: GridFocusTraveler(
-        itemCount: tiles.length,
-        crossAxisCount: columns,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+    return SliverLayoutBuilder(builder: (context, constraints) {
+      final width = constraints.crossAxisExtent - contentPadding.horizontal;
+      final columns = context.tokens.density.columnsFor(width);
+      final tileWidth =
+          (width - (columns - 1) * AppSpacing.gridGap) / columns;
+      return SliverPadding(
+        padding: contentPadding,
+        sliver: GridFocusTraveler(
+          itemCount: tiles.length,
           crossAxisCount: columns,
-          crossAxisSpacing: AppSpacing.gridGap,
-          mainAxisSpacing: AppSpacing.gridGap,
-          childAspectRatio: 2 / 3,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: AppSpacing.gridGap,
+            mainAxisSpacing: AppSpacing.gridGap,
+            mainAxisExtent: captionedPosterHeight(context, tileWidth),
+          ),
+          itemBuilder: (context, selectedIndex, index) =>
+              _RecommendationTileWidget(tile: tiles[index]),
         ),
-        itemBuilder: (context, selectedIndex, index) =>
-            _RecommendationTileWidget(tile: tiles[index]),
-      ),
-    );
+      );
+    });
   }
 }
 
@@ -485,26 +502,34 @@ class _RecommendationTileWidgetState extends State<_RecommendationTileWidget> {
               posterMotion: true,
               focusNode: MediaNavigationScope.focusOf(context),
               onActivate: () => _open(context),
-              child: ClipRRect(
-                borderRadius: AppRadii.cardBorder,
-                child: ColoredBox(
-                  color: AppColors.surface,
-                  child: Stack(fit: StackFit.expand, children: [
-                    MediaArtwork(child: tile.buildPoster(context)),
-                    if (_opening)
-                      IgnorePointer(
-                          child: Center(
-                              child: SizedBox.square(
-                                  dimension: AppSpacing.lg,
-                                  child: CircularProgressIndicator(
-                                      color: AppColors.textPrimary,
-                                      strokeWidth:
-                                          context.tokens.density.focusWidth,
-                                      semanticsLabel:
-                                          context.localized.loading)))),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: AppMedia.posterAspectRatio,
+                      child: ClipRRect(
+                        borderRadius: AppRadii.cardBorder,
+                        child: ColoredBox(
+                          color: AppColors.surface,
+                          child: Stack(fit: StackFit.expand, children: [
+                            MediaArtwork(child: tile.buildPoster(context)),
+                            if (_opening)
+                              IgnorePointer(
+                                  child: Center(
+                                      child: SizedBox.square(
+                                          dimension: AppSpacing.lg,
+                                          child: CircularProgressIndicator(
+                                              color: AppColors.textPrimary,
+                                              strokeWidth: context
+                                                  .tokens.density.focusWidth,
+                                              semanticsLabel:
+                                                  context.localized.loading)))),
+                          ]),
+                        ),
+                      ),
+                    ),
+                    PosterCaption(title: tile.title, subtitle: tile.subtitle),
                   ]),
-                ),
-              ),
             ));
   }
 }

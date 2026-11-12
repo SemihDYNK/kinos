@@ -147,17 +147,9 @@ class _FriendRatingCell extends StatelessWidget {
                 children: [
                   _Avatar(friend: friend),
                   const SizedBox(height: AppSpacing.xxs),
-                  // Cinq étoiles et demie tiennent toujours dans la cellule.
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(stars,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: AppColors.textPrimary)),
-                  ),
+                  // Étoiles de taille fixe : la note se lit à leur nombre,
+                  // jamais à leur taille.
+                  _Stars(rating: rating.rating),
                 ],
               ),
             ),
@@ -220,5 +212,27 @@ class _MoreCell extends StatelessWidget {
             )),
           ),
         ),
+      );
+}
+
+/// Note sur 10 en étoiles pleines et demi-étoile, toutes de la même taille
+/// ([AppDetailLayout.friendStarSize]).
+class _Stars extends StatelessWidget {
+  const _Stars({required this.rating});
+  final int rating;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < rating ~/ 2; i++)
+            const Icon(Icons.star_rounded,
+                size: AppDetailLayout.friendStarSize,
+                color: AppColors.textPrimary),
+          if (rating.isOdd)
+            const Icon(Icons.star_half_rounded,
+                size: AppDetailLayout.friendStarSize,
+                color: AppColors.textPrimary),
+        ],
       );
 }

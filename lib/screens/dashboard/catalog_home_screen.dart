@@ -11,6 +11,7 @@ import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/dashboard/home_hero_section.dart';
 import 'package:kinos/screens/dashboard/single_row_section.dart';
 import 'package:kinos/screens/dashboard/catalog_inventory_section.dart';
+import 'package:kinos/screens/dashboard/genre_browse_section.dart';
 import 'package:kinos/screens/dashboard/seerr_discovery_section.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
@@ -73,6 +74,10 @@ class CatalogHomeScreen extends ConsumerWidget {
                     heroItems: home.hero,
                     resumeItems: home.resume,
                     contentPadding: padding),
+                // Les genres juste sous le bandeau : accès direct, sans défiler.
+                if (scope.libraryId == null &&
+                    enabledTypes.contains(HomeRowType.catalogNarrowGenres))
+                  GenreBrowseSection(scope: scope, contentPadding: padding),
                 SliverPadding(
                     padding: const EdgeInsets.only(top: AppSpacing.xl),
                     sliver: SingleRowSection(
@@ -86,8 +91,7 @@ class CatalogHomeScreen extends ConsumerWidget {
                     mediaType: mediaType,
                     showWellRated:
                         enabledTypes.contains(HomeRowType.catalogWellRated),
-                    showNarrowGenres:
-                        enabledTypes.contains(HomeRowType.catalogNarrowGenres),
+                    showNarrowGenres: false,
                     showDecades:
                         enabledTypes.contains(HomeRowType.catalogDecades),
                     showLongFilms: false,

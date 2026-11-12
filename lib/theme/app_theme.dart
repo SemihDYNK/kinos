@@ -152,6 +152,14 @@ abstract final class AppTopNavigation {
   static const contentInset = 100.0;
 }
 
+/// Bandeau d'une page de genre : une part de la hauteur de la fenêtre,
+/// bornée.
+abstract final class AppGenrePage {
+  static const bannerHeightFraction = .42;
+  static const bannerMinHeight = 340.0;
+  static const bannerMaxHeight = 480.0;
+}
+
 abstract final class AppGlass {
   static const blur = 18.0;
   static const surface = Color(0x99141414);
@@ -197,8 +205,17 @@ abstract final class AppDetailLayout {
   /// Avatars des amis Letterboxd, dans le bandeau d'un film : une seule
   /// rangée qui tient dans la largeur du synopsis.
   static const friendAvatarSize = 40.0;
-  static const friendCellWidth = 56.0;
-  static const friendsVisible = 9;
+
+  /// Largeur d'une cellule d'ami : cinq étoiles et demie ([friendStarSize]
+  /// × 5,5) y tiennent. Avec l'anneau de focus (8 px) et l'écart entre
+  /// cellules, sept amis et « +N » tiennent sur une seule ligne du synopsis.
+  static const friendCellWidth = 68.0;
+
+  /// Taille d'une étoile de note : fixe pour toutes les notes.
+  static const friendStarSize = 12.0;
+
+  /// Amis affichés avant « +N ».
+  static const friendsVisible = 7;
   static const seriesViewportFraction = .68;
   static const seriesMinHeight = 560.0;
   static const seriesTintTailHeight = 64.0;

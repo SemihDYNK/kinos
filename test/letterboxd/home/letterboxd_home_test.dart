@@ -7,6 +7,7 @@ import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_client.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_parser.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_store.dart';
+import 'package:kinos/letterboxd/home/letterboxd_genres.dart';
 import 'package:kinos/letterboxd/home/letterboxd_home.dart';
 import 'package:kinos/letterboxd/home/letterboxd_home_providers.dart';
 import 'package:kinos/letterboxd/letterboxd_model.dart';
@@ -34,7 +35,8 @@ class FakeClient extends LetterboxdFriendsClient {
   final failing = <String>{};
 
   @override
-  Future<LetterboxdPage<List<String>>> slugList(String path, int page) async {
+  Future<LetterboxdPage<List<String>>> slugList(String path, int page,
+      {bool urgent = false}) async {
     requested.add('$path#$page');
     if (failing.contains(path)) throw const LetterboxdUnavailable(503);
     final pages = lists[path] ?? const [];
@@ -43,7 +45,7 @@ class FakeClient extends LetterboxdFriendsClient {
   }
 
   @override
-  Future<LetterboxdFilmPage?> film(String slug) async {
+  Future<LetterboxdFilmPage?> film(String slug, {bool urgent = false}) async {
     requested.add('film:$slug');
     return films[slug];
   }
@@ -290,6 +292,173 @@ void main() {
     expect(rows.watchlistLibrary.map((e) => e.item!.id), ['owned']);
     expect(rows.watchlistRequest.map((e) => e.film.slug), ['missing']);
     expect(api.years.single, [2000]);
+  });
+
+  group('genres', () {
+    test('Kinos genre labels map to Letterboxd genres and back', () {
+      expect(letterboxdGenreSlug('Comédie'), 'comedy');
+      expect(letterboxdGenreSlug('Science-Fiction'), 'science-fiction');
+      expect(letterboxdGenreSlug('Science-fiction'), 'science-fiction');
+      expect(letterboxdGenreSlug('Inconnu'), isNull);
+      final film = const LetterboxdFilmPage(
+          slug: 'x',
+          tmdbId: '1',
+          isMovie: true,
+          title: 'x',
+          genres: ['Comedy', 'Science Fiction']);
+      expect(filmInGenre(film, 'Comédie'), isTrue);
+      expect(filmInGenre(film, 'Science-fiction'), isTrue);
+      expect(filmInGenre(film, 'Drame'), isFalse);
+      expect(filmInGenre(film, 'Comédie'), isTrue);
+      expect(
+          filmInGenre(
+              const LetterboxdFilmPage(
+                  slug: 'y', tmdbId: '2', isMovie: true, title: 'y'),
+              'Comédie'),
+          isFalse);
+    });
+
+    test('a film page carries its genres; old cache entries have none yet', () {
+      const page =
+          '<meta property="og:url" content="https://letterboxd.com/film/ikiru/" />'
+          '<body data-tmdb-type="movie" data-tmdb-id="3782">'
+          '<script type="application/ld+json"> /* <![CDATA[ */ '
+          '{"name":"Ikiru","genre":["Drama","Crime"],"dateCreated":"1952-10-09"} '
+          '/* ]]> */ </script>';
+      expect(parseFilmPage(page)!.genres, ['Drama', 'Crime']);
+      expect(
+          parseFilmPage(page.replaceAll('"genre":["Drama","Crime"],', ''))!
+              .genres,
+          isEmpty,
+          reason: 'read, but no genre: never re-read');
+      final old = LetterboxdFilmPage.fromJson(
+          {'s': 'a', 'id': '1', 't': 'a', 'm': true});
+      expect(old!.genres, isNull);
+      final round = LetterboxdFilmPage.fromJson(const LetterboxdFilmPage(
+          slug: 'a',
+          tmdbId: '1',
+          isMovie: true,
+          title: 'a',
+          genres: ['Drama']).toJson());
+      expect(round!.genres, ['Drama']);
+    });
+
+    test('genre lists use the filtered pages, with daily and weekly caches',
+        () async {
+      final store = LetterboxdHomeStore(memoryDb(), 'p');
+      final client = FakeClient()
+        ..lists['me/watchlist/genre/drama/'] = [
+          ['a', 'b'],
+          ['c']
+        ]
+        ..lists['${top500Path}genre/drama/'] = [
+          ['t1', 't2']
+        ];
+      final day = DateTime(2026, 11, 12, 9);
+      final refresh = LetterboxdHomeRefresh(client, store, now: day);
+      expect(await refresh.watchlistInGenre('me', 'drama'), ['a', 'b', 'c']);
+      expect(await refresh.topInGenre('drama'), ['t1', 't2']);
+      client.requested.clear();
+
+      final later = LetterboxdHomeRefresh(client, store,
+          now: day.add(const Duration(hours: 5)));
+      expect(await later.watchlistInGenre('me', 'drama'), ['a', 'b', 'c']);
+      expect(await later.topInGenre('drama'), ['t1', 't2']);
+      expect(client.requested, isEmpty, reason: 'both caches are fresh');
+
+      client.failing
+        ..add('me/watchlist/genre/drama/')
+        ..add('${top500Path}genre/drama/');
+      final nextWeek = LetterboxdHomeRefresh(client, store,
+          now: day.add(const Duration(days: 8)));
+      expect(await nextWeek.watchlistInGenre('me', 'drama'), ['a', 'b', 'c'],
+          reason: 'a failing page keeps the old list');
+      expect(await nextWeek.topInGenre('drama'), ['t1', 't2']);
+    });
+
+    test('old film entries are re-read for genres only when asked', () async {
+      final store = LetterboxdHomeStore(memoryDb(), 'p');
+      await store.saveFilm('old', film('old', '1'));
+      await store.saveFilm(
+          'fresh',
+          const LetterboxdFilmPage(
+              slug: 'fresh',
+              tmdbId: '2',
+              isMovie: true,
+              title: 'fresh',
+              genres: ['Drama']));
+      final client = FakeClient()
+        ..films['old'] = const LetterboxdFilmPage(
+            slug: 'old',
+            tmdbId: '1',
+            isMovie: true,
+            title: 'old',
+            genres: ['Crime'])
+        ..films['new'] = const LetterboxdFilmPage(
+            slug: 'new', tmdbId: '3', isMovie: true, title: 'new', genres: []);
+      final refresh =
+          LetterboxdHomeRefresh(client, store, now: DateTime(2026, 11, 12));
+      await refresh.resolve(['old', 'fresh', 'new'], () => false);
+      expect(client.requested, ['film:new'], reason: 'known entries are kept');
+      client.requested.clear();
+      await refresh
+          .resolve(['old', 'fresh', 'new'], () => false, needGenres: true);
+      expect(client.requested, ['film:old']);
+      expect((await store.film('old'))!.film!.genres, ['Crime']);
+    });
+
+    test('a genre page gets friends, watchlist and top 500 of that genre',
+        () async {
+      final db = memoryDb();
+      final home = LetterboxdHomeStore(db, 'p');
+      final friends = LetterboxdFriendsStore(db, 'p');
+      final now = DateTime.now();
+      await friends.saveAccount(const LetterboxdFriendsAccount(username: 'me'));
+      await friends.saveFriends([friend('ana')]);
+      await friends.saveRatings('ana',
+          const FriendRatings({'ikiru': 10, 'comedy-film': 9, 'plain': 3}));
+      await home.saveList('watched', const [], at: now);
+      await home.saveList('wl:drama', ['w1', 'w2'], at: now);
+      await home.saveList('top:drama', ['t1'], at: now);
+      var tmdb = 10;
+      for (final (slug, genre) in [
+        ('ikiru', 'Drama'),
+        ('comedy-film', 'Comedy'),
+        ('w1', 'Drama'),
+        ('w2', 'Drama'),
+        ('t1', 'Drama'),
+      ]) {
+        await home.saveFilm(
+            slug,
+            LetterboxdFilmPage(
+                slug: slug,
+                tmdbId: '${tmdb++}',
+                isMovie: true,
+                title: slug,
+                year: 2000,
+                genres: [genre]));
+      }
+      final container = ProviderContainer(overrides: [
+        letterboxdScopeProvider.overrideWith((ref) => 'p'),
+        appDatabaseProvider.overrideWithValue(db),
+        // w1 est dans la bibliothèque (TMDB 12), pas w2.
+        jellyApiProvider.overrideWith(
+            () => _Api(_Library([_movie('w1', '12', played: false)]))),
+      ]);
+      addTearDown(container.dispose);
+
+      final rows =
+          await container.read(letterboxdGenreRowsProvider('Drame').future);
+      expect(rows.friends.map((e) => e.film.slug), ['ikiru']);
+      expect(rows.watchlistLibrary.map((e) => e.film.slug), ['w1']);
+      expect(rows.watchlistRequest.map((e) => e.film.slug), ['w2']);
+      expect(rows.top.map((e) => e.film.slug), ['t1']);
+
+      final none =
+          await container.read(letterboxdGenreRowsProvider('Inconnu').future);
+      expect(none.friends, isEmpty);
+      expect(none.top, isEmpty);
+    });
   });
 }
 

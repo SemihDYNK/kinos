@@ -30,6 +30,14 @@ const topDailyCount = 10;
 /// des rangées (page « tout voir »).
 const watchlistResolvePerRun = 120;
 
+/// Réservoir de conseils d'amis dont on lit les genres, pour les pages de
+/// genre, et fiches relues par passage pour les obtenir.
+const friendGenrePoolSize = 150;
+const genreEnrichPerRun = 60;
+
+/// Films d'une rangée de page de genre.
+const genreRowCount = 12;
+
 /// Les conseils des amis et la watchlist changent tous les 3 jours.
 const rotationPeriod = Duration(days: 3);
 
@@ -207,11 +215,13 @@ class LetterboxdHomeRefresh {
       at == null || now.difference(at) > every;
 
   Future<List<String>> _all(String path,
-      {int maxPages = 20, bool Function()? cancelled}) async {
+      {int maxPages = 20,
+      bool Function()? cancelled,
+      bool urgent = false}) async {
     final slugs = <String>[];
     for (var page = 1; page <= maxPages; page++) {
       if (cancelled?.call() ?? false) break;
-      final result = await client.slugList(path, page);
+      final result = await client.slugList(path, page, urgent: urgent);
       slugs.addAll(result.items);
       if (!result.hasNext) break;
     }
@@ -294,14 +304,60 @@ class LetterboxdHomeRefresh {
     final lists = _lists(picks, watchlist, top, watched);
     // D'abord les fiches des rangées, puis, par lots, le reste de la
     // watchlist pour la page « tout voir ».
-    await _resolve(lists.shown, cancelled);
+    await resolve(lists.shown, cancelled);
     final rest = <String>[];
     for (final slug in watchlist) {
       if (rest.length >= watchlistResolvePerRun) break;
       if (await store.film(slug) == null) rest.add(slug);
     }
-    await _resolve(rest, cancelled);
+    await resolve(rest, cancelled);
+    // Genres des meilleurs conseils d'amis, pour leurs pages de genre.
+    final pool = friendPicks(friendsIndex, watched, limit: friendGenrePoolSize);
+    final lacking = <String>[];
+    for (final slug in pool) {
+      if (lacking.length >= genreEnrichPerRun) break;
+      final known = await store.film(slug);
+      if (known == null || (known.film != null && known.film!.genres == null)) {
+        lacking.add(slug);
+      }
+    }
+    await resolve(lacking, cancelled, needGenres: true);
     return lists;
+  }
+
+  /// Slugs de ta watchlist dans un genre (page filtrée de Letterboxd) ;
+  /// relue au plus une fois par jour, le cache sert en cas d'erreur.
+  Future<List<String>> watchlistInGenre(String username, String genreSlug,
+      {bool Function()? cancelled}) async {
+    final cached = await store.list('wl:$genreSlug');
+    if (!_stale(cached.at, schedule.daily)) return cached.slugs;
+    try {
+      final slugs = await _all('$username/watchlist/genre/$genreSlug/',
+          maxPages: 5, cancelled: cancelled, urgent: true);
+      await store.saveList('wl:$genreSlug', slugs, at: now);
+      return slugs;
+    } catch (error) {
+      if (kDebugMode) debugPrint('[Letterboxd genre] watchlist : $error');
+      return cached.slugs;
+    }
+  }
+
+  /// Top 500 officiel dans un genre ; relu au plus une fois par semaine.
+  Future<List<String>> topInGenre(String genreSlug,
+      {bool Function()? cancelled}) async {
+    final cached = await store.list('top:$genreSlug');
+    if (!_stale(cached.at, schedule.weekly)) return cached.slugs;
+    try {
+      final slugs = await _all('${top500Path}genre/$genreSlug/',
+          maxPages: 5, cancelled: cancelled, urgent: true);
+      if (slugs.isNotEmpty) {
+        await store.saveList('top:$genreSlug', slugs, at: now);
+      }
+      return slugs.isEmpty ? cached.slugs : slugs;
+    } catch (error) {
+      if (kDebugMode) debugPrint('[Letterboxd genre] top 500 : $error');
+      return cached.slugs;
+    }
   }
 
   LetterboxdHomeLists _lists(List<String> picks, List<String> watchlist,
@@ -315,13 +371,20 @@ class LetterboxdHomeRefresh {
           top: dailyPick(top, watched, now),
           watched: watched);
 
-  Future<void> _resolve(
-      Iterable<String> slugs, bool Function() cancelled) async {
+  /// Lit et enregistre les fiches de [slugs] qu'on n'a pas encore ; avec
+  /// [needGenres], relit aussi celles enregistrées sans leurs genres.
+  /// [urgent] : ce que l'utilisateur attend à l'écran.
+  Future<void> resolve(Iterable<String> slugs, bool Function() cancelled,
+      {bool urgent = false, bool needGenres = false}) async {
     for (final slug in slugs) {
       if (cancelled()) return;
-      if (await store.film(slug) != null) continue;
+      final known = await store.film(slug);
+      if (known != null) {
+        final film = known.film;
+        if (!needGenres || film == null || film.genres != null) continue;
+      }
       try {
-        await store.saveFilm(slug, await client.film(slug));
+        await store.saveFilm(slug, await client.film(slug, urgent: urgent));
       } on LetterboxdUnavailable catch (error) {
         if (kDebugMode) debugPrint('[Letterboxd accueil] fiche $slug : $error');
       }

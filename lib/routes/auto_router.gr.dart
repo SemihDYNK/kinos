@@ -65,6 +65,11 @@ import 'package:kinos/screens/settings/settings_selection_screen.dart' as _i34;
 import 'package:kinos/screens/splash_screen.dart' as _i35;
 import 'package:kinos/screens/syncing/synced_screen.dart' as _i36;
 import 'package:kinos/seerr/seerr_models.dart' as _i50;
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart' as _i51;
+import 'package:kinos/letterboxd/home/letterboxd_watchlist_screen.dart'
+    as _i52;
+import 'package:kinos/models/items/images_models.dart' as _i53;
+import 'package:kinos/screens/dashboard/genre_page_screen.dart' as _i54;
 
 /// generated route for
 /// [_i1.AboutSettingsPage]
@@ -600,6 +605,97 @@ class FavouritesRoute extends _i37.PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [_i54.GenrePageScreen]
+class GenrePageRoute extends _i37.PageRouteInfo<GenrePageRouteArgs> {
+  GenrePageRoute({
+    required String label,
+    required List<String> names,
+    _i51.BaseItemKind? kind,
+    String? libraryId,
+    _i53.ImageData? image,
+    _i39.Key? key,
+    List<_i37.PageRouteInfo>? children,
+  }) : super(
+          GenrePageRoute.name,
+          args: GenrePageRouteArgs(
+            label: label,
+            names: names,
+            kind: kind,
+            libraryId: libraryId,
+            image: image,
+            key: key,
+          ),
+          initialChildren: children,
+        );
+
+  static const String name = 'GenrePageRoute';
+
+  static _i37.PageInfo page = _i37.PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<GenrePageRouteArgs>();
+      return _i54.GenrePageScreen(
+        label: args.label,
+        names: args.names,
+        kind: args.kind,
+        libraryId: args.libraryId,
+        image: args.image,
+        key: args.key,
+      );
+    },
+  );
+}
+
+class GenrePageRouteArgs {
+  const GenrePageRouteArgs({
+    required this.label,
+    required this.names,
+    this.kind,
+    this.libraryId,
+    this.image,
+    this.key,
+  });
+
+  final String label;
+
+  final List<String> names;
+
+  final _i51.BaseItemKind? kind;
+
+  final String? libraryId;
+
+  final _i53.ImageData? image;
+
+  final _i39.Key? key;
+
+  @override
+  String toString() {
+    return 'GenrePageRouteArgs{label: $label, names: $names, kind: $kind, libraryId: $libraryId, image: $image, key: $key}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! GenrePageRouteArgs) return false;
+    return label == other.label &&
+        names == other.names &&
+        kind == other.kind &&
+        libraryId == other.libraryId &&
+        image == other.image &&
+        key == other.key;
+  }
+
+  @override
+  int get hashCode =>
+      label.hashCode ^
+      names.hashCode ^
+      kind.hashCode ^
+      libraryId.hashCode ^
+      image.hashCode ^
+      key.hashCode;
+}
+
+/// generated route for
 /// [_i20.HomeRowsSettingsScreen]
 class HomeRowsSettingsRoute extends _i37.PageRouteInfo<void> {
   const HomeRowsSettingsRoute({List<_i37.PageRouteInfo>? children})
@@ -627,6 +723,22 @@ class HomeRoute extends _i37.PageRouteInfo<void> {
     name,
     builder: (data) {
       return const _i21.HomeScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [_i52.LetterboxdWatchlistScreen]
+class LetterboxdWatchlistRoute extends _i37.PageRouteInfo<void> {
+  const LetterboxdWatchlistRoute({List<_i37.PageRouteInfo>? children})
+      : super(LetterboxdWatchlistRoute.name, initialChildren: children);
+
+  static const String name = 'LetterboxdWatchlistRoute';
+
+  static _i37.PageInfo page = _i37.PageInfo(
+    name,
+    builder: (data) {
+      return const _i52.LetterboxdWatchlistScreen();
     },
   );
 }

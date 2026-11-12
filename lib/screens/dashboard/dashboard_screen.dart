@@ -1,4 +1,5 @@
 import 'package:kinos/letterboxd/home/letterboxd_home_sections.dart';
+import 'package:kinos/screens/dashboard/genre_browse_section.dart';
 import 'package:kinos/widgets/shared/page_motion.dart';
 import 'dart:async';
 import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
@@ -181,6 +182,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               resumeItems: continueWatching,
               contentPadding: padding,
             ),
+            // Les genres, tout de suite sous « Continuer à regarder » : un accès
+            // direct qui évite de défiler. Une rangée de tuiles remplace
+            // l'empilement d'une rangée par genre ; chaque tuile mène à la
+            // page du genre.
+            if (enabledCatalogTypes.contains(HomeRowType.catalogNarrowGenres))
+              GenreBrowseSection(scope: allCatalog, contentPadding: padding),
             // Entre "Continuer à regarder" et "Ajouts récents" (cf. spec)
             // — en dehors du SliverStack/FadingHeroBackdrop ci-dessus,
             // donc sur AppColors.background pur comme tout ce qui suit,
@@ -223,8 +230,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 contentPadding: padding,
                 showWellRated:
                     enabledCatalogTypes.contains(HomeRowType.catalogWellRated),
-                showNarrowGenres: enabledCatalogTypes
-                    .contains(HomeRowType.catalogNarrowGenres),
+                showNarrowGenres: false,
                 showDecades:
                     enabledCatalogTypes.contains(HomeRowType.catalogDecades),
                 showLongFilms:

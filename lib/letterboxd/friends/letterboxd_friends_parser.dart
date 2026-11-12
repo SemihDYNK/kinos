@@ -156,13 +156,18 @@ class LetterboxdFilmPage {
       required this.isMovie,
       required this.title,
       this.year,
-      this.posterUrl});
+      this.posterUrl,
+      this.genres});
   final String slug;
   final String tmdbId;
   final bool isMovie;
   final String title;
   final int? year;
   final String? posterUrl;
+
+  /// Genres de la fiche (noms anglais de Letterboxd) ; null pour une fiche
+  /// enregistrée avant que Kinos les lise, à relire quand on en a besoin.
+  final List<String>? genres;
 
   Map<String, Object?> toJson() => {
         's': slug,
@@ -171,20 +176,22 @@ class LetterboxdFilmPage {
         't': title,
         if (year != null) 'y': year,
         if (posterUrl != null) 'p': posterUrl,
+        if (genres != null) 'g': genres,
       };
 
   static LetterboxdFilmPage? fromJson(Object? json) {
     if (json is! Map) return null;
     final slug = json['s'], id = json['id'], title = json['t'];
     if (slug is! String || id is! String || title is! String) return null;
-    final year = json['y'], poster = json['p'];
+    final year = json['y'], poster = json['p'], genres = json['g'];
     return LetterboxdFilmPage(
         slug: slug,
         tmdbId: id,
         isMovie: json['m'] != false,
         title: title,
         year: year is int ? year : null,
-        posterUrl: poster is String ? poster : null);
+        posterUrl: poster is String ? poster : null,
+        genres: genres is List ? genres.whereType<String>().toList() : null);
   }
 }
 
@@ -204,6 +211,7 @@ LetterboxdFilmPage? parseFilmPage(String html, {String? slug}) {
   String? title;
   int? year;
   String? poster;
+  List<String>? genres;
   // Champs de premier niveau seulement : le bloc imbrique aussi les
   // réalisateurs, qui ont eux aussi un « name ».
   final ld = _ldJson.firstMatch(html)?.group(1);
@@ -213,6 +221,11 @@ LetterboxdFilmPage? parseFilmPage(String html, {String? slug}) {
       if (json is Map) {
         if (json['name'] case final String name) title = name;
         if (json['image'] case final String image) poster = image;
+        if (json['genre'] case final List list) {
+          genres = list.whereType<String>().toList();
+        } else if (json['genre'] case final String one) {
+          genres = [one];
+        }
         if (json['dateCreated'] case final String date) {
           year = int.tryParse(date.split('-').first);
         }
@@ -236,5 +249,7 @@ LetterboxdFilmPage? parseFilmPage(String html, {String? slug}) {
       isMovie: _tmdbType.firstMatch(html)?.group(1) != 'tv',
       title: _decode(title),
       year: year,
-      posterUrl: poster);
+      posterUrl: poster,
+      // Une fiche lue sans genre n'est pas à relire : liste vide.
+      genres: genres ?? const []);
 }

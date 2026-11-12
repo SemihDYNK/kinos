@@ -124,16 +124,17 @@ class LetterboxdFriendsClient {
 
   /// Une page d'une liste de jaquettes : `<pseudo>/watchlist/`,
   /// `<pseudo>/films/by/date/`, `official/list/<liste>/`…
-  Future<LetterboxdPage<List<String>>> slugList(String path, int page) async {
-    final html = await _page(_paged(path, page));
+  Future<LetterboxdPage<List<String>>> slugList(String path, int page,
+      {bool urgent = false}) async {
+    final html = await _page(_paged(path, page), urgent: urgent);
     if (html == null) return const LetterboxdPage([], hasNext: false);
     return parseSlugListPage(html);
   }
 
   /// Fiche du film [slug], null si elle n'existe pas ou n'a pas
   /// d'identifiant TMDB.
-  Future<LetterboxdFilmPage?> film(String slug) async {
-    final html = await _page('film/$slug/');
+  Future<LetterboxdFilmPage?> film(String slug, {bool urgent = false}) async {
+    final html = await _page('film/$slug/', urgent: urgent);
     return html == null ? null : parseFilmPage(html, slug: slug);
   }
 }

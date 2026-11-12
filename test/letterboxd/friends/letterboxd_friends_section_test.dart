@@ -34,6 +34,20 @@ void main() {
         (w) => w is Tooltip && (w.message ?? '').startsWith('Ami '));
     expect(cells, findsNWidgets(AppDetailLayout.friendsVisible));
     final more = '+${27 - AppDetailLayout.friendsVisible}';
+    // Les amis et « +N » sont sur la même ligne : le bloc ne pousse pas le
+    // logo et les boutons du bandeau vers le haut.
+    final firstRow = tester.getTopLeft(cells.first).dy;
+    expect(tester.getTopLeft(cells.last).dy, firstRow);
+    expect(
+        tester.getTopLeft(find.text(more)).dy,
+        closeTo(
+            firstRow +
+                (AppDetailLayout.friendAvatarSize + AppSpacing.lg) / 2 -
+                10,
+            40),
+        reason: 'the +N cell shares the row, not a second one');
+    expect(tester.getSize(find.byType(LetterboxdFriendsSection)).height,
+        lessThan(2 * (AppDetailLayout.friendAvatarSize + AppSpacing.lg)));
     await tester.tap(find.text(more));
     await tester.pumpAndSettle();
     expect(cells, findsNWidgets(27));
@@ -73,6 +87,36 @@ void main() {
     final mine = tester.getTopLeft(find.textContaining('Votre note')).dy;
     final friends = tester.getTopLeft(find.textContaining('Vos amis')).dy;
     expect(mine, lessThan(friends));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('stars keep one size whatever the rating', (tester) async {
+    final ratings = [
+      (friend: const LetterboxdFriend(username: 'a', name: 'A'), rating: 10),
+      (friend: const LetterboxdFriend(username: 'b', name: 'B'), rating: 7),
+      (friend: const LetterboxdFriend(username: 'c', name: 'C'), rating: 5),
+    ];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        letterboxdScopeProvider.overrideWith((ref) => null),
+        letterboxdFriendsFilmProvider('1').overrideWith(
+            (ref) async => (slug: 'x', ratings: ratings, mine: null)),
+      ],
+      child: MaterialApp(
+          theme: buildAppTheme(density: AppDensity.desk),
+          home: const Scaffold(body: LetterboxdFriendsSection(tmdbId: '1'))),
+    ));
+    await tester.pumpAndSettle();
+    final full = tester.widgetList<Icon>(find.byIcon(Icons.star_rounded));
+    final half = tester.widgetList<Icon>(find.byIcon(Icons.star_half_rounded));
+    expect(full, hasLength(5 + 3 + 2));
+    expect(half, hasLength(2));
+    for (final icon in [...full, ...half]) {
+      expect(icon.size, AppDetailLayout.friendStarSize);
+    }
+    // Cinq étoiles et demie tiennent dans une cellule d'ami.
+    expect(5.5 * AppDetailLayout.friendStarSize,
+        lessThanOrEqualTo(AppDetailLayout.friendCellWidth));
     expect(tester.takeException(), isNull);
   });
 }
