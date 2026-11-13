@@ -14,6 +14,7 @@ import 'package:kinos/screens/dashboard/genre_hero.dart';
 import 'package:kinos/screens/dashboard/recommendation_tile.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/widgets/shared/scroll_pinned_back_button.dart';
 
 /// Ouvre la page du genre [genre] dans la portée [scope]. Une vraie page du
 /// routeur : le logo, la barre du haut et le menu latéral la quittent comme
@@ -89,7 +90,9 @@ class GenrePageScreen extends ConsumerWidget {
         autofocus: true,
         child: Scaffold(
           backgroundColor: AppColors.background,
-          body: CustomScrollView(slivers: [
+          body: ScrollPinnedBackButton(
+              restLeft: padding.left,
+              child: CustomScrollView(slivers: [
             SliverToBoxAdapter(
               child: SizedBox(
                 height: bannerHeight,
@@ -100,24 +103,6 @@ class GenrePageScreen extends ConsumerWidget {
                       tag: genreImageTag(kind, libraryId, label),
                       image: image,
                       mix: 1),
-                  Padding(
-                    padding: padding.copyWith(top: AppSpacing.xl),
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Tooltip(
-                        message: 'Retour · Échap',
-                        child: FocusRing(
-                          borderRadius: AppRadii.controlBorder,
-                          onActivate: () => context.router.maybePop(),
-                          child: const Padding(
-                            padding: EdgeInsets.all(AppSpacing.xs),
-                            child:
-                                Icon(Icons.arrow_back, semanticLabel: 'Retour'),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
                   Padding(
                     padding: padding.copyWith(bottom: AppSpacing.md),
                     child: Align(
@@ -172,7 +157,7 @@ class GenrePageScreen extends ConsumerWidget {
               ),
             const SliverPadding(
                 padding: EdgeInsets.only(bottom: AppSpacing.xxl)),
-          ]),
+          ])),
         ),
       ),
     );

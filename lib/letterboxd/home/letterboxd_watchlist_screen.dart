@@ -7,6 +7,7 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/dashboard/recommendation_tile.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
+import 'package:kinos/widgets/shared/scroll_pinned_back_button.dart';
 
 import 'letterboxd_home_providers.dart';
 import 'letterboxd_home_sections.dart' show letterboxdTiles;
@@ -55,22 +56,15 @@ class LetterboxdWatchlistScreen extends ConsumerWidget {
         autofocus: true,
         child: Scaffold(
           backgroundColor: AppColors.background,
-          body: CustomScrollView(slivers: [
+          body: ScrollPinnedBackButton(
+              restLeft: padding.left,
+              child: CustomScrollView(slivers: [
             SliverPadding(
               padding: padding.copyWith(top: AppSpacing.xl),
               sliver: SliverToBoxAdapter(
                 child: Row(children: [
-                  Tooltip(
-                    message: 'Retour · Échap',
-                    child: FocusRing(
-                      borderRadius: AppRadii.controlBorder,
-                      onActivate: () => context.router.maybePop(),
-                      child: const Padding(
-                        padding: EdgeInsets.all(AppSpacing.xs),
-                        child: Icon(Icons.arrow_back, semanticLabel: 'Retour'),
-                      ),
-                    ),
-                  ),
+                  // La place du bouton retour, posé par ScrollPinnedBackButton.
+                  const SizedBox(width: backButtonSlot),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                       child: Text('Votre watchlist', style: text.displaySmall)),
@@ -104,7 +98,7 @@ class LetterboxdWatchlistScreen extends ConsumerWidget {
             ],
             const SliverPadding(
                 padding: EdgeInsets.only(bottom: AppSpacing.xxl)),
-          ]),
+          ])),
         ),
       ),
     );
