@@ -127,7 +127,9 @@ class SideNavigationRail extends ConsumerWidget {
         .indexWhere((d) => d.selected)
         .clamp(0, destinations.length - 1);
 
-    return TweenAnimationBuilder<double>(
+    return _ScrollTracker(
+        content: child,
+        builder: (context, scrolled, tracked) => TweenAnimationBuilder<double>(
       tween: Tween(end: expanded ? 1 : 0),
       duration: !AppMotion.enabled(context)
           ? Duration.zero
@@ -135,7 +137,7 @@ class SideNavigationRail extends ConsumerWidget {
               ? AppDurations.navigationExpand
               : AppDurations.navigationCollapse,
       curve: AppMotion.navigationReveal,
-      child: child,
+      child: tracked,
       builder: (context, progress, content) {
         final animatedWidth = AppNavigation.collapsedWidth +
             (AppNavigation.expandedWidth - AppNavigation.collapsedWidth) *
@@ -149,8 +151,15 @@ class SideNavigationRail extends ConsumerWidget {
               child: content!,
             ),
             Positioned.fill(
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
+              child: AnimatedAlign(
+                // Centrée au repos ; remonte en haut dès que la page défile.
+                duration: !AppMotion.enabled(context)
+                    ? Duration.zero
+                    : AppDurations.navigationExpand,
+                curve: AppMotion.navigationReveal,
+                alignment: scrolled
+                    ? AlignmentDirectional.topStart
+                    : AlignmentDirectional.centerStart,
                 child: AnimatedOpacity(
                   duration: !AppMotion.enabled(context)
                       ? Duration.zero
@@ -353,7 +362,7 @@ class SideNavigationRail extends ConsumerWidget {
           ],
         );
       },
-    );
+    ));
   }
 
   void _openSettings(BuildContext context) {
@@ -683,5 +692,44 @@ class _BrandSwap extends StatelessWidget {
               child: Opacity(opacity: wordmark, child: const KinosWordmark())),
       ]),
     );
+  }
+}
+
+/// Dit si la page défile : la capsule remonte alors en haut au lieu de rester
+/// centrée dans un angle vide.
+class _ScrollTracker extends StatefulWidget {
+  const _ScrollTracker({required this.content, required this.builder});
+  final Widget content;
+  final Widget Function(BuildContext context, bool scrolled, Widget content)
+      builder;
+  @override
+  State<_ScrollTracker> createState() => _ScrollTrackerState();
+}
+
+class _ScrollTrackerState extends State<_ScrollTracker> {
+  static const _threshold = 24.0;
+  bool _scrolled = false;
+  String? _route;
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
+    final scrolled = n.metrics.pixels > _threshold;
+    if (scrolled != _scrolled) setState(() => _scrolled = scrolled);
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Une nouvelle page repart en haut : la capsule se recentre.
+    final route = context.router.current.name;
+    if (route != _route) {
+      _route = route;
+      _scrolled = false;
+    }
+    return widget.builder(
+        context,
+        _scrolled,
+        NotificationListener<ScrollNotification>(
+            onNotification: _onScroll, child: widget.content));
   }
 }
