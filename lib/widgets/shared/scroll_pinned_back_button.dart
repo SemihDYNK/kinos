@@ -56,7 +56,12 @@ class _ScrollPinnedBackButtonState extends State<ScrollPinnedBackButton> {
       AnimatedPositioned(
         duration: duration,
         curve: AppMotion.navigationReveal,
-        left: _scrolled ? AppSpacing.sm : widget.restLeft,
+        // Centré sur la capsule latérale repliée.
+        left: _scrolled
+            ? MediaQuery.paddingOf(context).left +
+                AppNavigation.inset +
+                (AppNavigation.collapsedWidth - backButtonSlot) / 2
+            : widget.restLeft,
         top: _scrolled ? AppSpacing.sm : AppSpacing.xl,
         child: _scrolled
             ? FrostedSurface(
