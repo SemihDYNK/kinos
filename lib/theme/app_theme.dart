@@ -139,6 +139,10 @@ abstract final class AppLibraryLayout {
 abstract final class AppTopNavigation {
   static const indicatorHeight = 2.0;
 
+  /// Hauteur mesurée de la capsule : sert à centrer d'autres commandes sur
+  /// elle (bouton retour épinglé).
+  static const capsuleHeight = 63.0;
+
   /// Rayon concentrique à la capsule : le sien moins l'espace qui les sépare.
   static const tabBorder = BorderRadius.all(
       Radius.circular(AppNavigation.radius - AppSpacing.xxs));

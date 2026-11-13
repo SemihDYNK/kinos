@@ -62,7 +62,12 @@ class _ScrollPinnedBackButtonState extends State<ScrollPinnedBackButton> {
                 AppNavigation.inset +
                 (AppNavigation.collapsedWidth - backButtonSlot) / 2
             : widget.restLeft,
-        top: _scrolled ? AppSpacing.sm : AppSpacing.xl,
+        // Centré sur la capsule du haut.
+        top: _scrolled
+            ? MediaQuery.paddingOf(context).top +
+                AppSpacing.sm +
+                (AppTopNavigation.capsuleHeight - backButtonSlot) / 2
+            : AppSpacing.xl,
         child: _scrolled
             ? FrostedSurface(
                 color: AppNavigation.surface,
