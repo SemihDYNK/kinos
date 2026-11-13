@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/views_model.dart';
+import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
+import 'package:kinos/providers/dashboard/genre_browse_provider.dart';
 import 'package:kinos/providers/dashboard/hero_items_provider.dart';
 import 'package:kinos/providers/dashboard_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
@@ -41,6 +43,7 @@ void main() {
       viewsProvider.overrideWith((ref) => InitialViews(ref, viewsReady)),
       dashboardProvider.overrideWith(InitialDashboard.new),
       heroItemsProvider.overrideWith((ref) => heroReady.future),
+      browseGenresProvider(allCatalog).overrideWith((ref) async => const []),
     ]);
     addTearDown(container.dispose);
     var done = false;

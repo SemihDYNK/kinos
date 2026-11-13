@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
+import 'package:kinos/providers/dashboard/genre_browse_provider.dart';
 import 'package:kinos/providers/dashboard/hero_items_provider.dart';
 import 'package:kinos/providers/dashboard_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
@@ -13,6 +15,11 @@ final startupHomeProvider = FutureProvider<void>((ref) async {
   if (connection.$1 == null) return;
   await Future.wait([
     ref.watch(heroItemsProvider.future),
+    // Les tuiles de genres de l'accueil : l'ouverture les attend aussi, sans
+    // jamais bloquer si elles échouent (la rangée gère son propre état).
+    ref
+        .watch(browseGenresProvider(allCatalog).future)
+        .then<void>((_) {}, onError: (_) {}),
     () async {
       await ref.read(viewsProvider.notifier).fetchViews();
       await ref.read(dashboardProvider.notifier).fetchNextUpAndResume();
