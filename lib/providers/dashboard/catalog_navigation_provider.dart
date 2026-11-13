@@ -3,6 +3,7 @@ import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/seerr_api_provider.dart';
+import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/models/seerr/seerr_dashboard_model.dart';
 
@@ -73,12 +74,52 @@ final catalogHomeProvider =
         : items;
   }
 
+  // Comme sur « À la une » : après les épisodes entamés, les épisodes
+  // suivants des séries en cours. Best-effort, sans priver l'onglet.
+  Future<List<ItemBaseModel>> nextUp() async {
+    if (scope.kind == BaseItemKind.movie) return const [];
+    try {
+      final cutoff = ref.read(clientSettingsProvider.select(
+          (value) => value.nextUpDateCutoff ?? const Duration(days: 28)));
+      final response = await api
+          .showsNextUpGet(
+            parentId: scope.libraryId,
+            limit: 16,
+            nextUpDateCutoff: DateTime.now().subtract(cutoff),
+            enableUserData: true,
+            fields: [
+              ItemFields.overview,
+              ItemFields.mediastreams,
+              ItemFields.mediasources
+            ],
+            enableImageTypes: [
+              ImageType.backdrop,
+              ImageType.primary,
+              ImageType.logo,
+              ImageType.thumb
+            ],
+            imageTypeLimit: 1,
+          )
+          .timeout(const Duration(seconds: 30));
+      return [
+        for (final dto in response.body?.items ?? const <BaseItemDto>[])
+          ItemBaseModel.fromBaseDto(dto, ref)
+      ];
+    } catch (_) {
+      return const [];
+    }
+  }
+
   final lists = await Future.wait([
     load(resume: false, sort: ItemSortBy.random, limit: 8),
     load(resume: false, sort: ItemSortBy.datecreated, limit: 24),
     load(resume: true, sort: ItemSortBy.dateplayed, limit: 16),
+    nextUp(),
   ]);
-  return (hero: lists[0], recent: lists[1], resume: lists[2]);
+  final seen = <String>{};
+  final resume =
+      [...lists[2], ...lists[3]].where((item) => seen.add(item.id)).toList();
+  return (hero: lists[0], recent: lists[1], resume: resume);
 });
 
 /// Requête de recherche rapide : texte saisi et langue de l'interface
@@ -101,10 +142,8 @@ final quickSearchProvider = FutureProvider.autoDispose
   final account =
       ref.watch(userProvider.select((user) => (user?.id, user?.credentials)));
   final query = search.query.trim();
-  const empty = (
-    library: <ItemBaseModel>[],
-    outside: <SeerrDashboardPosterModel>[]
-  );
+  const empty =
+      (library: <ItemBaseModel>[], outside: <SeerrDashboardPosterModel>[]);
   if (account.$1 == null || query.isEmpty) return empty;
   final seerrConfigured = ref.read(userProvider
           .select((user) => user?.seerrCredentials?.isConfigured)) ??
