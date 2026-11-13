@@ -40,6 +40,8 @@ final localConnectionAvailableProvider = StateProvider<bool>((ref) => false);
 @Riverpod(keepAlive: true)
 class ConnectivityStatus extends _$ConnectivityStatus {
   Timer? _debounceTimer;
+  Timer? _retryTimer;
+  static const _offlineRetry = Duration(seconds: 20);
   int _probeId = 0;
   Completer<void>? _probeCompleter;
 
@@ -60,6 +62,7 @@ class ConnectivityStatus extends _$ConnectivityStatus {
 
     ref.onDispose(() {
       _debounceTimer?.cancel();
+      _retryTimer?.cancel();
       subscription.cancel();
       _probeId++;
       _resolveProbe();
@@ -153,6 +156,12 @@ class ConnectivityStatus extends _$ConnectivityStatus {
   void _updateState(ConnectionState newState, {required bool isLocal}) {
     ref.read(localConnectionAvailableProvider.notifier).state = isLocal;
     state = newState;
+    // Hors ligne, plus aucune requête ne relance la sonde : sans ce rappel,
+    // l'app restait hors ligne après le retour du serveur.
+    _retryTimer?.cancel();
+    if (newState == ConnectionState.offline) {
+      _retryTimer = Timer(_offlineRetry, () => unawaited(checkConnectivity(immediate: true)));
+    }
   }
 
   void _resolveProbe() {
