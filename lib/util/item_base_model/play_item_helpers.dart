@@ -631,6 +631,11 @@ extension ItemBaseModelExtensions on ItemBaseModel? {
     bool showPlaybackOption = false,
   }) async {
     if (itemModel == null) return;
+    // Le bouton qui lance la lecture peut disparaître pendant le chargement
+    // (diapo suivante, accueil rafraîchi) : on garde le navigateur racine,
+    // qui vit aussi longtemps que l'app, pour fermer le dialogue et ouvrir
+    // le lecteur.
+    final navigator = Navigator.of(context, rootNavigator: true);
 
     final op = CancelableOperation.fromFuture(ref.read(playbackModelHelper).createPlaybackModel(
           context,
@@ -642,10 +647,11 @@ extension ItemBaseModelExtensions on ItemBaseModel? {
     _showLoadingIndicator(context, itemModel, op);
 
     final model = await op.valueOrCancellation(null);
+    if (!context.mounted) context = navigator.context;
     if (op.isCanceled || model == null) {
       if (!op.isCanceled) {
         try {
-          Navigator.of(context, rootNavigator: true).pop();
+          navigator.pop();
         } catch (e) {
           log('Error closing loading dialog: $e');
         }
@@ -657,6 +663,7 @@ extension ItemBaseModelExtensions on ItemBaseModel? {
     }
 
     final actualStartPosition = startPosition ?? await model.startDuration() ?? Duration.zero;
+    if (!context.mounted) context = navigator.context;
 
     await _playVideo(context, startPosition: actualStartPosition, current: model, ref: ref, cancelOperation: op);
   }
@@ -926,6 +933,10 @@ Future<void> _playVideo(
   VoidCallback? onPlayerExit,
   CancelableOperation? cancelOperation,
 }) async {
+  // Cf. _default : après chaque attente, on retombe sur le navigateur racine
+  // si le widget appelant a disparu.
+  final navigator = context.mounted ? Navigator.of(context, rootNavigator: true) : null;
+  BuildContext live() => context.mounted || navigator == null ? context : navigator.context;
   if (current == null) {
     if (context.mounted) {
       try {
@@ -946,6 +957,7 @@ Future<void> _playVideo(
         current,
         actualStartPosition,
       );
+  context = live();
 
   if (!loadedCorrectly) {
     if (context.mounted) {
@@ -968,6 +980,7 @@ Future<void> _playVideo(
   if (cancelOperation?.isCanceled ?? false) return;
 
   await ref.read(videoPlayerProvider.notifier).openPlayer(context);
+  context = live();
   if (AdaptiveLayout.of(context).isDesktop && defaultTargetPlatform != TargetPlatform.macOS) {
     fullScreenHelper.closeFullScreen(ref);
   }
