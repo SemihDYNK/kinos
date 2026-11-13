@@ -75,7 +75,11 @@ void main() {
     final genres = await container.read(browseGenresProvider(scope).future);
     expect(genres.map((g) => g.label), ['Action', 'Drame']);
     expect(genres.first.names, ['Action', 'Action/Aventure']);
+    // Le tirage commun (sans genre) ne couvre aucun genre ici : chaque
+    // tuile retombe sur sa propre requête.
+    expect(api.itemCalls.where((c) => c[#genres] == null), hasLength(1));
     final sampled = api.itemCalls
+        .where((call) => call[#genres] != null)
         .map((call) => (call[#genres] as List<String>).join('|'))
         .toSet();
     expect(sampled, {'Action|Action/Aventure', 'Drame'});

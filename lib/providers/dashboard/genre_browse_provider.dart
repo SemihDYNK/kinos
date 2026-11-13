@@ -58,62 +58,92 @@ final browseGenresProvider = FutureProvider.autoDispose
   if (account.$1 == null) return const [];
   final api = ref.read(jellyApiProvider);
   final kinds = _kinds(scope);
-  final response = await api
-      .genresGet(parentId: scope.libraryId, includeItemTypes: kinds)
-      .timeout(const Duration(seconds: 30));
-  final groups = groupGenreNames(
-      (response.body?.items ?? const <BaseItemDto>[]).map((g) => g.name ?? ''));
 
-  Future<List<ItemBaseModel>> sample(List<String> names,
-      {num? minRating}) async {
+  Future<List<ItemBaseModel>> sample(
+      {List<String>? names, num? minRating, required int limit}) async {
     final result = await api
         .itemsGet(
           genres: names,
           parentId: scope.libraryId,
           includeItemTypes: kinds,
           recursive: true,
-          limit: 8,
+          limit: limit,
           sortBy: [ItemSortBy.random],
           imageTypes: [ImageType.backdrop],
           enableImageTypes: [ImageType.backdrop],
+          fields: names == null ? [ItemFields.genres] : null,
           minCommunityRating: minRating,
         )
         .timeout(const Duration(seconds: 30));
     return result.body?.items ?? const <ItemBaseModel>[];
   }
 
+  // Un seul tirage de titres bien notés, en parallèle de la liste des
+  // genres, couvre presque toutes les tuiles : une requête par genre (une
+  // vingtaine, au tri aléatoire coûteux) retardait l'ouverture.
+  final pool = sample(minRating: 6.5, limit: 300)
+      .then<List<ItemBaseModel>>((items) => items, onError: (_) => const <ItemBaseModel>[]);
+  final response = await api
+      .genresGet(parentId: scope.libraryId, includeItemTypes: kinds)
+      .timeout(const Duration(seconds: 30));
+  final groups = groupGenreNames(
+      (response.body?.items ?? const <BaseItemDto>[]).map((g) => g.name ?? ''));
   final entries = groups.entries.toList();
-  final samples = List<List<ItemBaseModel>>.filled(entries.length, const []);
-  // Par petits lots : une vingtaine de genres, sans noyer le serveur.
-  for (var i = 0; i < entries.length; i += 4) {
-    await Future.wait([
-      for (var j = i; j < i + 4 && j < entries.length; j++)
+  final candidates = await pool;
+
+  final used = <String>{};
+  final picks = List<ItemBaseModel?>.filled(entries.length, null);
+  // Les genres les plus rares choisissent d'abord : les grands genres
+  // trouvent toujours un autre titre.
+  final order = [for (var i = 0; i < entries.length; i++) i];
+  int matches(int i) {
+    final names = entries[i].value.map((n) => n.toLowerCase()).toSet();
+    return candidates
+        .where((item) =>
+            item.overview.genres.any((g) => names.contains(g.toLowerCase())))
+        .length;
+  }
+
+  final counts = {for (final i in order) i: matches(i)};
+  order.sort((a, b) => counts[a]!.compareTo(counts[b]!));
+  for (final i in order) {
+    final names = entries[i].value.map((n) => n.toLowerCase()).toSet();
+    final pick = candidates
+        .where((item) =>
+            !used.contains(item.id) &&
+            item.overview.genres.any((g) => names.contains(g.toLowerCase())))
+        .firstOrNull;
+    if (pick != null) {
+      used.add(pick.id);
+      picks[i] = pick;
+    }
+  }
+
+  // Repli, tous en parallèle : les quelques genres absents du tirage.
+  await Future.wait([
+    for (final (i, entry) in entries.indexed)
+      if (picks[i] == null)
         () async {
           try {
-            var items = await sample(entries[j].value, minRating: 6.5);
-            if (items.isEmpty) items = await sample(entries[j].value);
-            samples[j] = items;
+            final items = await sample(names: entry.value, limit: 8);
+            picks[i] =
+                items.where((item) => !used.contains(item.id)).firstOrNull ??
+                    items.firstOrNull;
+            if (picks[i] case final pick?) used.add(pick.id);
           } catch (_) {
             // Genre sans image plutôt que rangée absente.
           }
         }()
-    ]);
-  }
+  ]);
 
-  final used = <String>{};
-  final genres = <BrowseGenre>[];
-  for (final (i, entry) in entries.indexed) {
-    final candidates = samples[i];
-    final pick =
-        candidates.where((item) => !used.contains(item.id)).firstOrNull ??
-            candidates.firstOrNull;
-    if (pick != null) used.add(pick.id);
-    genres.add((
-      label: entry.key,
-      names: entry.value,
-      image: pick?.images?.backDrop?.firstOrNull,
-    ));
-  }
+  final genres = [
+    for (final (i, entry) in entries.indexed)
+      (
+        label: entry.key,
+        names: entry.value,
+        image: picks[i]?.images?.backDrop?.firstOrNull,
+      ),
+  ];
   ref.keepAlive();
   return genres;
 });
@@ -155,7 +185,9 @@ Map<int, List<ItemBaseModel>> groupByDecade(Iterable<ItemBaseModel> items,
     if (year == null) continue;
     (decades[year ~/ 10 * 10] ??= []).add(item);
   }
-  final keys = decades.keys.where((d) => decades[d]!.length >= minItems).toList()
+  final keys = decades.keys
+      .where((d) => decades[d]!.length >= minItems)
+      .toList()
     ..sort((a, b) => b.compareTo(a));
   return {for (final d in keys) d: decades[d]!.take(perDecade).toList()};
 }
