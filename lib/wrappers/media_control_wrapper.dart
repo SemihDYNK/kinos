@@ -351,10 +351,16 @@ class MediaControlsWrapper extends BaseAudioHandler implements VideoPlayerContro
   Future<void> _applyWakelock(bool shouldEnable, {bool force = false}) async {
     if (!force && shouldEnable == _wakelockEnabled) return;
     _wakelockEnabled = shouldEnable;
-    if (shouldEnable) {
-      await WakelockPlus.enable();
-    } else {
-      await WakelockPlus.disable();
+    try {
+      if (shouldEnable) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+    } catch (e) {
+      // Sans service d'inhibition de veille (DBus ScreenSaver absent, par
+      // ex. Hyprland sans hypridle), la lecture continue sans wakelock.
+      log('Wakelock unavailable: $e');
     }
   }
 
