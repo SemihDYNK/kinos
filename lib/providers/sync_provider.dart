@@ -176,8 +176,9 @@ class SyncNotifier extends StateNotifier<SyncSettingsModel> {
                 log('Failed to delete file $fileName: $e');
               }
             }
-          } on PathAccessException {
-            // Skip files that are inaccessible
+          } on FileSystemException {
+            // Fichier inaccessible ou déjà disparu entre la liste et la
+            // lecture (le journal SQLite, par ex.) : on passe.
             continue;
           }
         }

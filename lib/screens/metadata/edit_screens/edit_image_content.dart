@@ -98,8 +98,11 @@ class _EditImageContentState extends ConsumerState<EditImageContent> {
                   iconColor: Theme.of(context).colorScheme.onError,
                 ),
                 onPressed: () async {
+                  // Le navigateur du dialogue, pris avant l'attente : son
+                  // contexte peut ne plus exister après la suppression.
+                  final navigator = Navigator.of(context);
                   await ref.read(editItemProvider.notifier).deleteImage(widget.type, image);
-                  Navigator.of(context).pop();
+                  if (navigator.mounted) navigator.pop();
                 },
                 child: const Text("Delete"),
               )
