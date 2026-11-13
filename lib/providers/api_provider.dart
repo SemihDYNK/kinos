@@ -76,6 +76,10 @@ class _TempJellyRequest implements Interceptor {
 
 final int _maxRetries = 3;
 
+/// Au-delà, une requête sans réponse est abandonnée : sans délai, une
+/// connexion à demi morte laissait un chargement tourner indéfiniment.
+const _requestTimeout = Duration(seconds: 30);
+
 bool _isConnectionError(Object e) {
   return e is IOException || e is TimeoutException;
 }
@@ -105,16 +109,18 @@ class JellyRequest implements Interceptor {
 
     for (var attempt = 0; attempt <= _maxRetries; attempt++) {
       try {
-        final response = await chain.proceed(
-          applyHeaders(
-            chain.request.copyWith(baseUri: Uri.parse(serverUrl)),
-            headers,
-          ),
-        );
+        final response = await Future.value(chain.proceed(
+              applyHeaders(
+                chain.request.copyWith(baseUri: Uri.parse(serverUrl)),
+                headers,
+              ),
+            )).timeout(_requestTimeout);
         unawaited(connectivityNotifier.checkConnectivity(immediate: true));
         return response;
       } catch (e) {
-        if (!_isConnectionError(e) || attempt == _maxRetries) {
+        // Seules les lectures sont rejouées : un POST (rapport de lecture,
+        // marquer vu) pourrait avoir été reçu avant la coupure.
+        if (!_isConnectionError(e) || attempt == _maxRetries || chain.request.method != 'GET') {
           unawaited(connectivityNotifier.checkConnectivity(immediate: true));
           rethrow;
         }
