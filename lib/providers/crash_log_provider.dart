@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -18,7 +19,7 @@ class CrashLogNotifier extends StateNotifier<List<ErrorLogModel>> {
   }
 
   late final Logger logger;
-  final maxLength = 50;
+  final maxLength = 200;
   String? logFilePath;
   Timer? _debounceTimer;
   static const _debounceDuration = Duration(milliseconds: 500);
@@ -110,7 +111,25 @@ class CrashLogNotifier extends StateNotifier<List<ErrorLogModel>> {
   }
 
   void logFile(FlutterErrorDetails details) {
-    logger.severe('Flutter error: ${details.exception}', details.exception, details.stack);
+    // Une image absente du serveur (vignette de chapitre, logo) n'est pas un
+    // plantage : ces 404 remplissaient le journal et chassaient les vraies
+    // erreurs.
+    if (details.library == 'image resource service') {
+      log('Image load failed: ${details.exception}');
+      return;
+    }
+    // Le widget en cause (débordement, assertion) : sans lui, l'erreur est
+    // introuvable depuis le journal.
+    final where = details.informationCollector
+        ?.call()
+        .map((node) => node.toString())
+        .where((line) => line.trim().isNotEmpty)
+        .take(2)
+        .join(' | ');
+    final suffix = where == null || where.isEmpty
+        ? ''
+        : ' — ${where.length > 400 ? where.substring(0, 400) : where}';
+    logger.severe('Flutter error: ${details.exception}$suffix', details.exception, details.stack);
     if (details.stack != null && kDebugMode) {
       print('${details.stack}');
     }
