@@ -234,7 +234,7 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
         body: ScrollPinnedBackButton(
           restLeft: sidebar + AppSpacing.sm,
           restTop: MediaQuery.paddingOf(context).top + AppSpacing.sm,
-          restSurface: AppPlayerStyle.controlSurface,
+          frostedAtRest: true,
           onBack: () => context.router.popBack(),
           child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),

@@ -296,7 +296,7 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
             child: ScrollPinnedBackButton(
               restLeft: sideBarInset + AppSpacing.sm,
               restTop: MediaQuery.paddingOf(context).top + AppSpacing.sm,
-              restSurface: AppColors.scrim.withValues(alpha: 0.4),
+              frostedAtRest: true,
               onBack: () => context.router.popBack(),
               child: Padding(
                 padding: EdgeInsetsDirectional.only(start: sideBarInset),

@@ -224,7 +224,7 @@ class _DetailScaffoldState extends ConsumerState<DetailScaffold> {
         body: ScrollPinnedBackButton(
           restLeft: topRowPadding.resolve(Directionality.of(context)).left,
           restTop: topRowPadding.resolve(Directionality.of(context)).top,
-          restSurface: AppPlayerStyle.controlSurface,
+          frostedAtRest: true,
           onBack: () => context.router.popBack(),
           child: Stack(
           children: [

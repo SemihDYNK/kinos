@@ -16,7 +16,7 @@ class ScrollPinnedBackButton extends StatefulWidget {
       {required this.restLeft,
       required this.child,
       this.restTop = AppSpacing.xl,
-      this.restSurface,
+      this.frostedAtRest = false,
       this.onBack,
       super.key});
 
@@ -24,9 +24,11 @@ class ScrollPinnedBackButton extends StatefulWidget {
   final double restLeft;
   final double restTop;
 
-  /// Fond du bouton au repos, quand il est posé sur une image (fiche d'un
-  /// film) plutôt que sur le fond uni de la page.
-  final Color? restSurface;
+  /// Fond dépoli dès le repos, quand le bouton est posé sur une image
+  /// (fiche d'un film) plutôt que sur le fond uni de la page : le même
+  /// verre que lorsqu'il est épinglé, pour qu'il ne change pas de
+  /// transparence en se déplaçant.
+  final bool frostedAtRest;
 
   /// Action de retour ; par défaut, `maybePop` du routeur.
   final VoidCallback? onBack;
@@ -81,18 +83,12 @@ class _ScrollPinnedBackButtonState extends State<ScrollPinnedBackButton> {
                 AppSpacing.sm +
                 (AppTopNavigation.capsuleHeight - backButtonSlot) / 2
             : widget.restTop,
-        child: _scrolled
+        child: _scrolled || widget.frostedAtRest
             ? FrostedSurface(
                 color: AppNavigation.surface,
                 borderRadius: AppRadii.controlBorder,
                 child: button)
-            : widget.restSurface != null
-                ? DecoratedBox(
-                    decoration: BoxDecoration(
-                        color: widget.restSurface,
-                        borderRadius: AppRadii.controlBorder),
-                    child: button)
-                : button,
+            : button,
       ),
     ]);
   }
