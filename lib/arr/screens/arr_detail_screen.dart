@@ -27,6 +27,7 @@ import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/router_extension.dart';
 import 'package:kinos/util/sliver_list_padding.dart';
 import 'package:kinos/widgets/shared/fading_hero_backdrop.dart';
+import 'package:kinos/widgets/shared/scroll_pinned_back_button.dart';
 
 /// Fiche détail Arr — ouverte depuis une jaquette de la bibliothèque
 /// (cf. `ArrLibraryGrid`). Alimentée par Radarr/Sonarr, pas par Jellyfin :
@@ -288,9 +289,19 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
           },
           child: ColoredBox(
             color: AppColors.background,
-            child: Padding(
-              padding: EdgeInsetsDirectional.only(start: sideBarInset),
-              child: _buildBody(context, state),
+            // Le bouton retour vit hors du décalage de la barre latérale :
+            // épinglé dans le coin de la fenêtre dès que la fiche défile
+            // (cf. ScrollPinnedBackButton), il doit rester dans sa zone
+            // pour rester cliquable.
+            child: ScrollPinnedBackButton(
+              restLeft: sideBarInset + AppSpacing.sm,
+              restTop: MediaQuery.paddingOf(context).top + AppSpacing.sm,
+              restSurface: AppColors.scrim.withValues(alpha: 0.4),
+              onBack: () => context.router.popBack(),
+              child: Padding(
+                padding: EdgeInsetsDirectional.only(start: sideBarInset),
+                child: _buildBody(context, state),
+              ),
             ),
           ),
         ),
@@ -318,7 +329,6 @@ class _ArrDetailScreenState extends ConsumerState<ArrDetailScreen> {
               ),
             ),
           ),
-          const _BackButton(),
         ],
       );
     }
@@ -470,40 +480,7 @@ class _ArrDetailContent extends ConsumerWidget {
             const DefaultSliverBottomPadding(),
           ],
         ),
-        const _BackButton(),
       ],
-    );
-  }
-}
-
-/// Positionné à `start: AppSpacing.sm`, pas `sideBarInset + AppSpacing.sm`
-/// comme `MediaDetailScaffold` : cet écran indente tout son contenu (pas
-/// seulement le bandeau) d'un seul `Padding(start: sideBarInset)` au
-/// niveau de `_ArrDetailScreenState.build` — même convention que
-/// `ArrSearchScreen`/`ArrLibraryScreen`, plus simple que le double
-/// padding de l'écran détail Jellyfin.
-class _BackButton extends StatelessWidget {
-  const _BackButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return PositionedDirectional(
-      top: MediaQuery.paddingOf(context).top + AppSpacing.sm,
-      start: AppSpacing.sm,
-      child: FocusRing(
-        borderRadius: AppRadii.controlBorder,
-        onActivate: () => context.router.popBack(),
-        child: ExcludeFocus(
-          child: IconButton.filledTonal(
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.scrim.withValues(alpha: 0.4),
-              foregroundColor: AppColors.textPrimary,
-            ),
-            onPressed: () => context.router.popBack(),
-            icon: const BackButtonIcon(),
-          ),
-        ),
-      ),
     );
   }
 }
