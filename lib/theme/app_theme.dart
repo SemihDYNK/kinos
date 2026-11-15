@@ -377,6 +377,10 @@ abstract final class AppMotion {
   static const navigationLabels = Interval(.25, 1, curve: Curves.easeOut);
   static const posterReveal = Cubic(.2, 1.3, .35, 1);
   static const posterZoom = .025;
+  // Marge qu'un conteneur qui découpe (défilement horizontal) doit laisser
+  // autour des jaquettes : le soulèvement plus la moitié du grossissement
+  // d'une carte de ~300 px.
+  static const posterLiftRoom = AppSpacing.xs;
   // Tuile paysage (genres) : l'image s'avance dans son cadre au survol et
   // au focus.
   static const tileImageZoom = .06;

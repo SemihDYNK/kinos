@@ -23,6 +23,7 @@ import 'package:kinos/widgets/shared/poster_caption.dart';
 import 'package:kinos/screens/dashboard/recommendation_tile.dart' show RequestPoster;
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/widgets/shared/poster_lift_room.dart';
 
 class SeerrDiscoverySection extends ConsumerWidget {
   final HomeRowModel row;
@@ -330,8 +331,11 @@ class _HorizontalDiscoveryRowState extends State<_HorizontalDiscoveryRow> {
                         child: ScrollConfiguration(
                           behavior: ScrollConfiguration.of(context)
                               .copyWith(scrollbars: false),
-                          child: SingleChildScrollView(
+                          child: PosterLiftRoom(
+                            height: height,
+                            builder: (context, room) => SingleChildScrollView(
                             controller: _scroll,
+                            padding: room,
                             physics: const NeverScrollableScrollPhysics(),
                             scrollDirection: Axis.horizontal,
                             child: Row(children: [
@@ -352,7 +356,7 @@ class _HorizontalDiscoveryRowState extends State<_HorizontalDiscoveryRow> {
                                             onOpen: (origin) => widget.onOpen(
                                                 origin, widget.items[index])))),
                             ]),
-                          ),
+                          )),
                         )),
                   )),
             ]));

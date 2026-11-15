@@ -15,6 +15,7 @@ import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/widgets/shared/ensure_visible.dart';
 import 'package:kinos/widgets/shared/horizontal_list.dart';
+import 'package:kinos/widgets/shared/poster_lift_room.dart';
 
 class SeerrPosterRow extends ConsumerWidget {
   final List<SeerrDashboardPosterModel> posters;
@@ -128,10 +129,14 @@ class _DiscoverPosterRailState extends State<_DiscoverPosterRail> {
   Future<void> _focusPoster(int index, double extent, int generation) async {
     final start = index * extent;
     final end = start + extent;
+    // Largeur de la rangée : la zone visible déborde de la marge de
+    // [PosterLiftRoom] de chaque côté.
+    final visible =
+        _scroll.position.viewportDimension - 2 * AppMotion.posterLiftRoom;
     final target = (start < _scroll.offset
             ? start
-            : end > _scroll.offset + _scroll.position.viewportDimension
-                ? end - _scroll.position.viewportDimension
+            : end > _scroll.offset + visible
+                ? end - visible
                 : _scroll.offset)
         .clamp(0.0, _scroll.position.maxScrollExtent);
     if (AppMotion.enabled(context)) {
@@ -228,10 +233,11 @@ class _DiscoverPosterRailState extends State<_DiscoverPosterRail> {
                     focusNode: _railFocus,
                     onKeyEvent: (_, event) =>
                         _onKey(event, width + AppSpacing.gridGap),
-                    child: SizedBox(
+                    child: PosterLiftRoom(
                       height: height,
-                      child: ListView.builder(
+                      builder: (context, room) => ListView.builder(
                         controller: _scroll,
+                        padding: room,
                         scrollDirection: Axis.horizontal,
                         physics: const NeverScrollableScrollPhysics(),
                         scrollCacheExtent: ScrollCacheExtent.pixels(width),

@@ -11,6 +11,7 @@ import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/focus_row.dart';
 import 'package:kinos/widgets/shared/media_progress_bar.dart';
 import 'package:kinos/widgets/shared/media_thumbnail.dart';
+import 'package:kinos/widgets/shared/poster_lift_room.dart';
 
 /// Une seule rangée de reprise, navigable au clavier et par les flèches du titre.
 class ContinueWatchingSection extends StatefulWidget {
@@ -74,9 +75,12 @@ class _ContinueWatchingSectionState extends State<ContinueWatchingSection> {
 
   void _move(int direction) {
     if (!_scroll.hasClients) return;
-    final target =
-        (_scroll.offset + direction * _scroll.position.viewportDimension)
-            .clamp(0.0, _scroll.position.maxScrollExtent);
+    // La zone visible déborde de [AppMotion.posterLiftRoom] de chaque côté
+    // (cf. [PosterLiftRoom]) : une page reste la largeur de la rangée.
+    final page =
+        _scroll.position.viewportDimension - 2 * AppMotion.posterLiftRoom;
+    final target = (_scroll.offset + direction * page)
+        .clamp(0.0, _scroll.position.maxScrollExtent);
     if (MediaQuery.disableAnimationsOf(context)) {
       _scroll.jumpTo(target);
     } else {
@@ -148,8 +152,11 @@ class _ContinueWatchingSectionState extends State<ContinueWatchingSection> {
                 child: Focus(
                     canRequestFocus: false,
                     onKeyEvent: _onKeyEvent,
-                    child: SingleChildScrollView(
+                    child: PosterLiftRoom(
+                      height: tileHeight,
+                      builder: (context, room) => SingleChildScrollView(
                       controller: _scroll,
+                      padding: room,
                       scrollDirection: Axis.horizontal,
                       physics: const NeverScrollableScrollPhysics(),
                       child: Row(
@@ -168,7 +175,7 @@ class _ContinueWatchingSectionState extends State<ContinueWatchingSection> {
                                 const SizedBox(width: AppSpacing.gridGap),
                             ],
                           ]),
-                    )),
+                    ))),
               ),
             ))),
       ]);
