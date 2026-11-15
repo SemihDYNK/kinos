@@ -6,8 +6,12 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/screens/shared/outlined_text_field.dart';
+import 'package:kinos/theme/app_theme.dart';
 
-class IntInputField extends ConsumerWidget {
+/// Champ numérique compact : la case ne contient que les chiffres, l'unité
+/// est posée à côté. La valeur est enregistrée à la validation (Entrée) et
+/// quand le champ perd le focus.
+class IntInputField extends StatefulWidget {
   final int? value;
   final TextEditingController? controller;
   final String? placeHolder;
@@ -23,25 +27,64 @@ class IntInputField extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(
-        minWidth: 60,
-        maxWidth: 135,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: OutlinedTextField(
-          controller: controller ?? TextEditingController(text: (value ?? 0).toString()),
-          keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          textInputAction: TextInputAction.done,
-          onSubmitted: (value) => onSubmitted?.call(int.tryParse(value)),
-          textAlign: TextAlign.center,
-          suffix: suffix,
-          placeHolder: placeHolder,
+  State<IntInputField> createState() => _IntInputFieldState();
+}
+
+class _IntInputFieldState extends State<IntInputField> {
+  late final bool _ownsController = widget.controller == null;
+  late final TextEditingController _controller =
+      widget.controller ?? TextEditingController(text: widget.value?.toString() ?? "");
+  final FocusNode _focusNode = FocusNode();
+  late String _lastCommitted;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastCommitted = _controller.text;
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus) _commit(_controller.text);
+  }
+
+  void _commit(String text) {
+    if (text == _lastCommitted) return;
+    _lastCommitted = text;
+    widget.onSubmitted?.call(int.tryParse(text));
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    if (_ownsController) _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: AppManagementLayout.numberFieldWidth,
+          child: OutlinedTextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            textInputAction: TextInputAction.done,
+            onSubmitted: _commit,
+            textAlign: TextAlign.center,
+            placeHolder: widget.placeHolder,
+          ),
         ),
-      ),
+        if (widget.suffix != null) ...[
+          const SizedBox(width: AppSpacing.xs),
+          Text(widget.suffix!, style: AppTypography.meta),
+        ],
+      ],
     );
   }
 }

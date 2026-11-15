@@ -266,6 +266,7 @@ abstract final class AppManagementLayout {
   static const settingsNavigationWidth = 272.0;
   static const settingsSplitWidth = 1000.0;
   static const settingsValueWidth = 220.0;
+  static const numberFieldWidth = 88.0;
   static const requestPosterWidth = 40.0;
   static const avatarSize = 28.0;
   static const requesterWidth = 200.0;

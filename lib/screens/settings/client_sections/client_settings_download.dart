@@ -156,22 +156,17 @@ List<Widget> buildClientSettingsDownload(BuildContext context, WidgetRef ref, Fu
           SettingsListTile(
             label: Text(context.localized.maxConcurrentDownloadsTitle),
             subLabel: Text(context.localized.maxConcurrentDownloadsDesc),
-            trailing: SizedBox(
-              width: AppManagementLayout.settingsValueWidth,
-              child: IntInputField(
-                controller: TextEditingController(text: clientSettings.maxConcurrentDownloads.toString()),
-                onSubmitted: (value) {
-                  if (value != null) {
-                    ref.read(clientSettingsProvider.notifier).update(
-                          (current) => current.copyWith(
-                            maxConcurrentDownloads: value,
-                          ),
-                        );
+            trailing: IntInputField(
+              value: clientSettings.maxConcurrentDownloads,
+              onSubmitted: (value) {
+                if (value != null) {
+                  ref.read(clientSettingsProvider.notifier).update(
+                        (current) => current.copyWith(maxConcurrentDownloads: value),
+                      );
 
-                    ref.read(backgroundDownloaderProvider.notifier).setMaxConcurrent(value);
-                  }
-                },
-              ),
+                  ref.read(backgroundDownloaderProvider.notifier).setMaxConcurrent(value);
+                }
+              },
             ),
           ),
         ],
