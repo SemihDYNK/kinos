@@ -30,6 +30,7 @@ import 'package:kinos/widgets/navigation_scaffold/components/settings_user_icon.
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 import 'package:kinos/widgets/shared/pull_to_refresh.dart';
+import 'package:kinos/widgets/shared/scroll_pinned_back_button.dart';
 
 /// Utilisé par [DetailScaffold] (via [PaletteService.fromSeed] quand la
 /// couleur est déjà connue) et par les écrans musique hors périmètre
@@ -217,7 +218,15 @@ class _DetailScaffoldState extends ConsumerState<DetailScaffold> {
       child: (context) => Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
         extendBodyBehindAppBar: true,
-        body: Stack(
+        // Le bouton retour glisse dans le coin de la fenêtre dès que la page
+        // défile (cf. ScrollPinnedBackButton) ; sa place reste réservée dans
+        // la rangée du haut.
+        body: ScrollPinnedBackButton(
+          restLeft: topRowPadding.resolve(Directionality.of(context)).left,
+          restTop: topRowPadding.resolve(Directionality.of(context)).top,
+          restSurface: AppPlayerStyle.controlSurface,
+          onBack: () => context.router.popBack(),
+          child: Stack(
           children: [
             SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -327,20 +336,7 @@ class _DetailScaffoldState extends ConsumerState<DetailScaffold> {
                   padding: topRowPadding,
                   child: Row(
                     children: [
-                      IconButton.filledTonal(
-                        style: IconButton.styleFrom(
-                          backgroundColor: backGroundColor,
-                        ),
-                        onPressed: () => context.router.popBack(),
-                        icon: Padding(
-                          padding: EdgeInsets.all(
-                              AdaptiveLayout.inputDeviceOf(context) ==
-                                      InputDevice.pointer
-                                  ? 0
-                                  : 4),
-                          child: const BackButtonIcon(),
-                        ),
-                      ),
+                      const SizedBox(width: backButtonSlot),
                       const Spacer(),
                       AnimatedSize(
                         duration: const Duration(milliseconds: 250),
@@ -468,6 +464,7 @@ class _DetailScaffoldState extends ConsumerState<DetailScaffold> {
                 ),
               ),
           ],
+        ),
         ),
       ),
     );

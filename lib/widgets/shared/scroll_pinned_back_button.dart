@@ -13,10 +13,23 @@ const backButtonSlot = 48.0;
 /// dépoli, dès que la page défile.
 class ScrollPinnedBackButton extends StatefulWidget {
   const ScrollPinnedBackButton(
-      {required this.restLeft, required this.child, super.key});
+      {required this.restLeft,
+      required this.child,
+      this.restTop = AppSpacing.xl,
+      this.restSurface,
+      this.onBack,
+      super.key});
 
-  /// Abscisse du bouton au repos, dans l'en-tête.
+  /// Position du bouton au repos, dans l'en-tête.
   final double restLeft;
+  final double restTop;
+
+  /// Fond du bouton au repos, quand il est posé sur une image (fiche d'un
+  /// film) plutôt que sur le fond uni de la page.
+  final Color? restSurface;
+
+  /// Action de retour ; par défaut, `maybePop` du routeur.
+  final VoidCallback? onBack;
   final Widget child;
 
   @override
@@ -43,7 +56,7 @@ class _ScrollPinnedBackButtonState extends State<ScrollPinnedBackButton> {
       message: 'Retour · Échap',
       child: FocusRing(
         borderRadius: AppRadii.controlBorder,
-        onActivate: () => context.router.maybePop(),
+        onActivate: widget.onBack ?? () => context.router.maybePop(),
         child: const Padding(
           padding: EdgeInsets.all(AppSpacing.xs),
           child: Icon(Icons.arrow_back, semanticLabel: 'Retour'),
@@ -67,13 +80,19 @@ class _ScrollPinnedBackButtonState extends State<ScrollPinnedBackButton> {
             ? MediaQuery.paddingOf(context).top +
                 AppSpacing.sm +
                 (AppTopNavigation.capsuleHeight - backButtonSlot) / 2
-            : AppSpacing.xl,
+            : widget.restTop,
         child: _scrolled
             ? FrostedSurface(
                 color: AppNavigation.surface,
                 borderRadius: AppRadii.controlBorder,
                 child: button)
-            : button,
+            : widget.restSurface != null
+                ? DecoratedBox(
+                    decoration: BoxDecoration(
+                        color: widget.restSurface,
+                        borderRadius: AppRadii.controlBorder),
+                    child: button)
+                : button,
       ),
     ]);
   }

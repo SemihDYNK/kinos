@@ -24,6 +24,7 @@ import 'package:kinos/screens/shared/media_hero_title.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 import 'package:kinos/widgets/shared/pull_to_refresh.dart';
+import 'package:kinos/widgets/shared/scroll_pinned_back_button.dart';
 
 /// Écran de détail film/série (et fiche Seerr, cf. `SeerrDetailsScreen`) —
 /// même langage visuel que le tableau de bord : bandeau plein cadre teinté
@@ -226,8 +227,15 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
       refreshOnStart: true,
       child: (context) => Scaffold(
         backgroundColor: AppColors.background,
-        body: Stack(children: [
-          CustomScrollView(
+        // Le bouton retour glisse dans le coin de la fenêtre dès que la
+        // fiche défile, comme sur la page d'un genre : il ne recouvre plus
+        // le contenu qui passe dessous.
+        body: ScrollPinnedBackButton(
+          restLeft: sidebar + AppSpacing.sm,
+          restTop: MediaQuery.paddingOf(context).top + AppSpacing.sm,
+          restSurface: AppPlayerStyle.controlSurface,
+          onBack: () => context.router.popBack(),
+          child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverStack(children: [
@@ -327,22 +335,7 @@ class _MediaDetailScaffoldState extends ConsumerState<MediaDetailScaffold> {
                 ...widget.content(context, padding),
                 const DefaultSliverBottomPadding(),
               ]),
-          PositionedDirectional(
-              top: MediaQuery.paddingOf(context).top + AppSpacing.sm,
-              start: sidebar + AppSpacing.sm,
-              child: FocusRing(
-                  borderRadius: AppRadii.controlBorder,
-                  onActivate: () => context.router.popBack(),
-                  child: ExcludeFocus(
-                      child: IconButton.filledTonal(
-                          tooltip: MaterialLocalizations.of(context)
-                              .backButtonTooltip,
-                          style: IconButton.styleFrom(
-                              backgroundColor: AppPlayerStyle.controlSurface,
-                              foregroundColor: AppColors.textPrimary),
-                          onPressed: () => context.router.popBack(),
-                          icon: const BackButtonIcon())))),
-        ]),
+        ),
       ),
     );
   }
