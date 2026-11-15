@@ -74,9 +74,11 @@ void main() {
       ))));
       await tester.pumpAndSettle();
       final bounds = tester.getRect(find.byType(FocusButton));
+      // Sous PosterHoverMotion : le rebond au clic (PressBounce) ajoute
+      // sa propre transformation au-dessus.
       double scale() => tester
           .widgetList<Transform>(find.descendant(
-            of: find.byType(FocusButton),
+            of: find.byType(PosterHoverMotion),
             matching: find.byType(Transform),
           ))
           .firstWhere((t) =>

@@ -16,6 +16,7 @@ import 'package:kinos/screens/dashboard/genre_page_screen.dart';
 
 import 'seerr_discovery_section_test.dart' show shell, TestUser;
 import 'support/page_shell.dart';
+import '../support/press_bounce.dart';
 
 BrowseGenre genre(String label) => (label: label, names: [label], image: null);
 
@@ -62,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Action'));
-    await tester.pump();
+    await pumpPressBounce(tester);
     final opened = router.opened as GenrePageRoute;
     final args = opened.args as GenrePageRouteArgs;
     expect(args.label, 'Action');

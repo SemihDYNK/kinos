@@ -7,6 +7,7 @@ import 'package:kinos/providers/dashboard/genre_browse_provider.dart';
 import 'package:kinos/screens/dashboard/genre_hero.dart';
 import 'package:kinos/screens/dashboard/genre_page_screen.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/poster_lift_room.dart';
 
 /// Rangée « Genres » de l'accueil : tuiles paysage (image d'un titre du
 /// genre sous un voile sombre, nom au centre) qui défilent à la molette
@@ -109,12 +110,14 @@ class _GenreRowState extends State<_GenreRow> {
                   ),
               ]),
               const SizedBox(height: AppSpacing.sm),
-              SizedBox(
+              // Le rebond au clic grossit la tuile un instant : la rangée
+              // lui laisse de la place (cf. PosterLiftRoom).
+              PosterLiftRoom(
                 height: height,
                 // Défilement horizontal : molette avec Maj, molette ou
                 // pavé horizontal, glisser à la souris. La molette
                 // verticale seule continue de faire défiler la page.
-                child: ScrollConfiguration(
+                builder: (context, room) => ScrollConfiguration(
                   behavior: ScrollConfiguration.of(context).copyWith(
                     scrollbars: false,
                     dragDevices: {
@@ -125,6 +128,7 @@ class _GenreRowState extends State<_GenreRow> {
                   ),
                   child: ListView.separated(
                     controller: _scroll,
+                    padding: room,
                     scrollDirection: Axis.horizontal,
                     itemCount: widget.genres.length,
                     separatorBuilder: (_, __) =>
@@ -186,6 +190,7 @@ class _GenreTileState extends State<_GenreTile> {
           excludeSemantics: true,
           child: FocusRing(
             onActivate: widget.onOpen,
+            pressMotion: true,
             child: ClipRRect(
               borderRadius: AppRadii.cardBorder,
               // Survol ou focus : l'image s'avance dans le cadre, la tuile

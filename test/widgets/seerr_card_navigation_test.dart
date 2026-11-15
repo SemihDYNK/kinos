@@ -12,6 +12,7 @@ import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:kinos/seerr/seerr_models.dart';
 import 'seerr_discovery_section_test.dart' show shell, PendingDetailsRouter;
 import 'support/home_visual_fixture.dart' show homeArtwork;
+import '../support/press_bounce.dart';
 
 class _User extends SeerrUser {
   @override
@@ -48,7 +49,7 @@ void main() {
         await tester.pumpAndSettle();
         final hero = tester.widget<Hero>(find.byType(Hero));
         await tester.tap(find.byType(FocusButton));
-        await tester.pump();
+        await pumpPressBounce(tester);
         final Object? tag;
         if (available) {
           final route = router.opened as DetailsRoute;

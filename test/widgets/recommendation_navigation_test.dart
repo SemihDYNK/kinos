@@ -10,6 +10,7 @@ import 'package:kinos/screens/dashboard/recommendation_tile.dart';
 import 'package:kinos/screens/shared/media_navigation.dart';
 import 'seerr_discovery_section_test.dart' show shell, PendingDetailsRouter;
 import 'support/home_visual_fixture.dart' show homeArtwork;
+import '../support/press_bounce.dart';
 
 void main() {
   for (final isMovie in [true, false]) {
@@ -33,7 +34,7 @@ void main() {
       await tester.pumpAndSettle();
       final tag = tester.widget<Hero>(find.byType(Hero)).tag;
       await tester.tap(find.byType(MediaArtwork));
-      await tester.pump();
+      await pumpPressBounce(tester);
       final route = router.opened as DetailsRoute;
       expect(route.args!.item!.type,
           isMovie ? KinosItemType.movie : KinosItemType.series);
@@ -79,10 +80,10 @@ void main() {
                   contentPadding: EdgeInsets.zero)))));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(MediaArtwork));
-      await tester.pump();
+      await pumpPressBounce(tester);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       await tester.tap(find.byType(MediaArtwork));
-      await tester.pump();
+      await pumpPressBounce(tester);
       expect(calls, 1);
       expect(router.opened, isNull);
       response.complete((id: 'native', name: 'Film'));
@@ -120,7 +121,7 @@ void main() {
     await tester.pumpAndSettle();
     final tag = tester.widget<Hero>(find.byType(Hero)).tag;
     await tester.tap(find.byType(MediaArtwork));
-    await tester.pump();
+    await pumpPressBounce(tester);
     final route = router.opened as ArrTitleDetailsRoute;
     expect(route.args!.id, 7);
     expect(tag, (route.args!.tag, false));

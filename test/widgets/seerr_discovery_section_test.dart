@@ -22,6 +22,7 @@ import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout_model.dart';
 import 'package:kinos/util/poster_defaults.dart';
+import '../support/press_bounce.dart';
 
 AccountModel account(String id) => AccountModel(
     name: id,
@@ -212,7 +213,7 @@ void main() {
               of: find.text('Transition'), matching: find.byType(FocusRing))
           .first);
       await tester.tap(find.text('Transition'));
-      await tester.pump();
+      await pumpPressBounce(tester);
       final args = (router.opened as SeerrDetailsRoute).args!;
       expect(args.mediaType, type == 'tv' ? 'tvshow' : 'movie');
       expect(args.tmdbId, 42);
@@ -259,6 +260,7 @@ void main() {
       await tester.pumpAndSettle();
     }
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await pumpPressBounce(tester);
     expect(opened?.title, 'movie 14');
     expect(
         tester.getRect(find.text('movie 14')).right, lessThanOrEqualTo(1400));
@@ -336,10 +338,12 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await pumpPressBounce(tester);
     expect(opened?.key, items.first.key);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await pumpPressBounce(tester);
     expect(opened?.key, items.last.key);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.f10);

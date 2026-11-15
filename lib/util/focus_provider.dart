@@ -89,6 +89,16 @@ class FocusButton extends StatefulWidget {
 
 class FocusButtonState extends State<FocusButton> {
   late FocusNode focusNode = widget.focusNode ?? FocusNode();
+  final _bounce = GlobalKey<PressBounceState>();
+
+  /// Jaquette : rebond au clic avant d'ouvrir la fiche (cf. [PressBounce]).
+  void _tap() {
+    final tap = widget.onTap;
+    if (tap == null) return;
+    final bounce = widget.posterMotion ? _bounce.currentState : null;
+    bounce == null ? tap() : bounce.trigger(tap);
+  }
+
   ValueNotifier<bool> onHover = ValueNotifier(false);
   Timer? _longPressTimer;
   bool _longPressTriggered = false;
@@ -120,7 +130,7 @@ class FocusButtonState extends State<FocusButton> {
         }
         _cancelLongPressTimer();
         _keyDownActive = false;
-        widget.onTap?.call();
+        _tap();
       }
     }
     return KeyEventResult.ignored;
@@ -213,11 +223,14 @@ class FocusButtonState extends State<FocusButton> {
             builder: (context, value, child) {
               final hasFocus = widget.forceFocusOutline ? true : value;
               if (!widget.posterMotion) return _surface(context, hasFocus);
-              return PosterHoverMotion(
+              final hover = PosterHoverMotion(
                 active: hasFocus,
                 builder: (context, reveal) =>
                     _surface(context, hasFocus, reveal: reveal),
               );
+              return widget.onTap == null
+                  ? hover
+                  : PressBounce(key: _bounce, child: hover);
             },
           ),
         ),
@@ -266,7 +279,7 @@ class FocusButtonState extends State<FocusButton> {
       ),
       child: FlatButton(
         canRequestFocus: false,
-        onTap: widget.onTap,
+        onTap: widget.onTap == null ? null : _tap,
         onSecondaryTapDown: widget.onSecondaryTapDown,
         onLongPress: widget.onLongPress,
         child: widget.child,

@@ -1,4 +1,7 @@
 import 'package:kinos/util/motion_input.dart';
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -329,6 +332,11 @@ abstract final class AppDurations {
   static const popover = Duration(milliseconds: 180);
   static const unroll = Duration(milliseconds: 260);
   static const focusRing = Duration(milliseconds: 100);
+  // Clic sur une tuile : enfoncement, puis rebond au relâchement ; la page
+  // s'ouvre au sommet du rebond.
+  static const pressIn = Duration(milliseconds: 90);
+  static const pressRelease = Duration(milliseconds: 110);
+  static const pressSettle = Duration(milliseconds: 180);
   static const heroTint = Duration(milliseconds: 300);
   static const heroSlide = Duration(milliseconds: 420);
   static const pageTransition = Duration(milliseconds: 220);
@@ -370,6 +378,8 @@ abstract final class AppMotion {
   static const heroTextSlideTravel = AppSpacing.xl;
   static const heroImageSettle = .04;
   static const menuScale = .95;
+  static const pressScale = .96;
+  static const pressOvershoot = 1.02;
 
   /// Part du déroulé pendant laquelle le voile finit d'apparaître en fondu.
   static const unrollFadeEnd = .35;
@@ -896,6 +906,85 @@ class PosterHoverMotion extends StatelessWidget {
   }
 }
 
+/// Retour de clic d'une tuile : elle s'enfonce sous le pointeur, puis
+/// rebondit au relâchement, et l'action (ouvrir la fiche, la page d'un
+/// genre…) part au sommet du rebond, quand la tuile « pousse » vers la page.
+/// Au clavier, [trigger] joue le geste entier. Sans mouvement, l'action
+/// part tout de suite.
+class PressBounce extends StatefulWidget {
+  const PressBounce({required this.child, super.key});
+  final Widget child;
+
+  @override
+  State<PressBounce> createState() => PressBounceState();
+}
+
+class PressBounceState extends State<PressBounce>
+    with SingleTickerProviderStateMixin {
+  late final _scale = AnimationController(
+      vsync: this, value: 1, lowerBound: 0, upperBound: 2);
+  bool _triggering = false;
+
+  @override
+  void dispose() {
+    _scale.dispose();
+    super.dispose();
+  }
+
+  bool get _motion => mounted && AppMotion.enabled(context);
+
+  void _down(PointerDownEvent event) {
+    if (!_motion || event.buttons != kPrimaryButton || _triggering) return;
+    _scale.animateTo(AppMotion.pressScale,
+        duration: AppDurations.pressIn, curve: AppMotion.easeOut);
+  }
+
+  void _up(PointerEvent _) {
+    // Le tap (qui appelle [trigger]) arrive dans la même distribution
+    // d'événement : on attend de savoir s'il a eu lieu.
+    scheduleMicrotask(() {
+      if (!mounted || _triggering) return;
+      _scale.animateTo(1,
+          duration: AppDurations.pressSettle, curve: AppMotion.easeOut);
+    });
+  }
+
+  /// Joue le rebond puis appelle [action] à son sommet.
+  Future<void> trigger(VoidCallback action) async {
+    if (!_motion || _triggering) {
+      if (!_triggering) action();
+      return;
+    }
+    _triggering = true;
+    try {
+      if (_scale.value > AppMotion.pressScale + .005) {
+        await _scale.animateTo(AppMotion.pressScale,
+            duration: AppDurations.pressIn, curve: AppMotion.easeOut);
+      }
+      if (!mounted) return;
+      await _scale.animateTo(AppMotion.pressOvershoot,
+          duration: AppDurations.pressRelease, curve: AppMotion.easeOut);
+      if (!mounted) return;
+      action();
+      if (!mounted) return;
+      await _scale.animateTo(1,
+          duration: AppDurations.pressSettle, curve: AppMotion.easeOut);
+    } on TickerCanceled {
+      // Démonté pendant le geste : rien à rétablir.
+    } finally {
+      _triggering = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+        onPointerDown: _down,
+        onPointerUp: _up,
+        onPointerCancel: _up,
+        child: ScaleTransition(scale: _scale, child: widget.child),
+      );
+}
+
 class FocusRing extends StatefulWidget {
   /// Espace vertical (et horizontal, la valeur est la même dans les deux
   /// sens) que le padding interne de [FocusRing] retire à son enfant —
@@ -920,6 +1009,7 @@ class FocusRing extends StatefulWidget {
     this.autofocus = false,
     this.focusNode,
     this.posterMotion = false,
+    this.pressMotion = false,
   });
 
   final Widget child;
@@ -929,6 +1019,10 @@ class FocusRing extends StatefulWidget {
   final FocusNode? focusNode;
   final bool posterMotion;
 
+  /// Rebond au clic avant l'action (cf. [PressBounce]) ; toujours actif avec
+  /// [posterMotion].
+  final bool pressMotion;
+
   @override
   State<FocusRing> createState() => _FocusRingState();
 }
@@ -936,6 +1030,16 @@ class FocusRing extends StatefulWidget {
 class _FocusRingState extends State<FocusRing> {
   bool _focused = false;
   bool _hovered = false;
+  final _bounce = GlobalKey<PressBounceState>();
+
+  bool get _pressMotion => widget.pressMotion || widget.posterMotion;
+
+  void _activate() {
+    final action = widget.onActivate;
+    if (action == null) return;
+    final bounce = _pressMotion ? _bounce.currentState : null;
+    bounce == null ? action() : bounce.trigger(action);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -953,7 +1057,7 @@ class _FocusRingState extends State<FocusRing> {
       actions: {
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (_) {
-            widget.onActivate?.call();
+            _activate();
             return null;
           },
         ),
@@ -968,19 +1072,25 @@ class _FocusRingState extends State<FocusRing> {
             ? (_) => setState(() => _hovered = false)
             : null,
         child: GestureDetector(
-          onTap: widget.onActivate,
-          // Le focus clavier soulève la jaquette comme le survol : au
-          // clavier directionnel (mode salon), c'est le seul retour de
-          // mouvement.
-          child: widget.posterMotion
-              ? PosterHoverMotion(
-                  active: _hovered || _focused,
-                  builder: (context, _) => _surface(context))
-              : _surface(context),
+          onTap: widget.onActivate == null ? null : _activate,
+          child: _withPress(
+            // Le focus clavier soulève la jaquette comme le survol : au
+            // clavier directionnel (mode salon), c'est le seul retour de
+            // mouvement.
+            widget.posterMotion
+                ? PosterHoverMotion(
+                    active: _hovered || _focused,
+                    builder: (context, _) => _surface(context))
+                : _surface(context),
+          ),
         ),
       ),
     );
   }
+
+  Widget _withPress(Widget child) => _pressMotion && widget.onActivate != null
+      ? PressBounce(key: _bounce, child: child)
+      : child;
 
   Widget _surface(BuildContext context) {
     final density = context.tokens.density;
