@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 /// Jetons de design du client.
@@ -332,10 +333,8 @@ abstract final class AppDurations {
   static const popover = Duration(milliseconds: 180);
   static const unroll = Duration(milliseconds: 260);
   static const focusRing = Duration(milliseconds: 100);
-  // Clic sur une tuile : enfoncement, puis rebond au relâchement ; la page
-  // s'ouvre au sommet du rebond.
+  // Clic sur une tuile : enfoncement, d'où part la transition de page.
   static const pressIn = Duration(milliseconds: 90);
-  static const pressRelease = Duration(milliseconds: 110);
   static const pressSettle = Duration(milliseconds: 180);
   static const heroTint = Duration(milliseconds: 300);
   static const heroSlide = Duration(milliseconds: 420);
@@ -379,7 +378,6 @@ abstract final class AppMotion {
   static const heroImageSettle = .04;
   static const menuScale = .95;
   static const pressScale = .96;
-  static const pressOvershoot = 1.02;
 
   /// Part du déroulé pendant laquelle le voile finit d'apparaître en fondu.
   static const unrollFadeEnd = .35;
@@ -906,11 +904,12 @@ class PosterHoverMotion extends StatelessWidget {
   }
 }
 
-/// Retour de clic d'une tuile : elle s'enfonce sous le pointeur, puis
-/// rebondit au relâchement, et l'action (ouvrir la fiche, la page d'un
-/// genre…) part au sommet du rebond, quand la tuile « pousse » vers la page.
-/// Au clavier, [trigger] joue le geste entier. Sans mouvement, l'action
-/// part tout de suite.
+/// Retour de clic d'une tuile : elle s'enfonce sous le pointeur, et
+/// l'action (ouvrir la fiche, la page d'un genre…) part de cette taille
+/// réduite. La transition de page prolonge le geste d'un seul trait :
+/// l'enfoncement est l'élan, l'extension vers la bannière la détente, sans
+/// arrêt entre les deux. Au clavier, [trigger] joue l'enfoncement avant
+/// l'action. Sans mouvement, l'action part tout de suite.
 class PressBounce extends StatefulWidget {
   const PressBounce({required this.child, super.key});
   final Widget child;
@@ -949,7 +948,8 @@ class PressBounceState extends State<PressBounce>
     });
   }
 
-  /// Joue le rebond puis appelle [action] à son sommet.
+  /// Enfonce la tuile si elle ne l'est pas encore (clavier, clic très
+  /// bref), puis appelle [action].
   Future<void> trigger(VoidCallback action) async {
     if (!_motion || _triggering) {
       if (!_triggering) action();
@@ -957,17 +957,22 @@ class PressBounceState extends State<PressBounce>
     }
     _triggering = true;
     try {
+      // Un clic bref a à peine commencé à enfoncer la tuile : l'élan doit
+      // se voir avant la détente. Le reste de l'enfoncement est court.
       if (_scale.value > AppMotion.pressScale + .005) {
         await _scale.animateTo(AppMotion.pressScale,
             duration: AppDurations.pressIn, curve: AppMotion.easeOut);
       }
       if (!mounted) return;
-      await _scale.animateTo(AppMotion.pressOvershoot,
-          duration: AppDurations.pressRelease, curve: AppMotion.easeOut);
-      if (!mounted) return;
       action();
+      // La transition mesure la tuile à l'image qui suit l'ouverture : elle
+      // part donc de la taille enfoncée. La tuile, alors masquée par le
+      // vol, reprend sa taille ensuite, sans que cela se voie.
+      for (var frame = 0; frame < 3; frame++) {
+        await SchedulerBinding.instance.endOfFrame;
+      }
       if (!mounted) return;
-      await _scale.animateTo(1,
+      _scale.animateTo(1,
           duration: AppDurations.pressSettle, curve: AppMotion.easeOut);
     } on TickerCanceled {
       // Démonté pendant le geste : rien à rétablir.

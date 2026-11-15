@@ -32,8 +32,9 @@ void main() {
       .scale
       .value;
 
-  testWidgets('la tuile s\'enfonce, rebondit, et l\'action part au sommet',
-      (tester) async {
+  testWidgets(
+      'la tuile s\'enfonce et l\'action part de la taille enfoncée, '
+      'sans rebond ni attente au relâchement', (tester) async {
     final taps = await pump(tester);
     final gesture =
         await tester.startGesture(tester.getCenter(find.byType(FocusRing)));
@@ -43,16 +44,26 @@ void main() {
 
     await gesture.up();
     await tester.pump();
-    expect(taps, isEmpty, reason: 'la page attend le rebond');
-
-    await tester.pump(AppDurations.pressRelease);
-    await tester.pump(const Duration(milliseconds: 1));
-    expect(taps, [1]);
-    expect(scale(tester), closeTo(AppMotion.pressOvershoot, .005));
+    expect(taps, [1], reason: 'déjà enfoncée : la page part au relâchement');
+    expect(scale(tester), closeTo(AppMotion.pressScale, .005),
+        reason: 'la transition doit mesurer la tuile enfoncée');
 
     await tester.pumpAndSettle();
     expect(scale(tester), 1);
     expect(taps, [1]);
+  });
+
+  testWidgets('un clic bref termine l\'enfoncement avant l\'action',
+      (tester) async {
+    final taps = await pump(tester);
+    await tester.tap(find.byType(FocusRing));
+    await tester.pump();
+    expect(taps, isEmpty);
+    await tester.pump(AppDurations.pressIn);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(taps, [1]);
+    await tester.pumpAndSettle();
+    expect(scale(tester), 1);
   });
 
   testWidgets('sans animation, l\'action part tout de suite', (tester) async {
