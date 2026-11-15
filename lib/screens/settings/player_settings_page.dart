@@ -342,6 +342,17 @@ class _PlayerSettingsPageState extends ConsumerState<PlayerSettingsPage> {
                 value: videoSettings.hardwareAccel,
                 onChanged: (value) => provider.setHardwareAccel(value ?? !videoSettings.hardwareAccel),
               ),
+              SettingsListTile(
+                label: Text(context.localized.settingsPlayerBufferSizeTitle),
+                subLabel: Text(context.localized.settingsPlayerBufferSizeDesc),
+                trailing: IntInputField(
+                  suffix: 'Mo',
+                  value: videoSettings.bufferSize,
+                  onSubmitted: (value) {
+                    if (value != null) provider.setBufferSize(value);
+                  },
+                ),
+              ),
               if (!kIsWeb)
                 SettingsListTileCheckbox(
                   label: Text(context.localized.settingsPlayerNativeLibassAccelTitle),

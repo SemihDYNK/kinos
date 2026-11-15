@@ -16,6 +16,7 @@ import 'package:kinos/models/settings/video_player_settings.dart';
 import 'package:kinos/screens/video_player/video_player.dart' as video_screen;
 import 'package:kinos/wrappers/players/base_player.dart';
 import 'package:kinos/wrappers/players/player_states.dart';
+import 'package:kinos/wrappers/players/player_log.dart';
 
 class LibMDK extends BasePlayer {
   VideoPlayerController? _controller;
@@ -53,7 +54,7 @@ class LibMDK extends BasePlayer {
 
     fvp.registerWith(
       options: {
-        'global': {'log': 'off'},
+        'global': {'log': 'warning'},
         'subtitleFontFile': libassFallbackFont,
         if (settings.enableAdvancedVideoOptions) ...advancedOptions,
       },
@@ -78,8 +79,17 @@ class LibMDK extends BasePlayer {
       _controller = VideoPlayerController.file(File(url));
     }
 
-    await _controller?.initialize();
-    _controller?.addListener(() => updateState());
+    try {
+      await _controller?.initialize();
+    } catch (error, stackTrace) {
+      playerLogger.severe('MDK: ouverture impossible de ${redactPlayerLog(url)} : $error', error, stackTrace);
+      rethrow;
+    }
+    _loggedError = null;
+    _controller?.addListener(() {
+      _logControllerError();
+      updateState();
+    });
 
     if (startPosition != Duration.zero) {
       await _controller?.seekTo(startPosition);
@@ -95,6 +105,15 @@ class LibMDK extends BasePlayer {
     return setState(lastState.update(
       buffering: true,
     ));
+  }
+
+  String? _loggedError;
+
+  void _logControllerError() {
+    final value = _controller?.value;
+    if (value == null || !value.hasError || value.errorDescription == _loggedError) return;
+    _loggedError = value.errorDescription;
+    playerLogger.severe('MDK: ${redactPlayerLog(value.errorDescription ?? 'erreur inconnue')}');
   }
 
   void setState(PlayerState state) {

@@ -22,6 +22,7 @@ import 'package:kinos/providers/settings/subtitle_settings_provider.dart';
 import 'package:kinos/screens/video_player/video_player.dart' as video_screen;
 import 'package:kinos/util/subtitle_position_calculator.dart';
 import 'package:kinos/wrappers/players/base_player.dart';
+import 'package:kinos/wrappers/players/player_log.dart';
 import 'package:kinos/wrappers/players/player_states.dart';
 
 class LibMPV extends BasePlayer {
@@ -81,6 +82,10 @@ class LibMPV extends BasePlayer {
         libassAndroidFont: libassFallbackFont,
         libass: !kIsWeb && settings.useLibass,
         bufferSize: settings.bufferSize * 1024 * 1024, // MPV uses buffer size in bytes
+        // Les avertissements de mpv alimentent le journal de l'app : sans
+        // eux, un écran noir sur une plateforme qu'on ne peut pas tester
+        // (macOS) n'a aucune cause lisible.
+        logLevel: mpv.MPVLogLevel.warn,
       ),
     );
 
@@ -159,7 +164,24 @@ class LibMPV extends BasePlayer {
       player.stream.rate.listen((value) => setState(lastState.update(rate: value))),
       player.stream.buffer.listen((value) => setState(lastState.update(buffer: value))),
       player.stream.completed.listen((value) => setState(lastState.update(completed: value))),
+      player.stream.error.listen((value) => playerLogger.severe('mpv: ${redactPlayerLog(value)}')),
+      player.stream.log.listen(_logMpvMessage),
     ]);
+  }
+
+  final Set<String> _loggedMpvWarnings = {};
+
+  void _logMpvMessage(mpv.PlayerLog entry) {
+    final text = redactPlayerLog('[${entry.prefix}] ${entry.text.trim()}');
+    switch (entry.level) {
+      case 'fatal' || 'error':
+        playerLogger.severe('mpv $text');
+      case 'warn':
+        // Un même avertissement revient à chaque image : une fois suffit.
+        if (_loggedMpvWarnings.length < 50 && _loggedMpvWarnings.add(text)) {
+          playerLogger.warning('mpv $text');
+        }
+    }
   }
 
   Future<void> crossfadeToUrl(String url, Duration startPosition, {double? replayGainDb}) async {
