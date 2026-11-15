@@ -9,8 +9,8 @@ import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/shared/media/external_urls.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/localization_helper.dart';
-import 'package:kinos/util/theme_extensions.dart';
 import 'package:kinos/util/update_checker.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 class SettingsUpdateInformation extends ConsumerStatefulWidget {
   const SettingsUpdateInformation({super.key});
@@ -48,7 +48,7 @@ class _SettingsUpdateInformationState extends ConsumerState<SettingsUpdateInform
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          const Divider(),
+          const Divider(color: AppColors.border),
           SettingsListTile(
             label: Text(context.localized.latestReleases),
             subLabel: Text(context.localized.autoCheckForUpdates),
@@ -88,24 +88,23 @@ class UpdateInformation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
-      backgroundColor:
-          releaseInfo.isNewerThanCurrent ? context.colors.primaryContainer : context.colors.surfaceContainer,
-      collapsedBackgroundColor: releaseInfo.isNewerThanCurrent ? context.colors.primaryContainer : null,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(releaseInfo.version),
+      backgroundColor: AppColors.surface,
+      collapsedBackgroundColor: releaseInfo.isNewerThanCurrent ? AppColors.surfaceHigh : AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: AppRadii.controlBorder, side: BorderSide(color: AppColors.borderStrong)),
+      collapsedShape: RoundedRectangleBorder(
+          borderRadius: AppRadii.controlBorder,
+          side: BorderSide(color: releaseInfo.isNewerThanCurrent ? AppColors.borderStrong : AppColors.border)),
+      iconColor: AppColors.textPrimary,
+      collapsedIconColor: AppColors.textSecondary,
+      title: Text(releaseInfo.version, style: AppTypography.cardTitle),
       initiallyExpanded: expanded,
-      childrenPadding: const EdgeInsets.all(16),
+      childrenPadding: const EdgeInsets.all(AppSpacing.md),
       expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: MarkdownWidget(
-              data: releaseInfo.changelog,
-              shrinkWrap: true,
-            ),
-          ),
+        MarkdownWidget(
+          data: releaseInfo.changelog,
+          shrinkWrap: true,
         ),
         ...releaseInfo.preferredDownloads.entries.map(
           (entry) {
@@ -117,10 +116,10 @@ class UpdateInformation extends StatelessWidget {
             );
           },
         ),
-        const Divider(),
+        const Divider(color: AppColors.border),
         ...releaseInfo.otherDownloads.entries.map(
           (entry) {
-            return ElevatedButton(
+            return OutlinedButton(
               onPressed: () => launchUrl(context, entry.value),
               child: Text(
                 entry.key.prettifyKey(),
@@ -128,7 +127,7 @@ class UpdateInformation extends StatelessWidget {
             );
           },
         )
-      ].addInBetween(const SizedBox(height: 12)),
+      ].addInBetween(const SizedBox(height: AppSpacing.sm)),
     );
   }
 }

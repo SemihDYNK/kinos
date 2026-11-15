@@ -3,6 +3,8 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/login/widgets/login_icon.dart';
 import 'package:kinos/screens/shared/outlined_text_field.dart';
 import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/screens/settings/widgets/settings_message_box.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,7 +38,6 @@ class _QuickConnectDialogState extends ConsumerState<QuickConnectDialog> {
         context.localized.quickConnectTitle,
         textAlign: TextAlign.center,
       ),
-      backgroundColor: Theme.of(context).colorScheme.surface,
       scrollable: true,
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -67,23 +68,12 @@ class _QuickConnectDialogState extends ConsumerState<QuickConnectDialog> {
             ),
           ),
           AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
+            duration: AppDurations.selection,
             child: error != null || success != null
-                ? Card(
+                ? SettingsMessageBox(
+                    success ?? error ?? "",
                     key: Key(context.localized.error),
-                    color: success == null
-                        ? Theme.of(context).colorScheme.errorContainer
-                        : Theme.of(context).colorScheme.surfaceContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        success ?? error ?? "",
-                        style: TextStyle(
-                            color: success == null
-                                ? Theme.of(context).colorScheme.onErrorContainer
-                                : Theme.of(context).colorScheme.onSurface),
-                      ),
-                    ),
+                    messageType: success == null ? MessageType.error : MessageType.info,
                   )
                 : null,
           ),

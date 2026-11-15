@@ -20,7 +20,6 @@ import 'package:kinos/screens/shared/default_alert_dialog.dart';
 import 'package:kinos/screens/shared/kinos_icon.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
-import 'package:kinos/util/theme_extensions.dart';
 import 'package:kinos/util/window_actions.dart';
 
 @RoutePage()
@@ -61,8 +60,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             }
           },
           child: !split(context)
-              ? Card(
-                  elevation: 0,
+              ? ColoredBox(
+                  color: AppColors.background,
                   child: Stack(
                     children: [
                       _leftPane(context),
@@ -154,18 +153,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           navigation: true,
           items: [
             if (hasNewUpdate && newRelease != null) ...[
-              Card(
-                color: context.colors.secondaryContainer,
-                child: SettingsListTile(
-                  navigation: true,
-                  label: Text(context.localized
-                      .newReleaseFoundTitle(newRelease.version)),
-                  subLabel: Text(context.localized.newUpdateFoundOnGithub),
-                  icon: IconsaxPlusLinear.information,
-                  onTap: () => navigateTo(const AboutSettingsRoute()),
-                ),
+              SettingsListTile(
+                navigation: true,
+                selected: true,
+                label: Text(context.localized
+                    .newReleaseFoundTitle(newRelease.version)),
+                subLabel: Text(context.localized.newUpdateFoundOnGithub),
+                icon: IconsaxPlusLinear.information,
+                onTap: () => navigateTo(const AboutSettingsRoute()),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xs),
             ],
             SettingsListTile(
               navigation: true,
@@ -215,18 +212,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: Text(context.localized.about),
               subLabel: Text("Kinos, ${context.localized.latestReleases}"),
               selected: containsRoute(const AboutSettingsRoute()),
-              leading: Opacity(
-                opacity: 1,
-                child: KinosIconOutlined(
-                  size: 24,
-                  color: context.colors.onSurfaceVariant,
-                ),
+              leading: const KinosIconOutlined(
+                size: AppNavigation.iconSize,
+                color: AppColors.textPrimary,
               ),
               onTap: () => navigateTo(const AboutSettingsRoute()),
             ),
-            const FractionallySizedBox(
-              widthFactor: 0.25,
-              child: Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
+              child: Divider(height: 1, color: AppColors.border),
             ),
             if (quickConnectAvailable)
               SettingsListTile(
@@ -273,7 +267,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               navigation: true,
               label: Text(context.localized.logout),
               icon: IconsaxPlusLinear.logout,
-              contentColor: Theme.of(context).colorScheme.error,
+              contentColor: AppColors.error,
               onTap: () {
                 final user = ref.read(userProvider);
                 showDialog(
@@ -287,18 +281,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           user?.name ?? "", user?.credentials.url ?? ""),
                     ),
                     actions: [
-                      ElevatedButton(
+                      OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         child: Text(context.localized.cancel),
                       ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom().copyWith(
-                          iconColor: WidgetStatePropertyAll(
-                              Theme.of(context).colorScheme.onErrorContainer),
-                          foregroundColor: WidgetStatePropertyAll(
-                              Theme.of(context).colorScheme.onErrorContainer),
-                          backgroundColor: WidgetStatePropertyAll(
-                              Theme.of(context).colorScheme.errorContainer),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          backgroundColor: AppColors.error,
                         ),
                         onPressed: () async {
                           await ref.read(authProvider.notifier).logOutUser();

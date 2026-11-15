@@ -4,6 +4,7 @@ import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/widgets/shared/enum_selection.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
+import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 
 class SettingsListTileCheckbox extends StatelessWidget {
@@ -216,5 +217,82 @@ class SettingsListTile extends StatelessWidget {
           border: selected ? Border.all(color: AppColors.borderStrong) : null,
         ),
         child: body);
+  }
+}
+
+/// Réglage numérique : libellé et valeur sur une ligne, curseur dessous.
+class SettingsSliderTile extends StatelessWidget {
+  final Widget label;
+  final Widget? subLabel;
+  final String valueLabel;
+  final double value;
+  final double min;
+  final double max;
+  final int? divisions;
+  final ValueChanged<double> onChanged;
+  const SettingsSliderTile({
+    required this.label,
+    this.subLabel,
+    required this.valueLabel,
+    required this.value,
+    required this.min,
+    required this.max,
+    this.divisions,
+    required this.onChanged,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.xs),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(
+                child: DefaultTextStyle.merge(
+                    style: AppTypography.cardTitle, child: label)),
+            const SizedBox(width: AppSpacing.md),
+            Text(valueLabel, style: AppTypography.cardTitle),
+          ]),
+          if (subLabel != null) ...[
+            const SizedBox(height: AppSpacing.xxs),
+            DefaultTextStyle.merge(style: AppTypography.meta, child: subLabel!),
+          ],
+          const SizedBox(height: AppSpacing.xs),
+          KinosSlider(
+            min: min,
+            max: max,
+            value: value.clamp(min, max),
+            divisions: divisions,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Une ligne de raccourci clavier : action à gauche, touche modifiable à
+/// droite.
+class SettingsShortcutRow extends StatelessWidget {
+  final String label;
+  final Widget keyWidget;
+  const SettingsShortcutRow(
+      {required this.label, required this.keyWidget, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      child: Row(children: [
+        Expanded(child: Text(label, style: AppTypography.cardTitle)),
+        const SizedBox(width: AppSpacing.md),
+        keyWidget,
+      ]),
+    );
   }
 }

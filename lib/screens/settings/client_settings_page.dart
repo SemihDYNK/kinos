@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:kinos/providers/incognito_mode_provider.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/shared_provider.dart';
 import 'package:kinos/recommendations/providers/recommendation_providers.dart';
@@ -13,13 +14,13 @@ import 'package:kinos/screens/settings/client_sections/client_settings_advanced.
 import 'package:kinos/screens/settings/client_sections/client_settings_dashboard.dart';
 import 'package:kinos/screens/settings/client_sections/client_settings_download.dart';
 import 'package:kinos/screens/settings/client_sections/client_settings_shortcuts.dart';
-import 'package:kinos/screens/settings/client_sections/client_settings_theme.dart';
 import 'package:kinos/screens/settings/client_sections/client_settings_visual.dart';
 import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/settings/settings_scaffold.dart';
 import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
 import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
 import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/simple_duration_picker.dart';
@@ -66,21 +67,47 @@ class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final clientSettings = ref.watch(clientSettingsProvider);
+    final notifier = ref.read(clientSettingsProvider.notifier);
 
     return SettingsScaffold(
       label: context.localized.managementApplication,
       items: [
-        ...buildClientSettingsTheme(context, ref),
-        ...buildClientSettingsVisual(
-            context, ref, nextUpDaysEditor, libraryPageSizeController),
-        ...buildClientSettingsDownload(context, ref, setState),
+        ...buildClientSettingsVisual(context, ref, libraryPageSizeController),
+        ...buildClientSettingsDashboard(
+          context,
+          ref,
+          nextUpDaysEditor: nextUpDaysEditor,
+          recomputingRecommendations: _recomputingRecommendations,
+          onRecomputeRecommendations: _forceRecommendationRecompute,
+        ),
         ...settingsListGroup(
           context,
-          SettingsLabelDivider(label: context.localized.lockscreen),
+          SettingsLabelDivider(label: context.localized.controls),
           [
+            SettingsListTileCheckbox(
+              label: Text(context.localized.settingsEnableOsMediaControls),
+              subLabel: Text(context.localized.settingsEnableOsMediaControlsDesc),
+              value: clientSettings.enableMediaKeys,
+              onChanged: (value) => notifier.setMediaKeys(value ?? !clientSettings.enableMediaKeys),
+            ),
+            if (AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer)
+              SettingsListTileCheckbox(
+                label: Text(context.localized.mouseDragSupport),
+                value: clientSettings.mouseDragSupport,
+                onChanged: (value) => notifier
+                    .update((current) => current.copyWith(mouseDragSupport: value ?? !current.mouseDragSupport)),
+              ),
+            SettingsListTileCheckbox(
+              label: Text(context.localized.incognitoModeGlobal),
+              subLabel: Text(context.localized.incognitoModeDesc),
+              value: ref.watch(incognitoModeProvider),
+              onChanged: (value) => ref.read(incognitoModeProvider.notifier).state = value ?? !ref.read(incognitoModeProvider),
+            ),
             SettingsListTile(
-              label: Text(context.localized.timeOut),
-              subLabel: Text(timePickerString(context, clientSettings.timeOut)),
+              label: Text(context.localized.lockscreen),
+              subLabel: Text(context.localized.timeOut),
+              valueAsTrailing: false,
+              trailing: Text(timePickerString(context, clientSettings.timeOut)),
               onTap: () async {
                 final timePicker = await showSimpleDurationPicker(
                   context: context,
@@ -89,66 +116,23 @@ class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
 
                 if (timePicker == null) return;
 
-                ref.read(clientSettingsProvider.notifier).setTimeOut(
-                    timePicker != Duration.zero
-                        ? Duration(
-                            minutes: timePicker.inMinutes,
-                            seconds: timePicker.inSeconds % 60)
-                        : null);
+                notifier.setTimeOut(timePicker != Duration.zero
+                    ? Duration(minutes: timePicker.inMinutes, seconds: timePicker.inSeconds % 60)
+                    : null);
               },
             ),
           ],
         ),
-        if (AdaptiveLayout.inputDeviceOf(context) != InputDevice.touch) ...[
-          const SizedBox(height: 12),
-          ...buildClientSettingsShortCuts(context, ref),
-        ],
-        const SizedBox(height: 12),
-        ...buildClientSettingsDashboard(context, ref),
-        const SizedBox(height: 12),
-        if (AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer) ...[
-          ...settingsListGroup(context,
-              SettingsLabelDivider(label: context.localized.controls), [
-            SettingsListTile(
-              label: Text(context.localized.mouseDragSupport),
-              subLabel: Text(clientSettings.mouseDragSupport
-                  ? context.localized.enabled
-                  : context.localized.disabled),
-              onTap: () => ref.read(clientSettingsProvider.notifier).update(
-                  (current) => current.copyWith(
-                      mouseDragSupport: !clientSettings.mouseDragSupport)),
-              trailing: Switch(
-                value: clientSettings.mouseDragSupport,
-                onChanged: (value) => ref
-                    .read(clientSettingsProvider.notifier)
-                    .update((current) => current.copyWith(
-                        mouseDragSupport: !clientSettings.mouseDragSupport)),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 12),
-        ],
+        if (AdaptiveLayout.inputDeviceOf(context) != InputDevice.touch) ...buildClientSettingsShortCuts(context, ref),
+        ...buildClientSettingsDownload(context, ref, setState),
         ...buildClientSettingsAdvanced(context, ref),
-        const SizedBox(height: 12),
-        ...settingsListGroup(context, null, [
-          SettingsListTile(
-            label: Text(_recomputingRecommendations
-                ? "Recommandations : nouveau calcul demandé…"
-                : "Recalculer les recommandations"),
-            subLabel: const Text(
-                "Force un nouveau calcul complet au prochain retour à l'accueil — sinon, le cache existant est réutilisé jusqu'à 24 h."),
-            onTap: _recomputingRecommendations
-                ? null
-                : _forceRecommendationRecompute,
-          ),
-        ]),
         if (kDebugMode) ...[
-          const SizedBox(height: 64),
+          const SizedBox(height: AppSpacing.xxl),
           SettingsListTile(
             label: const Text(
               "Clear cache",
             ),
-            contentColor: Theme.of(context).colorScheme.error,
+            contentColor: AppColors.error,
             onTap: () {
               PaintingBinding.instance.imageCache.clear();
             },
@@ -157,7 +141,7 @@ class _ClientSettingsPageState extends ConsumerState<ClientSettingsPage> {
             label: Text(
               context.localized.clearAllSettings,
             ),
-            contentColor: Theme.of(context).colorScheme.error,
+            contentColor: AppColors.error,
             onTap: () {
               showDialog(
                 context: context,

@@ -2,20 +2,24 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
 
-import 'package:kinos/providers/incognito_mode_provider.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/settings/home_settings_provider.dart';
 import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
 import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
 import 'package:kinos/screens/settings/widgets/settings_message_box.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/option_dialogue.dart';
 
 List<Widget> buildClientSettingsAdvanced(BuildContext context, WidgetRef ref) {
+  final enabledSizes = ref.watch(homeSettingsProvider.select((value) => value.layoutStates));
+  final enabledModes = ref.watch(homeSettingsProvider.select((value) => value.screenLayouts));
+  final currentSize = AdaptiveLayout.viewSizeOf(context);
+  final currentMode = AdaptiveLayout.layoutModeOf(context);
+
   return settingsListGroup(
     context,
     SettingsLabelDivider(label: context.localized.advanced),
@@ -29,7 +33,7 @@ List<Widget> buildClientSettingsAdvanced(BuildContext context, WidgetRef ref) {
             label: context.localized.settingsLayoutSizesTitle,
             items: ViewSize.values,
             allowMultiSelection: true,
-            selected: ref.read(homeSettingsProvider.select((value) => value.layoutStates.toList())),
+            selected: enabledSizes.toList(),
             itemBuilder: (type, selected, tap) => CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               value: selected,
@@ -39,35 +43,11 @@ List<Widget> buildClientSettingsAdvanced(BuildContext context, WidgetRef ref) {
           );
           ref.read(homeSettingsProvider.notifier).setViewSize(newItems.toSet());
         },
-        trailing: Card(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          shadowColor: Colors.transparent,
-          elevation: 0,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              spacing: 4,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: ViewSize.values.map((e) {
-                final isCurrent = AdaptiveLayout.viewSizeOf(context) == e;
-                final isEnabled = ref.watch(homeSettingsProvider.select((value) => value.layoutStates.contains(e)));
-
-                return Row(
-                  spacing: 4,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      e.label(context),
-                      style: TextStyle(
-                        color: isEnabled ? null : Theme.of(context).disabledColor,
-                      ),
-                    ),
-                    if (isCurrent) const Icon(IconsaxPlusLinear.tick_circle, size: 16),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
+        trailing: _LayoutSummary(
+          labels: [
+            for (final size in ViewSize.values)
+              if (enabledSizes.contains(size)) (size.label(context), size == currentSize),
+          ],
         ),
       ),
       SettingsListTile(
@@ -79,7 +59,7 @@ List<Widget> buildClientSettingsAdvanced(BuildContext context, WidgetRef ref) {
             label: context.localized.settingsLayoutModesTitle,
             items: LayoutMode.values,
             allowMultiSelection: true,
-            selected: ref.read(homeSettingsProvider.select((value) => value.screenLayouts.toList())),
+            selected: enabledModes.toList(),
             itemBuilder: (type, selected, tap) => CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               value: selected,
@@ -89,71 +69,52 @@ List<Widget> buildClientSettingsAdvanced(BuildContext context, WidgetRef ref) {
           );
           ref.read(homeSettingsProvider.notifier).setLayoutModes(newItems.toSet());
         },
-        trailing: Card(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          shadowColor: Colors.transparent,
-          elevation: 0,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              spacing: 4,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: LayoutMode.values.map((e) {
-                final isCurrent = AdaptiveLayout.layoutModeOf(context) == e;
-                final isEnabled = ref.watch(homeSettingsProvider.select((value) => value.screenLayouts.contains(e)));
-                return Row(
-                  spacing: 4,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      e.label(context),
-                      style: TextStyle(
-                        color: isEnabled ? null : Theme.of(context).disabledColor,
-                      ),
-                    ),
-                    if (isCurrent) const Icon(IconsaxPlusLinear.tick_circle, size: 16),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
+        trailing: _LayoutSummary(
+          labels: [
+            for (final mode in LayoutMode.values)
+              if (enabledModes.contains(mode)) (mode.label(context), mode == currentMode),
+          ],
         ),
       ),
       if (AdaptiveLayout.inputDeviceOf(context) == InputDevice.dPad)
-        SettingsListTile(
+        SettingsListTileCheckbox(
           label: Text(context.localized.clientSettingsUseSystemIMETitle),
           subLabel: Text(context.localized.clientSettingsUseSystemIMEDesc),
-          onTap: () => ref
-              .read(clientSettingsProvider.notifier)
-              .useSystemIME(!ref.read(clientSettingsProvider.select((value) => value.useSystemIME))),
-          trailing: Switch(
-            value: ref.watch(clientSettingsProvider.select((value) => value.useSystemIME)),
-            onChanged: (value) => ref.read(clientSettingsProvider.notifier).useSystemIME(value),
-          ),
+          value: ref.watch(clientSettingsProvider.select((value) => value.useSystemIME)),
+          onChanged: (value) => ref.read(clientSettingsProvider.notifier).useSystemIME(value),
         ),
-      SettingsListTile(
-        label: Text(context.localized.incognitoModeGlobal),
-        subLabel: Text(context.localized.incognitoModeDesc),
-        onTap: () => ref.read(incognitoModeProvider.notifier).state = !ref.read(incognitoModeProvider),
-        trailing: Switch(
-          value: ref.watch(incognitoModeProvider),
-          onChanged: (value) => ref.read(incognitoModeProvider.notifier).state = value,
+      if (defaultTargetPlatform == TargetPlatform.android) ...[
+        SettingsListTileCheckbox(
+          label: Text(context.localized.leanBackModeTitle),
+          subLabel: Text(context.localized.leanBackModeDesc),
+          value: ref.watch(clientSettingsProvider.select((value) => value.forceLeanBackMode)),
+          onChanged: (value) => ref.read(clientSettingsProvider.notifier).setForceLeanBackMode(value ?? false),
         ),
-      ),
-      if (defaultTargetPlatform == TargetPlatform.android)
-        Column(
-          children: [
-            SettingsListTileCheckbox(
-              label: Text(context.localized.leanBackModeTitle),
-              subLabel: Text(context.localized.leanBackModeDesc),
-              value: ref.watch(clientSettingsProvider.select((value) => value.forceLeanBackMode)),
-              onChanged: (value) => ref.read(clientSettingsProvider.notifier).setForceLeanBackMode(value ?? false),
-            ),
-            SettingsMessageBox(
-              context.localized.leanBackModeInfo,
-            ),
-          ],
-        ),
+        SettingsMessageBox(context.localized.leanBackModeInfo),
+      ],
     ],
   );
+}
+
+/// Valeurs autorisées, la disposition en cours en texte principal.
+class _LayoutSummary extends StatelessWidget {
+  final List<(String, bool)> labels;
+  const _LayoutSummary({required this.labels});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(children: [
+        for (final (index, (label, current)) in labels.indexed) ...[
+          if (index > 0) const TextSpan(text: ' · '),
+          TextSpan(
+            text: label,
+            style: TextStyle(color: current ? AppColors.textPrimary : AppColors.textSecondary),
+          ),
+        ],
+      ]),
+      textAlign: TextAlign.end,
+      style: AppTypography.meta,
+    );
+  }
 }

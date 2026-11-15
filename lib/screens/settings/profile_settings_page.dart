@@ -20,6 +20,7 @@ import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/update_notifications_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/settings/settings_list_tile.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/screens/settings/settings_scaffold.dart';
 import 'package:kinos/screens/settings/widgets/home_preferences_editors.dart';
 import 'package:kinos/screens/settings/widgets/password_reset_dialog.dart';
@@ -153,7 +154,6 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
             ),
           ],
         ),
-        const SizedBox(height: 16),
         ...settingsListGroup(
           context,
           SettingsLabelDivider(label: context.localized.subtitles),
@@ -211,7 +211,6 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
             ),
           ],
         ),
-        const SizedBox(height: 16),
         ...settingsListGroup(
           context,
           SettingsLabelDivider(label: context.localized.audio(2)),
@@ -236,8 +235,7 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
           ],
         ),
         if (ref.watch(supportsNotificationsProvider)) ...[
-          const SizedBox(height: 16),
-          ...settingsListGroup(
+            ...settingsListGroup(
             context,
             SettingsLabelDivider(label: context.localized.notifications),
             [
@@ -268,14 +266,12 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
                   ),
                   if (lastUpdateAt != null)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                       child: Align(
                         alignment: Alignment.centerRight,
                         child: Text(
                           context.localized.lastUpdateAt(lastUpdateAt, lastUpdateAt),
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: Theme.of(context).textTheme.bodyMedium?.color?.withAlpha(155),
-                              ),
+                          style: AppTypography.meta,
                         ),
                       ),
                     ),
@@ -345,7 +341,6 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
             ],
           ),
         ],
-        const SizedBox(height: 16),
         ...settingsListGroup(
           context,
           const SettingsLabelDivider(label: "Seerr"),
@@ -375,7 +370,6 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
               ),
           ],
         ),
-        const SizedBox(height: 16),
         SettingsListTile(
           label: Text(context.localized.anilistTitle),
           subLabel: Text(context.localized.anilistAccount),
@@ -392,7 +386,6 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
           onTap: () => showLetterboxdFriendsDialog(context),
         ),
         const LibraryOrderEditor(),
-        const SizedBox(height: 16),
         ...settingsListGroup(
           context,
           SettingsLabelDivider(label: context.localized.advanced),
@@ -404,12 +397,10 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
                 children: [
                   if (user?.credentials.localUrl?.isNotEmpty == true)
                     Container(
-                      width: 8,
-                      height: 8,
+                      width: AppManagementLayout.statusDotSize,
+                      height: AppManagementLayout.statusDotSize,
                       decoration: BoxDecoration(
-                        color: ref.watch(localConnectionAvailableProvider)
-                            ? Colors.greenAccent
-                            : Theme.of(context).colorScheme.error,
+                        color: ref.watch(localConnectionAvailableProvider) ? AppColors.success : AppColors.error,
                         shape: BoxShape.circle,
                       ),
                     ),

@@ -8,7 +8,7 @@ import 'package:kinos/models/settings/key_combinations.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/settings/video_player_settings_provider.dart';
 import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
-import 'package:kinos/theme.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/ensure_visible.dart';
 
@@ -209,7 +209,7 @@ class KeyListenerWidgetState extends ConsumerState<KeyListenerWidget> {
         onEnter: (event) => showClearButton(true),
         onExit: (event) => showClearButton(false),
         child: ClipRRect(
-          borderRadius: KinosTheme.smallShape.borderRadius,
+          borderRadius: AppRadii.controlBorder,
           child: InkWell(
             focusNode: buttonFocus,
             canRequestFocus: false,
@@ -222,12 +222,12 @@ class KeyListenerWidgetState extends ConsumerState<KeyListenerWidget> {
             },
             child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: KinosTheme.smallShape.borderRadius,
+                color: AppColors.surfaceHigh,
+                borderRadius: AppRadii.controlBorder,
                 border: BoxBorder.all(
                   width: 2.0,
                   strokeAlign: BorderSide.strokeAlignInside,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: _isFocused ? 1.0 : 0.0),
+                  color: _isFocused ? AppColors.focus : AppColors.borderStrong,
                 ),
               ),
               child: AnimatedSize(
@@ -253,10 +253,7 @@ class KeyListenerWidgetState extends ConsumerState<KeyListenerWidget> {
                             ),
                           Text(
                             currentHotKey?.label ?? "+",
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
+                            style: AppTypography.button,
                           ),
                         ],
                       ),

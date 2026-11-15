@@ -13,6 +13,7 @@ import 'package:kinos/screens/shared/media/external_urls.dart';
 import 'package:kinos/util/application_info.dart';
 import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/localization_helper.dart';
+import 'package:kinos/theme/app_theme.dart';
 
 class _Socials {
   final String label;
@@ -110,9 +111,9 @@ class _SocialsSection extends StatelessWidget {
       children: [
         Text(
           context.localized.aboutSocials,
-          style: Theme.of(context).textTheme.titleLarge,
+          style: AppTypography.sectionTitleSmall,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppSpacing.xs),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: socials

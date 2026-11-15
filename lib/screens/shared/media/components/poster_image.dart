@@ -5,19 +5,16 @@ import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart' as jelly;
 import 'package:flutter/material.dart';
 
-import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/item_shared_models.dart';
-import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/sync/sync_provider_helpers.dart';
 import 'package:kinos/screens/shared/media/components/poster_overlays.dart';
 import 'package:kinos/screens/shared/media/components/poster_placeholder.dart';
 import 'package:kinos/screens/syncing/sync_button.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/color_extensions.dart';
 import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/item_base_model/item_base_model_extensions.dart';
@@ -92,16 +89,9 @@ class PosterImage extends ConsumerWidget {
     final radius = AppRadii.cardBorder;
     final padding = const EdgeInsets.all(5);
 
-    final derivePosterColor = ref.watch(
-        clientSettingsProvider.select((value) => value.dynamicPosterColors));
-    final cinema = poster.type == KinosItemType.movie ||
-        poster.type == KinosItemType.series;
-    final backgroundColor = cinema
-        ? AppColors.surface
-        : derivePosterColor
-            ? poster.title.toColor
-                .harmonizeWith(Theme.of(context).colorScheme.surface)
-            : Theme.of(context).colorScheme.surface;
+    // Les grilles de jaquettes restent neutres : aucune teinte dérivée du
+    // titre, quel que soit le type d'élément.
+    const backgroundColor = AppColors.surface;
 
     return MediaNavigation(
         previewImage: _resolveImage(),

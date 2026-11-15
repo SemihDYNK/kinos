@@ -1,62 +1,57 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
+
+import 'package:kinos/theme/app_theme.dart';
 
 enum MessageType {
   info,
   warning,
   error;
 
-  Color color(BuildContext context) => switch (this) {
-        MessageType.info => Theme.of(context).colorScheme.secondaryContainer,
-        MessageType.warning => Theme.of(context).colorScheme.primaryContainer,
-        MessageType.error => Theme.of(context).colorScheme.errorContainer,
+  /// Seule l'icône porte la sévérité ; le fond reste neutre.
+  Color get iconColor => switch (this) {
+        MessageType.info => AppColors.textSecondary,
+        MessageType.warning => AppColors.warning,
+        MessageType.error => AppColors.error,
+      };
+
+  IconData get icon => switch (this) {
+        MessageType.info => IconsaxPlusLinear.information,
+        MessageType.warning => IconsaxPlusLinear.warning_2,
+        MessageType.error => IconsaxPlusLinear.danger,
       };
 }
 
-class SettingsMessageBox extends ConsumerWidget {
+/// Note explicative rattachée à un réglage, à l'intérieur de son groupe.
+class SettingsMessageBox extends StatelessWidget {
   final String message;
   final MessageType messageType;
   final VoidCallback? onTap;
-  const SettingsMessageBox(this.message, {this.messageType = MessageType.info, this.onTap, super.key});
+  const SettingsMessageBox(this.message,
+      {this.messageType = MessageType.info, this.onTap, super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      width: double.infinity,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8).add(
-          EdgeInsets.symmetric(
-            horizontal: MediaQuery.paddingOf(context).horizontal,
-          ),
-        ),
-        child: Card(
-          elevation: 2,
-          color: messageType.color(context),
-          child: InkWell(
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                spacing: 12,
-                children: [
-                  Icon(
-                    switch (messageType) {
-                      MessageType.info => IconsaxPlusLinear.information,
-                      MessageType.warning => IconsaxPlusLinear.warning_2,
-                      MessageType.error => IconsaxPlusLinear.danger,
-                    },
-                  ),
-                  Flexible(
-                    child: Text(message),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+  Widget build(BuildContext context) {
+    Widget body = Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(messageType.icon,
+              size: AppLoginLayout.statusIcon, color: messageType.iconColor),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: Text(message, style: AppTypography.meta)),
+        ],
       ),
     );
+    if (onTap != null) {
+      body = FocusRing(
+          onActivate: onTap,
+          borderRadius: AppRadii.controlBorder,
+          child: ExcludeFocus(child: body));
+    }
+    return SizedBox(width: double.infinity, child: body);
   }
 }

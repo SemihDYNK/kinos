@@ -13,10 +13,10 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
 import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
-import 'package:kinos/screens/settings/widgets/transcode_music_settings_popup.dart';
 import 'package:kinos/screens/settings/widgets/transcode_settings_popup.dart';
 import 'package:kinos/screens/shared/default_alert_dialog.dart';
 import 'package:kinos/screens/shared/input_fields.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/size_formatting.dart';
@@ -66,7 +66,7 @@ List<Widget> buildClientSettingsDownload(BuildContext context, WidgetRef ref, Fu
                     },
               trailing: currentFolder?.isNotEmpty == true
                   ? IconButton(
-                      color: Theme.of(context).colorScheme.error,
+                      color: AppColors.error,
                       onPressed: () async => await showDialog(
                         context: context,
                         builder: (context) => GlassAlertDialog(
@@ -131,17 +131,17 @@ List<Widget> buildClientSettingsDownload(BuildContext context, WidgetRef ref, Fu
               );
             },
           ),
-          SettingsListTile(
-            label: Text(context.localized.clientSettingsRequireWifiTitle),
-            subLabel: Text(context.localized.clientSettingsRequireWifiDesc),
-            onTap: () => ref.read(clientSettingsProvider.notifier).setRequireWifi(!clientSettings.requireWifi),
-            trailing: Switch(
+          // Le Wi-Fi n'a de sens que sur un appareil mobile.
+          if (!AdaptiveLayout.of(context).isDesktop)
+            SettingsListTileCheckbox(
+              label: Text(context.localized.clientSettingsRequireWifiTitle),
+              subLabel: Text(context.localized.clientSettingsRequireWifiDesc),
               value: clientSettings.requireWifi,
-              onChanged: (value) => ref.read(clientSettingsProvider.notifier).setRequireWifi(value),
+              onChanged: (value) =>
+                  ref.read(clientSettingsProvider.notifier).setRequireWifi(value ?? !clientSettings.requireWifi),
             ),
-          ),
           SettingsListTile(
-            label: const Text("Quality"),
+            label: const Text("Qualité"),
             subLabel: Text(clientSettings.transcodeDownloadModel.label(context)),
             onTap: () => showTranscodeSettingsPopup(
               context: context,
@@ -154,23 +154,10 @@ List<Widget> buildClientSettingsDownload(BuildContext context, WidgetRef ref, Fu
             ),
           ),
           SettingsListTile(
-            label: const Text("Music Quality"),
-            subLabel: Text(clientSettings.transcodeMusicDownloadModel.label(context)),
-            onTap: () => showTranscodeMusicSettingsPopup(
-              context: context,
-              current: clientSettings.transcodeMusicDownloadModel,
-              onChanged: (value) {
-                ref.read(clientSettingsProvider.notifier).update(
-                      (current) => current.copyWith(transcodeMusicDownloadModel: value),
-                    );
-              },
-            ),
-          ),
-          SettingsListTile(
             label: Text(context.localized.maxConcurrentDownloadsTitle),
             subLabel: Text(context.localized.maxConcurrentDownloadsDesc),
             trailing: SizedBox(
-              width: 150,
+              width: AppManagementLayout.settingsValueWidth,
               child: IntInputField(
                 controller: TextEditingController(text: clientSettings.maxConcurrentDownloads.toString()),
                 onSubmitted: (value) {
@@ -189,7 +176,6 @@ List<Widget> buildClientSettingsDownload(BuildContext context, WidgetRef ref, Fu
           ),
         ],
       ),
-      const SizedBox(height: 12),
     ],
   ];
 }

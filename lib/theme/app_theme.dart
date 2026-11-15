@@ -766,6 +766,36 @@ ThemeData buildAppTheme({
           borderRadius: AppRadii.controlBorder,
           borderSide: BorderSide(color: AppColors.focus)),
     ),
+    // Interrupteurs et cases monochromes : l'état se lit au contraste, jamais
+    // à une couleur d'accent.
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.disabled)
+              ? AppColors.textDisabled
+              : states.contains(WidgetState.selected)
+                  ? AppColors.background
+                  : AppColors.textSecondary),
+      trackColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected) &&
+                  !states.contains(WidgetState.disabled)
+              ? AppColors.textPrimary
+              : AppColors.surfaceHigh),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected)
+              ? AppColors.textPrimary
+              : AppColors.borderStrong),
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+    ),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected)
+              ? AppColors.textPrimary
+              : Colors.transparent),
+      checkColor: const WidgetStatePropertyAll(AppColors.background),
+      side: const BorderSide(color: AppColors.borderStrong, width: 1.5),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(4))),
+    ),
     popupMenuTheme: const PopupMenuThemeData(
       textStyle: AppTypography.cardTitle,
       color: AppColors.surfaceHigh,

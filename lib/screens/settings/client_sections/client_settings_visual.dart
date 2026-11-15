@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/l10n/generated/app_localizations.dart';
-import 'package:kinos/models/settings/client_settings_model.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
@@ -11,16 +10,21 @@ import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
 import 'package:kinos/screens/shared/input_fields.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
-import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
 
+/// Langue et affichage des jaquettes.
+///
+/// Le thème est unique (sombre, sans accent) : ni mode, ni couleur, ni
+/// variante de schéma ne sont proposés. Les réglages du fond flouté et de la
+/// barre du haut ne concernent que l'ancienne disposition TV et ne sont plus
+/// exposés.
 List<Widget> buildClientSettingsVisual(
   BuildContext context,
   WidgetRef ref,
-  TextEditingController nextUpDaysEditor,
   TextEditingController libraryPageSizeController,
 ) {
   final clientSettings = ref.watch(clientSettingsProvider);
+  final notifier = ref.read(clientSettingsProvider.notifier);
   Locale currentLocale = WidgetsBinding.instance.platformDispatcher.locale;
   return settingsListGroup(
     context,
@@ -50,98 +54,41 @@ List<Widget> buildClientSettingsVisual(
                     return Text("${context.localized.nativeName} (${entry.toDisplayCode()})");
                   }),
                 ),
-                action: () =>
-                    ref.read(clientSettingsProvider.notifier).update((state) => state.copyWith(selectedLocale: entry)),
+                action: () => notifier.update((state) => state.copyWith(selectedLocale: entry)),
               ),
             )
           ];
         },
       ),
-      SettingsListTile(
+      SettingsListTileCheckbox(
         label: Text(context.localized.settingsBlurredPlaceholderTitle),
         subLabel: Text(context.localized.settingsBlurredPlaceholderDesc),
-        onTap: () => ref.read(clientSettingsProvider.notifier).setBlurPlaceholders(!clientSettings.blurPlaceHolders),
-        trailing: Switch(
-          value: clientSettings.blurPlaceHolders,
-          onChanged: (value) => ref.read(clientSettingsProvider.notifier).setBlurPlaceholders(value),
-        ),
+        value: clientSettings.blurPlaceHolders,
+        onChanged: (value) => notifier.setBlurPlaceholders(value ?? !clientSettings.blurPlaceHolders),
       ),
-      SettingsListTile(
-        label: Text(context.localized.settingsBlurEffectsTitle),
-        subLabel: Text(context.localized.settingsBlurEffectsDesc),
-        onTap: () => ref.read(clientSettingsProvider.notifier).setBlurEffects(!clientSettings.enableBlurEffects),
-        trailing: Switch(
-          value: clientSettings.enableBlurEffects,
-          onChanged: (value) => ref.read(clientSettingsProvider.notifier).setBlurEffects(value),
-        ),
-      ),
-      SettingsListTile(
+      SettingsListTileCheckbox(
         label: Text(context.localized.settingsBlurEpisodesTitle),
         subLabel: Text(context.localized.settingsBlurEpisodesDesc),
-        onTap: () => ref.read(clientSettingsProvider.notifier).setBlurEpisodes(!clientSettings.blurUpcomingEpisodes),
-        trailing: Switch(
-          value: clientSettings.blurUpcomingEpisodes,
-          onChanged: (value) => ref.read(clientSettingsProvider.notifier).setBlurEpisodes(value),
+        value: clientSettings.blurUpcomingEpisodes,
+        onChanged: (value) => notifier.setBlurEpisodes(value ?? !clientSettings.blurUpcomingEpisodes),
+      ),
+      SettingsListTileCheckbox(
+        label: Text(AdaptiveLayout.of(context).isDesktop
+            ? context.localized.settingsShowScaleSlider
+            : context.localized.settingsPosterPinch),
+        value: clientSettings.pinchPosterZoom,
+        onChanged: (value) => notifier.update(
+          (current) => current.copyWith(pinchPosterZoom: value ?? !current.pinchPosterZoom),
         ),
       ),
-      SettingsListTile(
-        label: Text(context.localized.settingsEnableOsMediaControls),
-        subLabel: Text(context.localized.settingsEnableOsMediaControlsDesc),
-        onTap: () => ref.read(clientSettingsProvider.notifier).setMediaKeys(!clientSettings.enableMediaKeys),
-        trailing: Switch(
-          value: clientSettings.enableMediaKeys,
-          onChanged: (value) => ref.read(clientSettingsProvider.notifier).setMediaKeys(value),
-        ),
-      ),
-      if (AdaptiveLayout.viewSizeOf(context) == ViewSize.television)
-        SettingsListTile(
-          label: Text(context.localized.enableNewTVLayout),
-          subLabel: Text(context.localized.enableNewTVLayoutDesc),
-          onTap: () =>
-              ref.read(clientSettingsProvider.notifier).setExpandedTVLayout(!clientSettings.useTVExpandedLayout),
-          trailing: Switch(
-            value: clientSettings.useTVExpandedLayout,
-            onChanged: (value) => ref.read(clientSettingsProvider.notifier).setExpandedTVLayout(value),
-          ),
-        ),
-      SettingsListTileEnum(
-        label: Text(context.localized.enableBackgroundPostersTitle),
-        subLabel: Text(context.localized.enableBackgroundPostersDesc),
-        current: clientSettings.backgroundImage.label(context),
-        itemBuilder: (context) => BackgroundType.values
-            .map(
-              (e) => ItemActionButton(
-                label: Text(e.label(context)),
-                action: () => ref.read(clientSettingsProvider.notifier).update((cb) => cb.copyWith(backgroundImage: e)),
-              ),
-            )
-            .toList(),
-      ),
-      SettingsListTile(
-        label: Text(context.localized.usePostersForLibraryIconsTitle),
-        subLabel: Text(context.localized.usePostersForLibraryIconsDesc),
-        onTap: () => ref
-            .read(clientSettingsProvider.notifier)
-            .update((cb) => cb.copyWith(usePosterForLibrary: !clientSettings.usePosterForLibrary)),
-        trailing: Switch(
-          value: clientSettings.usePosterForLibrary,
-          onChanged: (value) =>
-              ref.read(clientSettingsProvider.notifier).update((cb) => cb.copyWith(usePosterForLibrary: value)),
-        ),
-      ),
-      SettingsListTile(
-        label: Text(context.localized.settingsNextUpCutoffDays),
-        trailing: IntInputField(
-          suffix: context.localized.days(clientSettings.nextUpDateCutoff?.inDays ?? 1),
-          controller: nextUpDaysEditor,
-          onSubmitted: (value) {
-            if (value != null) {
-              ref.read(clientSettingsProvider.notifier).update((current) => current.copyWith(
-                    nextUpDateCutoff: Duration(days: value),
-                  ));
-            }
-          },
-        ),
+      SettingsSliderTile(
+        label: Text(context.localized.settingsPosterSize),
+        valueLabel: "${(clientSettings.posterSize * 100).round()} %",
+        min: 0.5,
+        max: 1.5,
+        divisions: 20,
+        value: clientSettings.posterSize,
+        onChanged: (value) => notifier.update((current) => current.copyWith(posterSize: value)),
       ),
       SettingsListTile(
         label: Text(context.localized.libraryPageSizeTitle),
@@ -149,46 +96,10 @@ List<Widget> buildClientSettingsVisual(
         trailing: IntInputField(
           controller: libraryPageSizeController,
           placeHolder: "500",
-          onSubmitted: (value) => ref.read(clientSettingsProvider.notifier).update(
-                (current) => current.copyWith(libraryPageSize: value),
-              ),
-        ),
-      ),
-      SettingsListTile(
-        label: Text(AdaptiveLayout.of(context).isDesktop
-            ? context.localized.settingsShowScaleSlider
-            : context.localized.settingsPosterPinch),
-        onTap: () => ref.read(clientSettingsProvider.notifier).update(
-              (current) => current.copyWith(pinchPosterZoom: !current.pinchPosterZoom),
-            ),
-        trailing: Switch(
-          value: clientSettings.pinchPosterZoom,
-          onChanged: (value) => ref.read(clientSettingsProvider.notifier).update(
-                (current) => current.copyWith(pinchPosterZoom: value),
-              ),
-        ),
-      ),
-      Column(
-        children: [
-          SettingsListTile(
-            label: Text(context.localized.settingsPosterSize),
-            trailing: Text(
-              clientSettings.posterSize.toString(),
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+          onSubmitted: (value) => notifier.update(
+            (current) => current.copyWith(libraryPageSize: value),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: KinosSlider(
-              min: 0.5,
-              max: 1.5,
-              value: clientSettings.posterSize,
-              divisions: 20,
-              onChanged: (value) =>
-                  ref.read(clientSettingsProvider.notifier).update((current) => current.copyWith(posterSize: value)),
-            ),
-          ),
-        ],
+        ),
       ),
     ],
   );
