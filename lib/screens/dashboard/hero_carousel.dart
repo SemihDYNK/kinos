@@ -46,6 +46,9 @@ class HeroCarousel extends ConsumerStatefulWidget {
 class _HeroCarouselState extends ConsumerState<HeroCarousel>
     with SingleTickerProviderStateMixin {
   int _index = 0;
+  // Sens de la dernière navigation (-1 précédent, 1 suivant, 0 sans
+  // navigation) : le texte de la nouvelle diapo arrive de ce côté.
+  int _direction = 0;
   ItemBaseModel? _paletteItem;
   late final _revealController = AnimationController(
       vsync: this, value: 1, duration: AppDurations.heroSlide);
@@ -80,6 +83,7 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
     if (previousId != null &&
         widget.items.isNotEmpty &&
         previousId != _current.id) {
+      _direction = 0;
       _restartReveal();
     }
     _schedulePalette();
@@ -129,7 +133,10 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
 
   void _go(int delta) {
     if (widget.items.length < 2) return;
-    setState(() => _index = (_index + delta) % widget.items.length);
+    setState(() {
+      _index = (_index + delta) % widget.items.length;
+      _direction = delta.sign;
+    });
     _restartReveal();
     _updatePalette();
   }
@@ -167,12 +174,20 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
           child: child,
           builder: (_, child) {
             final progress = interval.transform(_revealController.value);
+            final remaining = 1 - progress;
+            // Navigation : le texte glisse depuis le côté d'où vient la
+            // diapo. Sinon (premier affichage, liste renouvelée), il monte.
             return Opacity(
                 key: ValueKey(role),
                 opacity: progress,
                 child: Transform.translate(
-                    offset:
-                        Offset(0, AppMotion.heroTextTravel * (1 - progress)),
+                    offset: _direction == 0
+                        ? Offset(0, AppMotion.heroTextTravel * remaining)
+                        : Offset(
+                            _direction *
+                                AppMotion.heroTextSlideTravel *
+                                remaining,
+                            0),
                     child: child));
           });
 

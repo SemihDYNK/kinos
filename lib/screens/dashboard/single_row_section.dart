@@ -2,6 +2,7 @@ import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/screens/dashboard/genre_hero.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/widgets/shared/grid_focus_traveler.dart';
@@ -23,11 +24,16 @@ class SingleRowSection extends StatelessWidget {
   final EdgeInsets contentPadding;
   final VoidCallback? onSeeAll;
 
+  /// Repère de transition du titre : la page ouverte par « tout voir » le
+  /// reprend comme grand titre (cf. genre_hero.dart).
+  final Object? titleTag;
+
   const SingleRowSection({
     required this.title,
     required this.items,
     required this.contentPadding,
     this.onSeeAll,
+    this.titleTag,
     super.key,
   });
 
@@ -64,12 +70,17 @@ class SingleRowSection extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                      child: Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  )),
+                      child: titleTag != null
+                          ? Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: genreTitleHero(context,
+                                  tag: titleTag!, label: title, big: false, maxLines: 2))
+                          : Text(
+                              title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            )),
                   if (onSeeAll != null)
                     FocusRing(
                       borderRadius: AppRadii.controlBorder,

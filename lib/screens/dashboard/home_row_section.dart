@@ -3,10 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/item_shared_models.dart';
 import 'package:kinos/models/settings/home_row_model.dart';
+import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
+import 'package:kinos/providers/dashboard/genre_browse_provider.dart';
 import 'package:kinos/providers/dashboard/home_row_items_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/dashboard/genre_hero.dart';
+import 'package:kinos/screens/dashboard/genre_page_screen.dart';
 import 'package:kinos/screens/dashboard/single_row_section.dart';
 
 /// Une rangée configurable de l'accueil (cf. [HomeRowType]).
@@ -30,13 +35,26 @@ class HomeRowSection extends ConsumerWidget {
   /// filtres de [LibrarySearchRoute] (réalisateur, mieux notés, jamais vus,
   /// à redécouvrir, similaire) — le lien "tout voir" est alors omis plutôt
   /// que de mener vers une vue mal filtrée.
-  VoidCallback? _seeAll(BuildContext context) {
+  VoidCallback? _seeAll(BuildContext context, List<ItemBaseModel> items) {
     switch (row.type) {
       case HomeRowType.genre:
         final name = row.params['genreName'];
         if (name == null) return null;
-        return () => context.router.push(
-              LibrarySearchRoute(recursive: true, genres: {name: true}),
+        // La page du genre, comme une tuile de la rangée « Genres » : le
+        // titre de la rangée devient son grand titre, et l'image de fond du
+        // premier titre de la rangée lui sert de bandeau.
+        return () => openGenrePage(
+              context,
+              allCatalog,
+              (
+                label: browseGenreLabel(name),
+                names: [name],
+                image: items
+                    .map((item) => item.getPosters?.backDrop?.firstOrNull)
+                    .nonNulls
+                    .firstOrNull,
+              ),
+              origin: genreRowOrigin,
             );
       case HomeRowType.studio:
         final id = row.params['studioId'];
@@ -83,6 +101,14 @@ class HomeRowSection extends ConsumerWidget {
     }
   }
 
+  Object? get _genreTitleTag {
+    final name = row.params['genreName'];
+    if (row.type != HomeRowType.genre || name == null) return null;
+    return genreTitleTag(allCatalog.kind, allCatalog.libraryId,
+        browseGenreLabel(name),
+        origin: genreRowOrigin);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(homeRowItemsProvider(row));
@@ -92,7 +118,8 @@ class HomeRowSection extends ConsumerWidget {
         title: row.title,
         items: data,
         contentPadding: contentPadding,
-        onSeeAll: _seeAll(context),
+        onSeeAll: _seeAll(context, data),
+        titleTag: _genreTitleTag,
       ),
       loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
       error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),

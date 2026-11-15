@@ -613,6 +613,7 @@ class GenrePageRoute extends _i37.PageRouteInfo<GenrePageRouteArgs> {
     _i51.BaseItemKind? kind,
     String? libraryId,
     _i53.ImageData? image,
+    String? origin,
     _i39.Key? key,
     List<_i37.PageRouteInfo>? children,
   }) : super(
@@ -623,6 +624,7 @@ class GenrePageRoute extends _i37.PageRouteInfo<GenrePageRouteArgs> {
             kind: kind,
             libraryId: libraryId,
             image: image,
+            origin: origin,
             key: key,
           ),
           initialChildren: children,
@@ -640,6 +642,7 @@ class GenrePageRoute extends _i37.PageRouteInfo<GenrePageRouteArgs> {
         kind: args.kind,
         libraryId: args.libraryId,
         image: args.image,
+        origin: args.origin,
         key: args.key,
       );
     },
@@ -653,6 +656,7 @@ class GenrePageRouteArgs {
     this.kind,
     this.libraryId,
     this.image,
+    this.origin,
     this.key,
   });
 
@@ -666,11 +670,13 @@ class GenrePageRouteArgs {
 
   final _i53.ImageData? image;
 
+  final String? origin;
+
   final _i39.Key? key;
 
   @override
   String toString() {
-    return 'GenrePageRouteArgs{label: $label, names: $names, kind: $kind, libraryId: $libraryId, image: $image, key: $key}';
+    return 'GenrePageRouteArgs{label: $label, names: $names, kind: $kind, libraryId: $libraryId, image: $image, origin: $origin, key: $key}';
   }
 
   @override
@@ -682,6 +688,7 @@ class GenrePageRouteArgs {
         kind == other.kind &&
         libraryId == other.libraryId &&
         image == other.image &&
+        origin == other.origin &&
         key == other.key;
   }
 
@@ -692,6 +699,7 @@ class GenrePageRouteArgs {
       kind.hashCode ^
       libraryId.hashCode ^
       image.hashCode ^
+      origin.hashCode ^
       key.hashCode;
 }
 

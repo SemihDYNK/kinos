@@ -114,8 +114,20 @@ class _HomeHeroBackdropState extends State<HomeHeroBackdrop> {
                       switchInCurve: AppMotion.easeOut,
                       switchOutCurve: AppMotion.easeOut,
                       // Sans clé sur la transition : A → B → A peut garder deux sorties A.
-                      transitionBuilder: (child, animation) =>
-                          FadeTransition(opacity: animation, child: child),
+                      // Carrousel : la nouvelle image se pose en reculant
+                      // légèrement pendant son fondu, comme une mise au
+                      // point ; la fiche (cinematic) garde un fondu simple.
+                      transitionBuilder: (child, animation) => FadeTransition(
+                          opacity: animation,
+                          child: cinematic
+                              ? child
+                              : ScaleTransition(
+                                  scale: Tween(
+                                          begin: 1 + AppMotion.heroImageSettle,
+                                          end: 1.0)
+                                      .animate(animation),
+                                  alignment: AppHeroLayout.imageAlignment,
+                                  child: child)),
                       child: imageWidget,
                     )
                   else

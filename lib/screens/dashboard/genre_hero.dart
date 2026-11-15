@@ -9,11 +9,20 @@ import 'package:kinos/util/kinos_image.dart';
 
 /// Repères de la transition partagée entre la tuile d'un genre et le
 /// bandeau de sa page. La portée en fait partie : la tuile « Action » de
-/// l'accueil Films n'est pas celle de l'accueil Séries.
-Object genreImageTag(BaseItemKind? kind, String? libraryId, String label) =>
-    ('genre-image', kind?.name, libraryId, label);
-Object genreTitleTag(BaseItemKind? kind, String? libraryId, String label) =>
-    ('genre-title', kind?.name, libraryId, label);
+/// l'accueil Films n'est pas celle de l'accueil Séries. L'origine aussi :
+/// la tuile de la rangée « Genres » et le titre d'une rangée « Action » de
+/// l'accueil cohabitent sur la même page et ne peuvent pas partager un
+/// repère.
+Object genreImageTag(BaseItemKind? kind, String? libraryId, String label,
+        {String? origin}) =>
+    ('genre-image', kind?.name, libraryId, label, origin);
+Object genreTitleTag(BaseItemKind? kind, String? libraryId, String label,
+        {String? origin}) =>
+    ('genre-title', kind?.name, libraryId, label, origin);
+
+/// Origine d'une page de genre ouverte depuis le titre d'une rangée de
+/// l'accueil (plutôt que depuis une tuile de la rangée « Genres »).
+const genreRowOrigin = 'home-row';
 
 /// Fond d'un genre : l'image sous un voile, de la tuile ([mix] 0 : coins
 /// arrondis, voile sombre uniforme) au bandeau ([mix] 1 : coins vifs, voile

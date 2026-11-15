@@ -365,6 +365,10 @@ abstract final class AppMotion {
   static const playerSeekTravel = .12;
   static const playerVolumePulse = 1.12;
   static const heroTextTravel = AppSpacing.sm;
+  // Changement de diapo : le texte glisse du côté de la navigation, et
+  // l'image entrante se pose depuis un léger agrandissement.
+  static const heroTextSlideTravel = AppSpacing.xl;
+  static const heroImageSettle = .04;
   static const menuScale = .95;
 
   /// Part du déroulé pendant laquelle le voile finit d'apparaître en fondu.
@@ -373,6 +377,9 @@ abstract final class AppMotion {
   static const navigationLabels = Interval(.25, 1, curve: Curves.easeOut);
   static const posterReveal = Cubic(.2, 1.3, .35, 1);
   static const posterZoom = .025;
+  // Tuile paysage (genres) : l'image s'avance dans son cadre au survol et
+  // au focus.
+  static const tileImageZoom = .06;
   static const posterLift = 4.0;
   static const posterActionScale = .88;
   static const heartLift = .30;
@@ -958,9 +965,13 @@ class _FocusRingState extends State<FocusRing> {
             : null,
         child: GestureDetector(
           onTap: widget.onActivate,
+          // Le focus clavier soulève la jaquette comme le survol : au
+          // clavier directionnel (mode salon), c'est le seul retour de
+          // mouvement.
           child: widget.posterMotion
               ? PosterHoverMotion(
-                  active: _hovered, builder: (context, _) => _surface(context))
+                  active: _hovered || _focused,
+                  builder: (context, _) => _surface(context))
               : _surface(context),
         ),
       ),

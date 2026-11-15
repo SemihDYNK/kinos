@@ -20,13 +20,15 @@ import 'package:kinos/widgets/shared/scroll_pinned_back_button.dart';
 /// routeur : le logo, la barre du haut et le menu latéral la quittent comme
 /// n'importe quelle autre.
 Future<void> openGenrePage(
-        BuildContext context, CatalogScope scope, BrowseGenre genre) =>
+        BuildContext context, CatalogScope scope, BrowseGenre genre,
+        {String? origin}) =>
     context.router.push(GenrePageRoute(
         label: genre.label,
         names: genre.names,
         kind: scope.kind,
         libraryId: scope.libraryId,
-        image: genre.image));
+        image: genre.image,
+        origin: origin));
 
 /// Page d'un genre : grand titre sur une image du genre, puis des rangées
 /// (mieux notés, récents, pas encore vus, films et séries séparés sur
@@ -40,6 +42,7 @@ class GenrePageScreen extends ConsumerWidget {
     this.kind,
     this.libraryId,
     this.image,
+    this.origin,
     super.key,
   });
   final String label;
@@ -47,6 +50,10 @@ class GenrePageScreen extends ConsumerWidget {
   final BaseItemKind? kind;
   final String? libraryId;
   final ImageData? image;
+
+  /// Repère de l'élément d'où la page s'ouvre (cf. [genreRowOrigin]) ;
+  /// `null` pour une tuile de la rangée « Genres ».
+  final String? origin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -100,7 +107,8 @@ class GenrePageScreen extends ConsumerWidget {
                   // Le bandeau est l'image de la tuile, arrivée en haut de la
                   // page (cf. genre_hero.dart).
                   genreBackdropHero(context,
-                      tag: genreImageTag(kind, libraryId, label),
+                      tag: genreImageTag(kind, libraryId, label,
+                          origin: origin),
                       image: image,
                       mix: 1),
                   Padding(
@@ -108,7 +116,8 @@ class GenrePageScreen extends ConsumerWidget {
                     child: Align(
                       alignment: Alignment.bottomLeft,
                       child: genreTitleHero(context,
-                          tag: genreTitleTag(kind, libraryId, label),
+                          tag: genreTitleTag(kind, libraryId, label,
+                              origin: origin),
                           label: label,
                           big: true),
                     ),
@@ -116,7 +125,8 @@ class GenrePageScreen extends ConsumerWidget {
                 ]),
               ),
             ),
-            if (page.valueOrNull case final data?) ...[
+            if (page.valueOrNull case final data?)
+              _SliverReveal(sliver: SliverMainAxisGroup(slivers: [
               row('Les mieux notés', data.topRated),
               row('Ajoutés récemment', data.recent),
               row('Pas encore vus', data.unvisited),
@@ -136,7 +146,8 @@ class GenrePageScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-            ] else if (page.hasError)
+            ]))
+            else if (page.hasError)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: padding.copyWith(top: AppSpacing.xl),
@@ -162,4 +173,56 @@ class GenrePageScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Les rangées de la page entrent en fondu une fois le bandeau arrivé (fin
+/// de la transition de route) ou dès qu'elles arrivent du serveur : jamais
+/// d'apparition sèche sous un bandeau encore en vol.
+class _SliverReveal extends StatefulWidget {
+  const _SliverReveal({required this.sliver});
+  final Widget sliver;
+
+  @override
+  State<_SliverReveal> createState() => _SliverRevealState();
+}
+
+class _SliverRevealState extends State<_SliverReveal>
+    with SingleTickerProviderStateMixin {
+  late final _controller =
+      AnimationController(vsync: this, duration: AppDurations.heroSlide);
+  late final _opacity =
+      CurvedAnimation(parent: _controller, curve: AppMotion.easeOut);
+  Animation<double>? _route;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!AppMotion.enabled(context)) {
+      _controller.value = 1;
+      return;
+    }
+    if (_route != null || _controller.value > 0) return;
+    final route = ModalRoute.of(context)?.animation;
+    if (route == null || route.isCompleted) {
+      _controller.forward();
+    } else {
+      _route = route..addStatusListener(_onRouteStatus);
+    }
+  }
+
+  void _onRouteStatus(AnimationStatus status) {
+    if (status.isCompleted && mounted) _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _route?.removeStatusListener(_onRouteStatus);
+    _opacity.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      SliverFadeTransition(opacity: _opacity, sliver: widget.sliver);
 }

@@ -145,7 +145,7 @@ class _GenreRowState extends State<_GenreRow> {
       );
 }
 
-class _GenreTile extends StatelessWidget {
+class _GenreTile extends StatefulWidget {
   const _GenreTile(
       {required this.scope, required this.genre, required this.onOpen});
   final CatalogScope scope;
@@ -153,35 +153,68 @@ class _GenreTile extends StatelessWidget {
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) => Focus(
-        canRequestFocus: false,
-        skipTraversal: true,
-        // Le clavier amène toujours la tuile focalisée dans la rangée.
-        onFocusChange: (focused) {
-          if (focused) {
-            Scrollable.ensureVisible(context,
-                alignment: .5,
-                duration: AppMotion.enabled(context)
-                    ? AppDurations.hover
-                    : Duration.zero);
-          }
-        },
+  State<_GenreTile> createState() => _GenreTileState();
+}
+
+class _GenreTileState extends State<_GenreTile> {
+  bool _hovered = false;
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = widget.scope, genre = widget.genre;
+    final motion = AppMotion.enabled(context);
+    final active = _hovered || _focused;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      // Le clavier amène toujours la tuile focalisée dans la rangée.
+      onFocusChange: (focused) {
+        setState(() => _focused = focused);
+        if (focused) {
+          Scrollable.ensureVisible(context,
+              alignment: .5,
+              duration: motion ? AppDurations.hover : Duration.zero);
+        }
+      },
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
         child: Semantics(
           button: true,
           label: 'Genre ${genre.label}',
           excludeSemantics: true,
           child: FocusRing(
-            onActivate: onOpen,
+            onActivate: widget.onOpen,
             child: ClipRRect(
               borderRadius: AppRadii.cardBorder,
-              child: Stack(fit: StackFit.expand, children: [
-                // L'image part en bandeau vers la page du genre, et le nom
-                // la rejoint (cf. genre_hero.dart).
-                genreBackdropHero(context,
-                    tag: genreImageTag(scope.kind, scope.libraryId, genre.label),
-                    image: genre.image,
-                    mix: 0),
-                Center(
+              // Survol ou focus : l'image s'avance dans le cadre, la tuile
+              // ne bouge pas (elle vit dans une rangée défilante qui la
+              // couperait si elle se soulevait).
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(end: motion && active ? 1 : 0),
+                duration: !motion
+                    ? Duration.zero
+                    : active
+                        ? AppDurations.posterHover
+                        : AppDurations.hover,
+                curve: AppMotion.posterReveal,
+                builder: (context, reveal, child) => Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Transform.scale(
+                        scale: 1 + AppMotion.tileImageZoom * reveal,
+                        // L'image part en bandeau vers la page du genre, et
+                        // le nom la rejoint (cf. genre_hero.dart).
+                        child: genreBackdropHero(context,
+                            tag: genreImageTag(
+                                scope.kind, scope.libraryId, genre.label),
+                            image: genre.image,
+                            mix: 0),
+                      ),
+                      child!,
+                    ]),
+                child: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: genreTitleHero(context,
@@ -193,9 +226,11 @@ class _GenreTile extends StatelessWidget {
                         maxLines: 2),
                   ),
                 ),
-              ]),
+              ),
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }
