@@ -110,8 +110,8 @@ abstract final class AppBrand {
   static const markSize = 28.0;
   static const wordmarkWidth = 132.0;
   static const startupMarkSize = 128.0;
-  static const startupGuideWidth = 1.0;
-  static const startupGuideOpacity = .28;
+  static const startupGuideWidth = 1.5;
+  static const startupGuideOpacity = .6;
   static const startupApertureFeather = 28.0;
   // Creux du K (jonction des deux branches), en fraction de la taille du
   // signe depuis son centre : point d'où part l'ouverture.
@@ -367,7 +367,11 @@ abstract final class AppMotion {
   static const startupMarkCloseup = 7.0;
   static const startupMarkTilt = .65;
   static const startupMarkAngle = -.32;
-  static const startupMarkDepth = .075;
+  // Profondeur du pivot initial, en fraction de la taille du signe : plus
+  // la valeur est grande, plus la perspective est marquée.
+  static const startupMarkPerspective = .9;
+  // Largeur du bord adouci du remplissage, en fraction du signe.
+  static const startupMarkFillEdge = .18;
   static const startupMarkOffsets = [
     Offset(-.30, 0),
     Offset(.34, -.25),
@@ -379,7 +383,9 @@ abstract final class AppMotion {
     Interval(.22, .74, curve: easeOut),
   ];
   static const startupMarkTrace = Interval(0, .45, curve: easeOut);
-  static const startupMarkFill = Interval(.28, .78, curve: easeOut);
+  // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie
+  // traverser le K plutôt que surgir.
+  static const startupMarkFill = Interval(.28, .78, curve: Cubic(.45, 0, .25, 1));
   static const startupMarkCamera =
       Interval(.12, .87, curve: Cubic(.65, 0, .2, 1));
   static const startupMarkFade = Interval(.08, .40, curve: easeOut);

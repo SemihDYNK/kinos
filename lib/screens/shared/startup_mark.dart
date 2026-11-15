@@ -58,40 +58,52 @@ class _StartupMarkPainter extends CustomPainter {
     }
     final camera = AppMotion.startupMarkCamera.transform(progress);
     final zoom = ui.lerpDouble(AppMotion.startupMarkCloseup, 1, camera)!;
-    final solid = AppMotion.startupMarkFill.transform(progress);
+    final fill = AppMotion.startupMarkFill.transform(progress);
     final trace = AppMotion.startupMarkTrace.transform(progress);
     canvas.translate(size.width / 2, size.height / 2);
     canvas.scale(unit * zoom);
+    // Un vrai pivot en profondeur : sans le terme de perspective, la
+    // rotation autour de l'axe vertical ne fait qu'écraser le K en largeur.
     canvas.transform((Matrix4.identity()
+          ..setEntry(3, 2, AppMotion.startupMarkPerspective / _extent)
           ..rotateY(AppMotion.startupMarkTilt * (1 - camera))
           ..rotateZ(AppMotion.startupMarkAngle * (1 - camera)))
         .storage);
     canvas.translate(
         -ui.lerpDouble(176, 128, camera)!, -ui.lerpDouble(80, 128, camera)!);
+    // Le blanc gagne le K de la hampe vers la pointe des branches, dans le
+    // sens où les pièces se rejoignent, derrière un bord adouci.
+    const edge = AppMotion.startupMarkFillEdge * _extent;
+    final front = ui.lerpDouble(-edge, _extent, fill)!;
     for (var i = 0; i < _parts.length; i++) {
       final assembly = AppMotion.startupMarkAssembly[i].transform(progress);
       final offset =
           AppMotion.startupMarkOffsets[i] * (_extent * (1 - assembly));
       canvas.save();
       canvas.translate(offset.dx, offset.dy);
-      final outline = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = AppBrand.startupGuideWidth / (unit * zoom)
-        ..color = AppColors.textPrimary
-            .withValues(alpha: AppBrand.startupGuideOpacity * (1 - solid));
       final metric = _metrics[i];
-      final contour = metric.extractPath(0, metric.length * trace);
-      for (var depth = 2; depth > 0; depth--) {
-        canvas.save();
-        final distance =
-            _extent * AppMotion.startupMarkDepth * depth * (1 - camera);
-        canvas.translate(distance, -distance);
-        canvas.drawPath(contour, outline);
-        canvas.restore();
+      canvas.drawPath(
+          metric.extractPath(0, metric.length * trace),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = AppBrand.startupGuideWidth / (unit * zoom)
+            ..color = AppColors.textPrimary
+                .withValues(alpha: AppBrand.startupGuideOpacity * (1 - fill)));
+      if (fill > 0) {
+        // Le dégradé est posé dans le repère du signe assemblé, pas dans
+        // celui de la pièce qui glisse encore.
+        canvas.drawPath(
+            _parts[i],
+            Paint()
+              ..shader = ui.Gradient.linear(
+                Offset(front - offset.dx, 0),
+                Offset(front + edge - offset.dx, 0),
+                [
+                  AppColors.textPrimary,
+                  AppColors.textPrimary.withValues(alpha: 0),
+                ],
+              ));
       }
-      canvas.drawPath(contour, outline);
-      canvas.drawPath(_parts[i],
-          Paint()..color = AppColors.textPrimary.withValues(alpha: solid));
       canvas.restore();
     }
   }
