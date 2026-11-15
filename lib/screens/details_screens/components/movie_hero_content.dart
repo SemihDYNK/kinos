@@ -3,6 +3,7 @@ import 'package:kinos/models/items/media_streams_model.dart';
 import 'package:kinos/screens/details_screens/components/media_stream_selectors.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/widgets/shared/frosted_surface.dart';
+import 'package:kinos/widgets/shared/appear_in.dart';
 
 /// Film and episode reading block and track controls in the cinematic hero.
 class MovieHeroContent extends StatelessWidget {
@@ -38,7 +39,12 @@ class MovieHeroContent extends StatelessWidget {
               streams.subStreams.isNotEmpty ||
               streams.versionStreams.length > 1) ...[
             const SizedBox(height: AppSpacing.md),
-            FrostedSurface(
+            // Les pistes arrivent parfois après la fiche, et le sélecteur de
+            // sous-titres s'ajoute à la barre : elle s'élargit en douceur.
+            AppearIn(
+                child: SmoothSize(
+                    alignment: Alignment.centerLeft,
+                    child: FrostedSurface(
                 borderRadius: AppRadii.controlBorder,
                 // Même translucidité que la barre latérale.
                 color: AppNavigation.surface,
@@ -53,7 +59,7 @@ class MovieHeroContent extends StatelessWidget {
                               onChanged: onStreamsChanged,
                               onSearchSubtitles: onSearchSubtitles),
                           if (trackMemory case final memory?) memory,
-                        ]))),
+                        ]))))),
           ],
           if (footer case final footer?) ...[
             const SizedBox(height: AppSpacing.md),

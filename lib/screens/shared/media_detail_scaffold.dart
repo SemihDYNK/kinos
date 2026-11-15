@@ -25,6 +25,7 @@ import 'package:kinos/widgets/shared/item_actions.dart';
 import 'package:kinos/widgets/shared/modal_bottom_sheet.dart';
 import 'package:kinos/widgets/shared/pull_to_refresh.dart';
 import 'package:kinos/widgets/shared/scroll_pinned_back_button.dart';
+import 'package:kinos/widgets/shared/appear_in.dart';
 
 /// Écran de détail film/série (et fiche Seerr, cf. `SeerrDetailsScreen`) —
 /// même langage visuel que le tableau de bord : bandeau plein cadre teinté
@@ -371,7 +372,14 @@ class _TitleBlock extends StatelessWidget {
                     onPressed: callback,
                     icon: icon)));
     final parent = widget.parentLink;
-    return Column(
+    // Le bloc est ancré au bas du bandeau : ce qui arrive en différé en
+    // dessous (pistes, amis Letterboxd…) le ferait sauter vers le haut. Sa
+    // hauteur suit en douceur, et les nouveaux éléments entrent en fondu.
+    return SmoothSize(
+        // Un logo de titre peut déborder de son cadre (reflet, ombre) : rien
+        // n'est découpé, les nouveaux éléments entrent déjà en fondu.
+        clipBehavior: Clip.none,
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -399,15 +407,17 @@ class _TitleBlock extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis))))),
           if (widget.originalTitle?.trim().isNotEmpty == true &&
               widget.originalTitle!.toLowerCase() != widget.title.toLowerCase())
-            Padding(
+            AppearIn(
+                child: Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
                 child: Text(widget.originalTitle!,
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
-                        ?.copyWith(color: secondary))),
+                        ?.copyWith(color: secondary)))),
           if (widget.metaLine.isNotEmpty)
-            Padding(
+            AppearIn(
+                child: Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.md),
                 child: Text(widget.metaLine,
                     maxLines: 3,
@@ -415,7 +425,7 @@ class _TitleBlock extends StatelessWidget {
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
-                        ?.copyWith(color: secondary))),
+                        ?.copyWith(color: secondary)))),
           const SizedBox(height: AppSpacing.lg),
           Wrap(
               spacing: AppSpacing.xs,
@@ -450,8 +460,8 @@ class _TitleBlock extends StatelessWidget {
               ]),
           if (widget.heroContent != null) ...[
             const SizedBox(height: AppSpacing.md),
-            widget.heroContent!,
+            AppearIn(child: widget.heroContent!),
           ],
-        ]);
+        ]));
   }
 }

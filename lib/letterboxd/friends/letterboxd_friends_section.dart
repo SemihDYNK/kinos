@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/screens/shared/media/external_urls.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/appear_in.dart';
 
 import 'letterboxd_friends_parser.dart';
 import 'letterboxd_friends_providers.dart';
@@ -83,7 +84,9 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
       ],
     );
     // Texte sur image : textPrimary, secondaire à 75 % (cf. CLAUDE.md).
-    return ConstrainedBox(
+    // Les notes arrivent après la fiche : elles entrent en fondu.
+    return AppearIn(
+        child: ConstrainedBox(
       constraints:
           const BoxConstraints(maxWidth: AppDetailLayout.movieSynopsisWidth),
       child: Column(
@@ -118,7 +121,7 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
           ],
         ],
       ),
-    );
+    ));
   }
 }
 
