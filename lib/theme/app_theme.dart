@@ -348,10 +348,6 @@ abstract final class AppDurations {
   static const heroSlide = Duration(milliseconds: 420);
   static const pageTransition = Duration(milliseconds: 220);
   static const startupLogo = Duration(milliseconds: 1300);
-  // Relancée moins de [startupShortWindow] après la dernière fois : le
-  // même assemblage, plus court.
-  static const startupLogoShort = Duration(milliseconds: 700);
-  static const startupShortWindow = Duration(hours: 1);
   static const startupReveal = Duration(milliseconds: 900);
   // Attente de l'accueil au-delà de ce délai : un trait signale que l'app
   // travaille. En deçà, rien ne s'affiche.

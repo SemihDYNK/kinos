@@ -30,21 +30,6 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   final _logoReady = Completer<void>();
 
-  static const _lastLaunchKey = 'kinos_startup_last_launch';
-
-  /// Relancée peu après la dernière fois : l'assemblage du signe est plus
-  /// court (cf. [AppDurations.startupShortWindow]).
-  late final Duration _assembly = () {
-    final prefs = ref.read(sharedPreferencesProvider);
-    final now = DateTime.now();
-    final last = prefs.getInt(_lastLaunchKey);
-    unawaited(prefs.setInt(_lastLaunchKey, now.millisecondsSinceEpoch));
-    final recent = last != null &&
-        now.difference(DateTime.fromMillisecondsSinceEpoch(last)) <
-            AppDurations.startupShortWindow;
-    return recent ? AppDurations.startupLogoShort : AppDurations.startupLogo;
-  }();
-
   @override
   void initState() {
     super.initState();
@@ -164,9 +149,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     return RouteWrapper(
       child: Scaffold(
         body: SizedBox.expand(
-            child: StartupCurtain(
-                assemblyDuration: _assembly,
-                onLogoReady: () {
+            child: StartupCurtain(onLogoReady: () {
                   if (!_logoReady.isCompleted) _logoReady.complete();
                 })),
       ),

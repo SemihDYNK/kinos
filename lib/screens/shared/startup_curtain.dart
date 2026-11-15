@@ -16,7 +16,6 @@ class StartupCurtain extends StatefulWidget {
       this.onLogoReady,
       this.onOpening,
       this.ready = true,
-      this.assemblyDuration = AppDurations.startupLogo,
       super.key});
 
   final VoidCallback? onRevealed;
@@ -25,9 +24,6 @@ class StartupCurtain extends StatefulWidget {
   /// Le rideau commence à s'ouvrir (l'accueil a peint sa première image).
   final VoidCallback? onOpening;
   final bool ready;
-
-  /// Durée de l'assemblage du signe (écran de démarrage seulement).
-  final Duration assemblyDuration;
 
   @override
   State<StartupCurtain> createState() => _StartupCurtainState();
@@ -38,7 +34,7 @@ class _StartupCurtainState extends State<StartupCurtain>
   late final _controller = AnimationController(
     vsync: this,
     duration: widget.onRevealed == null
-        ? widget.assemblyDuration
+        ? AppDurations.startupLogo
         : AppDurations.startupReveal,
   );
 

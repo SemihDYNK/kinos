@@ -270,24 +270,6 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('a recent launch assembles the K in the short duration',
-      (tester) async {
-    var assembled = false;
-    await tester.pumpWidget(MaterialApp(
-        home: StartupCurtain(
-            assemblyDuration: AppDurations.startupLogoShort,
-            onLogoReady: () => assembled = true)));
-    // Une image de démarrage, la durée courte, une image de remise : bien
-    // moins que l'assemblage complet.
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(AppDurations.startupLogoShort);
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(assembled, isTrue);
-    expect(const Duration(milliseconds: 200) + AppDurations.startupLogoShort,
-        lessThan(AppDurations.startupLogo));
-    await tester.pumpWidget(const SizedBox());
-  });
-
   testWidgets('the opening starts from the notch of the K and enlarges it',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
