@@ -13,6 +13,7 @@ import 'package:kinos/providers/theme/palette_service_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/screens/dashboard/home_hero_backdrop.dart';
 import 'package:kinos/screens/shared/media_hero_title.dart';
+import 'package:kinos/screens/shared/startup_home.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/theme/palette_service.dart';
 import 'package:kinos/util/humanize_duration.dart';
@@ -63,6 +64,33 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
     super.initState();
     _palette = ref.read(heroPaletteProvider.notifier);
     _schedulePalette();
+    // Au lancement, le rideau de démarrage couvre l'accueil : le texte de
+    // la première diapo attend, puis se pose pendant que le rideau s'ouvre.
+    if (ref.read(startupCurtainPhaseProvider) != StartupCurtainPhase.none) {
+      _revealController.value = 0;
+      if (ref.read(startupCurtainPhaseProvider) ==
+          StartupCurtainPhase.opening) {
+        _revealAfterCurtain();
+      }
+      ref.listenManual(startupCurtainPhaseProvider, (previous, next) {
+        if (next != StartupCurtainPhase.covering) _revealAfterCurtain();
+      });
+      // Secours : un rideau retiré sans signaler son ouverture ne doit pas
+      // laisser le texte caché.
+      Future.delayed(
+          AppDurations.startupLoadTimeout + AppDurations.startupReveal,
+          _revealAfterCurtain);
+    }
+  }
+
+  bool _startupRevealScheduled = false;
+
+  void _revealAfterCurtain() {
+    if (_startupRevealScheduled) return;
+    _startupRevealScheduled = true;
+    Future.delayed(AppDurations.startupContentDelay, () {
+      if (mounted && _revealController.value == 0) _restartReveal();
+    });
   }
 
   @override

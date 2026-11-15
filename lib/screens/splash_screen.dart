@@ -29,6 +29,22 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   final _logoReady = Completer<void>();
+
+  static const _lastLaunchKey = 'kinos_startup_last_launch';
+
+  /// Relancée peu après la dernière fois : l'assemblage du signe est plus
+  /// court (cf. [AppDurations.startupShortWindow]).
+  late final Duration _assembly = () {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final now = DateTime.now();
+    final last = prefs.getInt(_lastLaunchKey);
+    unawaited(prefs.setInt(_lastLaunchKey, now.millisecondsSinceEpoch));
+    final recent = last != null &&
+        now.difference(DateTime.fromMillisecondsSinceEpoch(last)) <
+            AppDurations.startupShortWindow;
+    return recent ? AppDurations.startupLogoShort : AppDurations.startupLogo;
+  }();
+
   @override
   void initState() {
     super.initState();
@@ -79,6 +95,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         .timeout(AppDurations.startupLoadTimeout, onTimeout: () {});
     if (!mounted) return;
     ref.read(startupPageReadyProvider.notifier).state = false;
+    ref.read(startupCurtainPhaseProvider.notifier).state =
+        StartupCurtainPhase.covering;
     final overlay = Overlay.of(context, rootOverlay: true);
     late final OverlayEntry curtain;
     curtain = OverlayEntry(
@@ -87,7 +105,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             builder: (context, overlayRef, _) => StartupCurtain(
                   ready:
                       !loggedIn || overlayRef.watch(startupPageReadyProvider),
+                  onOpening: () => overlayRef
+                      .read(startupCurtainPhaseProvider.notifier)
+                      .state = StartupCurtainPhase.opening,
                   onRevealed: () {
+                    overlayRef.read(startupCurtainPhaseProvider.notifier).state =
+                        StartupCurtainPhase.none;
                     curtain.remove();
                     curtain.dispose();
                   },
@@ -140,9 +163,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Widget build(BuildContext context) {
     return RouteWrapper(
       child: Scaffold(
-        body: SizedBox.expand(child: StartupCurtain(onLogoReady: () {
-          if (!_logoReady.isCompleted) _logoReady.complete();
-        })),
+        body: SizedBox.expand(
+            child: StartupCurtain(
+                assemblyDuration: _assembly,
+                onLogoReady: () {
+                  if (!_logoReady.isCompleted) _logoReady.complete();
+                })),
       ),
     );
   }

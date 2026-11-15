@@ -18,7 +18,9 @@ void main() {
     await tester.pump();
     await tester.pump(AppDurations.startupLogo ~/ 2);
     expect(assembled, 0);
-    await tester.pumpAndSettle();
+    // Le trait d'attente tourne ensuite indéfiniment : pas de pumpAndSettle.
+    await tester.pump(AppDurations.startupLogo);
+    await tester.pump();
     expect(assembled, 1);
     await tester.pump(const Duration(seconds: 3));
     expect(assembled, 1);
@@ -124,7 +126,9 @@ void main() {
     try {
       await tester.pumpWidget(const MaterialApp(home: StartupCurtain()));
       expect(find.byType(KinosWordmark), findsNothing);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(AppDurations.startupLogo);
+      await tester.pump();
       final mark = tester.getRect(find.bySemanticsLabel('Kinos'));
       expect(mark.width, closeTo(mark.height, .1));
       expect(mark.center, const Offset(400, 300));
@@ -243,5 +247,66 @@ void main() {
     await tester.pumpAndSettle();
     expect(completed, isTrue);
     expect(find.byType(ScaleTransition), findsNothing);
+  });
+
+  testWidgets(
+      'waiting for home shows nothing at first, then a moving line under the '
+      'K without moving it', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: StartupCurtain()));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(AppDurations.startupLogo);
+    await tester.pump(const Duration(milliseconds: 100));
+    final mark = tester.getRect(find.byType(StartupMark));
+    double lineOpacity() => tester
+        .widgetList<Opacity>(find.byType(Opacity))
+        .map((o) => o.opacity)
+        .fold(0.0, (a, b) => a > b ? a : b);
+    expect(lineOpacity(), 0, reason: 'attente courte : rien ne s\'affiche');
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(lineOpacity(), 1);
+    expect(tester.getRect(find.byType(StartupMark)), mark);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a recent launch assembles the K in the short duration',
+      (tester) async {
+    var assembled = false;
+    await tester.pumpWidget(MaterialApp(
+        home: StartupCurtain(
+            assemblyDuration: AppDurations.startupLogoShort,
+            onLogoReady: () => assembled = true)));
+    // Une image de démarrage, la durée courte, une image de remise : bien
+    // moins que l'assemblage complet.
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(AppDurations.startupLogoShort);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(assembled, isTrue);
+    expect(const Duration(milliseconds: 200) + AppDurations.startupLogoShort,
+        lessThan(AppDurations.startupLogo));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('the opening starts from the notch of the K and enlarges it',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: StartupCurtain(onRevealed: () {}),
+    ));
+    await tester.pump();
+    await tester.pump(AppDurations.startupReveal ~/ 3);
+    final clipper = tester.widget<ClipPath>(find.byType(ClipPath)).clipper!
+        as StartupApertureClipper;
+    expect(
+        clipper.centre,
+        const Offset(400, 300) +
+            AppBrand.startupMarkNotch * AppBrand.startupMarkSize);
+    final scale = tester
+        .widgetList<Transform>(find.descendant(
+            of: find.byType(ClipPath), matching: find.byType(Transform)))
+        .map((t) => t.transform.getMaxScaleOnAxis())
+        .reduce((a, b) => a > b ? a : b);
+    expect(scale, greaterThan(1));
+    await tester.pumpAndSettle();
   });
 }

@@ -8,6 +8,13 @@ import 'package:kinos/providers/views_provider.dart';
 
 final startupPageReadyProvider = StateProvider<bool>((ref) => false);
 
+/// Où en est le rideau de démarrage au-dessus de l'app : l'accueil retient
+/// son entrée tant qu'il le couvre, et la joue quand il s'ouvre.
+enum StartupCurtainPhase { none, covering, opening }
+
+final startupCurtainPhaseProvider =
+    StateProvider<StartupCurtainPhase>((ref) => StartupCurtainPhase.none);
+
 // Shared by the splash and navigation so initial requests run once per profile.
 final startupHomeProvider = FutureProvider<void>((ref) async {
   final connection =

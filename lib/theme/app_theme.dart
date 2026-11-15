@@ -113,6 +113,14 @@ abstract final class AppBrand {
   static const startupGuideWidth = 1.0;
   static const startupGuideOpacity = .28;
   static const startupApertureFeather = 28.0;
+  // Creux du K (jonction des deux branches), en fraction de la taille du
+  // signe depuis son centre : point d'où part l'ouverture.
+  static const startupMarkNotch = Offset(-48 / 256, 0);
+  static const startupWaitWidth = 96.0;
+  static const startupWaitSegment = 28.0;
+  static const startupWaitGap = AppSpacing.xl;
+  static const startupWaitOpacity = .55;
+  static const startupWaitTrackOpacity = .08;
   static const wordmarkAspectRatio = 949 / 256;
 }
 
@@ -340,7 +348,18 @@ abstract final class AppDurations {
   static const heroSlide = Duration(milliseconds: 420);
   static const pageTransition = Duration(milliseconds: 220);
   static const startupLogo = Duration(milliseconds: 1300);
+  // Relancée moins de [startupShortWindow] après la dernière fois : le
+  // même assemblage, plus court.
+  static const startupLogoShort = Duration(milliseconds: 700);
+  static const startupShortWindow = Duration(hours: 1);
   static const startupReveal = Duration(milliseconds: 900);
+  // Attente de l'accueil au-delà de ce délai : un trait signale que l'app
+  // travaille. En deçà, rien ne s'affiche.
+  static const startupWaitDelay = Duration(milliseconds: 400);
+  static const startupWaitFade = Duration(milliseconds: 300);
+  static const startupWaitSweep = Duration(milliseconds: 1400);
+  // Le texte du bandeau d'accueil se pose pendant l'ouverture.
+  static const startupContentDelay = Duration(milliseconds: 320);
   static const startupLoadTimeout = Duration(seconds: 30);
 }
 
@@ -363,7 +382,11 @@ abstract final class AppMotion {
   static const startupMarkFill = Interval(.28, .78, curve: easeOut);
   static const startupMarkCamera =
       Interval(.12, .87, curve: Cubic(.65, 0, .2, 1));
-  static const startupMarkFade = Interval(.08, .25, curve: easeOut);
+  static const startupMarkFade = Interval(.08, .40, curve: easeOut);
+  // Sortie : la caméra plonge dans le creux du K, qui grandit en
+  // s'effaçant pendant que l'ouverture part de ce creux.
+  static const startupExitZoom = 4.0;
+  static const startupExitDive = Interval(0, .55, curve: Cubic(.55, 0, .8, .3));
   static const startupAperture = Interval(.08, 1, curve: Cubic(.65, 0, .35, 1));
   static const easeOut = Cubic(.23, 1, .32, 1);
   static const heroTitleReveal = Interval(0, .75, curve: easeOut);
