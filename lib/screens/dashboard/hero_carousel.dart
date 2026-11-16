@@ -11,6 +11,7 @@ import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/providers/theme/app_theme_provider.dart';
 import 'package:kinos/providers/theme/palette_service_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/screens/dashboard/hero_scroll_depth.dart';
 import 'package:kinos/screens/dashboard/home_hero_backdrop.dart';
 import 'package:kinos/screens/shared/media_hero_title.dart';
 import 'package:kinos/screens/shared/startup_home.dart';
@@ -271,9 +272,14 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
                             double.infinity)),
                 child: Stack(alignment: Alignment.bottomLeft, children: [
                   Positioned.fill(
-                      child: MediaArtwork(
-                          child: HomeHeroBackdrop(image: _imageFor(item)))),
-                  Padding(
+                      child: HeroScrollDepth(
+                          layer: HeroDepthLayer.image,
+                          child: MediaArtwork(
+                              child:
+                                  HomeHeroBackdrop(image: _imageFor(item))))),
+                  HeroScrollDepth(
+                    layer: HeroDepthLayer.text,
+                    child: Padding(
                     padding: EdgeInsetsDirectional.fromSTEB(
                         widget.contentStart + AppSpacing.screenPadding,
                         AppSpacing.xxl,
@@ -377,12 +383,14 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
                                     ]),
                           ],
                         )),
-                  ),
+                  )),
                   if (widget.items.length > 1)
                     PositionedDirectional(
                         end: AppSpacing.screenPadding,
                         bottom: AppSpacing.md,
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        child: HeroScrollDepth(
+                            layer: HeroDepthLayer.text,
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
                           _arrow(
                               context,
                               Icons.chevron_left_rounded,
@@ -402,7 +410,7 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
                               1,
                               MaterialLocalizations.of(context)
                                   .nextPageTooltip),
-                        ])),
+                        ]))),
                 ]),
               );
             }));

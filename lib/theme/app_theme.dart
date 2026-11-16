@@ -401,6 +401,13 @@ abstract final class AppMotion {
   // l'image entrante se pose depuis un léger agrandissement.
   static const heroTextSlideTravel = AppSpacing.xl;
   static const heroImageSettle = .04;
+  // Défilement de l'accueil : l'image du bandeau ne suit le contenu qu'à
+  // moitié (elle paraît plus loin) et s'éteint avant d'avoir quitté
+  // l'écran ; le texte, au premier plan, défile normalement et s'efface en
+  // approchant du haut.
+  static const heroParallax = .5;
+  static const heroScrollFadeEnd = .8;
+  static const heroTextFadeLead = AppSpacing.xxl;
   static const menuScale = .95;
   static const pressScale = .96;
 
