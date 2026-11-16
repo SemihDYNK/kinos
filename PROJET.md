@@ -1,6 +1,6 @@
 # État des lieux — Kinos
 
-Dernière mise à jour : 2026-11-12 (v0.14.0). Les sections
+Dernière mise à jour : 2026-11-16 (v0.15.0). Les sections
 détaillées plus bas datent pour l'essentiel du 2026-10-08 ; ce qui a changé
 depuis est résumé dans « Travail depuis le 8 octobre ». Ce document est un instantané factuel
 pour reprendre le travail sans repartir de zéro. Il ne répète pas les
@@ -95,6 +95,28 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
 - `f0fe54be` (8 nov., v0.12.4) — téléchargement des sous-titres distants
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
+
+## v0.15.0 (16 novembre)
+
+- **Réglages** : une vingtaine de réglages sans effet retirés de l'interface
+  (thème, ancien bandeau d'accueil, ReplayGain, fondu enchaîné, réglages
+  mobiles ; les champs restent dans les modèles), sections regroupées, pages
+  passées aux jetons du thème, interrupteurs et cases monochromes. Les champs
+  numériques affichent la saisie et enregistrent à la sortie du champ.
+- **Mouvement** : rangées « Action »… de l'accueil → page du genre avec vol
+  du titre ; zoom des tuiles de genre ; rangées de la page de genre en fondu
+  ; carrousel directionnel ; jaquettes soulevées au focus clavier ; tuiles
+  qui s'enfoncent au clic, la page partant de la tuile enfoncée
+  (`PressBounce`) ; marge des rangées horizontales (`PosterLiftRoom`) ;
+  bouton retour épinglé sur toutes les fiches, même verre au repos ; contenu
+  tardif des fiches absorbé en douceur (`SmoothSize`, `AppearIn`).
+- **Démarrage** : trait d'attente sous le K, pivot en vraie perspective, plus
+  d'échos de profondeur, remplissage en balayage, sortie qui plonge dans le
+  creux du K, texte d'accueil qui se pose à l'ouverture.
+- **Stabilité** : reconnexion automatique toutes les 20 s hors ligne, délais
+  réseau Jellyfin/Seerr, journal des erreurs mpv/MDK (jetons masqués).
+- **Connu, non résolu** : écran noir à la lecture sous macOS (mpv et MDK) ;
+  les journaux ajoutés doivent en donner la cause.
 
 ## v0.14.0 (12 novembre)
 

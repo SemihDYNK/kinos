@@ -131,6 +131,8 @@ v0.13.0 (12 novembre) ajoute la recherche intégrée à la capsule, les
 langues retenues par série et l'intégration Letterboxd publique (notes des
 amis, rangées d'accueil) — détail dans `PROJET.md`.
 v0.14.0 (12 novembre) ajoute la rangée « Genres » et les pages de genre.
+v0.15.0 (16 novembre) nettoie les réglages et étend le langage de mouvement
+(fiches, tuiles, démarrage) — détail dans `PROJET.md`.
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 
