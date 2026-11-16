@@ -22,11 +22,21 @@ void main() {
             child: SizedBox(
               height: bannerHeight,
               child: Stack(children: [
-                const Positioned.fill(
+                Positioned.fill(
                     child: HeroScrollDepth(
                         layer: HeroDepthLayer.image,
-                        child: ColoredBox(
-                            key: Key('image'), color: AppColors.surface))),
+                        child: Builder(
+                            builder: (context) =>
+                                ValueListenableBuilder<double>(
+                                  valueListenable:
+                                      HeroScrollDepth.parallaxOf(context),
+                                  builder: (_, shift, __) =>
+                                      Transform.translate(
+                                          offset: Offset(0, shift),
+                                          child: const ColoredBox(
+                                              key: Key('image'),
+                                              color: AppColors.surface)),
+                                )))),
                 Positioned(
                     left: 0,
                     right: 0,
@@ -56,7 +66,7 @@ void main() {
       tester.getTopLeft(find.byKey(const Key('image'))).dy;
 
   testWidgets(
-      'l\'image défile à moitié vitesse et s\'éteint, le texte '
+      'l\'image défile à moitié vitesse sous son masque et s\'éteint, le texte '
       's\'efface en approchant du haut', (tester) async {
     final controller = await pump(tester);
     expect(opacityAbove(tester, 'image').opacity, 1);
@@ -78,9 +88,10 @@ void main() {
     expect(opacityAbove(tester, 'text').opacity,
         allOf(greaterThan(0), lessThan(1)));
 
-    controller.jumpTo(350);
+    // Encore à l'écran sur 10 px : presque éteinte.
+    controller.jumpTo(bannerHeight - 10);
     await tester.pump();
-    expect(opacityAbove(tester, 'image').opacity, 0);
+    expect(opacityAbove(tester, 'image').opacity, lessThan(.05));
     expect(opacityAbove(tester, 'text').opacity, 0);
     expect(FocusManager.instance.primaryFocus, same(focused),
         reason: 'franchir les seuils ne reconstruit pas le contenu');

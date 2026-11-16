@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -29,6 +30,14 @@ class HeroScrollDepth extends StatefulWidget {
   final HeroDepthLayer layer;
   final Widget child;
 
+  /// Décalage vertical à donner à l'image elle-même, à l'intérieur de son
+  /// masque de fondu (cf. [HomeHeroBackdrop]) : déplacer tout le bandeau
+  /// emmènerait le masque avec lui, et la découpe au bord du bandeau
+  /// laisserait une ligne nette. Hors d'un plan image : toujours zéro.
+  static ValueListenable<double> parallaxOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_ParallaxScope>()?.shift ??
+      const AlwaysStoppedAnimation<double>(0);
+
   @override
   State<HeroScrollDepth> createState() => _HeroScrollDepthState();
 }
@@ -40,6 +49,7 @@ class _HeroScrollDepthState extends State<HeroScrollDepth> {
   /// pixels : positive tant qu'il est entièrement à l'écran.
   final _top = ValueNotifier<double?>(null);
   double _height = 0;
+  final _shift = ValueNotifier<double>(0);
 
   /// [_top] au repos (défilement à zéro).
   double _rest = 0;
@@ -80,6 +90,7 @@ class _HeroScrollDepthState extends State<HeroScrollDepth> {
         !box.attached ||
         !box.hasSize) {
       _top.value = null;
+      _shift.value = 0;
       return;
     }
     final viewport = RenderAbstractViewport.maybeOf(box);
@@ -90,18 +101,23 @@ class _HeroScrollDepthState extends State<HeroScrollDepth> {
     final reveal = viewport.getOffsetToReveal(box, 0).offset;
     _rest = reveal;
     _top.value = reveal - position.pixels;
+    _shift.value = widget.layer == HeroDepthLayer.image
+        ? (position.pixels - reveal).clamp(0.0, _height) *
+            AppMotion.heroParallax
+        : 0;
   }
 
   @override
   void dispose() {
     _position?.removeListener(_measure);
     _top.dispose();
+    _shift.dispose();
     super.dispose();
   }
 
-  // Structure fixe (découpe, translation, opacité) quelle que soit la
-  // position : changer d'arbre au passage d'un seuil reconstruirait le
-  // contenu et lui ferait perdre le focus.
+  // Structure fixe quelle que soit la position : changer d'arbre au
+  // passage d'un seuil reconstruirait le contenu et lui ferait perdre le
+  // focus.
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<double?>(
         valueListenable: _top,
@@ -109,26 +125,24 @@ class _HeroScrollDepthState extends State<HeroScrollDepth> {
         builder: (context, top, child) {
           final measured = top != null && _height > 0;
           return switch (widget.layer) {
-            HeroDepthLayer.image => _image(measured ? top : 0, child!),
+            HeroDepthLayer.image => _ParallaxScope(
+                shift: _shift,
+                child: Opacity(
+                    opacity: measured ? _imageOpacity(top) : 1, child: child)),
             HeroDepthLayer.text =>
               Opacity(opacity: measured ? _textOpacity(top) : 1, child: child),
           };
         },
       );
 
-  Widget _image(double top, Widget child) {
+  /// L'image reste presque entière au début du défilement et ne s'éteint
+  /// vraiment qu'en quittant l'écran.
+  double _imageOpacity(double top) {
     final scrolled = (-top).clamp(0.0, _height);
-    final fade = scrolled == 0
-        ? 0.0
-        : Curves.easeOut.transform(
+    return 1 -
+        AppMotion.heroScrollFade.transform(
             (scrolled / (_height * AppMotion.heroScrollFadeEnd))
                 .clamp(0.0, 1.0));
-    return ClipRect(
-      child: Transform.translate(
-        offset: Offset(0, scrolled * AppMotion.heroParallax),
-        child: Opacity(opacity: 1 - fade, child: child),
-      ),
-    );
   }
 
   /// Opaque tant que le texte est à [AppMotion.heroTextFadeLead] du haut ou
@@ -142,4 +156,12 @@ class _HeroScrollDepthState extends State<HeroScrollDepth> {
     if (lead + half <= 0) return 1;
     return ((top + half) / (lead + half)).clamp(0.0, 1.0);
   }
+}
+
+class _ParallaxScope extends InheritedWidget {
+  const _ParallaxScope({required this.shift, required super.child});
+  final ValueListenable<double> shift;
+
+  @override
+  bool updateShouldNotify(_ParallaxScope oldWidget) => shift != oldWidget.shift;
 }

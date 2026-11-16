@@ -406,7 +406,8 @@ abstract final class AppMotion {
   // l'écran ; le texte, au premier plan, défile normalement et s'efface en
   // approchant du haut.
   static const heroParallax = .5;
-  static const heroScrollFadeEnd = .8;
+  static const heroScrollFadeEnd = 1.0;
+  static const heroScrollFade = Curves.easeIn;
   static const heroTextFadeLead = AppSpacing.xxl;
   static const menuScale = .95;
   static const pressScale = .96;

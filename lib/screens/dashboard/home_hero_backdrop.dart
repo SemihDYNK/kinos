@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/screens/dashboard/hero_scroll_depth.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/kinos_image.dart';
 
@@ -105,8 +106,15 @@ class _HomeHeroBackdropState extends State<HomeHeroBackdrop> {
                 top: 0,
                 bottom: guard,
                 child: Stack(fit: StackFit.expand, children: [
-                  if (AppMotion.enabled(context))
-                    AnimatedSwitcher(
+                  // Profondeur au défilement (cf. [HeroScrollDepth]) : seule
+                  // l'image se décale, sous le masque et les voiles fixés au
+                  // bandeau, dont le fondu du bas reste intact.
+                  ValueListenableBuilder<double>(
+                    valueListenable: HeroScrollDepth.parallaxOf(context),
+                    builder: (context, shift, child) => Transform.translate(
+                        offset: Offset(0, shift), child: child),
+                    child: AppMotion.enabled(context)
+                        ? AnimatedSwitcher(
                       duration: cinematic
                           ? AppDurations.heroTint
                           : AppDurations.heroSlide,
@@ -130,8 +138,8 @@ class _HomeHeroBackdropState extends State<HomeHeroBackdrop> {
                                   child: child)),
                       child: imageWidget,
                     )
-                  else
-                    imageWidget,
+                        : imageWidget,
+                  ),
                   ColoredBox(
                       color: AppColors.scrim.withValues(
                           alpha: cinematic
