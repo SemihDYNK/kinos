@@ -150,6 +150,13 @@ jobs:
           test -d "$APP"
           lipo "$APP/Contents/MacOS/Kinos" -verify_arch arm64 x86_64
           codesign --verify --deep --strict "$APP"
+          # Le vrai plugin media_kit_video (pas le stub SwiftPM) doit être
+          # embarqué et lié à Mpv.framework, sinon la lecture mpv est noire.
+          PLUGIN="$APP/Contents/Frameworks/media_kit_video.framework/media_kit_video"
+          test -f "$PLUGIN"
+          strings "$PLUGIN" | grep -q VideoOutputManager
+          otool -L "$PLUGIN" | grep -q 'Mpv.framework'
+          test -d "$APP/Contents/Frameworks/Mpv.framework"
           mkdir -p dist/Kinos
           ditto "$APP" dist/Kinos/Kinos.app
           cp LICENSE NOTICE docs/desktop-testing.md dist/Kinos/

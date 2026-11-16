@@ -68,14 +68,8 @@ extension DownloadLabelFormatter on String {
 }
 
 class UpdateChecker {
-  // TODO (hors dépôt) : remplacer par le propriétaire/dépôt GitHub réels
-  // de Kinos une fois publié — laisser "DonutWare"/"Fladder" afficherait
-  // les versions de Fladder comme des mises à jour de Kinos, ce qui
-  // induirait en erreur. Tant que ce n'est pas renseigné, l'appel
-  // renvoie 404 et fetchRecentReleases() retourne simplement une liste
-  // vide (aucune mise à jour affichée, sans planter).
-  final String owner = 'YOUR_GITHUB_OWNER';
-  final String repo = 'Kinos';
+  final String owner = 'SemihDYNK';
+  final String repo = 'kinos';
 
   Future<List<ReleaseInfo>> fetchRecentReleases({int count = 5}) async {
     final info = await PackageInfo.fromPlatform();
@@ -98,28 +92,30 @@ class UpdateChecker {
 
       final Map<String, String> downloads = {};
       for (final asset in assets) {
-        final name = asset['name'] as String? ?? '';
+        // Les archives publiées sont en minuscules
+        // (kinos-windows-x64-portable.zip, kinos-macos-universal.zip).
+        final name = (asset['name'] as String? ?? '').toLowerCase();
         final downloadUrl = asset['browser_download_url'] as String? ?? '';
 
-        if (name.contains('Android') && name.endsWith('.apk')) {
+        if (name.contains('android') && name.endsWith('.apk')) {
           downloads['android'] = downloadUrl;
-        } else if (name.contains('iOS') && name.endsWith('.ipa')) {
+        } else if (name.contains('ios') && name.endsWith('.ipa')) {
           downloads['ios'] = downloadUrl;
-        } else if (name.contains('Windows') && name.endsWith('Setup.exe')) {
+        } else if (name.contains('windows') && name.endsWith('setup.exe')) {
           downloads['windows_installer'] = downloadUrl;
-        } else if (name.contains('Windows') && name.endsWith('.zip')) {
+        } else if (name.contains('windows') && name.endsWith('.zip')) {
           downloads['windows_portable'] = downloadUrl;
-        } else if (name.contains('macOS') && name.endsWith('.dmg')) {
+        } else if (name.contains('macos') && (name.endsWith('.dmg') || name.endsWith('.zip'))) {
           downloads['macos'] = downloadUrl;
-        } else if (name.contains('Linux') && name.endsWith('.AppImage')) {
+        } else if (name.contains('linux') && name.endsWith('.appimage')) {
           downloads['linux_appimage'] = downloadUrl;
-        } else if (name.contains('Linux') && name.endsWith('.flatpak')) {
+        } else if (name.contains('linux') && name.endsWith('.flatpak')) {
           downloads['linux_flatpak'] = downloadUrl;
-        } else if (name.contains('Linux') && name.endsWith('.zip')) {
+        } else if (name.contains('linux') && name.endsWith('.zip')) {
           downloads['linux_zip'] = downloadUrl;
-        } else if (name.contains('Linux') && name.endsWith('.zsync')) {
+        } else if (name.contains('linux') && name.endsWith('.zsync')) {
           downloads['linux_zsync'] = downloadUrl;
-        } else if (name.contains('Web') && name.endsWith('.zip')) {
+        } else if (name.contains('web') && name.endsWith('.zip')) {
           downloads['web'] = downloadUrl;
         }
       }

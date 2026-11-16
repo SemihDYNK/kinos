@@ -221,6 +221,13 @@ dev_dependencies:
   pigeon: ^26.0.1
 
 flutter:
+  # macOS : CocoaPods, pas Swift Package Manager. Le Package.swift de
+  # media_kit_video cherche ses libs à côté de lui (#file résolu dans le
+  # pub cache, où elles n'y sont pas) et compile alors le stub vide :
+  # MissingPluginException sur VideoOutputManager.Create, écran noir.
+  config:
+    enable-swift-package-manager: false
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
