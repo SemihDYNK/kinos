@@ -28,6 +28,11 @@ class StartupCurtain extends StatefulWidget {
   @visibleForTesting
   static Duration? frameCap = AppDurations.startupFrameCap;
 
+  /// Attente maximale du calme avant l'ouverture (cf.
+  /// [AppDurations.startupSettleMax]) ; zéro dans les tests.
+  @visibleForTesting
+  static Duration settleMax = AppDurations.startupSettleMax;
+
   /// Indication affichée sous l'assemblage pour le passer (une touche ou un
   /// clic l'amènent au K assemblé).
   final String? skipHint;
@@ -133,29 +138,64 @@ class _StartupCurtainState extends State<StartupCurtain>
     }
     _readinessTimeout?.cancel();
     _started = true;
-    // Start the clock only after the destination has actually painted.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      if (_exiting) {
-        setState(() {});
-        widget.onOpening?.call();
+    // Start the clock only after the destination has actually painted, and
+    // has settled.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _settleThen(_begin));
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  /// L'accueil qui vient d'apparaître occupe le fil principal (fin de
+  /// construction, données, images) : une ouverture lancée tout de suite
+  /// sautait des images. Le rideau attend que les images sortent à temps
+  /// ([AppDurations.startupSettleFrame], plusieurs d'affilée), au plus
+  /// [StartupCurtain.settleMax], en gardant le mot posé.
+  Ticker? _settle;
+
+  void _settleThen(VoidCallback start) {
+    final max = StartupCurtain.settleMax;
+    if (!mounted) return;
+    if (!_exiting || !_motionEnabled || max == Duration.zero) {
+      start();
+      return;
+    }
+    Duration? last;
+    var calm = 0;
+    _settle?.dispose();
+    _settle = createTicker((elapsed) {
+      if (last != null) {
+        calm =
+            elapsed - last! <= AppDurations.startupSettleFrame ? calm + 1 : 0;
       }
-      if (!_motionEnabled) {
-        _controller.value = 1;
-      } else {
-        if (!await _play()) return;
+      last = elapsed;
+      if (calm >= AppMotion.startupSettleFrames || elapsed >= max) {
+        _settle?.stop();
+        start();
       }
-      if (!mounted) return;
-      if (_exiting) {
-        _waitingSince = null;
-        widget.onRevealed!.call();
-      } else {
-        // Le signe est assemblé : ce qui suit est de l'attente.
-        _waitingSince ??= DateTime.now();
-        setState(() => _assembled = true);
-        widget.onLogoReady?.call();
-      }
-    });
+    })
+      ..start();
+  }
+
+  Future<void> _begin() async {
+    if (!mounted) return;
+    if (_exiting) {
+      setState(() {});
+      widget.onOpening?.call();
+    }
+    if (!_motionEnabled) {
+      _controller.value = 1;
+    } else {
+      if (!await _play()) return;
+    }
+    if (!mounted) return;
+    if (_exiting) {
+      _waitingSince = null;
+      widget.onRevealed!.call();
+    } else {
+      // Le signe est assemblé : ce qui suit est de l'attente.
+      _waitingSince ??= DateTime.now();
+      setState(() => _assembled = true);
+      widget.onLogoReady?.call();
+    }
     WidgetsBinding.instance.ensureVisualUpdate();
   }
 
@@ -173,6 +213,7 @@ class _StartupCurtainState extends State<StartupCurtain>
     _readinessTimeout?.cancel();
     _finish(false);
     _clock?.dispose();
+    _settle?.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -282,8 +323,7 @@ class _StartupCurtainState extends State<StartupCurtain>
                       animation: _controller,
                       builder: (_, __) => _markWithWait(
                           StartupMark(
-                              progress: _controller.value,
-                              intro: widget.intro),
+                              progress: _controller.value, intro: widget.intro),
                           waiting: _assembled),
                     ),
             ),
@@ -498,8 +538,8 @@ class _SkipHintState extends State<_SkipHint> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(AppDurations.startupSkipHintDelay,
-        () => setState(() => _due = true));
+    _timer = Timer(
+        AppDurations.startupSkipHintDelay, () => setState(() => _due = true));
   }
 
   @override

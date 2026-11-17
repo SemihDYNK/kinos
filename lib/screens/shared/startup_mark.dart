@@ -277,8 +277,14 @@ class StartupIntroBeam extends CustomPainter {
   final double markSize;
 
   static const _extent = _StartupMarkPainter._extent;
-  // Creux du K, d'où part le faisceau (repère du signe).
+  // Creux du K, autour duquel pivotent les branches (repère du signe).
   static const _hinge = Offset(80, 128);
+
+  // Source du faisceau, reculée dans la hampe (cachée par son blanc) : la
+  // bouche du K est une fente de 10 unités de haut au creux, et un
+  // faisceau parti d'un point y laissait deux petits triangles noirs. D'ici,
+  // il couvre toute la fente dès sa sortie.
+  static const _source = Offset(62, 128);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -289,7 +295,7 @@ class StartupIntroBeam extends CustomPainter {
         centre +
         (p - const Offset(_extent / 2, _extent / 2)) * unit -
         Offset(introWordShift * unit, 0);
-    final notch = toScreen(_hinge);
+    final notch = toScreen(_source);
 
     final on = AppMotion.startupIntroBeamOn.transform(progress);
     final open = AppMotion.startupIntroBeamOpen.transform(progress);
@@ -299,46 +305,66 @@ class StartupIntroBeam extends CustomPainter {
     // Le rideau, percé par le faisceau : la lumière part du creux du K et
     // s'allonge vers l'extérieur derrière un front adouci, pendant que son
     // intensité monte. Au tout premier instant, rien ne passe.
-    const feather = AppMotion.startupIntroBeamFeather;
+    //
+    // Tout est dessiné directement, sans calque intermédiaire ni flou de
+    // masque : recalculés à chaque image pendant que l'accueil décode ses
+    // images, ils faisaient sauter des images. Les bords du faisceau sont
+    // adoucis par de fines bandes semi-transparentes.
     final length = AppMotion.startupIntroBeamReach.transform(progress) *
         size.longestSide *
         1.5;
+    final background = Paint()..color = AppColors.background;
     if (on <= 0 || length <= 0) {
-      canvas.drawRect(
-          Offset.zero & size, Paint()..color = AppColors.background);
+      canvas.drawRect(Offset.zero & size, background);
       _paintMark(canvas, toScreen, unit, half, progress);
       return;
     }
 
-    // Le faisceau : un éventail depuis le creux, de la longueur de la
-    // lumière (rien au-delà : le flou coûte selon la taille du tracé).
-    final beam = Path()..moveTo(notch.dx, notch.dy);
-    const steps = 48;
-    for (var i = 0; i <= steps; i++) {
-      final angle = -half + 2 * half * i / steps;
-      beam.lineTo(notch.dx + length * math.cos(angle),
-          notch.dy + length * math.sin(angle));
+    // Un éventail depuis le creux, de la longueur de la lumière.
+    Path fan(double halfAngle) {
+      final path = Path()..moveTo(notch.dx, notch.dy);
+      const steps = 48;
+      for (var i = 0; i <= steps; i++) {
+        final angle = -halfAngle + 2 * halfAngle * i / steps;
+        path.lineTo(notch.dx + length * math.cos(angle),
+            notch.dy + length * math.sin(angle));
+      }
+      return path..close();
     }
-    beam.close();
 
-    canvas.saveLayer(Offset.zero & size, Paint());
-    canvas.drawRect(Offset.zero & size, Paint()..color = AppColors.background);
+    // Bords adoucis : des bandes de plus en plus opaques vers l'extérieur.
+    const soft = AppMotion.startupIntroBeamSoft;
+    const bands = AppMotion.startupIntroBeamBands;
+    final beam = fan(half);
+    var inside = beam;
+    for (var band = 1; band <= bands; band++) {
+      final around = fan(half + soft * band / bands);
+      canvas.drawPath(
+          Path.combine(PathOperation.difference, around, inside),
+          Paint()
+            ..color =
+                AppColors.background.withValues(alpha: (band - .5) / bands));
+      inside = around;
+    }
+    canvas.drawPath(
+        Path.combine(PathOperation.difference,
+            Path()..addRect(Offset.zero & size), inside),
+        background);
+    // Dans le faisceau : le rideau s'efface à l'allumage, et reste entier
+    // derrière le front de la lumière.
     canvas.drawPath(
         beam,
         Paint()
-          ..blendMode = BlendMode.dstOut
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, feather / 2)
           ..shader = ui.Gradient.radial(
             notch,
             length,
             [
-              Colors.white.withValues(alpha: on),
-              Colors.white.withValues(alpha: on),
-              Colors.white.withValues(alpha: 0),
+              AppColors.background.withValues(alpha: 1 - on),
+              AppColors.background.withValues(alpha: 1 - on),
+              AppColors.background,
             ],
             const [0, 1 - AppMotion.startupIntroBeamFront, 1],
           ));
-    canvas.restore();
 
     // La lumière du projecteur : une lueur additive dans le faisceau, plus
     // forte près du K, qui s'éteint pendant l'élargissement pour rendre à
@@ -347,8 +373,6 @@ class StartupIntroBeam extends CustomPainter {
     final glow =
         on * (1 - AppMotion.startupIntroBeamGlowOut.transform(progress));
     if (glow > 0) {
-      // Sans flou : le dégradé est déjà doux, et un second flou plein écran
-      // coûtait des images pendant que l'accueil décode les siennes.
       canvas.drawPath(
           beam,
           Paint()

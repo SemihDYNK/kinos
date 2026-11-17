@@ -34,6 +34,7 @@ import 'package:kinos/screens/shared/nested_sliver_appbar.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/sliver_list_padding.dart';
+import 'package:kinos/screens/shared/startup_home.dart';
 import 'package:kinos/widgets/shared/pull_to_refresh.dart';
 
 /// Types de collection dans le périmètre du projet — films et séries
@@ -111,6 +112,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final padding = AdaptiveLayout.adaptivePadding(context,
         horizontalPadding: AppSpacing.screenPadding);
     final dashboardData = ref.watch(dashboardProvider);
+    final curtainUp = ref.watch(startupCurtainPhaseProvider) !=
+        StartupCurtainPhase.none;
     final views = ref.watch(viewsProvider);
     final allRows = ref.watch(homeRowsProvider);
     final enabledRows = allRows.where((row) => row.enabled).toList();
@@ -188,70 +191,77 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             // page du genre.
             if (enabledCatalogTypes.contains(HomeRowType.catalogNarrowGenres))
               GenreBrowseSection(scope: allCatalog, contentPadding: padding),
-            // Entre "Continuer à regarder" et "Ajouts récents" (cf. spec)
-            // — en dehors du SliverStack/FadingHeroBackdrop ci-dessus,
-            // donc sur AppColors.background pur comme tout ce qui suit,
-            // jamais teinté (cf. CLAUDE.md § Bandeau teinté : "la grille
-            // Ajouts récents et tout ce qui suit restent sur #0A0A0A
-            // pur").
-            for (final row in recommendationRows)
+            // Tout ce qui suit est hors de l'écran à l'ouverture. Ces rangées
+            // lancent leurs chargements en se construisant : construites sous
+            // le rideau, leurs réponses tombaient en pleine ouverture et
+            // occupaient le fil principal (le faisceau sautait des images).
+            // Elles se construisent une fois le rideau retiré.
+            if (!curtainUp) ...[
+              // Entre "Continuer à regarder" et "Ajouts récents" (cf. spec)
+              // — en dehors du SliverStack/FadingHeroBackdrop ci-dessus,
+              // donc sur AppColors.background pur comme tout ce qui suit,
+              // jamais teinté (cf. CLAUDE.md § Bandeau teinté : "la grille
+              // Ajouts récents et tout ce qui suit restent sur #0A0A0A
+              // pur").
+              for (final row in recommendationRows)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: switch (row.type) {
+                    // Rangées Letterboxd juste après « Pour vous ».
+                    HomeRowType.forYou => SliverMainAxisGroup(slivers: [
+                        ForYouRowSection(row: row, contentPadding: padding),
+                        LetterboxdHomeSections(contentPadding: padding),
+                      ]),
+                    HomeRowType.setAside =>
+                      SetAsideRowSection(row: row, contentPadding: padding),
+                    _ => const SliverToBoxAdapter(child: SizedBox.shrink()),
+                  },
+                ),
+              // Graines + inventaire du catalogue (cf. spec) : entre les
+              // rangées de recommandation et "Ajouts récents", qui garde sa
+              // position actuelle. Pas de rangée/titre de transition
+              // explicite entre les deux — seule la typographie des titres
+              // d'inventaire change de registre (cf.
+              // `AppTypography.catalogSectionTitle`).
+              if (enabledCatalogTypes.contains(HomeRowType.tasteSeeds))
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: TasteSeedRowsSection(contentPadding: padding),
+                ),
+              for (final row in enabledRows
+                  .where((row) => row.type == HomeRowType.seerrDiscovery)
+                  .take(1))
+                SeerrDiscoverySection(
+                    key: ValueKey(row.id), row: row, contentPadding: padding),
               SliverPadding(
                 padding: const EdgeInsets.only(top: AppSpacing.xl),
-                sliver: switch (row.type) {
-                  // Rangées Letterboxd juste après « Pour vous ».
-                  HomeRowType.forYou => SliverMainAxisGroup(slivers: [
-                      ForYouRowSection(row: row, contentPadding: padding),
-                      LetterboxdHomeSections(contentPadding: padding),
-                    ]),
-                  HomeRowType.setAside =>
-                    SetAsideRowSection(row: row, contentPadding: padding),
-                  _ => const SliverToBoxAdapter(child: SizedBox.shrink()),
-                },
+                sliver: CatalogInventorySection(
+                  contentPadding: padding,
+                  showWellRated:
+                      enabledCatalogTypes.contains(HomeRowType.catalogWellRated),
+                  showNarrowGenres: false,
+                  showDecades:
+                      enabledCatalogTypes.contains(HomeRowType.catalogDecades),
+                  showLongFilms:
+                      enabledCatalogTypes.contains(HomeRowType.catalogLongFilms),
+                ),
               ),
-            // Graines + inventaire du catalogue (cf. spec) : entre les
-            // rangées de recommandation et "Ajouts récents", qui garde sa
-            // position actuelle. Pas de rangée/titre de transition
-            // explicite entre les deux — seule la typographie des titres
-            // d'inventaire change de registre (cf.
-            // `AppTypography.catalogSectionTitle`).
-            if (enabledCatalogTypes.contains(HomeRowType.tasteSeeds))
               SliverPadding(
                 padding: const EdgeInsets.only(top: AppSpacing.xl),
-                sliver: TasteSeedRowsSection(contentPadding: padding),
-              ),
-            for (final row in enabledRows
-                .where((row) => row.type == HomeRowType.seerrDiscovery)
-                .take(1))
-              SeerrDiscoverySection(
-                  key: ValueKey(row.id), row: row, contentPadding: padding),
-            SliverPadding(
-              padding: const EdgeInsets.only(top: AppSpacing.xl),
-              sliver: CatalogInventorySection(
-                contentPadding: padding,
-                showWellRated:
-                    enabledCatalogTypes.contains(HomeRowType.catalogWellRated),
-                showNarrowGenres: false,
-                showDecades:
-                    enabledCatalogTypes.contains(HomeRowType.catalogDecades),
-                showLongFilms:
-                    enabledCatalogTypes.contains(HomeRowType.catalogLongFilms),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.only(top: AppSpacing.xl),
-              sliver: RecentlyAddedSection(
-                items: recentlyAdded,
-                contentPadding: padding,
-              ),
-            ),
-            for (final row in homeRows)
-              SliverPadding(
-                padding: const EdgeInsets.only(top: AppSpacing.xl),
-                sliver: HomeRowSection(
-                  row: row,
+                sliver: RecentlyAddedSection(
+                  items: recentlyAdded,
                   contentPadding: padding,
                 ),
               ),
+              for (final row in homeRows)
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xl),
+                  sliver: HomeRowSection(
+                    row: row,
+                    contentPadding: padding,
+                  ),
+                ),
+            ],
             const DefaultSliverBottomPadding(),
           ],
         ),

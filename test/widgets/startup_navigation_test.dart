@@ -58,8 +58,14 @@ class StartupRouter extends RootStackRouter {
 
 void main() {
   // Le temps des tests avance par grands sauts : sans plafond par image.
-  setUp(() => StartupCurtain.frameCap = null);
-  tearDown(() => StartupCurtain.frameCap = AppDurations.startupFrameCap);
+  setUp(() {
+    StartupCurtain.frameCap = null;
+    StartupCurtain.settleMax = Duration.zero;
+  });
+  tearDown(() {
+    StartupCurtain.frameCap = AppDurations.startupFrameCap;
+    StartupCurtain.settleMax = AppDurations.startupSettleMax;
+  });
 
   testWidgets('guard redirect reveals the authenticated destination',
       (tester) async {

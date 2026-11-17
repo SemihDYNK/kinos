@@ -11,8 +11,14 @@ import 'package:kinos/screens/shared/startup_mark.dart';
 
 void main() {
   // Le temps des tests avance par grands sauts : sans plafond par image.
-  setUp(() => StartupCurtain.frameCap = null);
-  tearDown(() => StartupCurtain.frameCap = AppDurations.startupFrameCap);
+  setUp(() {
+    StartupCurtain.frameCap = null;
+    StartupCurtain.settleMax = Duration.zero;
+  });
+  tearDown(() {
+    StartupCurtain.frameCap = AppDurations.startupFrameCap;
+    StartupCurtain.settleMax = AppDurations.startupSettleMax;
+  });
 
   testWidgets('signature assembly finishes once before handing off',
       (tester) async {
@@ -130,6 +136,42 @@ void main() {
             AppDurations.startupFrameCap.inMicroseconds /
                 AppDurations.startupLogo.inMicroseconds,
             .001));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('l\'ouverture attend que les images sortent à temps',
+      (tester) async {
+    StartupCurtain.settleMax = AppDurations.startupSettleMax;
+    var opening = false;
+    await tester.pumpWidget(MaterialApp(
+        home: StartupCurtain(
+            intro: true, onRevealed: () {}, onOpening: () => opening = true)));
+    await tester.pump();
+    // Des images lentes : l'ouverture attend.
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 60));
+    }
+    expect(opening, isFalse);
+    // Des images à temps, plusieurs d'affilée : elle démarre.
+    for (var i = 0; i <= AppMotion.startupSettleFrames + 1; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(opening, isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('l\'ouverture n\'attend jamais plus que le plafond',
+      (tester) async {
+    StartupCurtain.settleMax = AppDurations.startupSettleMax;
+    var opening = false;
+    await tester.pumpWidget(MaterialApp(
+        home: StartupCurtain(
+            intro: true, onRevealed: () {}, onOpening: () => opening = true)));
+    await tester.pump();
+    for (var i = 0; i < 14; i++) {
+      await tester.pump(const Duration(milliseconds: 60));
+    }
+    expect(opening, isTrue);
     await tester.pumpWidget(const SizedBox());
   });
 

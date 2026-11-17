@@ -2,6 +2,7 @@ import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:kinos/widgets/shared/animated_media_icon.dart';
 import 'package:kinos/theme/app_icons.dart';
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -208,7 +209,12 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
             // diapo. Sinon (premier affichage, liste renouvelée), il monte.
             return Opacity(
                 key: ValueKey(role),
-                opacity: progress,
+                // Jamais tout à fait zéro : un enfant à opacité nulle n'est
+                // pas dessiné, et le grand titre préparait alors toutes ses
+                // lettres à sa première image visible, en pleine ouverture
+                // du rideau (images perdues). À ce seuil, il reste
+                // invisible mais prêt.
+                opacity: math.max(progress, AppMotion.hiddenButPainted),
                 child: Transform.translate(
                     offset: _direction == 0
                         ? Offset(0, AppMotion.heroTextTravel * remaining)

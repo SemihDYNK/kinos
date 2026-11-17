@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/models/items/movie_model.dart';
 import 'package:kinos/screens/dashboard/hero_carousel.dart';
@@ -50,7 +51,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 40));
     expect(find.text('2 / 3'), findsOneWidget);
     expect(opacity(tester, 'hero-title-reveal'), inExclusiveRange(0, 1));
-    expect(opacity(tester, 'hero-synopsis-reveal'), 0);
+    expect(opacity(tester, 'hero-synopsis-reveal'),
+        lessThanOrEqualTo(AppMotion.hiddenButPainted),
+        reason: 'caché, mais dessiné pour apparaître sans coût');
     await tester.pump(const Duration(milliseconds: 100));
     expect(opacity(tester, 'hero-synopsis-reveal'), inExclusiveRange(0, 1));
     await tester.tap(find.byIcon(Icons.chevron_right_rounded));

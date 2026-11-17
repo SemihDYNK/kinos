@@ -353,6 +353,11 @@ abstract final class AppDurations {
   // image bloquée (l'accueil qui se construit) les ralentit au lieu de les
   // faire sauter.
   static const startupFrameCap = Duration(milliseconds: 25);
+  // Avant l'ouverture, le rideau attend que les images sortent à temps
+  // (écart entre deux images au plus [startupSettleFrame], plusieurs
+  // d'affilée), au plus [startupSettleMax].
+  static const startupSettleFrame = Duration(milliseconds: 20);
+  static const startupSettleMax = Duration(milliseconds: 700);
   // Premier lancement de la session : allumage, assemblage en profondeur,
   // clap, puis le mot (cf. AppMotion.startupIntro*).
   static const startupIntro = Duration(milliseconds: 2850);
@@ -439,6 +444,8 @@ abstract final class AppMotion {
   static const startupIntroCamera = Interval(.10, .68, curve: Cubic(.75, 0, .25, 1));
   // Inclinaison de départ de la caméra, résorbée pendant le recul.
   static const startupIntroTilt = .35;
+  // Images d'affilée sorties à temps avant de lancer l'ouverture.
+  static const startupSettleFrames = 8;
   // Branche du haut : ouverte (radians), élan, puis fermeture accélérée.
   static const startupIntroClapOpen = -.32;
   static const startupIntroClapLift = -.07;
@@ -483,7 +490,9 @@ abstract final class AppMotion {
   // Demi-angle du faisceau : celui de la bouche du K, puis l'écran entier.
   static const startupIntroBeamFrom = .30;
   static const startupIntroBeamTo = 3.1416;
-  static const startupIntroBeamFeather = 28.0;
+  // Adoucissement des bords du faisceau (radians), en fines bandes.
+  static const startupIntroBeamSoft = .016;
+  static const startupIntroBeamBands = 4;
   static const startupIntroWordOut = Interval(0, .25, curve: easeOut);
   static const startupIntroMarkOut = Interval(.62, .78, curve: easeOut);
   static const easeOut = Cubic(.23, 1, .32, 1);
@@ -497,6 +506,9 @@ abstract final class AppMotion {
   // l'image entrante se pose depuis un léger agrandissement.
   static const heroTextSlideTravel = AppSpacing.xl;
   static const heroImageSettle = .04;
+  // Opacité d'un élément caché qui doit rester dessiné (prêt à apparaître
+  // sans coût à sa première image) : imperceptible.
+  static const hiddenButPainted = .004;
   // Défilement de l'accueil : l'image du bandeau ne suit le contenu qu'à
   // moitié (elle paraît plus loin) et s'éteint avant d'avoir quitté
   // l'écran ; le texte, au premier plan, défile normalement et s'efface en
