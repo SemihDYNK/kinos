@@ -35,9 +35,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   /// Version longue de l'assemblage : premier lancement depuis le
   /// démarrage de la machine (cf. [resolveStartupIntro]). Jamais pour une
-  /// fenêtre secondaire ni quand l'écran sert à reverrouiller l'app.
-  late final bool _intro = widget.loggedIn == null &&
-      ref.read(argumentsStateProvider).newWindow != true &&
+  /// fenêtre secondaire. (Au lancement, la garde d'authentification ouvre
+  /// cet écran avec [SplashScreen.loggedIn] : c'est le chemin normal.)
+  late final bool _intro = ref.read(argumentsStateProvider).newWindow != true &&
       resolveStartupIntro(ref.read(sharedPreferencesProvider)) ==
           StartupIntro.long;
 
