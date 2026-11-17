@@ -408,6 +408,8 @@ abstract final class AppMotion {
   static const heroParallax = .5;
   static const heroScrollFadeEnd = 1.0;
   static const heroScrollFade = Curves.easeIn;
+  // Opacité plancher de l'image : elle ne disparaît jamais tout à fait.
+  static const heroScrollMinOpacity = .3;
   static const heroTextFadeLead = AppSpacing.xxl;
   static const menuScale = .95;
   static const pressScale = .96;

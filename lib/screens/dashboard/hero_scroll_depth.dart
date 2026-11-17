@@ -136,13 +136,13 @@ class _HeroScrollDepthState extends State<HeroScrollDepth> {
       );
 
   /// L'image reste presque entière au début du défilement et ne s'éteint
-  /// vraiment qu'en quittant l'écran.
+  /// vraiment qu'en quittant l'écran, sans jamais disparaître tout à fait
+  /// ([AppMotion.heroScrollMinOpacity]).
   double _imageOpacity(double top) {
     final scrolled = (-top).clamp(0.0, _height);
-    return 1 -
-        AppMotion.heroScrollFade.transform(
-            (scrolled / (_height * AppMotion.heroScrollFadeEnd))
-                .clamp(0.0, 1.0));
+    final fade = AppMotion.heroScrollFade.transform(
+        (scrolled / (_height * AppMotion.heroScrollFadeEnd)).clamp(0.0, 1.0));
+    return 1 - fade * (1 - AppMotion.heroScrollMinOpacity);
   }
 
   /// Opaque tant que le texte est à [AppMotion.heroTextFadeLead] du haut ou

@@ -88,10 +88,11 @@ void main() {
     expect(opacityAbove(tester, 'text').opacity,
         allOf(greaterThan(0), lessThan(1)));
 
-    // Encore à l'écran sur 10 px : presque éteinte.
+    // Encore à l'écran sur 10 px : estompée, jamais éteinte.
     controller.jumpTo(bannerHeight - 10);
     await tester.pump();
-    expect(opacityAbove(tester, 'image').opacity, lessThan(.05));
+    expect(opacityAbove(tester, 'image').opacity,
+        closeTo(AppMotion.heroScrollMinOpacity, .05));
     expect(opacityAbove(tester, 'text').opacity, 0);
     expect(FocusManager.instance.primaryFocus, same(focused),
         reason: 'franchir les seuils ne reconstruit pas le contenu');
