@@ -21,7 +21,9 @@ void setStartupSound(WidgetRef ref, bool enabled) {
   ref.read(sharedPreferencesProvider).setBool(startupSoundKey, enabled);
 }
 
-/// Sons de l'intro : au clap, l'interrupteur d'un projecteur Super 8 (le
+/// Sons de l'intro : pendant l'assemblage, un souffle par pièce qui arrive
+/// des bords, placé selon sa provenance (la hampe à gauche, les branches à
+/// droite, l'une plus grave, l'autre plus aiguë) ; au clap, l'interrupteur d'un projecteur Super 8 (le
 /// tout premier son de l'enregistrement, avant le moteur) ; à l'ouverture,
 /// un souffle vif quand le faisceau surgit du K, puis un souffle d'air
 /// léger qui passe de gauche à droite quand sa fenêtre s'élargit. Chacun part au moment où l'animation le franchit
@@ -33,12 +35,14 @@ void setStartupSound(WidgetRef ref, bool enabled) {
 /// prend plusieurs dizaines de millisecondes.
 ///
 /// Sons sous licence CC0 (freesound.org), coupés et mis au niveau :
+/// « Whoosh - Long Bamboo stick - OS ST 13 » par Sadiquecat (855844),
 /// « VideoTronic Super 8mm Projector » par ajoyce86 (213741), « Fast whoosh,
 /// bamboo swoosh through air, version 2 » par zapsplat.com (719637) et
 /// « Whoosh stereo light (transition) » par xkeril (701104).
 class StartupSounds {
-  StartupSounds._(this._clap, this._beam, this._window);
+  StartupSounds._(this._pieces, this._clap, this._beam, this._window);
 
+  final mpv.Player _pieces;
   final mpv.Player _clap;
   final mpv.Player _beam;
   final mpv.Player _window;
@@ -61,6 +65,7 @@ class StartupSounds {
       }
 
       return StartupSounds._(
+        await load('intro_pieces.wav', _piecesVolume),
         await load('intro_clap.wav', _clapVolume),
         await load('intro_beam.wav', _beamVolume),
         await load('intro_window.wav', _windowVolume),
@@ -72,8 +77,13 @@ class StartupSounds {
 
   // Volumes mpv (0–100) : nettement sous la lecture vidéo.
   static const _clapVolume = 30.0;
+  static const _piecesVolume = 22.0;
   static const _beamVolume = 25.0;
   static const _windowVolume = 30.0;
+
+  void pieces() {
+    if (!_disposed) _pieces.play();
+  }
 
   void clap() {
     if (!_disposed) _clap.play();
@@ -90,6 +100,7 @@ class StartupSounds {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    await _pieces.dispose();
     await _clap.dispose();
     await _beam.dispose();
     await _window.dispose();
