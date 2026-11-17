@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:kinos/screens/shared/startup_mark.dart';
 import 'package:kinos/theme/app_theme.dart';
 
@@ -17,7 +18,12 @@ class StartupCurtain extends StatefulWidget {
       this.onOpening,
       this.ready = true,
       this.intro = false,
+      this.skipHint,
       super.key});
+
+  /// Indication affichée sous l'assemblage pour le passer (une touche ou un
+  /// clic l'amènent au K assemblé).
+  final String? skipHint;
 
   /// Version longue de l'assemblage (premier lancement de la session) ; sans
   /// effet sur l'ouverture, identique dans les deux cas.
@@ -109,6 +115,16 @@ class _StartupCurtainState extends State<StartupCurtain>
     WidgetsBinding.instance.ensureVisualUpdate();
   }
 
+  /// Une touche ou un clic pendant l'assemblage l'amènent à son terme : le
+  /// K assemblé, comme s'il venait de finir.
+  bool _skip() {
+    if (_exiting || !_controller.isAnimating) return false;
+    // Termine l'animation sans l'annuler : la suite (onLogoReady) se joue.
+    _controller.stop(canceled: false);
+    _controller.value = 1;
+    return true;
+  }
+
   @override
   void dispose() {
     _readinessTimeout?.cancel();
@@ -176,18 +192,45 @@ class _StartupCurtainState extends State<StartupCurtain>
         );
       });
     }
-    return ColoredBox(
-      color: AppColors.background,
-      child: Center(
-        child: _exiting || !motion
-            ? _markWithWait(mark, waiting: _exiting ? !_started : _assembled)
-            : AnimatedBuilder(
-                animation: _controller,
-                builder: (_, __) => _markWithWait(
-                    StartupMark(
-                        progress: _controller.value, intro: widget.intro),
-                    waiting: _assembled),
+    final hint = widget.skipHint;
+    return Focus(
+      autofocus: !_exiting,
+      includeSemantics: false,
+      onKeyEvent: (_, event) => event is KeyDownEvent && _skip()
+          ? KeyEventResult.handled
+          : KeyEventResult.ignored,
+      // La touche et le clic pour passer restent hors de l'arbre
+      // d'accessibilité : leurs nœuds plein écran y absorberaient le
+      // libellé du K.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: _skip,
+        child: ColoredBox(
+          color: AppColors.background,
+          child: Stack(fit: StackFit.expand, children: [
+            Center(
+              child: _exiting || !motion
+                  ? _markWithWait(mark,
+                      waiting: _exiting ? !_started : _assembled)
+                  : AnimatedBuilder(
+                      animation: _controller,
+                      builder: (_, __) => _markWithWait(
+                          StartupMark(
+                              progress: _controller.value,
+                              intro: widget.intro),
+                          waiting: _assembled),
+                    ),
+            ),
+            if (hint != null && !_exiting && motion)
+              Positioned(
+                left: AppSpacing.screenPadding,
+                right: AppSpacing.screenPadding,
+                bottom: AppSpacing.xxl,
+                child: _SkipHint(text: hint, visible: !_assembled),
               ),
+          ]),
+        ),
       ),
     );
   }
@@ -370,4 +413,43 @@ class _StartupApertureEdge extends CustomPainter {
       oldDelegate.progress != progress ||
       oldDelegate.feather != feather ||
       oldDelegate.centre != centre;
+}
+
+/// « Une touche pour passer », discret : il apparaît après
+/// [AppDurations.startupSkipHintDelay] et s'efface une fois le K assemblé.
+class _SkipHint extends StatefulWidget {
+  const _SkipHint({required this.text, required this.visible});
+  final String text;
+  final bool visible;
+
+  @override
+  State<_SkipHint> createState() => _SkipHintState();
+}
+
+class _SkipHintState extends State<_SkipHint> {
+  bool _due = false;
+  late final Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(AppDurations.startupSkipHintDelay,
+        () => setState(() => _due = true));
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedOpacity(
+        opacity: _due && widget.visible ? AppBrand.startupSkipHintOpacity : 0,
+        duration: AppDurations.startupWaitFade,
+        curve: AppMotion.easeOut,
+        child: Text(widget.text,
+            textAlign: TextAlign.center,
+            style: AppTypography.meta.copyWith(color: AppColors.textSecondary)),
+      );
 }

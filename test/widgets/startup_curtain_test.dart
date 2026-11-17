@@ -41,6 +41,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('un clic ou une touche amènent l\'intro au K assemblé',
+      (tester) async {
+    for (final byKey in [false, true]) {
+      var assembled = 0;
+      await tester.pumpWidget(MaterialApp(
+          home: StartupCurtain(
+              key: ValueKey(byKey),
+              intro: true,
+              skipHint: 'Appuyez sur une touche pour passer',
+              onLogoReady: () => assembled++)));
+      await tester.pump();
+      await tester.pump(AppDurations.startupSkipHintDelay);
+      await tester.pump(AppDurations.startupWaitFade);
+      final hint = find.text('Appuyez sur une touche pour passer');
+      expect(
+          tester
+              .widget<AnimatedOpacity>(find.ancestor(
+                  of: hint, matching: find.byType(AnimatedOpacity)))
+              .opacity,
+          greaterThan(0));
+      expect(assembled, 0);
+
+      if (byKey) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      } else {
+        await tester.tap(find.byType(StartupCurtain));
+      }
+      await tester.pump();
+      await tester.pump();
+      expect(assembled, 1);
+      expect(tester.widget<StartupMark>(find.byType(StartupMark)).progress, 1);
+      await tester.pump(AppDurations.startupWaitFade);
+      expect(
+          tester
+              .widget<AnimatedOpacity>(find.ancestor(
+                  of: hint, matching: find.byType(AnimatedOpacity)))
+              .opacity,
+          0,
+          reason: 'l\'indication s\'efface une fois le K assemblé');
+      await tester.pump(AppDurations.startupIntro);
+      expect(assembled, 1);
+    }
+  });
+
   testWidgets('disposing during assembly cancels its handoff', (tester) async {
     var assembled = false;
     await tester.pumpWidget(

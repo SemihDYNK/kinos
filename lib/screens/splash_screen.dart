@@ -1,7 +1,4 @@
 import 'dart:async';
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -21,6 +18,8 @@ import 'package:kinos/screens/shared/startup_home.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/screens/shared/route_wrapper.dart';
 import 'package:kinos/services/local_network_permission.dart';
+import 'package:kinos/services/startup_session.dart';
+import 'package:kinos/util/localization_helper.dart';
 
 @RoutePage()
 class SplashScreen extends ConsumerStatefulWidget {
@@ -34,11 +33,13 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   final _logoReady = Completer<void>();
 
-  // TEMPORAIRE, mise au point : KINOS_STARTUP_INTRO=long force la version
-  // longue. La détection du premier lancement de la session viendra
-  // ensuite.
-  static final _intro = !kIsWeb &&
-      Platform.environment['KINOS_STARTUP_INTRO'] == 'long';
+  /// Version longue de l'assemblage : premier lancement depuis le
+  /// démarrage de la machine (cf. [resolveStartupIntro]). Jamais pour une
+  /// fenêtre secondaire ni quand l'écran sert à reverrouiller l'app.
+  late final bool _intro = widget.loggedIn == null &&
+      ref.read(argumentsStateProvider).newWindow != true &&
+      resolveStartupIntro(ref.read(sharedPreferencesProvider)) ==
+          StartupIntro.long;
 
   @override
   void initState() {
@@ -177,6 +178,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         body: SizedBox.expand(
             child: StartupCurtain(
                 intro: _intro,
+                skipHint: _intro ? context.localized.startupSkipHint : null,
                 onLogoReady: () {
                   if (!_logoReady.isCompleted) _logoReady.complete();
                 })),

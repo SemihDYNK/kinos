@@ -1035,6 +1035,7 @@
     "prevVideo": "Vidéo précédente",
     "fullScreen": "Plein écran",
     "skipMediaSegment": "Passer le segment média",
+    "startupSkipHint": "Appuyez sur une touche pour passer",
     "exit": "Quitter",
     "shortCutAlreadyAssigned": "Raccourci '{hotKey}' déjà attribué",
     "@shortCutAlreadyAssigned": {
