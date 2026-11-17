@@ -19,7 +19,6 @@ import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/screens/shared/route_wrapper.dart';
 import 'package:kinos/services/local_network_permission.dart';
 import 'package:kinos/services/startup_session.dart';
-import 'package:kinos/util/localization_helper.dart';
 
 @RoutePage()
 class SplashScreen extends ConsumerStatefulWidget {
@@ -180,7 +179,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         body: SizedBox.expand(
             child: StartupCurtain(
                 intro: _intro,
-                skipHint: _intro ? context.localized.startupSkipHint : null,
                 onLogoReady: () {
                   if (!_logoReady.isCompleted) _logoReady.complete();
                 })),

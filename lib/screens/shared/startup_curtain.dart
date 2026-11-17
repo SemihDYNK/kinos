@@ -19,7 +19,6 @@ class StartupCurtain extends StatefulWidget {
       this.onOpening,
       this.ready = true,
       this.intro = false,
-      this.skipHint,
       super.key});
 
   /// Avance maximale de l'animation par image affichée (cf.
@@ -32,10 +31,6 @@ class StartupCurtain extends StatefulWidget {
   /// [AppDurations.startupSettleMax]) ; zéro dans les tests.
   @visibleForTesting
   static Duration settleMax = AppDurations.startupSettleMax;
-
-  /// Indication affichée sous l'assemblage pour le passer (une touche ou un
-  /// clic l'amènent au K assemblé).
-  final String? skipHint;
 
   /// Version longue de l'assemblage (premier lancement de la session). À
   /// l'ouverture, le rideau part du mot posé et plonge dans le creux du K
@@ -298,7 +293,6 @@ class _StartupCurtainState extends State<StartupCurtain>
         );
       });
     }
-    final hint = widget.skipHint;
     return Focus(
       autofocus: !_exiting,
       includeSemantics: false,
@@ -327,13 +321,6 @@ class _StartupCurtainState extends State<StartupCurtain>
                           waiting: _assembled),
                     ),
             ),
-            if (hint != null && !_exiting && motion)
-              Positioned(
-                left: AppSpacing.screenPadding,
-                right: AppSpacing.screenPadding,
-                bottom: AppSpacing.xxl,
-                child: _SkipHint(text: hint, visible: !_assembled),
-              ),
           ]),
         ),
       ),
@@ -518,43 +505,4 @@ class _StartupApertureEdge extends CustomPainter {
       oldDelegate.progress != progress ||
       oldDelegate.feather != feather ||
       oldDelegate.centre != centre;
-}
-
-/// « Une touche pour passer », discret : il apparaît après
-/// [AppDurations.startupSkipHintDelay] et s'efface une fois le K assemblé.
-class _SkipHint extends StatefulWidget {
-  const _SkipHint({required this.text, required this.visible});
-  final String text;
-  final bool visible;
-
-  @override
-  State<_SkipHint> createState() => _SkipHintState();
-}
-
-class _SkipHintState extends State<_SkipHint> {
-  bool _due = false;
-  late final Timer _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer(
-        AppDurations.startupSkipHintDelay, () => setState(() => _due = true));
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedOpacity(
-        opacity: _due && widget.visible ? AppBrand.startupSkipHintOpacity : 0,
-        duration: AppDurations.startupWaitFade,
-        curve: AppMotion.easeOut,
-        child: Text(widget.text,
-            textAlign: TextAlign.center,
-            style: AppTypography.meta.copyWith(color: AppColors.textSecondary)),
-      );
 }

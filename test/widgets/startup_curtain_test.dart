@@ -59,18 +59,9 @@ void main() {
           home: StartupCurtain(
               key: ValueKey(byKey),
               intro: true,
-              skipHint: 'Appuyez sur une touche pour passer',
               onLogoReady: () => assembled++)));
       await tester.pump();
-      await tester.pump(AppDurations.startupSkipHintDelay);
-      await tester.pump(AppDurations.startupWaitFade);
-      final hint = find.text('Appuyez sur une touche pour passer');
-      expect(
-          tester
-              .widget<AnimatedOpacity>(find.ancestor(
-                  of: hint, matching: find.byType(AnimatedOpacity)))
-              .opacity,
-          greaterThan(0));
+      await tester.pump(AppDurations.startupLogo);
       expect(assembled, 0);
 
       if (byKey) {
@@ -82,14 +73,6 @@ void main() {
       await tester.pump();
       expect(assembled, 1);
       expect(tester.widget<StartupMark>(find.byType(StartupMark)).progress, 1);
-      await tester.pump(AppDurations.startupWaitFade);
-      expect(
-          tester
-              .widget<AnimatedOpacity>(find.ancestor(
-                  of: hint, matching: find.byType(AnimatedOpacity)))
-              .opacity,
-          0,
-          reason: 'l\'indication s\'efface une fois le K assemblé');
       await tester.pump(AppDurations.startupIntro);
       expect(assembled, 1);
     }

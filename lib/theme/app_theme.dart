@@ -121,7 +121,6 @@ abstract final class AppBrand {
   static const startupWaitGap = AppSpacing.xl;
   static const startupWaitOpacity = .55;
   static const startupWaitTrackOpacity = .08;
-  static const startupSkipHintOpacity = .6;
   static const wordmarkAspectRatio = 949 / 256;
 }
 
@@ -361,9 +360,6 @@ abstract final class AppDurations {
   // Premier lancement de la session : allumage, assemblage en profondeur,
   // clap, puis le mot (cf. AppMotion.startupIntro*).
   static const startupIntro = Duration(milliseconds: 2850);
-  // Indication « une touche pour passer » : discrète, et seulement si on
-  // regarde déjà depuis un moment.
-  static const startupSkipHintDelay = Duration(milliseconds: 700);
   static const startupReveal = Duration(milliseconds: 900);
   // Ouverture après l'intro longue : le faisceau du K s'allume et s'élargit.
   static const startupIntroReveal = Duration(milliseconds: 2000);

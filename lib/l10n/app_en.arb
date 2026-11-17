@@ -1737,10 +1737,6 @@
   "prevChapter": "Previous Chapter",
   "fullScreen": "Full Screen",
   "skipMediaSegment": "Skip Media Segment",
-  "startupSkipHint": "Press any key to skip",
-  "@startupSkipHint": {
-    "description": "Discreet hint under the long startup animation"
-  },
   "exit": "Exit",
   "shortCutAlreadyAssigned": "Shortcut '{hotKey}' already assigned",
   "@shortCutAlreadyAssigned": {
