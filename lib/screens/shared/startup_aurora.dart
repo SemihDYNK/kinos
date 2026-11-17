@@ -108,8 +108,15 @@ class StartupAuroraTicker extends StatefulWidget {
 
 class _StartupAuroraTickerState extends State<StartupAuroraTicker>
     with SingleTickerProviderStateMixin {
-  late final Ticker _ticker = createTicker((_) => StartupAurora._tick())
-    ..start();
+  late final Ticker _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    // Démarré ici : déclaré paresseux, le minuteur n'était jamais créé et
+    // l'aurore restait figée.
+    _ticker = createTicker((_) => StartupAurora._tick())..start();
+  }
 
   @override
   void dispose() {

@@ -466,7 +466,8 @@ abstract final class AppMotion {
   // Écart de teinte de chaque tache par rapport à la dominante (degrés).
   static const startupAuroraHues = [0.0, 40.0, -35.0, 70.0];
   static const startupAuroraSaturation = .70;
-  static const startupAuroraSpeed = .85;
+  // Vitesse de dérive : elle n'a que deux secondes environ pour se voir.
+  static const startupAuroraSpeed = 1.3;
   // Point d'ancrage de chaque tache (fraction de l'écran depuis son
   // centre), et amplitude de sa dérive autour.
   static const startupAuroraAnchors = [
