@@ -460,10 +460,22 @@ abstract final class AppMotion {
   // Aurore du clap (cf. StartupAurora) : clarté de chaque tache, écart de
   // teinte des voisines (degrés), saturation maximale (le K blanc doit
   // rester lisible) et vitesse de dérive.
-  static const startupAuroraLightness = [.30, .38, .22, .26];
-  static const startupAuroraHueShift = 28.0;
-  static const startupAuroraSaturation = .62;
-  static const startupAuroraSpeed = .55;
+  // Une tache claire, une très sombre, deux intermédiaires : c'est ce
+  // contraste, plus que la teinte, qui les distingue.
+  static const startupAuroraLightness = [.44, .14, .30, .22];
+  // Écart de teinte de chaque tache par rapport à la dominante (degrés).
+  static const startupAuroraHues = [0.0, 40.0, -35.0, 70.0];
+  static const startupAuroraSaturation = .70;
+  static const startupAuroraSpeed = .85;
+  // Point d'ancrage de chaque tache (fraction de l'écran depuis son
+  // centre), et amplitude de sa dérive autour.
+  static const startupAuroraAnchors = [
+    Offset(-.28, -.22),
+    Offset(.30, -.18),
+    Offset(-.22, .26),
+    Offset(.26, .24),
+  ];
+  static const startupAuroraDrift = Offset(.24, .22);
   // Passage du repli neutre à la vraie dominante, si elle arrive tard.
   static const startupTintFade = Duration(milliseconds: 400);
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie

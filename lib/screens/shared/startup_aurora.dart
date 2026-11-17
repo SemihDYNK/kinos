@@ -29,9 +29,9 @@ abstract final class StartupAurora {
     time.value = _clock.elapsedMicroseconds / 1e6;
   }
 
-  /// Les couleurs des taches : la dominante, et deux voisines un peu plus
-  /// claires et saturées, de part et d'autre de sa teinte. Une dominante
-  /// neutre (le repli) reste dans des gris.
+  /// Les couleurs des taches : la dominante et des teintes voisines,
+  /// plus saturées, de clartés contrastées. Une dominante neutre (le
+  /// repli) reste dans des gris.
   static List<Color> colorsFor(Color tint) {
     final base = HSLColor.fromColor(tint);
     Color shade(double hueShift, double lightness, double saturation) => base
@@ -41,13 +41,9 @@ abstract final class StartupAurora {
             base.saturation * saturation, AppMotion.startupAuroraSaturation))
         .toColor();
     return [
-      shade(0, AppMotion.startupAuroraLightness[0], 1.4),
-      shade(AppMotion.startupAuroraHueShift,
-          AppMotion.startupAuroraLightness[1], 1.7),
-      shade(-AppMotion.startupAuroraHueShift,
-          AppMotion.startupAuroraLightness[2], 1.6),
-      shade(AppMotion.startupAuroraHueShift / 2,
-          AppMotion.startupAuroraLightness[3], 1.2),
+      for (var i = 0; i < AppMotion.startupAuroraHues.length; i++)
+        shade(AppMotion.startupAuroraHues[i],
+            AppMotion.startupAuroraLightness[i], 1.8),
     ];
   }
 
@@ -67,12 +63,19 @@ abstract final class StartupAurora {
     final t = time.value * AppMotion.startupAuroraSpeed;
     final size = rect.longestSide;
     for (var i = 0; i < colors.length; i++) {
-      // Chaque tache suit sa propre courbe de Lissajous, lente et
-      // continue, autour du centre.
+      // Chaque tache a son ancrage, réparti dans l'écran, et dérive
+      // autour sur sa propre courbe de Lissajous : elles se croisent et se
+      // mêlent au lieu de tourner ensemble autour du centre.
       final phase = i * 1.9;
+      final anchor = AppMotion.startupAuroraAnchors[i];
+      const drift = AppMotion.startupAuroraDrift;
       final centre = rect.center +
-          Offset(math.sin(t * (0.9 + .23 * i) + phase) * rect.width * .34,
-              math.cos(t * (0.7 + .19 * i) + phase * 1.3) * rect.height * .32);
+          Offset(
+              (anchor.dx + drift.dx * math.sin(t * (0.9 + .31 * i) + phase)) *
+                  rect.width,
+              (anchor.dy +
+                      drift.dy * math.cos(t * (0.7 + .27 * i) + phase * 1.3)) *
+                  rect.height);
       final radius = size *
           (.42 + .08 * math.sin(t * (1.1 + .17 * i) + phase)) *
           ui.lerpDouble(.4, 1, intensity)!;
