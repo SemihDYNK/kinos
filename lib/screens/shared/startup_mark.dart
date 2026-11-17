@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:kinos/screens/shared/startup_aurora.dart';
 import 'package:kinos/screens/shared/wordmark_letters.dart';
 import 'package:kinos/theme/app_theme.dart';
 
@@ -270,12 +271,13 @@ class _StartupIntroPainter extends CustomPainter {
 /// jusqu'à couvrir l'écran. On voit dans le faisceau le vrai accueil, à sa
 /// vraie place.
 class StartupIntroBeam extends CustomPainter {
-  const StartupIntroBeam(this.progress,
-      {required this.markSize, this.tint = AppColors.heroFallback});
+  StartupIntroBeam(this.progress,
+      {required this.markSize, this.tint = AppColors.heroFallback})
+      : super(repaint: StartupAurora.time);
   final double progress;
 
-  /// Dominante du film : le rideau garde le dégradé né au clap (de cette
-  /// couleur, derrière le K, vers le fond) jusqu'à ce qu'il s'efface.
+  /// Dominante du film : le rideau garde l'aurore née au clap (cf.
+  /// [StartupAurora]) jusqu'à ce qu'il s'efface.
   final Color tint;
 
   /// Côté de la marque à l'écran (le K seul).
@@ -325,15 +327,11 @@ class StartupIntroBeam extends CustomPainter {
         size.longestSide *
         1.5;
     final background = Paint()..color = AppColors.background;
-    // Le dégradé né au clap : de la dominante, derrière le K, vers le fond.
-    final tinted = Paint()
-      ..shader = ui.Gradient.radial(
-        size.center(Offset.zero),
-        AppBrand.startupBloomRadius * size.shortestSide,
-        [tint, AppColors.background],
-      );
+    // L'aurore née au clap, au même instant de son mouvement.
+    final aurora = StartupAurora.colorsFor(tint);
     if (on <= 0 || length <= 0) {
-      canvas.drawRect(Offset.zero & size, tinted);
+      StartupAurora.paint(canvas, Offset.zero & size,
+          colors: aurora, intensity: 1);
       _paintMark(canvas, toScreen, unit, half, progress);
       return;
     }
@@ -428,7 +426,7 @@ class StartupIntroBeam extends CustomPainter {
             ));
     }
     // Le rideau (bords adoucis compris) est dessiné dans un calque, puis
-    // recoloré par le dégradé du clap là où il couvre : sa transparence
+    // recoloré par l'aurore du clap là où il couvre : sa transparence
     // dans les bords est conservée.
     canvas.saveLayer(Offset.zero & size, Paint());
     for (final (band, paint) in edges) {
@@ -459,7 +457,8 @@ class StartupIntroBeam extends CustomPainter {
             const [0, 1 - AppMotion.startupIntroBeamFront, 1],
           ));
 
-    canvas.drawRect(Offset.zero & size, tinted..blendMode = BlendMode.srcATop);
+    StartupAurora.paint(canvas, Offset.zero & size,
+        colors: aurora, intensity: 1, blendMode: BlendMode.srcATop);
     canvas.restore();
 
     _paintMark(canvas, toScreen, unit, half, progress);

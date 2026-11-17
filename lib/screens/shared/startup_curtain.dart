@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:kinos/screens/shared/startup_aurora.dart';
 import 'package:kinos/screens/shared/startup_mark.dart';
 import 'package:kinos/theme/app_theme.dart';
 
@@ -240,6 +240,7 @@ class _StartupCurtainState extends State<StartupCurtain>
     if (_exiting && motion && widget.intro) {
       // Les branches du K, en projecteur, ouvrent sur l'accueil.
       return Stack(fit: StackFit.expand, children: [
+        const StartupAuroraTicker(),
         AnimatedBuilder(
           animation: _controller,
           builder: (context, _) => CustomPaint(
@@ -517,37 +518,44 @@ class _StartupApertureEdge extends CustomPainter {
       oldDelegate.centre != centre;
 }
 
-/// Dégradé qui naît au clap de l'intro longue : de la dominante du film,
-/// derrière le K, vers le fond. Il s'étend comme une onde puis se pose ; si
-/// la dominante arrive tard, il part d'un repli neutre et y passe en fondu.
+/// Aurore qui naît au clap de l'intro longue (cf. [StartupAurora]) : ses
+/// taches de couleur s'allument et grandissent, puis dérivent. Si la
+/// dominante arrive tard, elle part d'un repli neutre et y passe en fondu.
 class _ClapBloom extends StatelessWidget {
   const _ClapBloom({required this.progress, required this.tint});
   final Animation<double> progress;
   final Color? tint;
 
   @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<Color?>(
-        tween: ColorTween(end: tint ?? AppColors.heroFallback),
-        duration: AppMotion.startupTintFade,
-        curve: AppMotion.easeOut,
-        builder: (context, color, _) => AnimatedBuilder(
-          animation: progress,
-          builder: (context, _) {
-            final bloom = AppMotion.startupIntroBloom.transform(progress.value);
-            if (bloom <= 0) return const SizedBox.expand();
-            return DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  radius: ui.lerpDouble(AppBrand.startupBloomFrom,
-                      AppBrand.startupBloomRadius, bloom)!,
-                  colors: [
-                    Color.lerp(AppColors.background, color, bloom)!,
-                    AppColors.background,
-                  ],
-                ),
-              ),
-            );
-          },
+  Widget build(BuildContext context) => Stack(fit: StackFit.expand, children: [
+        const StartupAuroraTicker(),
+        TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: tint ?? AppColors.heroFallback),
+          duration: AppMotion.startupTintFade,
+          curve: AppMotion.easeOut,
+          builder: (context, color, _) => CustomPaint(
+            painter: _AuroraPainter(
+                progress: progress, colors: StartupAurora.colorsFor(color!)),
+          ),
         ),
-      );
+      ]);
+}
+
+class _AuroraPainter extends CustomPainter {
+  _AuroraPainter({required this.progress, required this.colors})
+      : super(repaint: Listenable.merge([progress, StartupAurora.time]));
+  final Animation<double> progress;
+  final List<Color> colors;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bloom = AppMotion.startupIntroBloom.transform(progress.value);
+    if (bloom <= 0) return;
+    StartupAurora.paint(canvas, Offset.zero & size,
+        colors: colors, intensity: bloom);
+  }
+
+  @override
+  bool shouldRepaint(_AuroraPainter oldDelegate) =>
+      oldDelegate.colors != colors || oldDelegate.progress != progress;
 }
