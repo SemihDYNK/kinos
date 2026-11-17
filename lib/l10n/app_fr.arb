@@ -1036,7 +1036,7 @@
     "fullScreen": "Plein écran",
     "skipMediaSegment": "Passer le segment média",
     "settingsStartupSoundTitle": "Son au démarrage",
-    "settingsStartupSoundDesc": "Le clap et le projecteur de l'animation d'ouverture",
+    "settingsStartupSoundDesc": "Le projecteur et le souffle de l'animation d'ouverture",
     "exit": "Quitter",
     "shortCutAlreadyAssigned": "Raccourci '{hotKey}' déjà attribué",
     "@shortCutAlreadyAssigned": {

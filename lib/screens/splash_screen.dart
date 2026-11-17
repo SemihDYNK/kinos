@@ -58,7 +58,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         MediaQuery.accessibleNavigationOf(context)) {
       return;
     }
-    unawaited(StartupSounds.prepare(longProjector: _word).then((sounds) {
+    unawaited(StartupSounds.prepare().then((sounds) {
       // Prêts après coup : le clap déjà passé ne joue pas en retard.
       _sounds = sounds;
     }));
@@ -128,15 +128,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   tint: overlayRef.watch(startupTintProvider),
                   ready:
                       !loggedIn || overlayRef.watch(startupPageReadyProvider),
+                  onWindow: () => _sounds?.window(),
                   onOpening: () {
-                    // Le projecteur démarre quand le faisceau s'allume.
-                    _sounds?.projector();
                     overlayRef
                         .read(startupCurtainPhaseProvider.notifier)
                         .state = StartupCurtainPhase.opening;
                   },
                   onRevealed: () {
-                    // Le projecteur a fini de jouer avec l'ouverture.
+                    // Le souffle a fini de jouer avec l'ouverture.
                     unawaited(_sounds?.dispose());
                     overlayRef
                         .read(startupCurtainPhaseProvider.notifier)

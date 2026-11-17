@@ -53,3 +53,13 @@ Public cross-reference data is fetched on demand from Fribb/anime-lists
 (https://github.com/Fribb/anime-lists).
 No copy of the full dataset is bundled with Kinos. Public anime metadata is
 queried from AniList (https://anilist.co); Kinos is not affiliated with AniList.
+
+Startup sounds
+--------------
+assets/sounds/intro_clap.wav is cut from "VideoTronic Super 8mm Projector"
+by ajoyce86 (https://freesound.org/s/213741/).
+assets/sounds/intro_window.wav is cut from "Whoosh stereo light (transition)"
+by xkeril (https://freesound.org/s/701104/).
+Both are released under Creative Commons 0 (public domain dedication),
+https://creativecommons.org/publicdomain/zero/1.0/; they were trimmed,
+faded and level-adjusted for Kinos.

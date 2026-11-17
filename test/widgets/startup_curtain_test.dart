@@ -199,6 +199,29 @@ void main() {
     expect(claps, 1);
   });
 
+  testWidgets('le souffle part quand la fenêtre du faisceau s\'élargit',
+      (tester) async {
+    var windows = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: StartupCurtain(
+            intro: true, onWindow: () => windows++, onRevealed: () {})));
+    await tester.pump();
+    final at = AppDurations.startupIntroReveal *
+        AppMotion.startupIntroBeamOpen.begin;
+    var elapsed = Duration.zero;
+    while (elapsed < at - AppDurations.startupSoundLead * 2) {
+      await tester.pump(const Duration(milliseconds: 16));
+      elapsed += const Duration(milliseconds: 16);
+    }
+    expect(windows, 0);
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(windows, 1);
+    await tester.pump(AppDurations.startupIntroReveal);
+    expect(windows, 1);
+  });
+
   testWidgets('passée avant le clap, l\'intro n\'en joue pas le son',
       (tester) async {
     var claps = 0;

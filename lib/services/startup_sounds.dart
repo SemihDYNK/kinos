@@ -21,27 +21,30 @@ void setStartupSound(WidgetRef ref, bool enabled) {
   ref.read(sharedPreferencesProvider).setBool(startupSoundKey, enabled);
 }
 
-/// Sons de l'intro : le clap, puis le projecteur qui démarre quand le
-/// faisceau s'allume. Chacun part au moment où l'animation le franchit (pas
-/// une piste mixée d'avance : l'horloge de l'intro peut ralentir un instant
-/// quand une image bloque, une piste figée se décalerait).
+/// Sons de l'intro : au clap, le démarrage d'un projecteur Super 8 (le
+/// mécanisme qui s'enclenche, le moteur qui tourne) ; à l'ouverture, un
+/// souffle d'air léger qui passe de gauche à droite quand la fenêtre du
+/// faisceau s'élargit. Chacun part au moment où l'animation le franchit
+/// (pas une piste mixée d'avance : l'horloge de l'intro peut ralentir un
+/// instant quand une image bloque, une piste figée se décalerait).
 ///
 /// Les lecteurs (mpv, sans sortie vidéo) sont préparés dès l'écran de
 /// démarrage, sons chargés et en pause : en créer un au moment du son
 /// prend plusieurs dizaines de millisecondes.
 ///
-/// Les fichiers (`assets/sounds/`) sont provisoires, synthétisés par
-/// `tool/sounds/synthesize.py`.
+/// Sons sous licence CC0 (freesound.org), coupés et mis au niveau :
+/// « VideoTronic Super 8mm Projector » par ajoyce86 (213741) et « Whoosh
+/// stereo light (transition) » par xkeril (701104).
 class StartupSounds {
-  StartupSounds._(this._clap, this._projector);
+  StartupSounds._(this._clap, this._window);
 
   final mpv.Player _clap;
-  final mpv.Player _projector;
+  final mpv.Player _window;
   bool _disposed = false;
 
   /// Prépare les sons ; `null` si la lecture audio est indisponible (le
   /// démarrage continue sans son).
-  static Future<StartupSounds?> prepare({required bool longProjector}) async {
+  static Future<StartupSounds?> prepare() async {
     if (kIsWeb) return null;
     try {
       mpv.MediaKit.ensureInitialized();
@@ -57,11 +60,7 @@ class StartupSounds {
 
       return StartupSounds._(
         await load('intro_clap.wav', _clapVolume),
-        await load(
-            longProjector
-                ? 'intro_projector.wav'
-                : 'intro_projector_short.wav',
-            _projectorVolume),
+        await load('intro_window.wav', _windowVolume),
       );
     } catch (_) {
       return null;
@@ -70,20 +69,20 @@ class StartupSounds {
 
   // Volumes mpv (0–100) : nettement sous la lecture vidéo.
   static const _clapVolume = 70.0;
-  static const _projectorVolume = 50.0;
+  static const _windowVolume = 60.0;
 
   void clap() {
     if (!_disposed) _clap.play();
   }
 
-  void projector() {
-    if (!_disposed) _projector.play();
+  void window() {
+    if (!_disposed) _window.play();
   }
 
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
     await _clap.dispose();
-    await _projector.dispose();
+    await _window.dispose();
   }
 }

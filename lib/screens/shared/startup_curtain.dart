@@ -23,11 +23,16 @@ class StartupCurtain extends StatefulWidget {
       this.word = true,
       this.tint,
       this.onClap,
+      this.onWindow,
       super.key});
 
   /// Le clap de l'intro (pour son son), au moment où l'animation le
   /// franchit.
   final VoidCallback? onClap;
+
+  /// À l'ouverture après l'intro : la fenêtre du faisceau commence à
+  /// s'élargir (pour le souffle).
+  final VoidCallback? onWindow;
 
   /// Intro avec « KINOS » après le clap (premier lancement de la session) ;
   /// sans lui, elle s'arrête au K assemblé et l'ouverture part du K centré.
@@ -116,12 +121,21 @@ class _StartupCurtainState extends State<StartupCurtain>
     return run.future;
   }
 
-  /// Le clap de l'intro, au moment où l'animation le franchit, avec
+  /// Les sons de l'intro (le clap, puis à l'ouverture la fenêtre qui
+  /// s'élargit), au moment où l'animation les franchit, avec
   /// [AppDurations.startupSoundLead] d'avance pour la latence audio. Passée
   /// avant le clap, l'intro n'en joue pas.
   void _soundAt(double previous, double next, int duration) {
+    if (!widget.intro) return;
+    final lead = AppDurations.startupSoundLead.inMicroseconds / duration;
+    if (_exiting) {
+      // La fenêtre du faisceau commence à s'élargir.
+      final window = AppMotion.startupIntroBeamOpen.begin - lead;
+      if (previous < window && next >= window) widget.onWindow?.call();
+      return;
+    }
     final onClap = widget.onClap;
-    if (onClap == null || _exiting || !widget.intro) return;
+    if (onClap == null) return;
     final clap = (widget.word
             ? AppMotion.startupIntroAssemblyEnd * AppMotion.startupIntroClap
             : AppMotion.startupIntroClap) -
