@@ -21,8 +21,8 @@ void setStartupSound(WidgetRef ref, bool enabled) {
   ref.read(sharedPreferencesProvider).setBool(startupSoundKey, enabled);
 }
 
-/// Sons de l'intro : au clap, le démarrage d'un projecteur Super 8 (le
-/// mécanisme qui s'enclenche, le moteur qui tourne) ; à l'ouverture, un
+/// Sons de l'intro : au clap, le bouton de démarrage d'un projecteur
+/// Super 8 (le mécanisme qui s'enclenche, sans le moteur) ; à l'ouverture, un
 /// souffle d'air léger qui passe de gauche à droite quand la fenêtre du
 /// faisceau s'élargit. Chacun part au moment où l'animation le franchit
 /// (pas une piste mixée d'avance : l'horloge de l'intro peut ralentir un
@@ -68,8 +68,8 @@ class StartupSounds {
   }
 
   // Volumes mpv (0–100) : nettement sous la lecture vidéo.
-  static const _clapVolume = 70.0;
-  static const _windowVolume = 60.0;
+  static const _clapVolume = 45.0;
+  static const _windowVolume = 45.0;
 
   void clap() {
     if (!_disposed) _clap.play();
