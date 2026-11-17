@@ -336,6 +336,32 @@ class StartupIntroBeam extends CustomPainter {
     }
     canvas.restore();
 
+    // La lumière du projecteur : une lueur additive dans le faisceau, plus
+    // forte près du K, qui s'éteint pendant l'élargissement pour rendre à
+    // l'accueil ses vraies couleurs. Sans elle, le faisceau ne montre que
+    // la partie sombre du bandeau et ne se lit pas comme de la lumière.
+    final glow =
+        on * (1 - AppMotion.startupIntroBeamGlowOut.transform(progress));
+    if (glow > 0 && length > 0) {
+      canvas.drawPath(
+          beam,
+          Paint()
+            ..blendMode = BlendMode.plus
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, feather / 2)
+            ..shader = ui.Gradient.radial(
+              notch,
+              length,
+              [
+                Colors.white
+                    .withValues(alpha: AppMotion.startupIntroBeamGlow * glow),
+                Colors.white.withValues(
+                    alpha: AppMotion.startupIntroBeamGlow * glow * .35),
+                Colors.white.withValues(alpha: 0),
+              ],
+              const [0, .55, 1],
+            ));
+    }
+
     // Le K : la hampe reste, les branches pivotent avec les bords du
     // faisceau, puis tout s'efface.
     final mark = 1 - AppMotion.startupIntroMarkOut.transform(progress);

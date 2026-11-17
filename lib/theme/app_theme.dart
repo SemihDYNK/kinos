@@ -357,7 +357,7 @@ abstract final class AppDurations {
   static const startupSkipHintDelay = Duration(milliseconds: 700);
   static const startupReveal = Duration(milliseconds: 900);
   // Ouverture après l'intro longue : le faisceau du K s'allume et s'élargit.
-  static const startupIntroReveal = Duration(milliseconds: 1600);
+  static const startupIntroReveal = Duration(milliseconds: 1800);
   // Attente de l'accueil au-delà de ce délai : un trait signale que l'app
   // travaille. En deçà, rien ne s'affiche.
   static const startupWaitDelay = Duration(milliseconds: 400);
@@ -462,20 +462,24 @@ abstract final class AppMotion {
   // projecteur. L'espace entre elles s'allume sur l'accueil, puis elles
   // pivotent autour du creux du K en s'écartant, et le faisceau s'élargit
   // jusqu'à couvrir l'écran. INOS, dans le faisceau, s'efface à l'allumage.
-  static const startupIntroBeamOn = Interval(0, .22, curve: easeOut);
+  static const startupIntroBeamOn = Interval(0, .20, curve: easeOut);
   // La lumière s'allonge depuis le creux du K (jusqu'à 1,5 fois le plus
   // grand côté de l'écran), derrière un front adouci (part de sa longueur).
-  static const startupIntroBeamReach = Interval(0, .30, curve: Cubic(.3, 0, .2, 1));
+  static const startupIntroBeamReach = Interval(0, .28, curve: Cubic(.3, 0, .2, 1));
   static const startupIntroBeamFront = .45;
+  // Lueur du cône de lumière (opacité maximale près du K), éteinte
+  // pendant l'élargissement.
+  static const startupIntroBeamGlow = .28;
+  static const startupIntroBeamGlowOut = Interval(.50, .85, curve: easeOut);
   // Le rayon traverse l'écran et tient un instant à l'angle de la bouche
   // du K avant de s'élargir : sinon on ne voit jamais le projecteur.
-  static const startupIntroBeamOpen = Interval(.42, 1, curve: Cubic(.6, 0, .3, 1));
+  static const startupIntroBeamOpen = Interval(.50, 1, curve: Cubic(.6, 0, .3, 1));
   // Demi-angle du faisceau : celui de la bouche du K, puis l'écran entier.
   static const startupIntroBeamFrom = .30;
   static const startupIntroBeamTo = 3.1416;
   static const startupIntroBeamFeather = 28.0;
   static const startupIntroWordOut = Interval(0, .25, curve: easeOut);
-  static const startupIntroMarkOut = Interval(.55, .72, curve: easeOut);
+  static const startupIntroMarkOut = Interval(.62, .78, curve: easeOut);
   static const easeOut = Cubic(.23, 1, .32, 1);
   static const heroTitleReveal = Interval(0, .75, curve: easeOut);
   static const heroSynopsisReveal = Interval(.16, 1, curve: easeOut);
