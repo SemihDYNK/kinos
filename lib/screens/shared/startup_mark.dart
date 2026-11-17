@@ -391,6 +391,11 @@ class StartupIntroBeam extends CustomPainter {
     // les bords adoucis, elle s'estompe avec l'image à travers eux, au lieu
     // de s'arrêter net au bord du faisceau.
     final glow = 1 - AppMotion.startupIntroBeamGlowOut.transform(progress);
+    // Nulle à la source (dans la hampe), elle n'atteint son maximum qu'à la
+    // sortie de la bouche du K : sinon elle débordait en tache blanche
+    // dans la fente du creux, entre la hampe et les volets.
+    final mouth =
+        ((_mouthCorner - _source).distance * unit / length).clamp(0.0, .5);
     if (glow > 0) {
       canvas.drawPath(
           lit,
@@ -400,13 +405,14 @@ class StartupIntroBeam extends CustomPainter {
               notch,
               length,
               [
+                Colors.white.withValues(alpha: 0),
                 Colors.white
                     .withValues(alpha: AppMotion.startupIntroBeamGlow * glow),
                 Colors.white.withValues(
                     alpha: AppMotion.startupIntroBeamGlow * glow * .35),
                 Colors.white.withValues(alpha: 0),
               ],
-              const [0, .55, 1],
+              [0, mouth, math.max(mouth, .55), 1],
             ));
     }
     for (final (band, paint) in edges) {
