@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:kinos/screens/shared/wordmark_letters.dart';
@@ -261,77 +260,4 @@ class _StartupIntroPainter extends CustomPainter {
   @override
   bool shouldRepaint(_StartupIntroPainter oldDelegate) =>
       oldDelegate.progress != progress;
-}
-
-/// Ouverture après l'intro longue, peinte par-dessus l'accueil déjà en
-/// place : le rideau couvre l'écran sauf le K, qui devient une fenêtre sur
-/// l'accueil (son blanc se dissout, INOS s'efface). La caméra plonge
-/// ensuite dans le creux du K : le trou grandit, et une ouverture ronde
-/// partie du même point finit de découvrir l'écran. On voit à travers le K
-/// le vrai bandeau, à sa vraie place : la continuité est exacte.
-class StartupIntroOpening extends CustomPainter {
-  const StartupIntroOpening(this.progress, {required this.markSize});
-  final double progress;
-
-  /// Côté de la marque à l'écran (le K seul).
-  final double markSize;
-
-  static const _extent = _StartupMarkPainter._extent;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-    final centre = size.center(Offset.zero);
-    final notch = centre + StartupMark.notchOffset(markSize, intro: true);
-    final unit = markSize / _extent;
-    final dive = math.pow(AppMotion.startupIntroDiveZoom,
-            AppMotion.startupIntroDive.transform(progress))
-        .toDouble();
-    // Repère du signe (mot posé) vers l'écran, puis la plongée autour du
-    // creux du K.
-    final toScreen = (Matrix4.identity()
-          ..translateByDouble(notch.dx, notch.dy, 0, 1)
-          ..scaleByDouble(dive, dive, 1, 1)
-          ..translateByDouble(centre.dx - notch.dx, centre.dy - notch.dy, 0, 1)
-          ..scaleByDouble(unit, unit, 1, 1)
-          ..translateByDouble(
-              -_extent / 2 - introWordShift, -_extent / 2, 0, 1))
-        .storage;
-    final k = _StartupMarkPainter._signature.transform(toScreen);
-
-    final aperture = AppMotion.startupIntroAperture.transform(progress);
-    var hole = k;
-    if (aperture > 0) {
-      final radius = [
-            Offset.zero,
-            Offset(size.width, 0),
-            Offset(0, size.height),
-            Offset(size.width, size.height),
-          ].map((corner) => (corner - notch).distance).reduce(math.max) *
-          aperture;
-      hole = Path.combine(PathOperation.union, k,
-          Path()..addOval(Rect.fromCircle(center: notch, radius: radius)));
-    }
-    canvas.drawPath(
-        Path.combine(PathOperation.difference,
-            Path()..addRect(Offset.zero & size), hole),
-        Paint()..color = AppColors.background);
-
-    final white = AppColors.textPrimary;
-    final fill = 1 - AppMotion.startupIntroWindow.transform(progress);
-    if (fill > 0) {
-      canvas.drawPath(k, Paint()..color = white.withValues(alpha: fill));
-    }
-    final word = 1 - AppMotion.startupIntroWordOut.transform(progress);
-    if (word > 0) {
-      final paint = Paint()..color = white.withValues(alpha: word);
-      for (final letter in wordmarkLetters) {
-        canvas.drawPath(letter.transform(toScreen), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(StartupIntroOpening oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.markSize != markSize;
 }

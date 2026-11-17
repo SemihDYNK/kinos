@@ -356,9 +356,6 @@ abstract final class AppDurations {
   // regarde déjà depuis un moment.
   static const startupSkipHintDelay = Duration(milliseconds: 700);
   static const startupReveal = Duration(milliseconds: 900);
-  // Ouverture après l'intro longue : le K devient une fenêtre sur
-  // l'accueil, puis la caméra plonge dedans.
-  static const startupIntroReveal = Duration(milliseconds: 1300);
   // Attente de l'accueil au-delà de ce délai : un trait signale que l'app
   // travaille. En deçà, rien ne s'affiche.
   static const startupWaitDelay = Duration(milliseconds: 400);
@@ -458,19 +455,6 @@ abstract final class AppMotion {
   static const startupExitZoom = 4.0;
   static const startupExitDive = Interval(0, .55, curve: Cubic(.55, 0, .8, .3));
   static const startupAperture = Interval(.08, 1, curve: Cubic(.65, 0, .35, 1));
-  // Ouverture après l'intro longue (fraction de
-  // AppDurations.startupIntroReveal). Le blanc du K se dissout et laisse
-  // voir l'accueil à travers lui, INOS s'efface ; puis le K, devenu un
-  // trou dans le rideau, grandit autour de son creux, et une ouverture
-  // ronde partie du même point finit de découvrir l'écran.
-  static const startupIntroWindow = Interval(0, .34, curve: easeOut);
-  static const startupIntroWordOut = Interval(0, .22, curve: easeOut);
-  // Le zoom de la plongée suit une progression exponentielle (vitesse
-  // perçue régulière) : le K traverse l'écran avant que l'ouverture ronde
-  // ne finisse les coins.
-  static const startupIntroDive = Interval(.24, 1, curve: Cubic(.5, 0, .7, .9));
-  static const startupIntroDiveZoom = 40.0;
-  static const startupIntroAperture = Interval(.74, 1, curve: Cubic(.5, 0, .3, 1));
   static const easeOut = Cubic(.23, 1, .32, 1);
   static const heroTitleReveal = Interval(0, .75, curve: easeOut);
   static const heroSynopsisReveal = Interval(.16, 1, curve: easeOut);

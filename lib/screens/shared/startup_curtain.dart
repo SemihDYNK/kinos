@@ -46,9 +46,7 @@ class _StartupCurtainState extends State<StartupCurtain>
   late final _controller = AnimationController(
     vsync: this,
     duration: widget.onRevealed != null
-        ? (widget.intro
-            ? AppDurations.startupIntroReveal
-            : AppDurations.startupReveal)
+        ? AppDurations.startupReveal
         : widget.intro
             ? AppDurations.startupIntro
             : AppDurations.startupLogo,
@@ -152,25 +150,6 @@ class _StartupCurtainState extends State<StartupCurtain>
   Widget build(BuildContext context) {
     final motion = _motionEnabled;
     final mark = StartupMark(progress: 1, intro: widget.intro);
-    if (_exiting && motion && widget.intro) {
-      // Le K devient une fenêtre sur l'accueil, puis la caméra plonge.
-      return Stack(fit: StackFit.expand, children: [
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) => CustomPaint(
-            painter: StartupIntroOpening(_controller.value,
-                markSize: AppBrand.startupMarkSize),
-          ),
-        ),
-        Center(
-          child: Transform.translate(
-            offset: const Offset(
-                0, AppBrand.startupMarkSize / 2 + AppBrand.startupWaitGap),
-            child: _StartupWaitLine(active: !_started),
-          ),
-        ),
-      ]);
-    }
     if (_exiting && motion) {
       return LayoutBuilder(builder: (context, constraints) {
         final notch = StartupMark.notchOffset(AppBrand.startupMarkSize,

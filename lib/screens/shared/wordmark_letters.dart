@@ -15,8 +15,10 @@ final double wordmarkRight = wordmarkLetters.last.getBounds().right;
 Path _parse(String data) {
   final proxy = _PathProxy();
   writeSvgPathDataToPath(data, proxy);
-  // Le O a un contour intérieur : pair-impair, quel que soit son sens.
-  return proxy.path..fillType = PathFillType.evenOdd;
+  // Règle non nulle, celle du SVG : la diagonale du N se recouvre
+  // elle-même (pair-impair y ferait des trous), et le contour intérieur du
+  // O tourne en sens inverse.
+  return proxy.path;
 }
 
 class _PathProxy extends PathProxy {
