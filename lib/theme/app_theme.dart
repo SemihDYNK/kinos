@@ -487,11 +487,14 @@ abstract final class AppMotion {
   // Le rayon traverse l'écran et tient un instant à l'angle de la bouche
   // du K avant de s'élargir : sinon on ne voit jamais le projecteur.
   static const startupIntroBeamOpen = Interval(.48, 1, curve: Cubic(.6, 0, .3, 1));
-  // Demi-angle du faisceau : celui de la bouche du K, puis l'écran entier.
-  static const startupIntroBeamFrom = .30;
+  // Demi-angle final du faisceau : l'écran entier (il part de celui de la
+  // bouche du K, cf. StartupIntroBeam.mouthAngle).
   static const startupIntroBeamTo = 3.1416;
   static const startupIntroWordOut = Interval(0, .25, curve: easeOut);
-  static const startupIntroMarkOut = Interval(.62, .78, curve: easeOut);
+  // Les volets (branches du K) bordent le faisceau jusqu'à la verticale
+  // (vers 74 %) et s'effacent en l'approchant : au-delà, ils se
+  // retourneraient par-dessus la hampe en K à l'envers.
+  static const startupIntroMarkOut = Interval(.62, .76, curve: easeOut);
   static const easeOut = Cubic(.23, 1, .32, 1);
   static const heroTitleReveal = Interval(0, .75, curve: easeOut);
   static const heroSynopsisReveal = Interval(.16, 1, curve: easeOut);

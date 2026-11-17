@@ -277,14 +277,21 @@ class StartupIntroBeam extends CustomPainter {
   final double markSize;
 
   static const _extent = _StartupMarkPainter._extent;
-  // Creux du K, autour duquel pivotent les branches (repère du signe).
-  static const _hinge = Offset(80, 128);
-
   // Source du faisceau, reculée dans la hampe (cachée par son blanc) : la
   // bouche du K est une fente de 10 unités de haut au creux, et un
   // faisceau parti d'un point y laissait deux petits triangles noirs. D'ici,
   // il couvre toute la fente dès sa sortie.
   static const _source = Offset(62, 128);
+
+  // Coin intérieur de la branche du haut, où la bouche du K s'évase : le
+  // bord du faisceau passe par lui, et il tourne autour de la source avec
+  // la branche (le volet). Celui du bas est son symétrique.
+  static const _mouthCorner = Offset(168, 95);
+
+  /// Demi-angle de départ du faisceau : celui de la bouche du K vue depuis
+  /// la source.
+  static final mouthAngle =
+      math.atan2(_source.dy - _mouthCorner.dy, _mouthCorner.dx - _source.dx);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -299,8 +306,7 @@ class StartupIntroBeam extends CustomPainter {
 
     final on = AppMotion.startupIntroBeamOn.transform(progress);
     final open = AppMotion.startupIntroBeamOpen.transform(progress);
-    final half = ui.lerpDouble(
-        AppMotion.startupIntroBeamFrom, AppMotion.startupIntroBeamTo, open)!;
+    final half = ui.lerpDouble(mouthAngle, AppMotion.startupIntroBeamTo, open)!;
 
     // Le rideau, percé par le faisceau : la lumière part du creux du K et
     // s'allonge vers l'extérieur derrière un front adouci, pendant que son
@@ -432,13 +438,15 @@ class StartupIntroBeam extends CustomPainter {
   /// faisceau, puis tout s'efface) et INOS, qui s'efface à l'allumage.
   void _paintMark(Canvas canvas, Offset Function(Offset) toScreen, double unit,
       double half, double progress) {
-    // Le K : la hampe reste, les branches pivotent avec les bords du
-    // faisceau, puis tout s'efface.
+    // Le K : la hampe reste, les branches sont les volets du projecteur.
+    // Elles tournent autour de la source du faisceau, si bien que leur coin
+    // intérieur reste sur le bord de la lumière : le faisceau ne s'élargit
+    // que parce qu'elles s'écartent. Tout s'efface à la fin.
     final mark = 1 - AppMotion.startupIntroMarkOut.transform(progress);
     if (mark > 0) {
       final white = Paint()
         ..color = AppColors.textPrimary.withValues(alpha: mark);
-      final turn = half - AppMotion.startupIntroBeamFrom;
+      final turn = half - mouthAngle;
       canvas.save();
       canvas.translate(toScreen(Offset.zero).dx, toScreen(Offset.zero).dy);
       canvas.scale(unit);
@@ -446,9 +454,9 @@ class StartupIntroBeam extends CustomPainter {
       canvas.drawPath(parts[0], white);
       for (final (index, sign) in [(1, -1.0), (2, 1.0)]) {
         canvas.save();
-        canvas.translate(_hinge.dx, _hinge.dy);
+        canvas.translate(_source.dx, _source.dy);
         canvas.rotate(sign * turn);
-        canvas.translate(-_hinge.dx, -_hinge.dy);
+        canvas.translate(-_source.dx, -_source.dy);
         canvas.drawPath(parts[index], white);
         canvas.restore();
       }
