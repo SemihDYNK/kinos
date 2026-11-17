@@ -95,6 +95,20 @@ void main() {
         reason: 'le K glisse à gauche pour centrer « KINOS »');
   });
 
+  testWidgets('après l\'intro, l\'ouverture par la fenêtre du K va au bout',
+      (tester) async {
+    var revealed = false;
+    await tester.pumpWidget(MaterialApp(
+        home: StartupCurtain(intro: true, onRevealed: () => revealed = true)));
+    await tester.pump();
+    await tester.pump(AppDurations.startupReveal);
+    expect(revealed, isFalse, reason: 'plus longue que l\'ouverture courte');
+    await tester.pump(AppDurations.startupIntroReveal);
+    await tester.pump();
+    expect(revealed, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('disposing during assembly cancels its handoff', (tester) async {
     var assembled = false;
     await tester.pumpWidget(
