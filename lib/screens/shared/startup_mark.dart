@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:kinos/screens/shared/wordmark_letters.dart';
@@ -260,4 +261,110 @@ class _StartupIntroPainter extends CustomPainter {
   @override
   bool shouldRepaint(_StartupIntroPainter oldDelegate) =>
       oldDelegate.progress != progress;
+}
+
+/// Ouverture après l'intro longue, peinte par-dessus l'accueil déjà en
+/// place : les deux branches du K sont un projecteur. L'espace entre elles
+/// (la bouche du K) s'allume sur l'accueil, puis elles pivotent autour du
+/// creux du K en s'écartant ; le faisceau, aux bords adoucis, s'élargit
+/// jusqu'à couvrir l'écran. On voit dans le faisceau le vrai accueil, à sa
+/// vraie place.
+class StartupIntroBeam extends CustomPainter {
+  const StartupIntroBeam(this.progress, {required this.markSize});
+  final double progress;
+
+  /// Côté de la marque à l'écran (le K seul).
+  final double markSize;
+
+  static const _extent = _StartupMarkPainter._extent;
+  // Creux du K, d'où part le faisceau (repère du signe).
+  static const _hinge = Offset(80, 128);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final centre = size.center(Offset.zero);
+    final unit = markSize / _extent;
+    Offset toScreen(Offset p) =>
+        centre +
+        (p - const Offset(_extent / 2, _extent / 2)) * unit -
+        Offset(introWordShift * unit, 0);
+    final notch = toScreen(_hinge);
+
+    final on = AppMotion.startupIntroBeamOn.transform(progress);
+    final open = AppMotion.startupIntroBeamOpen.transform(progress);
+    final half = ui.lerpDouble(
+        AppMotion.startupIntroBeamFrom, AppMotion.startupIntroBeamTo, open)!;
+
+    // Le faisceau : un éventail depuis le creux, assez long pour sortir de
+    // l'écran.
+    final reach = size.longestSide * 3;
+    final beam = Path()..moveTo(notch.dx, notch.dy);
+    const steps = 48;
+    for (var i = 0; i <= steps; i++) {
+      final angle = -half + 2 * half * i / steps;
+      beam.lineTo(notch.dx + reach * math.cos(angle),
+          notch.dy + reach * math.sin(angle));
+    }
+    beam.close();
+
+    // Rideau autour du faisceau, aux bords adoucis ; dans le faisceau, il
+    // s'efface à l'allumage.
+    const feather = AppMotion.startupIntroBeamFeather;
+    final curtain = Paint()
+      ..color = AppColors.background
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, feather / 2);
+    canvas.drawPath(
+        Path.combine(PathOperation.difference,
+            Path()..addRect((Offset.zero & size).inflate(feather * 2)), beam),
+        curtain);
+    if (on < 1) {
+      canvas.drawPath(
+          beam,
+          Paint()
+            ..color = AppColors.background.withValues(alpha: 1 - on)
+            ..maskFilter =
+                const MaskFilter.blur(BlurStyle.normal, feather / 2));
+    }
+
+    // Le K : la hampe reste, les branches pivotent avec les bords du
+    // faisceau, puis tout s'efface.
+    final mark = 1 - AppMotion.startupIntroMarkOut.transform(progress);
+    if (mark > 0) {
+      final white = Paint()
+        ..color = AppColors.textPrimary.withValues(alpha: mark);
+      final turn = half - AppMotion.startupIntroBeamFrom;
+      canvas.save();
+      canvas.translate(toScreen(Offset.zero).dx, toScreen(Offset.zero).dy);
+      canvas.scale(unit);
+      final parts = _StartupMarkPainter._parts;
+      canvas.drawPath(parts[0], white);
+      for (final (index, sign) in [(1, -1.0), (2, 1.0)]) {
+        canvas.save();
+        canvas.translate(_hinge.dx, _hinge.dy);
+        canvas.rotate(sign * turn);
+        canvas.translate(-_hinge.dx, -_hinge.dy);
+        canvas.drawPath(parts[index], white);
+        canvas.restore();
+      }
+      canvas.restore();
+    }
+
+    final word = 1 - AppMotion.startupIntroWordOut.transform(progress);
+    if (word > 0) {
+      canvas.save();
+      canvas.translate(toScreen(Offset.zero).dx, toScreen(Offset.zero).dy);
+      canvas.scale(unit);
+      final paint = Paint()
+        ..color = AppColors.textPrimary.withValues(alpha: word);
+      for (final letter in wordmarkLetters) {
+        canvas.drawPath(letter, paint);
+      }
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(StartupIntroBeam oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.markSize != markSize;
 }

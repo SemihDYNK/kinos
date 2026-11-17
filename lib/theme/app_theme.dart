@@ -356,6 +356,8 @@ abstract final class AppDurations {
   // regarde déjà depuis un moment.
   static const startupSkipHintDelay = Duration(milliseconds: 700);
   static const startupReveal = Duration(milliseconds: 900);
+  // Ouverture après l'intro longue : le faisceau du K s'allume et s'élargit.
+  static const startupIntroReveal = Duration(milliseconds: 1300);
   // Attente de l'accueil au-delà de ce délai : un trait signale que l'app
   // travaille. En deçà, rien ne s'affiche.
   static const startupWaitDelay = Duration(milliseconds: 400);
@@ -455,6 +457,19 @@ abstract final class AppMotion {
   static const startupExitZoom = 4.0;
   static const startupExitDive = Interval(0, .55, curve: Cubic(.55, 0, .8, .3));
   static const startupAperture = Interval(.08, 1, curve: Cubic(.65, 0, .35, 1));
+  // Ouverture après l'intro longue (fraction de
+  // AppDurations.startupIntroReveal) : les deux branches du K sont un
+  // projecteur. L'espace entre elles s'allume sur l'accueil, puis elles
+  // pivotent autour du creux du K en s'écartant, et le faisceau s'élargit
+  // jusqu'à couvrir l'écran. INOS, dans le faisceau, s'efface à l'allumage.
+  static const startupIntroBeamOn = Interval(0, .22, curve: easeOut);
+  static const startupIntroBeamOpen = Interval(.10, 1, curve: Cubic(.6, 0, .3, 1));
+  // Demi-angle du faisceau : celui de la bouche du K, puis l'écran entier.
+  static const startupIntroBeamFrom = .30;
+  static const startupIntroBeamTo = 3.1416;
+  static const startupIntroBeamFeather = 28.0;
+  static const startupIntroWordOut = Interval(0, .25, curve: easeOut);
+  static const startupIntroMarkOut = Interval(.30, .52, curve: easeOut);
   static const easeOut = Cubic(.23, 1, .32, 1);
   static const heroTitleReveal = Interval(0, .75, curve: easeOut);
   static const heroSynopsisReveal = Interval(.16, 1, curve: easeOut);
