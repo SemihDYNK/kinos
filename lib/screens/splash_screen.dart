@@ -33,11 +33,15 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   final _logoReady = Completer<void>();
 
-  /// Version longue de l'assemblage : premier lancement depuis le
-  /// démarrage de la machine (cf. [resolveStartupIntro]). Jamais pour une
-  /// fenêtre secondaire. (Au lancement, la garde d'authentification ouvre
-  /// cet écran avec [SplashScreen.loggedIn] : c'est le chemin normal.)
-  late final bool _intro = ref.read(argumentsStateProvider).newWindow != true &&
+  /// Intro du projecteur (gros plan, clap, aurore, faisceau) à chaque
+  /// lancement, sauf pour une fenêtre secondaire. (Au lancement, la garde
+  /// d'authentification ouvre cet écran avec [SplashScreen.loggedIn] :
+  /// c'est le chemin normal.)
+  late final bool _intro = ref.read(argumentsStateProvider).newWindow != true;
+
+  /// Le mot « KINOS » après le clap : seulement au premier lancement depuis
+  /// le démarrage de la machine (cf. [resolveStartupIntro]).
+  late final bool _word = _intro &&
       resolveStartupIntro(ref.read(sharedPreferencesProvider)) ==
           StartupIntro.long;
 
@@ -100,6 +104,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Consumer(
             builder: (context, overlayRef, _) => StartupCurtain(
                   intro: _intro,
+                  word: _word,
                   tint: overlayRef.watch(startupTintProvider),
                   ready:
                       !loggedIn || overlayRef.watch(startupPageReadyProvider),
@@ -192,6 +197,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         body: SizedBox.expand(
             child: StartupCurtain(
                 intro: _intro,
+                word: _word,
                 tint: ref.watch(startupTintProvider),
                 onLogoReady: () {
                   if (!_logoReady.isCompleted) _logoReady.complete();

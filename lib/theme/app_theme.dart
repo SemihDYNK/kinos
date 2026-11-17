@@ -360,6 +360,9 @@ abstract final class AppDurations {
   // Premier lancement de la session : allumage, assemblage en profondeur,
   // clap, puis le mot (cf. AppMotion.startupIntro*).
   static const startupIntro = Duration(milliseconds: 2850);
+  // Lancements suivants : la même intro sans « KINOS », arrêtée à la fin
+  // de l'assemblage (startupIntro × AppMotion.startupIntroAssemblyEnd).
+  static const startupIntroShort = Duration(milliseconds: 2150);
   static const startupReveal = Duration(milliseconds: 900);
   // Ouverture après l'intro longue : le faisceau du K s'allume et s'élargit.
   static const startupIntroReveal = Duration(milliseconds: 2000);

@@ -20,8 +20,13 @@ class StartupCurtain extends StatefulWidget {
       this.onOpening,
       this.ready = true,
       this.intro = false,
+      this.word = true,
       this.tint,
       super.key});
+
+  /// Intro avec « KINOS » après le clap (premier lancement de la session) ;
+  /// sans lui, elle s'arrête au K assemblé et l'ouverture part du K centré.
+  final bool word;
 
   /// Dominante du premier film du bandeau (intro longue) : le fond passe
   /// du noir à un dégradé de cette couleur au clap. `null` tant qu'elle
@@ -64,7 +69,9 @@ class _StartupCurtainState extends State<StartupCurtain>
             ? AppDurations.startupIntroReveal
             : AppDurations.startupReveal)
         : widget.intro
-            ? AppDurations.startupIntro
+            ? (widget.word
+                ? AppDurations.startupIntro
+                : AppDurations.startupIntroShort)
             : AppDurations.startupLogo,
   );
 
@@ -236,7 +243,8 @@ class _StartupCurtainState extends State<StartupCurtain>
   @override
   Widget build(BuildContext context) {
     final motion = _motionEnabled;
-    final mark = StartupMark(progress: 1, intro: widget.intro);
+    final mark =
+        StartupMark(progress: 1, intro: widget.intro, word: widget.word);
     if (_exiting && motion && widget.intro) {
       // Les branches du K, en projecteur, ouvrent sur l'accueil.
       return Stack(fit: StackFit.expand, children: [
@@ -246,7 +254,8 @@ class _StartupCurtainState extends State<StartupCurtain>
           builder: (context, _) => CustomPaint(
             painter: StartupIntroBeam(_controller.value,
                 markSize: AppBrand.startupMarkSize,
-                tint: widget.tint ?? AppColors.heroFallback),
+                tint: widget.tint ?? AppColors.heroFallback,
+                word: widget.word),
           ),
         ),
         Center(
@@ -261,7 +270,7 @@ class _StartupCurtainState extends State<StartupCurtain>
     if (_exiting && motion) {
       return LayoutBuilder(builder: (context, constraints) {
         final notch = StartupMark.notchOffset(AppBrand.startupMarkSize,
-            intro: widget.intro);
+            intro: widget.intro, word: widget.word);
         final centre = constraints.biggest.center(Offset.zero) + notch;
         return AnimatedBuilder(
           animation: _controller,
@@ -319,7 +328,8 @@ class _StartupCurtainState extends State<StartupCurtain>
           color: AppColors.background,
           child: Stack(fit: StackFit.expand, children: [
             if (widget.intro && motion && !_exiting)
-              _ClapBloom(progress: _controller, tint: widget.tint),
+              _ClapBloom(
+                  progress: _controller, tint: widget.tint, word: widget.word),
             Center(
               child: _exiting || !motion
                   ? _markWithWait(mark,
@@ -328,7 +338,9 @@ class _StartupCurtainState extends State<StartupCurtain>
                       animation: _controller,
                       builder: (_, __) => _markWithWait(
                           StartupMark(
-                              progress: _controller.value, intro: widget.intro),
+                              progress: _controller.value,
+                              intro: widget.intro,
+                              word: widget.word),
                           waiting: _assembled),
                     ),
             ),
@@ -522,9 +534,11 @@ class _StartupApertureEdge extends CustomPainter {
 /// taches de couleur s'allument et grandissent, puis dérivent. Si la
 /// dominante arrive tard, elle part d'un repli neutre et y passe en fondu.
 class _ClapBloom extends StatelessWidget {
-  const _ClapBloom({required this.progress, required this.tint});
+  const _ClapBloom(
+      {required this.progress, required this.tint, required this.word});
   final Animation<double> progress;
   final Color? tint;
+  final bool word;
 
   @override
   Widget build(BuildContext context) => Stack(fit: StackFit.expand, children: [
@@ -535,21 +549,28 @@ class _ClapBloom extends StatelessWidget {
           curve: AppMotion.easeOut,
           builder: (context, color, _) => CustomPaint(
             painter: _AuroraPainter(
-                progress: progress, colors: StartupAurora.colorsFor(color!)),
+                progress: progress,
+                word: word,
+                colors: StartupAurora.colorsFor(color!)),
           ),
         ),
       ]);
 }
 
 class _AuroraPainter extends CustomPainter {
-  _AuroraPainter({required this.progress, required this.colors})
+  _AuroraPainter(
+      {required this.progress, required this.colors, required this.word})
       : super(repaint: Listenable.merge([progress, StartupAurora.time]));
   final Animation<double> progress;
   final List<Color> colors;
+  final bool word;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bloom = AppMotion.startupIntroBloom.transform(progress.value);
+    // Sans le mot, l'intro s'arrête à la fin de l'assemblage.
+    final bloom = AppMotion.startupIntroBloom.transform(word
+        ? progress.value
+        : progress.value * AppMotion.startupIntroAssemblyEnd);
     if (bloom <= 0) return;
     StartupAurora.paint(canvas, Offset.zero & size,
         colors: colors, intensity: bloom);

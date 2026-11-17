@@ -7,20 +7,30 @@ import 'package:kinos/theme/app_theme.dart';
 
 /// The signature's three original paths, assembled without changing the brand.
 class StartupMark extends StatelessWidget {
-  const StartupMark({required this.progress, this.intro = false, super.key});
+  const StartupMark(
+      {required this.progress,
+      this.intro = false,
+      this.word = true,
+      super.key});
 
   /// Creux du K (là où plonge la caméra à la sortie), par rapport au centre
   /// d'une marque de côté [size] ; dans le mot posé de l'intro, le K est
   /// décalé vers la gauche.
-  static Offset notchOffset(double size, {bool intro = false}) =>
+  static Offset notchOffset(double size,
+          {bool intro = false, bool word = true}) =>
       (AppBrand.startupMarkNotch * _StartupMarkPainter._extent -
-          Offset(intro ? introWordShift : 0, 0)) *
+          Offset(intro && word ? introWordShift : 0, 0)) *
       (size / _StartupMarkPainter._extent);
   final double progress;
 
   /// Version longue du premier lancement de la session (allumage,
   /// assemblage en profondeur, clap) ; sinon, l'assemblage court.
   final bool intro;
+
+  /// Intro avec le mot « KINOS » après le clap (premier lancement de la
+  /// session) ; sans lui (lancements suivants), elle s'arrête au K
+  /// assemblé, centré.
+  final bool word;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -29,7 +39,7 @@ class StartupMark extends StatelessWidget {
         child: CustomPaint(
           size: const Size.square(AppBrand.startupMarkSize),
           painter: intro
-              ? _StartupIntroPainter(progress)
+              ? _StartupIntroPainter(progress, word: word)
               : _StartupMarkPainter(progress),
         ),
       );
@@ -143,8 +153,9 @@ final double introWordShift = (_StartupMarkPainter._kLeft + wordmarkRight) / 2 -
     _StartupMarkPainter._extent / 2;
 
 class _StartupIntroPainter extends CustomPainter {
-  const _StartupIntroPainter(this.progress);
+  const _StartupIntroPainter(this.progress, {this.word = true});
   final double progress;
+  final bool word;
 
   static const _extent = _StartupMarkPainter._extent;
   static List<Path> get _parts => _StartupMarkPainter._parts;
@@ -193,6 +204,11 @@ class _StartupIntroPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
+    // Sans le mot, la même intro s'arrête à la fin de l'assemblage : son
+    // avancement couvre seulement cette partie.
+    final progress = this.word
+        ? this.progress
+        : this.progress * AppMotion.startupIntroAssemblyEnd;
     final unit = size.shortestSide / _extent;
     final white = AppColors.textPrimary;
     final word = AppMotion.startupIntroWord.transform(progress);
@@ -261,7 +277,7 @@ class _StartupIntroPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_StartupIntroPainter oldDelegate) =>
-      oldDelegate.progress != progress;
+      oldDelegate.progress != progress || oldDelegate.word != word;
 }
 
 /// Ouverture après l'intro longue, peinte par-dessus l'accueil déjà en
@@ -272,9 +288,15 @@ class _StartupIntroPainter extends CustomPainter {
 /// vraie place.
 class StartupIntroBeam extends CustomPainter {
   StartupIntroBeam(this.progress,
-      {required this.markSize, this.tint = AppColors.heroFallback})
+      {required this.markSize,
+      this.tint = AppColors.heroFallback,
+      this.word = true})
       : super(repaint: StartupAurora.time);
   final double progress;
+
+  /// Le rideau part du mot posé (K décalé, INOS qui s'efface) ; sinon du K
+  /// seul, centré.
+  final bool word;
 
   /// Dominante du film : le rideau garde l'aurore née au clap (cf.
   /// [StartupAurora]) jusqu'à ce qu'il s'efface.
@@ -308,7 +330,7 @@ class StartupIntroBeam extends CustomPainter {
     Offset toScreen(Offset p) =>
         centre +
         (p - const Offset(_extent / 2, _extent / 2)) * unit -
-        Offset(introWordShift * unit, 0);
+        Offset(word ? introWordShift * unit : 0, 0);
     final notch = toScreen(_source);
 
     final on = AppMotion.startupIntroBeamOn.transform(progress);
@@ -493,13 +515,14 @@ class StartupIntroBeam extends CustomPainter {
       canvas.restore();
     }
 
-    final word = 1 - AppMotion.startupIntroWordOut.transform(progress);
-    if (word > 0) {
+    final letters =
+        word ? 1 - AppMotion.startupIntroWordOut.transform(progress) : 0.0;
+    if (letters > 0) {
       canvas.save();
       canvas.translate(toScreen(Offset.zero).dx, toScreen(Offset.zero).dy);
       canvas.scale(unit);
       final paint = Paint()
-        ..color = AppColors.textPrimary.withValues(alpha: word);
+        ..color = AppColors.textPrimary.withValues(alpha: letters);
       for (final letter in wordmarkLetters) {
         canvas.drawPath(letter, paint);
       }
@@ -511,5 +534,6 @@ class StartupIntroBeam extends CustomPainter {
   bool shouldRepaint(StartupIntroBeam oldDelegate) =>
       oldDelegate.progress != progress ||
       oldDelegate.markSize != markSize ||
-      oldDelegate.tint != tint;
+      oldDelegate.tint != tint ||
+      oldDelegate.word != word;
 }

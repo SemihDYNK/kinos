@@ -158,6 +158,23 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('sans le mot, l\'intro s\'arrête au K assemblé, centré',
+      (tester) async {
+    var assembled = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: StartupCurtain(
+            intro: true, word: false, onLogoReady: () => assembled++)));
+    await tester.pump();
+    await tester.pump(AppDurations.startupIntroShort);
+    await tester.pump();
+    expect(assembled, 1);
+    expect(AppDurations.startupIntroShort, lessThan(AppDurations.startupIntro));
+    const size = AppBrand.startupMarkSize;
+    expect(StartupMark.notchOffset(size, intro: true, word: false),
+        StartupMark.notchOffset(size));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('disposing during assembly cancels its handoff', (tester) async {
     var assembled = false;
     await tester.pumpWidget(
