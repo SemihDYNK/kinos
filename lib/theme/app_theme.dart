@@ -348,6 +348,9 @@ abstract final class AppDurations {
   static const heroSlide = Duration(milliseconds: 420);
   static const pageTransition = Duration(milliseconds: 220);
   static const startupLogo = Duration(milliseconds: 1300);
+  // Premier lancement de la session : allumage, assemblage en profondeur et
+  // clap (cf. AppMotion.startupIntro*).
+  static const startupIntro = Duration(milliseconds: 2600);
   static const startupReveal = Duration(milliseconds: 900);
   // Attente de l'accueil au-delà de ce délai : un trait signale que l'app
   // travaille. En deçà, rien ne s'affiche.
@@ -381,6 +384,36 @@ abstract final class AppMotion {
     Interval(.22, .74, curve: easeOut),
   ];
   static const startupMarkTrace = Interval(0, .45, curve: easeOut);
+
+  // Version longue (premier lancement de la session), en fraction de
+  // AppDurations.startupIntro. Un trait de lumière dessine le K en
+  // fantôme ; les pièces arrivent du fond, la branche du haut ouverte
+  // autour du creux du K ; elle prend son élan puis se referme comme un
+  // clap, et la marque encaisse le choc.
+  static const startupIntroTrace = Interval(0, .42, curve: Cubic(.4, 0, .2, 1));
+  static const startupIntroArrivals = [
+    Interval(.16, .48, curve: easeOut),
+    Interval(.30, .62, curve: easeOut),
+    Interval(.24, .56, curve: easeOut),
+  ];
+  // Taille d'une pièce au fond, avant d'arriver (1 = à sa place).
+  static const startupIntroDepth = .35;
+  // Inclinaison de départ de la caméra, résorbée pendant l'assemblage.
+  static const startupIntroTilt = .35;
+  static const startupIntroCamera = Interval(.10, .66, curve: easeOut);
+  // Branche du haut : ouverte (radians), élan, puis fermeture accélérée.
+  static const startupIntroClapOpen = -.32;
+  static const startupIntroClapLift = -.07;
+  static const startupIntroClapWindup = Interval(.62, .71, curve: easeOut);
+  static const startupIntroClapClose = Interval(.71, .78, curve: Cubic(.6, 0, 1, .6));
+  // Instant du clap (fin de la fermeture), puis choc encaissé sans rebond.
+  static const startupIntroClap = .78;
+  static const startupIntroImpact = .02;
+  static const startupIntroImpactIn = Interval(.78, .80);
+  static const startupIntroImpactOut = Interval(.80, .94, curve: easeOut);
+  static const startupIntroGhostOut = Interval(.78, .88, curve: easeOut);
+  // Tête du trait de lumière, en unités du signe (viewBox 256).
+  static const startupIntroTraceHead = 3.0;
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie
   // traverser le K plutôt que surgir.
   static const startupMarkFill = Interval(.28, .78, curve: Cubic(.45, 0, .25, 1));

@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -30,6 +33,12 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   final _logoReady = Completer<void>();
+
+  // TEMPORAIRE, mise au point : KINOS_STARTUP_INTRO=long force la version
+  // longue. La détection du premier lancement de la session viendra
+  // ensuite.
+  static final _intro = !kIsWeb &&
+      Platform.environment['KINOS_STARTUP_INTRO'] == 'long';
 
   @override
   void initState() {
@@ -166,7 +175,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     return RouteWrapper(
       child: Scaffold(
         body: SizedBox.expand(
-            child: StartupCurtain(onLogoReady: () {
+            child: StartupCurtain(
+                intro: _intro,
+                onLogoReady: () {
                   if (!_logoReady.isCompleted) _logoReady.complete();
                 })),
       ),

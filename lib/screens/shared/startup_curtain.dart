@@ -16,7 +16,12 @@ class StartupCurtain extends StatefulWidget {
       this.onLogoReady,
       this.onOpening,
       this.ready = true,
+      this.intro = false,
       super.key});
+
+  /// Version longue de l'assemblage (premier lancement de la session) ; sans
+  /// effet sur l'ouverture, identique dans les deux cas.
+  final bool intro;
 
   final VoidCallback? onRevealed;
   final VoidCallback? onLogoReady;
@@ -33,9 +38,11 @@ class _StartupCurtainState extends State<StartupCurtain>
     with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,
-    duration: widget.onRevealed == null
-        ? AppDurations.startupLogo
-        : AppDurations.startupReveal,
+    duration: widget.onRevealed != null
+        ? AppDurations.startupReveal
+        : widget.intro
+            ? AppDurations.startupIntro
+            : AppDurations.startupLogo,
   );
 
   bool _started = false;
@@ -177,7 +184,8 @@ class _StartupCurtainState extends State<StartupCurtain>
             : AnimatedBuilder(
                 animation: _controller,
                 builder: (_, __) => _markWithWait(
-                    StartupMark(progress: _controller.value),
+                    StartupMark(
+                        progress: _controller.value, intro: widget.intro),
                     waiting: _assembled),
               ),
       ),

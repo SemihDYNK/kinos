@@ -26,6 +26,21 @@ void main() {
     expect(assembled, 1);
   });
 
+  testWidgets('la version longue du premier lancement dure plus longtemps '
+      'et finit sur le K assemblé', (tester) async {
+    var assembled = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: StartupCurtain(intro: true, onLogoReady: () => assembled++)));
+    await tester.pump();
+    await tester.pump(AppDurations.startupLogo + AppDurations.startupLogo ~/ 4);
+    expect(assembled, 0, reason: 'le clap n\'a pas encore eu lieu');
+    await tester.pump(AppDurations.startupIntro);
+    await tester.pump();
+    expect(assembled, 1);
+    expect(tester.widget<StartupMark>(find.byType(StartupMark)).progress, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('disposing during assembly cancels its handoff', (tester) async {
     var assembled = false;
     await tester.pumpWidget(
