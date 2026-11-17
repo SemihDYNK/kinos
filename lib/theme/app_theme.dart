@@ -386,12 +386,13 @@ abstract final class AppMotion {
   static const startupMarkTrace = Interval(0, .45, curve: easeOut);
 
   // Version longue (premier lancement de la session), en fraction de
-  // AppDurations.startupIntro. La caméra part d'un gros plan : un trait de
-  // lumière dessine le K en fantôme à l'échelle de l'écran, les pièces
+  // AppDurations.startupIntro. La caméra part d'un gros plan : le contour
+  // du K se dessine en fantôme à l'échelle de l'écran, les pièces
   // arrivent des bords et du fond pendant qu'elle recule ; la branche du
   // haut, arrivée ouverte autour du creux du K, prend son élan puis se
   // referme comme un clap, et la marque encaisse le choc.
-  static const startupIntroTrace = Interval(0, .42, curve: Cubic(.4, 0, .2, 1));
+  static const startupIntroTrace = Interval(0, .50, curve: Cubic(.45, 0, .25, 1));
+  static const startupIntroTraceFade = Interval(0, .12, curve: easeOut);
   static const startupIntroArrivals = [
     Interval(.14, .52, curve: easeOut),
     Interval(.26, .64, curve: easeOut),
@@ -419,8 +420,6 @@ abstract final class AppMotion {
   static const startupIntroImpactIn = Interval(.78, .80);
   static const startupIntroImpactOut = Interval(.80, .94, curve: easeOut);
   static const startupIntroGhostOut = Interval(.78, .88, curve: easeOut);
-  // Rayon de la tête du trait de lumière, en pixels à l'écran.
-  static const startupIntroTraceHead = 3.0;
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie
   // traverser le K plutôt que surgir.
   static const startupMarkFill = Interval(.28, .78, curve: Cubic(.45, 0, .25, 1));

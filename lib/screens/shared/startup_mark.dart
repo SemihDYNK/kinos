@@ -119,8 +119,8 @@ class _StartupMarkPainter extends CustomPainter {
       oldDelegate.progress != progress;
 }
 
-/// Premier lancement de la session : depuis un gros plan, un trait de
-/// lumière dessine le K en fantôme, les pièces arrivent des bords de
+/// Premier lancement de la session : depuis un gros plan, le contour du
+/// K se dessine en fantôme, les pièces arrivent des bords de
 /// l'écran et du fond pendant que la caméra recule, et la branche du haut,
 /// arrivée
 /// ouverte, se referme comme un clap (cf. [AppMotion.startupIntroClap]).
@@ -131,8 +131,6 @@ class _StartupIntroPainter extends CustomPainter {
   static const _extent = _StartupMarkPainter._extent;
   static List<Path> get _parts => _StartupMarkPainter._parts;
   static List<ui.PathMetric> get _metrics => _StartupMarkPainter._metrics;
-  static final _traceLength =
-      _StartupMarkPainter._metrics.fold<double>(0, (sum, m) => sum + m.length);
 
   // Charnière de la branche du haut : là où elle rejoint la hampe.
   static const _hinge = Offset(80, 123);
@@ -180,30 +178,19 @@ class _StartupIntroPainter extends CustomPainter {
         .storage);
     canvas.translate(-_centre.dx, -_centre.dy);
 
-    // Le contour fantôme : un seul trait qui parcourt les trois pièces à la
-    // suite, avec une tête plus vive, puis s'efface au clap.
+    // Le contour fantôme : les trois contours se dessinent ensemble, d'un
+    // mouvement régulier, apparaissent en fondu, puis s'effacent au clap.
     final ghost = 1 - AppMotion.startupIntroGhostOut.transform(progress);
-    final traced =
-        AppMotion.startupIntroTrace.transform(progress) * _traceLength;
-    if (ghost > 0 && traced > 0) {
+    final trace = AppMotion.startupIntroTrace.transform(progress);
+    final appear = AppMotion.startupIntroTraceFade.transform(progress);
+    if (ghost > 0 && trace > 0) {
       final stroke = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = AppBrand.startupGuideWidth / scale
-        ..color = white.withValues(alpha: AppBrand.startupGuideOpacity * ghost);
-      var start = 0.0;
+        ..color = white.withValues(
+            alpha: AppBrand.startupGuideOpacity * ghost * appear);
       for (final metric in _metrics) {
-        final length = (traced - start).clamp(0.0, metric.length);
-        if (length > 0) {
-          canvas.drawPath(metric.extractPath(0, length), stroke);
-          if (length < metric.length) {
-            final head = metric.getTangentForOffset(length)?.position;
-            if (head != null) {
-              canvas.drawCircle(head, AppMotion.startupIntroTraceHead,
-                  Paint()..color = white.withValues(alpha: ghost));
-            }
-          }
-        }
-        start += metric.length;
+        canvas.drawPath(metric.extractPath(0, metric.length * trace), stroke);
       }
     }
 
