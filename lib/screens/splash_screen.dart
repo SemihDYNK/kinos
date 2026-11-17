@@ -5,6 +5,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/models/account_model.dart';
+import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/providers/arguments_provider.dart';
 import 'package:kinos/providers/dashboard/hero_items_provider.dart';
 import 'package:kinos/providers/dashboard_provider.dart';
@@ -116,32 +117,48 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _prepareHome() async {
-    await ref.read(startupHomeProvider.future);
-    if (!mounted) return;
-    final hero = ref.read(heroItemsProvider).asData?.value.firstOrNull;
-    if (hero == null) return;
-    final image = hero.getPosters?.backDrop?.firstOrNull ??
-        hero.getPosters?.primary ??
-        hero.getPosters?.thumb;
-    final logo = hero.tvPosterLogo;
-    await Future.wait([
-      for (final artwork in [
-        image,
-        logo,
-        ...[
-          ...ref.read(dashboardProvider).resumeVideo,
-          ...ref.read(dashboardProvider).nextUp,
-          ...ref
-              .read(viewsProvider)
-              .dashboardViews
-              .expand((view) => view.recentlyAdded),
-        ].take(8).map((item) => item.tvPosterSmall),
-      ])
-        if (artwork != null &&
-            artwork.path.isNotEmpty &&
-            artwork.key.endsWith('_logo_null') != true)
-          precacheImage(artwork.imageProvider, context, onError: (_, __) {}),
-    ]);
+    Future<void> precache(Iterable<ImageData?> artwork) => Future.wait<void>([
+          for (final image in artwork)
+            if (image != null &&
+                image.path.isNotEmpty &&
+                image.key.endsWith('_logo_null') != true)
+              precacheImage(image.imageProvider, context, onError: (_, __) {}),
+        ]).then<void>((_) {});
+
+    // Le rideau s'ouvre sur le bandeau : son image est la seule attendue
+    // jusqu'au bout. Elle part dès que les films du carrousel sont connus,
+    // sans attendre le reste de l'accueil : tirée au hasard à chaque
+    // lancement, elle n'est presque jamais en cache et le serveur doit
+    // souvent la redimensionner.
+    Future<void> heroArtwork() async {
+      final hero = (await ref.read(heroItemsProvider.future)).firstOrNull;
+      if (hero == null || !mounted) return;
+      await precache([
+        hero.getPosters?.backDrop?.firstOrNull ??
+            hero.getPosters?.primary ??
+            hero.getPosters?.thumb,
+        hero.tvPosterLogo,
+      ]);
+    }
+
+    // Les vignettes en dessous ont un court délai, puis arrivent en fondu
+    // (leur chargement continue) : sans cache, elles retenaient le rideau
+    // plusieurs secondes.
+    Future<void> posters() async {
+      await ref.read(startupHomeProvider.future);
+      if (!mounted) return;
+      await precache([
+        ...ref.read(dashboardProvider).resumeVideo,
+        ...ref.read(dashboardProvider).nextUp,
+        ...ref
+            .read(viewsProvider)
+            .dashboardViews
+            .expand((view) => view.recentlyAdded),
+      ].take(8).map((item) => item.tvPosterSmall))
+          .timeout(AppDurations.startupArtworkBudget, onTimeout: () {});
+    }
+
+    await Future.wait<void>([heroArtwork(), posters()]);
   }
 
   @override

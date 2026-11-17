@@ -357,6 +357,8 @@ abstract final class AppDurations {
   // Le texte du bandeau d'accueil se pose pendant l'ouverture.
   static const startupContentDelay = Duration(milliseconds: 320);
   static const startupLoadTimeout = Duration(seconds: 30);
+  // Attente maximale des vignettes de l'accueil avant d'ouvrir le rideau.
+  static const startupArtworkBudget = Duration(milliseconds: 600);
 }
 
 abstract final class AppMotion {
