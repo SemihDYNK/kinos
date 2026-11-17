@@ -366,7 +366,7 @@ abstract final class AppDurations {
   static const startupSkipHintDelay = Duration(milliseconds: 700);
   static const startupReveal = Duration(milliseconds: 900);
   // Ouverture après l'intro longue : le faisceau du K s'allume et s'élargit.
-  static const startupIntroReveal = Duration(milliseconds: 1800);
+  static const startupIntroReveal = Duration(milliseconds: 2000);
   // Attente de l'accueil au-delà de ce délai : un trait signale que l'app
   // travaille. En deçà, rien ne s'affiche.
   static const startupWaitDelay = Duration(milliseconds: 400);
@@ -490,9 +490,6 @@ abstract final class AppMotion {
   // Demi-angle du faisceau : celui de la bouche du K, puis l'écran entier.
   static const startupIntroBeamFrom = .30;
   static const startupIntroBeamTo = 3.1416;
-  // Adoucissement des bords du faisceau (radians), en fines bandes.
-  static const startupIntroBeamSoft = .016;
-  static const startupIntroBeamBands = 4;
   static const startupIntroWordOut = Interval(0, .25, curve: easeOut);
   static const startupIntroMarkOut = Interval(.62, .78, curve: easeOut);
   static const easeOut = Cubic(.23, 1, .32, 1);

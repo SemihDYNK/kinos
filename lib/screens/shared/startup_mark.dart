@@ -309,7 +309,7 @@ class StartupIntroBeam extends CustomPainter {
     // Tout est dessiné directement, sans calque intermédiaire ni flou de
     // masque : recalculés à chaque image pendant que l'accueil décode ses
     // images, ils faisaient sauter des images. Les bords du faisceau sont
-    // adoucis par de fines bandes semi-transparentes.
+    // adoucis par un dégradé, comme ceux de l'iris.
     final length = AppMotion.startupIntroBeamReach.transform(progress) *
         size.longestSide *
         1.5;
@@ -332,35 +332,69 @@ class StartupIntroBeam extends CustomPainter {
       return path..close();
     }
 
-    // Bords adoucis : des bandes de plus en plus opaques vers l'extérieur.
-    const soft = AppMotion.startupIntroBeamSoft;
-    const bands = AppMotion.startupIntroBeamBands;
+    // Bords adoucis comme ceux de l'iris : de chaque côté, une bande de
+    // largeur constante où le rideau passe en dégradé de transparent à
+    // opaque, perpendiculairement au bord. Les bandes restent hors du
+    // faisceau (près de la source, quand il est très ouvert, elles y
+    // débordaient en tache sombre).
     final beam = fan(half);
-    var inside = beam;
-    for (var band = 1; band <= bands; band++) {
-      final around = fan(half + soft * band / bands);
+    const feather = AppBrand.startupApertureFeather;
+    var lit = beam;
+    for (final side in const [-1.0, 1.0]) {
+      final angle = side * half;
+      final along = Offset(math.cos(angle), math.sin(angle));
+      final out = Offset(-math.sin(angle), math.cos(angle)) * side;
+      var band = Path.combine(
+          PathOperation.difference,
+          Path()
+            ..moveTo(notch.dx, notch.dy)
+            ..lineTo(notch.dx + along.dx * length, notch.dy + along.dy * length)
+            ..lineTo(notch.dx + along.dx * length + out.dx * feather,
+                notch.dy + along.dy * length + out.dy * feather)
+            ..lineTo(notch.dx + out.dx * feather, notch.dy + out.dy * feather)
+            ..close(),
+          beam);
+      // Chaque bande reste de son côté de l'axe du faisceau : très ouvert,
+      // leurs dégradés se superposaient près de la source en losange sombre.
+      final reach = size.longestSide * 2;
+      band = Path.combine(
+          PathOperation.intersect,
+          band,
+          Path()
+            ..addRect(side < 0
+                ? Rect.fromLTRB(notch.dx - reach, notch.dy - reach,
+                    notch.dx + reach, notch.dy)
+                : Rect.fromLTRB(notch.dx - reach, notch.dy, notch.dx + reach,
+                    notch.dy + reach)));
       canvas.drawPath(
-          Path.combine(PathOperation.difference, around, inside),
+          band,
           Paint()
-            ..color =
-                AppColors.background.withValues(alpha: (band - .5) / bands));
-      inside = around;
+            ..shader = ui.Gradient.linear(notch, notch + out * feather, [
+              AppColors.background.withValues(alpha: 0),
+              AppColors.background,
+            ]));
+      lit = Path.combine(PathOperation.union, lit, band);
     }
     canvas.drawPath(
-        Path.combine(PathOperation.difference,
-            Path()..addRect(Offset.zero & size), inside),
+        Path.combine(
+            PathOperation.difference, Path()..addRect(Offset.zero & size), lit),
         background);
-    // Dans le faisceau : le rideau s'efface à l'allumage, et reste entier
-    // derrière le front de la lumière.
+    // Dans le faisceau : le rideau s'efface à l'allumage.
+    if (on < 1) {
+      canvas.drawPath(beam,
+          Paint()..color = AppColors.background.withValues(alpha: 1 - on));
+    }
+    // Derrière le front de la lumière, faisceau et bords compris, le rideau
+    // reste entier.
     canvas.drawPath(
-        beam,
+        lit,
         Paint()
           ..shader = ui.Gradient.radial(
             notch,
             length,
             [
-              AppColors.background.withValues(alpha: 1 - on),
-              AppColors.background.withValues(alpha: 1 - on),
+              AppColors.background.withValues(alpha: 0),
+              AppColors.background.withValues(alpha: 0),
               AppColors.background,
             ],
             const [0, 1 - AppMotion.startupIntroBeamFront, 1],
