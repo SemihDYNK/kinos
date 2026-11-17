@@ -22,14 +22,9 @@ class StartupCurtain extends StatefulWidget {
       this.intro = false,
       this.word = true,
       this.tint,
-      this.onPieces,
       this.onClap,
       this.onWindow,
       super.key});
-
-  /// Les pièces de l'intro commencent à arriver des bords (pour leurs
-  /// souffles).
-  final VoidCallback? onPieces;
 
   /// Le clap de l'intro (pour son son), au moment où l'animation le
   /// franchit.
@@ -139,16 +134,6 @@ class _StartupCurtainState extends State<StartupCurtain>
       if (previous < window && next >= window) widget.onWindow?.call();
       return;
     }
-    // Fraction de toute l'intro où tombe un instant de l'assemblage.
-    double atAssembly(double t) =>
-        widget.word ? t * AppMotion.startupIntroAssemblyEnd : t;
-    // Les pièces arrivent des bords (le fichier enchaîne les trois souffles
-    // aux écarts de leurs arrivées) : il part avec la première.
-    final pieces = atAssembly(AppMotion.startupIntroArrivals
-            .map((i) => i.begin)
-            .reduce(math.min)) -
-        lead;
-    if (previous < pieces && next >= pieces) widget.onPieces?.call();
     final onClap = widget.onClap;
     if (onClap == null) return;
     final clap = (widget.word

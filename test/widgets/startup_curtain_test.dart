@@ -175,30 +175,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('les souffles des pièces partent une fois, avec la première',
-      (tester) async {
-    var pieces = 0;
-    await tester.pumpWidget(MaterialApp(
-        home: StartupCurtain(
-            intro: true, onPieces: () => pieces++, onLogoReady: () {})));
-    await tester.pump();
-    final at = AppDurations.startupIntro *
-        (AppMotion.startupIntroAssemblyEnd *
-            AppMotion.startupIntroArrivals.first.begin);
-    var elapsed = Duration.zero;
-    while (elapsed < at - AppDurations.startupSoundLead * 2) {
-      await tester.pump(const Duration(milliseconds: 16));
-      elapsed += const Duration(milliseconds: 16);
-    }
-    expect(pieces, 0);
-    for (var i = 0; i < 8; i++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    expect(pieces, 1);
-    await tester.pump(AppDurations.startupIntro);
-    expect(pieces, 1);
-  });
-
   testWidgets('le son du clap part une fois, juste avant le clap',
       (tester) async {
     var claps = 0;
