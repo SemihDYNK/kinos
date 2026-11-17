@@ -308,24 +308,33 @@ class StartupIntroBeam extends CustomPainter {
     }
     beam.close();
 
-    // Rideau autour du faisceau, aux bords adoucis ; dans le faisceau, il
-    // s'efface à l'allumage.
+    // Le rideau, percé par le faisceau : la lumière part du creux du K et
+    // s'allonge vers l'extérieur derrière un front adouci, pendant que son
+    // intensité monte. Au tout premier instant, rien ne passe.
     const feather = AppMotion.startupIntroBeamFeather;
-    final curtain = Paint()
-      ..color = AppColors.background
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, feather / 2);
-    canvas.drawPath(
-        Path.combine(PathOperation.difference,
-            Path()..addRect((Offset.zero & size).inflate(feather * 2)), beam),
-        curtain);
-    if (on < 1) {
+    final length = AppMotion.startupIntroBeamReach.transform(progress) *
+        size.longestSide *
+        1.5;
+    canvas.saveLayer(Offset.zero & size, Paint());
+    canvas.drawRect(Offset.zero & size, Paint()..color = AppColors.background);
+    if (on > 0 && length > 0) {
       canvas.drawPath(
           beam,
           Paint()
-            ..color = AppColors.background.withValues(alpha: 1 - on)
-            ..maskFilter =
-                const MaskFilter.blur(BlurStyle.normal, feather / 2));
+            ..blendMode = BlendMode.dstOut
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, feather / 2)
+            ..shader = ui.Gradient.radial(
+              notch,
+              length,
+              [
+                Colors.white.withValues(alpha: on),
+                Colors.white.withValues(alpha: on),
+                Colors.white.withValues(alpha: 0),
+              ],
+              const [0, 1 - AppMotion.startupIntroBeamFront, 1],
+            ));
     }
+    canvas.restore();
 
     // Le K : la hampe reste, les branches pivotent avec les bords du
     // faisceau, puis tout s'efface.

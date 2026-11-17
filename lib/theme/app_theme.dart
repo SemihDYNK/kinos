@@ -462,7 +462,11 @@ abstract final class AppMotion {
   // projecteur. L'espace entre elles s'allume sur l'accueil, puis elles
   // pivotent autour du creux du K en s'écartant, et le faisceau s'élargit
   // jusqu'à couvrir l'écran. INOS, dans le faisceau, s'efface à l'allumage.
-  static const startupIntroBeamOn = Interval(0, .22, curve: easeOut);
+  static const startupIntroBeamOn = Interval(0, .30, curve: easeOut);
+  // La lumière s'allonge depuis le creux du K (jusqu'à 1,5 fois le plus
+  // grand côté de l'écran), derrière un front adouci (part de sa longueur).
+  static const startupIntroBeamReach = Interval(0, .50, curve: Cubic(.3, 0, .2, 1));
+  static const startupIntroBeamFront = .45;
   static const startupIntroBeamOpen = Interval(.10, 1, curve: Cubic(.6, 0, .3, 1));
   // Demi-angle du faisceau : celui de la bouche du K, puis l'écran entier.
   static const startupIntroBeamFrom = .30;
