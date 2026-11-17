@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -94,6 +96,16 @@ class StartupSounds {
   void window() {
     if (!_disposed) _window.play();
   }
+
+  /// Libère les lecteurs une fois les derniers sons finis : libérés à la
+  /// fin de l'ouverture, la nappe et le souffle étaient coupés net avant
+  /// leur fondu de sortie.
+  void release() {
+    unawaited(Future<void>.delayed(_tail, dispose));
+  }
+
+  // Plus long que le plus long des sons après la fin de l'ouverture.
+  static const _tail = Duration(seconds: 3);
 
   Future<void> dispose() async {
     if (_disposed) return;

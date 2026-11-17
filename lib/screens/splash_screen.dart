@@ -137,8 +137,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                         .state = StartupCurtainPhase.opening;
                   },
                   onRevealed: () {
-                    // Le souffle a fini de jouer avec l'ouverture.
-                    unawaited(_sounds?.dispose());
+                    // Les derniers sons finissent leur fondu avant d'être
+                    // libérés.
+                    _sounds?.release();
                     overlayRef
                         .read(startupCurtainPhaseProvider.notifier)
                         .state = StartupCurtainPhase.none;
