@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
 import 'package:kinos/providers/dashboard/genre_browse_provider.dart';
@@ -14,6 +16,12 @@ enum StartupCurtainPhase { none, covering, opening }
 
 final startupCurtainPhaseProvider =
     StateProvider<StartupCurtainPhase>((ref) => StartupCurtainPhase.none);
+
+/// Dominante du premier film du bandeau, calculée dès que les films sont
+/// connus : le dégradé qui apparaît au clap de l'intro longue la reprend,
+/// et le faisceau ouvre ensuite sur ce même film. `null` tant qu'elle
+/// n'est pas prête.
+final startupTintProvider = StateProvider<Color?>((ref) => null);
 
 // Shared by the splash and navigation so initial requests run once per profile.
 final startupHomeProvider = FutureProvider<void>((ref) async {

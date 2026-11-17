@@ -270,8 +270,13 @@ class _StartupIntroPainter extends CustomPainter {
 /// jusqu'à couvrir l'écran. On voit dans le faisceau le vrai accueil, à sa
 /// vraie place.
 class StartupIntroBeam extends CustomPainter {
-  const StartupIntroBeam(this.progress, {required this.markSize});
+  const StartupIntroBeam(this.progress,
+      {required this.markSize, this.tint = AppColors.heroFallback});
   final double progress;
+
+  /// Dominante du film : le rideau garde le dégradé né au clap (de cette
+  /// couleur, derrière le K, vers le fond) jusqu'à ce qu'il s'efface.
+  final Color tint;
 
   /// Côté de la marque à l'écran (le K seul).
   final double markSize;
@@ -320,8 +325,15 @@ class StartupIntroBeam extends CustomPainter {
         size.longestSide *
         1.5;
     final background = Paint()..color = AppColors.background;
+    // Le dégradé né au clap : de la dominante, derrière le K, vers le fond.
+    final tinted = Paint()
+      ..shader = ui.Gradient.radial(
+        size.center(Offset.zero),
+        AppBrand.startupBloomRadius * size.shortestSide,
+        [tint, AppColors.background],
+      );
     if (on <= 0 || length <= 0) {
-      canvas.drawRect(Offset.zero & size, background);
+      canvas.drawRect(Offset.zero & size, tinted);
       _paintMark(canvas, toScreen, unit, half, progress);
       return;
     }
@@ -415,6 +427,10 @@ class StartupIntroBeam extends CustomPainter {
               [0, mouth, math.max(mouth, .55), 1],
             ));
     }
+    // Le rideau (bords adoucis compris) est dessiné dans un calque, puis
+    // recoloré par le dégradé du clap là où il couvre : sa transparence
+    // dans les bords est conservée.
+    canvas.saveLayer(Offset.zero & size, Paint());
     for (final (band, paint) in edges) {
       canvas.drawPath(band, paint);
     }
@@ -442,6 +458,9 @@ class StartupIntroBeam extends CustomPainter {
             ],
             const [0, 1 - AppMotion.startupIntroBeamFront, 1],
           ));
+
+    canvas.drawRect(Offset.zero & size, tinted..blendMode = BlendMode.srcATop);
+    canvas.restore();
 
     _paintMark(canvas, toScreen, unit, half, progress);
   }
@@ -491,5 +510,7 @@ class StartupIntroBeam extends CustomPainter {
 
   @override
   bool shouldRepaint(StartupIntroBeam oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.markSize != markSize;
+      oldDelegate.progress != progress ||
+      oldDelegate.markSize != markSize ||
+      oldDelegate.tint != tint;
 }

@@ -121,6 +121,11 @@ abstract final class AppBrand {
   static const startupWaitGap = AppSpacing.xl;
   static const startupWaitOpacity = .55;
   static const startupWaitTrackOpacity = .08;
+  // Dégradé du clap (intro longue) : de la dominante du film, derrière le
+  // K, vers le fond. Rayon en fraction du plus petit côté de l'écran, au
+  // départ de l'onde puis posé.
+  static const startupBloomFrom = .30;
+  static const startupBloomRadius = .95;
   static const wordmarkAspectRatio = 949 / 256;
 }
 
@@ -453,6 +458,12 @@ abstract final class AppMotion {
   static const startupIntroImpactIn = Interval(.78, .80);
   static const startupIntroImpactOut = Interval(.80, .94, curve: easeOut);
   static const startupIntroGhostOut = Interval(.78, .88, curve: easeOut);
+  // Le dégradé de couleur naît au clap (fraction de toute l'intro :
+  // startupIntroAssemblyEnd × startupIntroClap ≈ .588) et s'étend comme une
+  // onde avant de se poser.
+  static const startupIntroBloom = Interval(.588, .72, curve: easeOut);
+  // Passage du repli neutre à la vraie dominante, si elle arrive tard.
+  static const startupTintFade = Duration(milliseconds: 400);
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie
   // traverser le K plutôt que surgir.
   static const startupMarkFill = Interval(.28, .78, curve: Cubic(.45, 0, .25, 1));

@@ -11,6 +11,7 @@ import 'package:kinos/providers/dashboard/hero_items_provider.dart';
 import 'package:kinos/providers/dashboard_provider.dart';
 import 'package:kinos/providers/shared_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/providers/theme/palette_service_provider.dart';
 import 'package:kinos/providers/views_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/shared/startup_curtain.dart';
@@ -99,6 +100,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Consumer(
             builder: (context, overlayRef, _) => StartupCurtain(
                   intro: _intro,
+                  tint: overlayRef.watch(startupTintProvider),
                   ready:
                       !loggedIn || overlayRef.watch(startupPageReadyProvider),
                   onOpening: () => overlayRef
@@ -144,12 +146,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     Future<void> heroArtwork() async {
       final hero = (await ref.read(heroItemsProvider.future)).firstOrNull;
       if (hero == null || !mounted) return;
-      await precache([
-        hero.getPosters?.backDrop?.firstOrNull ??
-            hero.getPosters?.primary ??
-            hero.getPosters?.thumb,
-        hero.tvPosterLogo,
-      ]);
+      final backdrop = hero.getPosters?.backDrop?.firstOrNull ??
+          hero.getPosters?.primary ??
+          hero.getPosters?.thumb;
+      // La dominante du film, pour le dégradé du clap (sans retenir le
+      // rideau : elle arrive quand elle arrive). Le service la garde en
+      // cache, le bandeau la retrouvera aussitôt.
+      if (_intro && backdrop != null && backdrop.path.isNotEmpty) {
+        unawaited(ref
+            .read(paletteServiceProvider)
+            .forItem(itemId: hero.id, image: backdrop.imageProvider)
+            .then((palette) {
+          if (mounted && !palette.isFallback) {
+            ref.read(startupTintProvider.notifier).state = palette.tint;
+          }
+        }, onError: (_) {}));
+      }
+      await precache([backdrop, hero.tvPosterLogo]);
     }
 
     // Les vignettes en dessous ont un court délai, puis arrivent en fondu
@@ -179,6 +192,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         body: SizedBox.expand(
             child: StartupCurtain(
                 intro: _intro,
+                tint: ref.watch(startupTintProvider),
                 onLogoReady: () {
                   if (!_logoReady.isCompleted) _logoReady.complete();
                 })),

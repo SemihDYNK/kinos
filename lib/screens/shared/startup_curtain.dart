@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -19,7 +20,13 @@ class StartupCurtain extends StatefulWidget {
       this.onOpening,
       this.ready = true,
       this.intro = false,
+      this.tint,
       super.key});
+
+  /// Dominante du premier film du bandeau (intro longue) : le fond passe
+  /// du noir à un dégradé de cette couleur au clap. `null` tant qu'elle
+  /// n'est pas prête : un repli neutre, puis la vraie couleur en fondu.
+  final Color? tint;
 
   /// Avance maximale de l'animation par image affichée (cf.
   /// [AppDurations.startupFrameCap]) ; `null` dans les tests, où le temps
@@ -237,7 +244,8 @@ class _StartupCurtainState extends State<StartupCurtain>
           animation: _controller,
           builder: (context, _) => CustomPaint(
             painter: StartupIntroBeam(_controller.value,
-                markSize: AppBrand.startupMarkSize),
+                markSize: AppBrand.startupMarkSize,
+                tint: widget.tint ?? AppColors.heroFallback),
           ),
         ),
         Center(
@@ -309,6 +317,8 @@ class _StartupCurtainState extends State<StartupCurtain>
         child: ColoredBox(
           color: AppColors.background,
           child: Stack(fit: StackFit.expand, children: [
+            if (widget.intro && motion && !_exiting)
+              _ClapBloom(progress: _controller, tint: widget.tint),
             Center(
               child: _exiting || !motion
                   ? _markWithWait(mark,
@@ -505,4 +515,39 @@ class _StartupApertureEdge extends CustomPainter {
       oldDelegate.progress != progress ||
       oldDelegate.feather != feather ||
       oldDelegate.centre != centre;
+}
+
+/// Dégradé qui naît au clap de l'intro longue : de la dominante du film,
+/// derrière le K, vers le fond. Il s'étend comme une onde puis se pose ; si
+/// la dominante arrive tard, il part d'un repli neutre et y passe en fondu.
+class _ClapBloom extends StatelessWidget {
+  const _ClapBloom({required this.progress, required this.tint});
+  final Animation<double> progress;
+  final Color? tint;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<Color?>(
+        tween: ColorTween(end: tint ?? AppColors.heroFallback),
+        duration: AppMotion.startupTintFade,
+        curve: AppMotion.easeOut,
+        builder: (context, color, _) => AnimatedBuilder(
+          animation: progress,
+          builder: (context, _) {
+            final bloom = AppMotion.startupIntroBloom.transform(progress.value);
+            if (bloom <= 0) return const SizedBox.expand();
+            return DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  radius: ui.lerpDouble(AppBrand.startupBloomFrom,
+                      AppBrand.startupBloomRadius, bloom)!,
+                  colors: [
+                    Color.lerp(AppColors.background, color, bloom)!,
+                    AppColors.background,
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
 }
