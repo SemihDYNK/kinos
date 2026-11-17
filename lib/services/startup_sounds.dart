@@ -22,9 +22,9 @@ void setStartupSound(WidgetRef ref, bool enabled) {
 }
 
 /// Sons de l'intro : au clap, l'interrupteur d'un projecteur Super 8 (le
-/// tout premier son de l'enregistrement, avant le moteur) ; à l'ouverture, un
-/// souffle d'air léger qui passe de gauche à droite quand la fenêtre du
-/// faisceau s'élargit. Chacun part au moment où l'animation le franchit
+/// tout premier son de l'enregistrement, avant le moteur) ; à l'ouverture,
+/// un souffle vif quand le faisceau surgit du K, puis un souffle d'air
+/// léger qui passe de gauche à droite quand sa fenêtre s'élargit. Chacun part au moment où l'animation le franchit
 /// (pas une piste mixée d'avance : l'horloge de l'intro peut ralentir un
 /// instant quand une image bloque, une piste figée se décalerait).
 ///
@@ -33,12 +33,14 @@ void setStartupSound(WidgetRef ref, bool enabled) {
 /// prend plusieurs dizaines de millisecondes.
 ///
 /// Sons sous licence CC0 (freesound.org), coupés et mis au niveau :
-/// « VideoTronic Super 8mm Projector » par ajoyce86 (213741) et « Whoosh
-/// stereo light (transition) » par xkeril (701104).
+/// « VideoTronic Super 8mm Projector » par ajoyce86 (213741), « Fast whoosh,
+/// bamboo swoosh through air, version 2 » par zapsplat.com (719637) et
+/// « Whoosh stereo light (transition) » par xkeril (701104).
 class StartupSounds {
-  StartupSounds._(this._clap, this._window);
+  StartupSounds._(this._clap, this._beam, this._window);
 
   final mpv.Player _clap;
+  final mpv.Player _beam;
   final mpv.Player _window;
   bool _disposed = false;
 
@@ -60,6 +62,7 @@ class StartupSounds {
 
       return StartupSounds._(
         await load('intro_clap.wav', _clapVolume),
+        await load('intro_beam.wav', _beamVolume),
         await load('intro_window.wav', _windowVolume),
       );
     } catch (_) {
@@ -69,10 +72,15 @@ class StartupSounds {
 
   // Volumes mpv (0–100) : nettement sous la lecture vidéo.
   static const _clapVolume = 30.0;
+  static const _beamVolume = 25.0;
   static const _windowVolume = 30.0;
 
   void clap() {
     if (!_disposed) _clap.play();
+  }
+
+  void beam() {
+    if (!_disposed) _beam.play();
   }
 
   void window() {
@@ -83,6 +91,7 @@ class StartupSounds {
     if (_disposed) return;
     _disposed = true;
     await _clap.dispose();
+    await _beam.dispose();
     await _window.dispose();
   }
 }

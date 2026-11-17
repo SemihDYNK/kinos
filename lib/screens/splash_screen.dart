@@ -130,6 +130,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                       !loggedIn || overlayRef.watch(startupPageReadyProvider),
                   onWindow: () => _sounds?.window(),
                   onOpening: () {
+                    // Le faisceau surgit du K.
+                    _sounds?.beam();
                     overlayRef
                         .read(startupCurtainPhaseProvider.notifier)
                         .state = StartupCurtainPhase.opening;
