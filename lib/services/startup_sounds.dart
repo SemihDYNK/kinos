@@ -110,7 +110,7 @@ class StartupSounds {
   }
 
   Timer? _fading;
-  static const _fadeStep = Duration(milliseconds: 30);
+  static const _fadeStep = Duration(milliseconds: 15);
 
   void beam() {
     if (!_disposed) _beam.play();
