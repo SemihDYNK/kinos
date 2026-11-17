@@ -22,7 +22,8 @@ void setStartupSound(WidgetRef ref, bool enabled) {
 }
 
 /// Sons de l'intro : au clap, l'interrupteur d'un projecteur Super 8 (le
-/// tout premier son de l'enregistrement, avant le moteur) ; à l'ouverture,
+/// tout premier son de l'enregistrement, avant le moteur), et une nappe
+/// lente et atmosphérique qui monte avec l'aurore ; à l'ouverture,
 /// un souffle vif quand le faisceau surgit du K, puis un souffle d'air
 /// léger qui passe de gauche à droite quand sa fenêtre s'élargit. Chacun part au moment où l'animation le franchit
 /// (pas une piste mixée d'avance : l'horloge de l'intro peut ralentir un
@@ -33,13 +34,15 @@ void setStartupSound(WidgetRef ref, bool enabled) {
 /// prend plusieurs dizaines de millisecondes.
 ///
 /// Sons sous licence CC0 (freesound.org), coupés et mis au niveau :
-/// « VideoTronic Super 8mm Projector » par ajoyce86 (213741), « Fast whoosh,
+/// « VideoTronic Super 8mm Projector » par ajoyce86 (213741), « Shimmery »
+/// par opticaillusions (521886, ralenti, plus grave, réverbéré), « Fast whoosh,
 /// bamboo swoosh through air, version 2 » par zapsplat.com (719637) et
 /// « Whoosh stereo light (transition) » par xkeril (701104).
 class StartupSounds {
-  StartupSounds._(this._clap, this._beam, this._window);
+  StartupSounds._(this._clap, this._aurora, this._beam, this._window);
 
   final mpv.Player _clap;
+  final mpv.Player _aurora;
   final mpv.Player _beam;
   final mpv.Player _window;
   bool _disposed = false;
@@ -62,6 +65,7 @@ class StartupSounds {
 
       return StartupSounds._(
         await load('intro_clap.wav', _clapVolume),
+        await load('intro_aurora.wav', _auroraVolume),
         await load('intro_beam.wav', _beamVolume),
         await load('intro_window.wav', _windowVolume),
       );
@@ -72,11 +76,15 @@ class StartupSounds {
 
   // Volumes mpv (0–100) : nettement sous la lecture vidéo.
   static const _clapVolume = 30.0;
+  static const _auroraVolume = 25.0;
   static const _beamVolume = 25.0;
   static const _windowVolume = 30.0;
 
+  /// Le clap : l'interrupteur, et la nappe qui monte avec l'aurore.
   void clap() {
-    if (!_disposed) _clap.play();
+    if (_disposed) return;
+    _clap.play();
+    _aurora.play();
   }
 
   void beam() {
@@ -91,6 +99,7 @@ class StartupSounds {
     if (_disposed) return;
     _disposed = true;
     await _clap.dispose();
+    await _aurora.dispose();
     await _beam.dispose();
     await _window.dispose();
   }
