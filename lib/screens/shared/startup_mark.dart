@@ -346,6 +346,7 @@ class StartupIntroBeam extends CustomPainter {
     final beam = fan(half);
     const feather = AppBrand.startupApertureFeather;
     var lit = beam;
+    final edges = <(Path, Paint)>[];
     for (final side in const [-1.0, 1.0]) {
       final angle = side * half;
       final along = Offset(math.cos(angle), math.sin(angle));
@@ -372,23 +373,53 @@ class StartupIntroBeam extends CustomPainter {
                     notch.dx + reach, notch.dy)
                 : Rect.fromLTRB(notch.dx - reach, notch.dy, notch.dx + reach,
                     notch.dy + reach)));
-      canvas.drawPath(
-          band,
-          Paint()
-            ..shader = ui.Gradient.linear(notch, notch + out * feather, [
-              AppColors.background.withValues(alpha: 0),
-              AppColors.background,
-            ]));
+      edges.add((
+        band,
+        Paint()
+          ..shader = ui.Gradient.linear(notch, notch + out * feather, [
+            AppColors.background.withValues(alpha: 0),
+            AppColors.background,
+          ])
+      ));
       lit = Path.combine(PathOperation.union, lit, band);
+    }
+
+    // La lumière du projecteur : une lueur additive, plus forte près du K,
+    // qui s'éteint pendant l'élargissement pour rendre à l'accueil ses
+    // vraies couleurs. Sans elle, le faisceau ne montre que la partie
+    // sombre du bandeau et ne se lit pas comme de la lumière. Posée avant
+    // les bords adoucis, elle s'estompe avec l'image à travers eux, au lieu
+    // de s'arrêter net au bord du faisceau.
+    final glow = 1 - AppMotion.startupIntroBeamGlowOut.transform(progress);
+    if (glow > 0) {
+      canvas.drawPath(
+          lit,
+          Paint()
+            ..blendMode = BlendMode.plus
+            ..shader = ui.Gradient.radial(
+              notch,
+              length,
+              [
+                Colors.white
+                    .withValues(alpha: AppMotion.startupIntroBeamGlow * glow),
+                Colors.white.withValues(
+                    alpha: AppMotion.startupIntroBeamGlow * glow * .35),
+                Colors.white.withValues(alpha: 0),
+              ],
+              const [0, .55, 1],
+            ));
+    }
+    for (final (band, paint) in edges) {
+      canvas.drawPath(band, paint);
     }
     canvas.drawPath(
         Path.combine(
             PathOperation.difference, Path()..addRect(Offset.zero & size), lit),
         background);
-    // Dans le faisceau : le rideau s'efface à l'allumage.
+    // Dans la lumière : le rideau s'efface à l'allumage.
     if (on < 1) {
-      canvas.drawPath(beam,
-          Paint()..color = AppColors.background.withValues(alpha: 1 - on));
+      canvas.drawPath(
+          lit, Paint()..color = AppColors.background.withValues(alpha: 1 - on));
     }
     // Derrière le front de la lumière, faisceau et bords compris, le rideau
     // reste entier.
@@ -405,31 +436,6 @@ class StartupIntroBeam extends CustomPainter {
             ],
             const [0, 1 - AppMotion.startupIntroBeamFront, 1],
           ));
-
-    // La lumière du projecteur : une lueur additive dans le faisceau, plus
-    // forte près du K, qui s'éteint pendant l'élargissement pour rendre à
-    // l'accueil ses vraies couleurs. Sans elle, le faisceau ne montre que
-    // la partie sombre du bandeau et ne se lit pas comme de la lumière.
-    final glow =
-        on * (1 - AppMotion.startupIntroBeamGlowOut.transform(progress));
-    if (glow > 0) {
-      canvas.drawPath(
-          beam,
-          Paint()
-            ..blendMode = BlendMode.plus
-            ..shader = ui.Gradient.radial(
-              notch,
-              length,
-              [
-                Colors.white
-                    .withValues(alpha: AppMotion.startupIntroBeamGlow * glow),
-                Colors.white.withValues(
-                    alpha: AppMotion.startupIntroBeamGlow * glow * .35),
-                Colors.white.withValues(alpha: 0),
-              ],
-              const [0, .55, 1],
-            ));
-    }
 
     _paintMark(canvas, toScreen, unit, half, progress);
   }
