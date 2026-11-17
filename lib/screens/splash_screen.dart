@@ -128,7 +128,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   tint: overlayRef.watch(startupTintProvider),
                   ready:
                       !loggedIn || overlayRef.watch(startupPageReadyProvider),
-                  onWindow: () => _sounds?.window(),
+                  onWindow: () {
+                    _sounds?.window();
+                    // La nappe s'éteint d'ici la fin de l'ouverture.
+                    _sounds?.fadeAurora(AppDurations.startupIntroReveal *
+                        (1 - AppMotion.startupIntroBeamOpen.begin));
+                  },
                   onOpening: () {
                     // Le faisceau surgit du K.
                     _sounds?.beam();

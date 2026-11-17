@@ -37,7 +37,7 @@ void setStartupSound(WidgetRef ref, bool enabled) {
 ///
 /// Sons sous licence CC0 (freesound.org), coupés et mis au niveau :
 /// « VideoTronic Super 8mm Projector » par ajoyce86 (213741), « Shimmery »
-/// par opticaillusions (521886, ralenti, plus grave, réverbéré), « Fast whoosh,
+/// par opticaillusions (521886, ralenti, plus grave, enchaîné, réverbéré), « Fast whoosh,
 /// bamboo swoosh through air, version 2 » par zapsplat.com (719637) et
 /// « Whoosh stereo light (transition) » par xkeril (701104).
 class StartupSounds {
@@ -67,7 +67,7 @@ class StartupSounds {
 
       return StartupSounds._(
         await load('intro_clap.wav', _clapVolume),
-        await load('intro_aurora.wav', _auroraVolume),
+        await load('intro_aurora.ogg', _auroraVolume),
         await load('intro_beam.wav', _beamVolume),
         await load('intro_window.wav', _windowVolume),
       );
@@ -88,6 +88,29 @@ class StartupSounds {
     _clap.play();
     _aurora.play();
   }
+
+  /// Éteint la nappe de l'aurore en [duration] : elle tient pendant
+  /// l'ouverture et s'éteint au moment où l'accueil est entièrement
+  /// découvert, quel que soit le temps qu'il a mis à se charger.
+  void fadeAurora(Duration duration) {
+    if (_disposed || _fading != null) return;
+    final start = DateTime.now();
+    _fading = Timer.periodic(_fadeStep, (timer) {
+      final t = DateTime.now().difference(start).inMicroseconds /
+          duration.inMicroseconds;
+      if (_disposed || t >= 1) {
+        timer.cancel();
+        if (!_disposed) _aurora.pause();
+        return;
+      }
+      // Descente en douceur, plus marquée vers la fin.
+      final remaining = 1 - t;
+      _aurora.setVolume(_auroraVolume * remaining * remaining);
+    });
+  }
+
+  Timer? _fading;
+  static const _fadeStep = Duration(milliseconds: 30);
 
   void beam() {
     if (!_disposed) _beam.play();
@@ -110,6 +133,7 @@ class StartupSounds {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _fading?.cancel();
     await _clap.dispose();
     await _aurora.dispose();
     await _beam.dispose();
