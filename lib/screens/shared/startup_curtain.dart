@@ -22,7 +22,12 @@ class StartupCurtain extends StatefulWidget {
       this.intro = false,
       this.word = true,
       this.tint,
+      this.onClap,
       super.key});
+
+  /// Le clap de l'intro (pour son son), au moment où l'animation le
+  /// franchit.
+  final VoidCallback? onClap;
 
   /// Intro avec « KINOS » après le clap (premier lancement de la session) ;
   /// sans lui, elle s'arrête au K assemblé et l'ouverture part du K centré.
@@ -98,7 +103,9 @@ class _StartupCurtainState extends State<StartupCurtain>
       last = elapsed;
       final cap = StartupCurtain.frameCap;
       if (cap != null && step > cap) step = cap;
-      final next = _controller.value + step.inMicroseconds / duration;
+      final previous = _controller.value;
+      final next = previous + step.inMicroseconds / duration;
+      _soundAt(previous, next, duration);
       if (next >= 1) {
         _finish(true);
       } else {
@@ -107,6 +114,19 @@ class _StartupCurtainState extends State<StartupCurtain>
     })
       ..start();
     return run.future;
+  }
+
+  /// Le clap de l'intro, au moment où l'animation le franchit, avec
+  /// [AppDurations.startupSoundLead] d'avance pour la latence audio. Passée
+  /// avant le clap, l'intro n'en joue pas.
+  void _soundAt(double previous, double next, int duration) {
+    final onClap = widget.onClap;
+    if (onClap == null || _exiting || !widget.intro) return;
+    final clap = (widget.word
+            ? AppMotion.startupIntroAssemblyEnd * AppMotion.startupIntroClap
+            : AppMotion.startupIntroClap) -
+        AppDurations.startupSoundLead.inMicroseconds / duration;
+    if (previous < clap && next >= clap) onClap();
   }
 
   void _finish(bool completed) {

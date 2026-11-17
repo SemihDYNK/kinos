@@ -1737,6 +1737,8 @@
   "prevChapter": "Previous Chapter",
   "fullScreen": "Full Screen",
   "skipMediaSegment": "Skip Media Segment",
+  "settingsStartupSoundTitle": "Startup sound",
+  "settingsStartupSoundDesc": "The clap and the projector of the opening animation",
   "exit": "Exit",
   "shortCutAlreadyAssigned": "Shortcut '{hotKey}' already assigned",
   "@shortCutAlreadyAssigned": {

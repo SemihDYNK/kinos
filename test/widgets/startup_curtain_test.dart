@@ -175,6 +175,44 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('le son du clap part une fois, juste avant le clap',
+      (tester) async {
+    var claps = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: StartupCurtain(
+            intro: true, onClap: () => claps++, onLogoReady: () {})));
+    await tester.pump();
+    final clapAt = AppDurations.startupIntro *
+        (AppMotion.startupIntroAssemblyEnd * AppMotion.startupIntroClap);
+    // Par petites images : l'horloge avance d'une image à l'autre.
+    var elapsed = Duration.zero;
+    while (elapsed < clapAt - AppDurations.startupSoundLead * 2) {
+      await tester.pump(const Duration(milliseconds: 16));
+      elapsed += const Duration(milliseconds: 16);
+    }
+    expect(claps, 0);
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(claps, 1);
+    await tester.pump(AppDurations.startupIntro);
+    expect(claps, 1);
+  });
+
+  testWidgets('passée avant le clap, l\'intro n\'en joue pas le son',
+      (tester) async {
+    var claps = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: StartupCurtain(
+            intro: true, onClap: () => claps++, onLogoReady: () {})));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    await tester.pump(AppDurations.startupIntro);
+    expect(claps, 0);
+  });
+
   testWidgets('disposing during assembly cancels its handoff', (tester) async {
     var assembled = false;
     await tester.pumpWidget(

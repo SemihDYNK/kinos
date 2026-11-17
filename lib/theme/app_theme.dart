@@ -363,6 +363,9 @@ abstract final class AppDurations {
   // Lancements suivants : la même intro sans « KINOS », arrêtée à la fin
   // de l'assemblage (startupIntro × AppMotion.startupIntroAssemblyEnd).
   static const startupIntroShort = Duration(milliseconds: 2150);
+  // Avance des sons de l'intro sur leur moment : la latence de la sortie
+  // audio.
+  static const startupSoundLead = Duration(milliseconds: 35);
   static const startupReveal = Duration(milliseconds: 900);
   // Ouverture après l'intro longue : le faisceau du K s'allume et s'élargit.
   static const startupIntroReveal = Duration(milliseconds: 2000);

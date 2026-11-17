@@ -20,6 +20,7 @@ import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/screens/shared/route_wrapper.dart';
 import 'package:kinos/services/local_network_permission.dart';
 import 'package:kinos/services/startup_session.dart';
+import 'package:kinos/services/startup_sounds.dart';
 
 @RoutePage()
 class SplashScreen extends ConsumerStatefulWidget {
@@ -45,10 +46,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       resolveStartupIntro(ref.read(sharedPreferencesProvider)) ==
           StartupIntro.long;
 
+  /// Sons de l'intro, prêts (ou `null` : réglage coupé, animations
+  /// réduites, lecture audio indisponible). Ils survivent à cet écran : le
+  /// projecteur joue pendant l'ouverture, sur l'accueil.
+  StartupSounds? _sounds;
+
+  void _prepareSounds() {
+    if (!_intro ||
+        !startupSoundEnabled(ref.read(sharedPreferencesProvider)) ||
+        MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context)) {
+      return;
+    }
+    unawaited(StartupSounds.prepare(longProjector: _word).then((sounds) {
+      // Prêts après coup : le clap déjà passé ne joue pas en retard.
+      _sounds = sounds;
+    }));
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((value) async {
+      _prepareSounds();
       final AccountModel? lastUsedAccount =
           await ref.read(sharedUtilityProvider).getActiveAccount();
       if (!mounted) return;
@@ -108,10 +128,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   tint: overlayRef.watch(startupTintProvider),
                   ready:
                       !loggedIn || overlayRef.watch(startupPageReadyProvider),
-                  onOpening: () => overlayRef
-                      .read(startupCurtainPhaseProvider.notifier)
-                      .state = StartupCurtainPhase.opening,
+                  onOpening: () {
+                    // Le projecteur démarre quand le faisceau s'allume.
+                    _sounds?.projector();
+                    overlayRef
+                        .read(startupCurtainPhaseProvider.notifier)
+                        .state = StartupCurtainPhase.opening;
+                  },
                   onRevealed: () {
+                    // Le projecteur a fini de jouer avec l'ouverture.
+                    unawaited(_sounds?.dispose());
                     overlayRef
                         .read(startupCurtainPhaseProvider.notifier)
                         .state = StartupCurtainPhase.none;
@@ -199,6 +225,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 intro: _intro,
                 word: _word,
                 tint: ref.watch(startupTintProvider),
+                onClap: () => _sounds?.clap(),
                 onLogoReady: () {
                   if (!_logoReady.isCompleted) _logoReady.complete();
                 })),

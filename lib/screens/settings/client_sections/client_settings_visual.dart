@@ -8,6 +8,7 @@ import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
 import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
 import 'package:kinos/screens/shared/input_fields.dart';
+import 'package:kinos/services/startup_sounds.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/item_actions.dart';
@@ -59,6 +60,13 @@ List<Widget> buildClientSettingsVisual(
             )
           ];
         },
+      ),
+      SettingsListTileCheckbox(
+        label: Text(context.localized.settingsStartupSoundTitle),
+        subLabel: Text(context.localized.settingsStartupSoundDesc),
+        value: ref.watch(startupSoundProvider),
+        onChanged: (value) =>
+            setStartupSound(ref, value ?? !ref.read(startupSoundProvider)),
       ),
       SettingsListTileCheckbox(
         label: Text(context.localized.settingsBlurredPlaceholderTitle),

@@ -243,6 +243,7 @@ flutter:
     - assets/fonts/inter/OFL.txt
     - config/
     - assets/mp-font.ttf
+    - assets/sounds/
     - assets/
 
   fonts:
