@@ -8,6 +8,7 @@ import 'package:kinos/screens/settings/settings_list_tile.dart';
 import 'package:kinos/screens/settings/widgets/settings_label_divider.dart';
 import 'package:kinos/screens/settings/widgets/settings_list_group.dart';
 import 'package:kinos/screens/shared/input_fields.dart';
+import 'package:kinos/services/startup_session.dart';
 import 'package:kinos/services/startup_sounds.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -61,6 +62,19 @@ List<Widget> buildClientSettingsVisual(
           ];
         },
       ),
+      SettingsListTileEnum(
+        label: Text(context.localized.settingsStartupIntroTitle),
+        subLabel: Text(context.localized.settingsStartupIntroDesc),
+        current: startupIntroModeLabel(
+            context, ref.watch(startupIntroModeProvider)),
+        itemBuilder: (context) => [
+          for (final mode in StartupIntroMode.values)
+            ItemActionButton(
+              label: Text(startupIntroModeLabel(context, mode)),
+              action: () => setStartupIntroMode(ref, mode),
+            ),
+        ],
+      ),
       SettingsListTileCheckbox(
         label: Text(context.localized.settingsStartupSoundTitle),
         subLabel: Text(context.localized.settingsStartupSoundDesc),
@@ -112,3 +126,11 @@ List<Widget> buildClientSettingsVisual(
     ],
   );
 }
+
+String startupIntroModeLabel(BuildContext context, StartupIntroMode mode) =>
+    switch (mode) {
+      StartupIntroMode.auto => context.localized.startupIntroAuto,
+      StartupIntroMode.full => context.localized.startupIntroFull,
+      StartupIntroMode.quick => context.localized.startupIntroQuick,
+      StartupIntroMode.legacy => context.localized.startupIntroLegacy,
+    };

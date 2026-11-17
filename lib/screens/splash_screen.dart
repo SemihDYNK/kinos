@@ -34,17 +34,20 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   final _logoReady = Completer<void>();
 
-  /// Intro du projecteur (gros plan, clap, aurore, faisceau) à chaque
-  /// lancement, sauf pour une fenêtre secondaire. (Au lancement, la garde
-  /// d'authentification ouvre cet écran avec [SplashScreen.loggedIn] :
-  /// c'est le chemin normal.)
-  late final bool _intro = ref.read(argumentsStateProvider).newWindow != true;
+  /// L'animation choisie pour ce lancement (réglage, ou premier lancement
+  /// depuis le démarrage de la machine) ; le lancement est noté.
+  late final StartupIntro _choice =
+      resolveStartupIntro(ref.read(sharedPreferencesProvider));
 
-  /// Le mot « KINOS » après le clap : seulement au premier lancement depuis
-  /// le démarrage de la machine (cf. [resolveStartupIntro]).
-  late final bool _word = _intro &&
-      resolveStartupIntro(ref.read(sharedPreferencesProvider)) ==
-          StartupIntro.long;
+  /// Intro du projecteur (gros plan, clap, aurore, faisceau), sauf pour une
+  /// fenêtre secondaire ou avec l'ancienne animation. (Au lancement, la
+  /// garde d'authentification ouvre cet écran avec [SplashScreen.loggedIn] :
+  /// c'est le chemin normal.)
+  late final bool _intro = ref.read(argumentsStateProvider).newWindow != true &&
+      _choice != StartupIntro.legacy;
+
+  /// Le mot « KINOS » après le clap : la version complète.
+  late final bool _word = _intro && _choice == StartupIntro.long;
 
   /// Sons de l'intro, prêts (ou `null` : réglage coupé, animations
   /// réduites, lecture audio indisponible). Ils survivent à cet écran : le

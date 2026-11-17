@@ -52,6 +52,36 @@ void main() {
     expect(p.getInt(startupLastLaunchKey), now.millisecondsSinceEpoch);
   });
 
+  test('le réglage force l\'animation, et le lancement est quand même noté',
+      () async {
+    Future<StartupIntro> withMode(StartupIntroMode mode,
+        {DateTime? lastLaunch}) async {
+      SharedPreferences.setMockInitialValues({
+        startupIntroModeKey: mode.name,
+        if (lastLaunch != null)
+          startupLastLaunchKey: lastLaunch.millisecondsSinceEpoch,
+      });
+      final p = await SharedPreferences.getInstance();
+      final intro = resolve(p);
+      expect(p.getInt(startupLastLaunchKey), now.millisecondsSinceEpoch);
+      return intro;
+    }
+
+    final sameSession = boot.add(const Duration(hours: 2));
+    expect(await withMode(StartupIntroMode.full, lastLaunch: sameSession),
+        StartupIntro.long);
+    expect(await withMode(StartupIntroMode.quick), StartupIntro.short,
+        reason: 'même au tout premier lancement');
+    expect(await withMode(StartupIntroMode.legacy), StartupIntro.legacy);
+    expect(await withMode(StartupIntroMode.auto, lastLaunch: sameSession),
+        StartupIntro.short);
+  });
+
+  test('KINOS_STARTUP_INTRO=legacy force l\'ancienne animation', () async {
+    expect(resolve(await prefs(), env: const {'KINOS_STARTUP_INTRO': 'legacy'}),
+        StartupIntro.legacy);
+  });
+
   test('l\'heure de démarrage de cette machine se lit', () {
     final boot = systemBootTime();
     expect(boot, isNotNull);
