@@ -296,18 +296,6 @@ class StartupIntroBeam extends CustomPainter {
     final half = ui.lerpDouble(
         AppMotion.startupIntroBeamFrom, AppMotion.startupIntroBeamTo, open)!;
 
-    // Le faisceau : un éventail depuis le creux, assez long pour sortir de
-    // l'écran.
-    final reach = size.longestSide * 3;
-    final beam = Path()..moveTo(notch.dx, notch.dy);
-    const steps = 48;
-    for (var i = 0; i <= steps; i++) {
-      final angle = -half + 2 * half * i / steps;
-      beam.lineTo(notch.dx + reach * math.cos(angle),
-          notch.dy + reach * math.sin(angle));
-    }
-    beam.close();
-
     // Le rideau, percé par le faisceau : la lumière part du creux du K et
     // s'allonge vers l'extérieur derrière un front adouci, pendant que son
     // intensité monte. Au tout premier instant, rien ne passe.
@@ -315,25 +303,41 @@ class StartupIntroBeam extends CustomPainter {
     final length = AppMotion.startupIntroBeamReach.transform(progress) *
         size.longestSide *
         1.5;
+    if (on <= 0 || length <= 0) {
+      canvas.drawRect(
+          Offset.zero & size, Paint()..color = AppColors.background);
+      _paintMark(canvas, toScreen, unit, half, progress);
+      return;
+    }
+
+    // Le faisceau : un éventail depuis le creux, de la longueur de la
+    // lumière (rien au-delà : le flou coûte selon la taille du tracé).
+    final beam = Path()..moveTo(notch.dx, notch.dy);
+    const steps = 48;
+    for (var i = 0; i <= steps; i++) {
+      final angle = -half + 2 * half * i / steps;
+      beam.lineTo(notch.dx + length * math.cos(angle),
+          notch.dy + length * math.sin(angle));
+    }
+    beam.close();
+
     canvas.saveLayer(Offset.zero & size, Paint());
     canvas.drawRect(Offset.zero & size, Paint()..color = AppColors.background);
-    if (on > 0 && length > 0) {
-      canvas.drawPath(
-          beam,
-          Paint()
-            ..blendMode = BlendMode.dstOut
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, feather / 2)
-            ..shader = ui.Gradient.radial(
-              notch,
-              length,
-              [
-                Colors.white.withValues(alpha: on),
-                Colors.white.withValues(alpha: on),
-                Colors.white.withValues(alpha: 0),
-              ],
-              const [0, 1 - AppMotion.startupIntroBeamFront, 1],
-            ));
-    }
+    canvas.drawPath(
+        beam,
+        Paint()
+          ..blendMode = BlendMode.dstOut
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, feather / 2)
+          ..shader = ui.Gradient.radial(
+            notch,
+            length,
+            [
+              Colors.white.withValues(alpha: on),
+              Colors.white.withValues(alpha: on),
+              Colors.white.withValues(alpha: 0),
+            ],
+            const [0, 1 - AppMotion.startupIntroBeamFront, 1],
+          ));
     canvas.restore();
 
     // La lumière du projecteur : une lueur additive dans le faisceau, plus
@@ -342,12 +346,13 @@ class StartupIntroBeam extends CustomPainter {
     // la partie sombre du bandeau et ne se lit pas comme de la lumière.
     final glow =
         on * (1 - AppMotion.startupIntroBeamGlowOut.transform(progress));
-    if (glow > 0 && length > 0) {
+    if (glow > 0) {
+      // Sans flou : le dégradé est déjà doux, et un second flou plein écran
+      // coûtait des images pendant que l'accueil décode les siennes.
       canvas.drawPath(
           beam,
           Paint()
             ..blendMode = BlendMode.plus
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, feather / 2)
             ..shader = ui.Gradient.radial(
               notch,
               length,
@@ -362,6 +367,13 @@ class StartupIntroBeam extends CustomPainter {
             ));
     }
 
+    _paintMark(canvas, toScreen, unit, half, progress);
+  }
+
+  /// Le K (la hampe reste, les branches pivotent avec les bords du
+  /// faisceau, puis tout s'efface) et INOS, qui s'efface à l'allumage.
+  void _paintMark(Canvas canvas, Offset Function(Offset) toScreen, double unit,
+      double half, double progress) {
     // Le K : la hampe reste, les branches pivotent avec les bords du
     // faisceau, puis tout s'efface.
     final mark = 1 - AppMotion.startupIntroMarkOut.transform(progress);

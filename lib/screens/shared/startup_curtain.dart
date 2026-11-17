@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:kinos/screens/shared/startup_mark.dart';
 import 'package:kinos/theme/app_theme.dart';
@@ -20,6 +21,12 @@ class StartupCurtain extends StatefulWidget {
       this.intro = false,
       this.skipHint,
       super.key});
+
+  /// Avance maximale de l'animation par image affichée (cf.
+  /// [AppDurations.startupFrameCap]) ; `null` dans les tests, où le temps
+  /// avance par grands sauts.
+  @visibleForTesting
+  static Duration? frameCap = AppDurations.startupFrameCap;
 
   /// Indication affichée sous l'assemblage pour le passer (une touche ou un
   /// clic l'amènent au K assemblé).
@@ -42,7 +49,7 @@ class StartupCurtain extends StatefulWidget {
 }
 
 class _StartupCurtainState extends State<StartupCurtain>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,
     duration: widget.onRevealed != null
@@ -57,6 +64,44 @@ class _StartupCurtainState extends State<StartupCurtain>
   bool _started = false;
   bool _assembled = false;
   Timer? _readinessTimeout;
+
+  /// Horloge de l'animation : elle n'avance que d'au plus
+  /// [StartupCurtain.frameCap] par image affichée. L'accueil bloque le
+  /// rendu une centaine de millisecondes en se construisant ; une horloge
+  /// libre aurait continué pendant ce gel, et l'ouverture aurait sauté son
+  /// début (le faisceau surgissait d'un coup). Elle ralentit un instant au
+  /// lieu de sauter.
+  Ticker? _clock;
+  Completer<bool>? _run;
+
+  Future<bool> _play() {
+    final run = _run = Completer<bool>();
+    final duration = _controller.duration!.inMicroseconds;
+    Duration? last;
+    _clock?.dispose();
+    _clock = createTicker((elapsed) {
+      var step = last == null ? Duration.zero : elapsed - last!;
+      last = elapsed;
+      final cap = StartupCurtain.frameCap;
+      if (cap != null && step > cap) step = cap;
+      final next = _controller.value + step.inMicroseconds / duration;
+      if (next >= 1) {
+        _finish(true);
+      } else {
+        _controller.value = next;
+      }
+    })
+      ..start();
+    return run.future;
+  }
+
+  void _finish(bool completed) {
+    _clock?.stop();
+    if (completed) _controller.value = 1;
+    final run = _run;
+    _run = null;
+    if (run != null && !run.isCompleted) run.complete(completed);
+  }
 
   bool get _exiting => widget.onRevealed != null;
 
@@ -98,11 +143,7 @@ class _StartupCurtainState extends State<StartupCurtain>
       if (!_motionEnabled) {
         _controller.value = 1;
       } else {
-        try {
-          await _controller.forward().orCancel;
-        } on TickerCanceled {
-          return;
-        }
+        if (!await _play()) return;
       }
       if (!mounted) return;
       if (_exiting) {
@@ -121,16 +162,17 @@ class _StartupCurtainState extends State<StartupCurtain>
   /// Une touche ou un clic pendant l'assemblage l'amènent à son terme : le
   /// K assemblé, comme s'il venait de finir.
   bool _skip() {
-    if (_exiting || !_controller.isAnimating) return false;
+    if (_exiting || _clock?.isActive != true) return false;
     // Termine l'animation sans l'annuler : la suite (onLogoReady) se joue.
-    _controller.stop(canceled: false);
-    _controller.value = 1;
+    _finish(true);
     return true;
   }
 
   @override
   void dispose() {
     _readinessTimeout?.cancel();
+    _finish(false);
+    _clock?.dispose();
     _controller.dispose();
     super.dispose();
   }

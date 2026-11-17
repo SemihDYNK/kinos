@@ -349,6 +349,10 @@ abstract final class AppDurations {
   static const heroSlide = Duration(milliseconds: 420);
   static const pageTransition = Duration(milliseconds: 220);
   static const startupLogo = Duration(milliseconds: 1300);
+  // Avance maximale des animations de démarrage par image affichée : une
+  // image bloquée (l'accueil qui se construit) les ralentit au lieu de les
+  // faire sauter.
+  static const startupFrameCap = Duration(milliseconds: 25);
   // Premier lancement de la session : allumage, assemblage en profondeur,
   // clap, puis le mot (cf. AppMotion.startupIntro*).
   static const startupIntro = Duration(milliseconds: 2850);

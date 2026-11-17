@@ -10,6 +10,10 @@ import 'package:kinos/screens/shared/kinos_icon.dart';
 import 'package:kinos/screens/shared/startup_mark.dart';
 
 void main() {
+  // Le temps des tests avance par grands sauts : sans plafond par image.
+  setUp(() => StartupCurtain.frameCap = null);
+  tearDown(() => StartupCurtain.frameCap = AppDurations.startupFrameCap);
+
   testWidgets('signature assembly finishes once before handing off',
       (tester) async {
     var assembled = 0;
@@ -107,6 +111,26 @@ void main() {
     await tester.pump();
     expect(revealed, isTrue);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('une image bloquée ralentit l\'animation au lieu de la sauter',
+      (tester) async {
+    StartupCurtain.frameCap = AppDurations.startupFrameCap;
+    await tester.pumpWidget(
+        MaterialApp(home: StartupCurtain(onLogoReady: () {})));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    final before = tester.widget<StartupMark>(find.byType(StartupMark)).progress;
+    // Une image de 300 ms : l'animation n'avance que d'un plafond.
+    await tester.pump(const Duration(milliseconds: 300));
+    final after = tester.widget<StartupMark>(find.byType(StartupMark)).progress;
+    expect(
+        after - before,
+        closeTo(
+            AppDurations.startupFrameCap.inMicroseconds /
+                AppDurations.startupLogo.inMicroseconds,
+            .001));
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('disposing during assembly cancels its handoff', (tester) async {
