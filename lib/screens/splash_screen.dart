@@ -99,14 +99,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       builder: (_) => Positioned.fill(
         child: Consumer(
             builder: (context, overlayRef, _) => StartupCurtain(
+                  intro: _intro,
                   ready:
                       !loggedIn || overlayRef.watch(startupPageReadyProvider),
                   onOpening: () => overlayRef
                       .read(startupCurtainPhaseProvider.notifier)
                       .state = StartupCurtainPhase.opening,
                   onRevealed: () {
-                    overlayRef.read(startupCurtainPhaseProvider.notifier).state =
-                        StartupCurtainPhase.none;
+                    overlayRef
+                        .read(startupCurtainPhaseProvider.notifier)
+                        .state = StartupCurtainPhase.none;
                     curtain.remove();
                     curtain.dispose();
                   },

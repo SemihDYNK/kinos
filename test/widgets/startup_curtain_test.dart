@@ -85,6 +85,16 @@ void main() {
     }
   });
 
+  test('dans le mot posé, la sortie plonge dans le creux du K décalé', () {
+    const size = AppBrand.startupMarkSize;
+    final alone = StartupMark.notchOffset(size);
+    final inWord = StartupMark.notchOffset(size, intro: true);
+    expect(alone, AppBrand.startupMarkNotch * size);
+    expect(inWord.dy, alone.dy);
+    expect(inWord.dx, lessThan(alone.dx - size),
+        reason: 'le K glisse à gauche pour centrer « KINOS »');
+  });
+
   testWidgets('disposing during assembly cancels its handoff', (tester) async {
     var assembled = false;
     await tester.pumpWidget(

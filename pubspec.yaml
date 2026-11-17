@@ -44,6 +44,7 @@ dependencies:
   cached_network_image: ^3.4.1
   http: ^1.5.0
   flutter_cache_manager: ^3.4.1
+  path_parsing: ^1.1.0 # Lettres du logotype pour l'intro (cf. startup_mark.dart)
   file: ^7.0.1 # Cache d'images persistant (cf. custom_cache_manager.dart)
   connectivity_plus: ^7.0.0
   punycoder: ^0.2.2

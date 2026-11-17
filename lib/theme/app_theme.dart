@@ -349,9 +349,9 @@ abstract final class AppDurations {
   static const heroSlide = Duration(milliseconds: 420);
   static const pageTransition = Duration(milliseconds: 220);
   static const startupLogo = Duration(milliseconds: 1300);
-  // Premier lancement de la session : allumage, assemblage en profondeur et
-  // clap (cf. AppMotion.startupIntro*).
-  static const startupIntro = Duration(milliseconds: 2600);
+  // Premier lancement de la session : allumage, assemblage en profondeur,
+  // clap, puis le mot (cf. AppMotion.startupIntro*).
+  static const startupIntro = Duration(milliseconds: 2850);
   // Indication « une touche pour passer » : discrète, et seulement si on
   // regarde déjà depuis un moment.
   static const startupSkipHintDelay = Duration(milliseconds: 700);
@@ -389,8 +389,28 @@ abstract final class AppMotion {
   ];
   static const startupMarkTrace = Interval(0, .45, curve: easeOut);
 
-  // Version longue (premier lancement de la session), en fraction de
-  // AppDurations.startupIntro. La caméra part d'un gros plan : le contour
+  // Version longue (premier lancement de la session). L'assemblage et le
+  // clap occupent le début de AppDurations.startupIntro, jusqu'à
+  // [startupIntroAssemblyEnd] ; les intervalles ci-dessous sont en
+  // fraction de cette partie. Ensuite vient le mot : le K glisse pour que
+  // « KINOS » soit centré, les lettres INOS arrivent écartées et se
+  // resserrent, puis le mot complet se pose.
+  static const startupIntroAssemblyEnd = .754;
+  static const startupIntroWord = Interval(.754, .912);
+  // Dans le mot (fraction de [startupIntroWord]) : glissement du K, puis
+  // chaque lettre, en décalé.
+  static const startupIntroWordSlide = Interval(0, .8, curve: easeOut);
+  static const startupIntroLetters = [
+    Interval(.05, .70, curve: easeOut),
+    Interval(.12, .78, curve: easeOut),
+    Interval(.19, .86, curve: easeOut),
+    Interval(.26, .94, curve: easeOut),
+  ];
+  // Écart supplémentaire entre lettres à leur arrivée, en unités du signe.
+  static const startupIntroTracking = 48.0;
+
+  // Assemblage (fraction de la partie assemblage). La caméra part d'un
+  // gros plan : le contour
   // du K se dessine en fantôme à l'échelle de l'écran, les pièces
   // arrivent des bords et du fond pendant qu'elle recule ; la branche du
   // haut, arrivée ouverte autour du creux du K, prend son élan puis se

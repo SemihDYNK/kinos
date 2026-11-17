@@ -25,8 +25,9 @@ class StartupCurtain extends StatefulWidget {
   /// clic l'amènent au K assemblé).
   final String? skipHint;
 
-  /// Version longue de l'assemblage (premier lancement de la session) ; sans
-  /// effet sur l'ouverture, identique dans les deux cas.
+  /// Version longue de l'assemblage (premier lancement de la session). À
+  /// l'ouverture, le rideau part du mot posé et plonge dans le creux du K
+  /// à sa place dans le mot.
   final bool intro;
 
   final VoidCallback? onRevealed;
@@ -148,10 +149,11 @@ class _StartupCurtainState extends State<StartupCurtain>
   @override
   Widget build(BuildContext context) {
     final motion = _motionEnabled;
-    const mark = StartupMark(progress: 1);
+    final mark = StartupMark(progress: 1, intro: widget.intro);
     if (_exiting && motion) {
       return LayoutBuilder(builder: (context, constraints) {
-        final notch = AppBrand.startupMarkNotch * AppBrand.startupMarkSize;
+        final notch = StartupMark.notchOffset(AppBrand.startupMarkSize,
+            intro: widget.intro);
         final centre = constraints.biggest.center(Offset.zero) + notch;
         return AnimatedBuilder(
           animation: _controller,
