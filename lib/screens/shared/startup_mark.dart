@@ -288,9 +288,7 @@ class _StartupIntroPainter extends CustomPainter {
 /// vraie place.
 class StartupIntroBeam extends CustomPainter {
   StartupIntroBeam(this.progress,
-      {required this.markSize,
-      this.tint = AppColors.heroFallback,
-      this.word = true})
+      {required this.markSize, this.tint, this.word = true})
       : super(repaint: StartupAurora.time);
   final double progress;
 
@@ -300,7 +298,7 @@ class StartupIntroBeam extends CustomPainter {
 
   /// Dominante du film : le rideau garde l'aurore née au clap (cf.
   /// [StartupAurora]) jusqu'à ce qu'il s'efface.
-  final Color tint;
+  final Color? tint;
 
   /// Côté de la marque à l'écran (le K seul).
   final double markSize;
@@ -350,10 +348,13 @@ class StartupIntroBeam extends CustomPainter {
         1.5;
     final background = Paint()..color = AppColors.background;
     // L'aurore née au clap, au même instant de son mouvement.
-    final aurora = StartupAurora.colorsFor(tint);
+    // Sans dominante (pas encore calculée), pas d'aurore : le fond seul.
+    final aurora =
+        tint == null ? const <Color>[] : StartupAurora.colorsFor(tint!);
+    final glowing = tint == null ? 0.0 : 1.0;
     if (on <= 0 || length <= 0) {
       StartupAurora.paint(canvas, Offset.zero & size,
-          colors: aurora, intensity: 1);
+          colors: aurora, intensity: glowing);
       _paintMark(canvas, toScreen, unit, half, progress);
       return;
     }
@@ -480,7 +481,7 @@ class StartupIntroBeam extends CustomPainter {
           ));
 
     StartupAurora.paint(canvas, Offset.zero & size,
-        colors: aurora, intensity: 1, blendMode: BlendMode.srcATop);
+        colors: aurora, intensity: glowing, blendMode: BlendMode.srcATop);
     canvas.restore();
 
     _paintMark(canvas, toScreen, unit, half, progress);

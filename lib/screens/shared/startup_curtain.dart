@@ -288,7 +288,7 @@ class _StartupCurtainState extends State<StartupCurtain>
           builder: (context, _) => CustomPaint(
             painter: StartupIntroBeam(_controller.value,
                 markSize: AppBrand.startupMarkSize,
-                tint: widget.tint ?? AppColors.heroFallback,
+                tint: widget.tint,
                 word: widget.word),
           ),
         ),
@@ -574,18 +574,24 @@ class _ClapBloom extends StatelessWidget {
   final Color? tint;
   final bool word;
 
+  // Sans la dominante, pas d'aurore : partir d'un repli neutre donnait des
+  // taches gris clair, presque blanches, avant les vraies couleurs. Elle
+  // apparaît en fondu dès que la dominante arrive (en général bien avant
+  // le clap : son calcul part vers 0,7 s et reste en cache).
   @override
   Widget build(BuildContext context) => Stack(fit: StackFit.expand, children: [
         const StartupAuroraTicker(),
-        TweenAnimationBuilder<Color?>(
-          tween: ColorTween(end: tint ?? AppColors.heroFallback),
+        TweenAnimationBuilder<double>(
+          tween: Tween(end: tint == null ? 0 : 1),
           duration: AppMotion.startupTintFade,
           curve: AppMotion.easeOut,
-          builder: (context, color, _) => CustomPaint(
+          builder: (context, ready, _) => CustomPaint(
             painter: _AuroraPainter(
                 progress: progress,
                 word: word,
-                colors: StartupAurora.colorsFor(color!)),
+                ready: ready,
+                colors:
+                    StartupAurora.colorsFor(tint ?? AppColors.heroFallback)),
           ),
         ),
       ]);
@@ -593,11 +599,17 @@ class _ClapBloom extends StatelessWidget {
 
 class _AuroraPainter extends CustomPainter {
   _AuroraPainter(
-      {required this.progress, required this.colors, required this.word})
+      {required this.progress,
+      required this.colors,
+      required this.word,
+      required this.ready})
       : super(repaint: Listenable.merge([progress, StartupAurora.time]));
   final Animation<double> progress;
   final List<Color> colors;
   final bool word;
+
+  /// 0 tant que la dominante n'est pas arrivée, puis 1 en fondu.
+  final double ready;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -607,10 +619,12 @@ class _AuroraPainter extends CustomPainter {
         : progress.value * AppMotion.startupIntroAssemblyEnd);
     if (bloom <= 0) return;
     StartupAurora.paint(canvas, Offset.zero & size,
-        colors: colors, intensity: bloom);
+        colors: colors, intensity: bloom * ready);
   }
 
   @override
   bool shouldRepaint(_AuroraPainter oldDelegate) =>
-      oldDelegate.colors != colors || oldDelegate.progress != progress;
+      oldDelegate.colors != colors ||
+      oldDelegate.progress != progress ||
+      oldDelegate.ready != ready;
 }
