@@ -119,8 +119,10 @@ class _StartupMarkPainter extends CustomPainter {
       oldDelegate.progress != progress;
 }
 
-/// Premier lancement de la session : un trait de lumière dessine le K en
-/// fantôme, les pièces arrivent du fond et la branche du haut, arrivée
+/// Premier lancement de la session : depuis un gros plan, un trait de
+/// lumière dessine le K en fantôme, les pièces arrivent des bords de
+/// l'écran et du fond pendant que la caméra recule, et la branche du haut,
+/// arrivée
 /// ouverte, se referme comme un clap (cf. [AppMotion.startupIntroClap]).
 class _StartupIntroPainter extends CustomPainter {
   const _StartupIntroPainter(this.progress);
@@ -165,9 +167,13 @@ class _StartupIntroPainter extends CustomPainter {
       return;
     }
     final camera = AppMotion.startupIntroCamera.transform(progress);
+    final zoom = ui.lerpDouble(AppMotion.startupIntroCloseup, 1, camera)!;
     final impact = impactScale(progress);
+    // Échelle à l'écran d'une unité du signe : traits et tête de lumière
+    // gardent leur taille en pixels pendant le recul de la caméra.
+    final scale = unit * zoom * impact;
     canvas.translate(size.width / 2, size.height / 2);
-    canvas.scale(unit * impact);
+    canvas.scale(scale);
     canvas.transform((Matrix4.identity()
           ..setEntry(3, 2, AppMotion.startupMarkPerspective / _extent)
           ..rotateY(AppMotion.startupIntroTilt * (1 - camera)))
@@ -182,7 +188,7 @@ class _StartupIntroPainter extends CustomPainter {
     if (ghost > 0 && traced > 0) {
       final stroke = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = AppBrand.startupGuideWidth / (unit * impact)
+        ..strokeWidth = AppBrand.startupGuideWidth / scale
         ..color = white.withValues(alpha: AppBrand.startupGuideOpacity * ghost);
       var start = 0.0;
       for (final metric in _metrics) {
@@ -207,7 +213,12 @@ class _StartupIntroPainter extends CustomPainter {
       final arrival = AppMotion.startupIntroArrivals[i].transform(progress);
       if (arrival <= 0) continue;
       final depth = ui.lerpDouble(AppMotion.startupIntroDepth, 1, arrival)!;
+      // Depuis les bords de l'écran (même direction que l'assemblage court),
+      // et du fond.
+      final offset = AppMotion.startupMarkOffsets[i] *
+          (_extent * AppMotion.startupIntroSpread * (1 - arrival));
       canvas.save();
+      canvas.translate(offset.dx, offset.dy);
       canvas.translate(_centre.dx, _centre.dy);
       canvas.scale(depth);
       canvas.translate(-_centre.dx, -_centre.dy);

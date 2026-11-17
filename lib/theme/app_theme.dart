@@ -386,21 +386,28 @@ abstract final class AppMotion {
   static const startupMarkTrace = Interval(0, .45, curve: easeOut);
 
   // Version longue (premier lancement de la session), en fraction de
-  // AppDurations.startupIntro. Un trait de lumière dessine le K en
-  // fantôme ; les pièces arrivent du fond, la branche du haut ouverte
-  // autour du creux du K ; elle prend son élan puis se referme comme un
-  // clap, et la marque encaisse le choc.
+  // AppDurations.startupIntro. La caméra part d'un gros plan : un trait de
+  // lumière dessine le K en fantôme à l'échelle de l'écran, les pièces
+  // arrivent des bords et du fond pendant qu'elle recule ; la branche du
+  // haut, arrivée ouverte autour du creux du K, prend son élan puis se
+  // referme comme un clap, et la marque encaisse le choc.
   static const startupIntroTrace = Interval(0, .42, curve: Cubic(.4, 0, .2, 1));
   static const startupIntroArrivals = [
-    Interval(.16, .48, curve: easeOut),
-    Interval(.30, .62, curve: easeOut),
-    Interval(.24, .56, curve: easeOut),
+    Interval(.14, .52, curve: easeOut),
+    Interval(.26, .64, curve: easeOut),
+    Interval(.20, .58, curve: easeOut),
   ];
   // Taille d'une pièce au fond, avant d'arriver (1 = à sa place).
-  static const startupIntroDepth = .35;
-  // Inclinaison de départ de la caméra, résorbée pendant l'assemblage.
+  static const startupIntroDepth = .6;
+  // Distance de départ des pièces, en multiple des écarts de l'assemblage
+  // court : assez loin pour qu'elles entrent par les bords de l'écran.
+  static const startupIntroSpread = 2.2;
+  // Gros plan de départ (en multiple de la taille finale), et recul de la
+  // caméra : lent au départ pour laisser voir le trait, posé avant l'élan.
+  static const startupIntroCloseup = 6.0;
+  static const startupIntroCamera = Interval(.10, .68, curve: Cubic(.75, 0, .25, 1));
+  // Inclinaison de départ de la caméra, résorbée pendant le recul.
   static const startupIntroTilt = .35;
-  static const startupIntroCamera = Interval(.10, .66, curve: easeOut);
   // Branche du haut : ouverte (radians), élan, puis fermeture accélérée.
   static const startupIntroClapOpen = -.32;
   static const startupIntroClapLift = -.07;
@@ -412,7 +419,7 @@ abstract final class AppMotion {
   static const startupIntroImpactIn = Interval(.78, .80);
   static const startupIntroImpactOut = Interval(.80, .94, curve: easeOut);
   static const startupIntroGhostOut = Interval(.78, .88, curve: easeOut);
-  // Tête du trait de lumière, en unités du signe (viewBox 256).
+  // Rayon de la tête du trait de lumière, en pixels à l'écran.
   static const startupIntroTraceHead = 3.0;
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie
   // traverser le K plutôt que surgir.
