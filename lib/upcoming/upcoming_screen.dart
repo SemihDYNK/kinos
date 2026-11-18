@@ -40,6 +40,21 @@ class _UpcomingScreenState extends ConsumerState<UpcomingScreen> {
   var _type = UpcomingTypeFilter.all;
   var _scope = UpcomingScopeFilter.both;
 
+  // Les éléments du carrousel, gardés tant que les diapos ne changent pas :
+  // de nouveaux objets à chaque reconstruction relançaient la palette et le
+  // préchargement des images voisines.
+  String _heroKey = '';
+  List<ItemBaseModel> _heroItems = const [];
+
+  List<ItemBaseModel> _hero(List<UpcomingEntry> featured) {
+    final key = [for (final e in featured) e.identity].join('|');
+    if (key != _heroKey) {
+      _heroKey = key;
+      _heroItems = [for (final e in featured) upcomingHeroItem(e)];
+    }
+    return _heroItems;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -78,7 +93,7 @@ class _UpcomingScreenState extends ConsumerState<UpcomingScreen> {
         // Le carrousel de l'accueil : mêmes mouvements, même dominante
         // teintée, mêmes flèches.
         HomeHeroSection(
-          heroItems: [for (final e in featured) upcomingHeroItem(e)],
+          heroItems: _hero(featured),
           resumeItems: const [],
           contentPadding: padding,
           titleScale: AppUpcomingLayout.heroTitleScale,

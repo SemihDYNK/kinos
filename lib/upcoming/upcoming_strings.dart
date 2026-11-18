@@ -227,6 +227,8 @@ abstract final class EntityStrings {
   static const openPage = 'Ouvrir sa page';
   static const studio = 'Studio';
   static const network = 'Chaîne';
+  static const person = 'Personne';
+  static const searchSection = 'Personnes et studios';
   static String saga(int films) => 'Saga · $films films';
   static String department(String? known) => switch (known) {
         'Directing' => 'Réalisation',

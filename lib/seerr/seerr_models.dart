@@ -113,6 +113,11 @@ typedef _SortValues = ({String movie, String tv});
 
 const String _tmdbImageBaseUrl = 'https://image.tmdb.org/t/p/original';
 const String _tmdbPosterBaseUrl = 'https://image.tmdb.org/t/p/w500';
+
+/// Fonds et vignettes : `w1280` suffit au bandeau d'une fiche. `original`
+/// (jusqu'à 4K, plusieurs Mo) se décodait à chaque ouverture et faisait
+/// saccader les fiches Seerr.
+const String _tmdbBackdropBaseUrl = 'https://image.tmdb.org/t/p/w1280';
 const String _tmdbProfileBaseUrl = 'https://image.tmdb.org/t/p/w185';
 
 enum SeerrSortBy {
@@ -1629,7 +1634,7 @@ extension SeerrMovieDetailsExtension on SeerrMovieDetails {
 
   String? get backdropUrl {
     if (internalBackdropPath == null || internalBackdropPath!.isEmpty) return null;
-    return '$_tmdbImageBaseUrl$internalBackdropPath';
+    return '$_tmdbBackdropBaseUrl$internalBackdropPath';
   }
 }
 
@@ -1655,7 +1660,7 @@ extension SeerrTvDetailsExtension on SeerrTvDetails {
 
   String? get backdropUrl {
     if (internalBackdropPath == null || internalBackdropPath!.isEmpty) return null;
-    return '$_tmdbImageBaseUrl$internalBackdropPath';
+    return '$_tmdbBackdropBaseUrl$internalBackdropPath';
   }
 }
 
@@ -1669,7 +1674,7 @@ extension SeerrSeasonExtension on SeerrSeason {
 extension SeerrEpisodeExtension on SeerrEpisode {
   String? get stillUrl {
     if (internalStillPath == null || internalStillPath!.isEmpty) return null;
-    return '$_tmdbImageBaseUrl$internalStillPath';
+    return '$_tmdbBackdropBaseUrl$internalStillPath';
   }
 }
 
@@ -1681,7 +1686,7 @@ extension SeerrDiscoverItemExtension on SeerrDiscoverItem {
 
   String? get backdropUrl {
     if (internalBackdropPath == null || internalBackdropPath!.isEmpty) return null;
-    return '$_tmdbImageBaseUrl$internalBackdropPath';
+    return '$_tmdbBackdropBaseUrl$internalBackdropPath';
   }
 }
 

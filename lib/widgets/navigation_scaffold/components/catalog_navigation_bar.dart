@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'package:kinos/upcoming/entity/entity_search.dart';
+import 'package:kinos/upcoming/upcoming_models.dart'
+    show UpcomingFollowKind, tmdbImage;
+import 'package:kinos/upcoming/upcoming_strings.dart' show EntityStrings;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -517,19 +521,23 @@ class _CatalogSearchResults extends ConsumerWidget {
     if (typing || query.isEmpty) {
       return _message(const CircularProgressIndicator());
     }
+    // Personnes et studios (Seerr) : à part, sans retarder les titres.
+    final entities =
+        ref.watch(entitySearchProvider(search)).valueOrNull ?? const [];
     return ref.watch(quickSearchProvider(search)).when(
           loading: () => _message(const CircularProgressIndicator()),
           error: (_, __) => _message(TextButton(
               onPressed: () => ref.invalidate(quickSearchProvider(search)),
               child: const Text('Recherche indisponible · Réessayer'))),
-          data: (found) => _list(context, found),
+          data: (found) => _list(context, found, entities),
         );
   }
 
-  Widget _list(BuildContext context, QuickSearchResults found) {
+  Widget _list(BuildContext context, QuickSearchResults found,
+      List<EntityResult> entities) {
     final library = found.library;
     final outside = found.outside;
-    if (library.isEmpty && outside.isEmpty) {
+    if (library.isEmpty && outside.isEmpty && entities.isEmpty) {
       return _message(const Text('Aucun résultat'));
     }
     var first = true;
@@ -572,8 +580,31 @@ class _CatalogSearchResults extends ConsumerWidget {
                       .push(LibrarySearchRoute(query: query, recursive: true))),
                   child: const Text('Voir tous les résultats')),
           ],
+          if (entities.isNotEmpty) ...[
+            _header(context, EntityStrings.searchSection,
+                first: library.isEmpty),
+            for (final entity in entities)
+              _row(
+                context,
+                focusNode: firstFocus(),
+                image: entity.image == null
+                    ? null
+                    : ImageData(
+                        path: tmdbImage(entity.image!, size: 'w185'),
+                        key: 'search:${entity.kind.name}:${entity.id}'),
+                logo: entity.kind != UpcomingFollowKind.person,
+                title: entity.name,
+                subtitle: entity.detail,
+                onActivate: () => onOpen((page) => page.router.push(
+                    EntityRoute(
+                        kind: entity.kind.name,
+                        id: entity.id,
+                        name: entity.name))),
+              ),
+          ],
           if (outside.isNotEmpty) ...[
-            _header(context, 'À demander', first: library.isEmpty),
+            _header(context, 'À demander',
+                first: library.isEmpty && entities.isEmpty),
             for (final poster in outside)
               _row(
                 context,
@@ -624,6 +655,7 @@ class _CatalogSearchResults extends ConsumerWidget {
     required String title,
     required String subtitle,
     required VoidCallback onActivate,
+    bool logo = false,
   }) =>
       Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
@@ -639,7 +671,16 @@ class _CatalogSearchResults extends ConsumerWidget {
                         AppMedia.posterHeightRatio,
                     child: ClipRRect(
                         borderRadius: AppRadii.cardBorder,
-                        child: KinosImage(image: image, fit: BoxFit.cover))),
+                        // Un logo de studio, entier sur une plaque claire.
+                        child: logo
+                            ? ColoredBox(
+                                color: AppColors.textPrimary,
+                                child: Padding(
+                                    padding:
+                                        const EdgeInsets.all(AppSpacing.xxs),
+                                    child: KinosImage(
+                                        image: image, fit: BoxFit.contain)))
+                            : KinosImage(image: image, fit: BoxFit.cover))),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                     child: Column(

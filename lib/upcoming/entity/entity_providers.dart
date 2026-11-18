@@ -239,7 +239,8 @@ class EntityController extends StateNotifier<EntityState> {
         // Non vérifié : compté comme principal, revu la prochaine fois.
       }
       done++;
-      if (mounted && (done % 8 == 0 || done == pending.length)) {
+      // Par lots : chaque mise à jour reconstruit toute la page.
+      if (mounted && (done % 24 == 0 || done == pending.length)) {
         state =
             state.copyWith(main: {...main}, checking: pending.length - done);
       }

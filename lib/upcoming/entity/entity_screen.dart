@@ -512,9 +512,15 @@ class _EntityBanner extends StatelessWidget {
                           key: 'entity-backdrop:$backdrop'),
                       fit: BoxFit.cover)
                   : kind == UpcomingFollowKind.person && posters.isNotEmpty
-                      ? Opacity(
-                          opacity: AppUpcomingLayout.mosaicOpacity,
-                          child: _PosterMosaic(posters: posters))
+                      // Assombrie par un voile plutôt qu'une Opacity : pas
+                      // de calque hors écran redessiné à chaque défilement.
+                      ? RepaintBoundary(
+                          child: Stack(fit: StackFit.expand, children: [
+                          _PosterMosaic(posters: posters),
+                          ColoredBox(
+                              color: AppColors.background.withValues(
+                                  alpha: 1 - AppUpcomingLayout.mosaicOpacity)),
+                        ]))
                       : const SizedBox.shrink(),
         ),
         fade(Alignment.bottomCenter, Alignment.topCenter),

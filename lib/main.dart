@@ -1,3 +1,4 @@
+import 'package:kinos/util/frame_log.dart';
 import 'package:kinos/util/motion_input.dart';
 import 'dart:ui';
 
@@ -30,6 +31,7 @@ void main(List<String> args) async {
 
   final bootstrap = await bootstrapApplication(args);
 
+  FrameLog.startIfRequested();
   runApp(
     ProviderScope(
       overrides: [
@@ -122,6 +124,7 @@ class _KinosApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         routerConfig: autoRouter.config(
           deepLinkBuilder: (deepLink) => deepLinkBuilder(deepLink.uri),
+          navigatorObservers: () => [if (FrameLog.requested) FrameLogObserver()],
         ),
       ),
     );
