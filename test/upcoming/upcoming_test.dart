@@ -231,4 +231,28 @@ void main() {
     // Le cache relit ce qu'il écrit.
     expect(UpcomingEntry.fromJson(byId[1]!.toJson())!.reasons, ['Léa Martin']);
   });
+
+  test('banner: next followed titles, then the most awaited big releases', () {
+    UpcomingEntry e(int id, int day,
+            {List<String> reasons = const [],
+            bool big = false,
+            double pop = 0}) =>
+        UpcomingEntry(
+            type: 'movie',
+            id: id,
+            title: '$id',
+            date: DateTime(2026, 11, day),
+            release: UpcomingRelease.theatrical,
+            backdropPath: '/b.jpg',
+            reasons: reasons,
+            big: big,
+            popularity: pop);
+    final featured = upcomingFeatured([
+      e(1, 25, big: true, pop: 10),
+      e(2, 30, reasons: ['Saga Dune']),
+      e(3, 20, big: true, pop: 90),
+      e(4, 22, reasons: ['A24'], big: true, pop: 50),
+    ], today: today);
+    expect(featured.map((e) => e.id), [4, 2, 3, 1]);
+  });
 }

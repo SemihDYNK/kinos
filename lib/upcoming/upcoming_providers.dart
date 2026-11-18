@@ -155,6 +155,9 @@ class UpcomingController extends StateNotifier<UpcomingState> {
 
   String _signature(UpcomingSettings settings, List<UpcomingFollow> follows) =>
       [
+        // Version du calcul : une frise d'une version précédente est
+        // refaite.
+        'v2',
         settings.region,
         _appLocale(ref).languageCode,
         ...([for (final f in follows) f.key]..sort()),
@@ -254,7 +257,13 @@ class UpcomingController extends StateNotifier<UpcomingState> {
       final now = DateTime.now();
       final entries = await UpcomingSource(
               (path, {query = const {}}) =>
-                  client.get(path, query: query, language: language),
+                  // Sur les listes `discover`, Seerr prend `language`
+                  // pour la langue d'origine : seuls les films français
+                  // restaient. Les fiches, elles, le prennent pour la
+                  // langue d'affichage.
+                  client.get(path,
+                      query: query,
+                      language: path.startsWith('discover/') ? null : language),
               map: client.map,
               region: settings.region,
               today: now)

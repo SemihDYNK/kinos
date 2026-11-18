@@ -66,12 +66,14 @@ class _UpcomingScreenState extends ConsumerState<UpcomingScreen> {
     final text = Theme.of(context).textTheme;
 
     final slivers = <Widget>[
-      if (featured != null)
+      if (featured.isNotEmpty)
         SliverToBoxAdapter(
-            child: _Banner(entry: featured, padding: padding, locale: locale))
+            child: _Banner(entries: featured, padding: padding, locale: locale))
       else
         SliverPadding(
-          padding: padding.copyWith(top: AppSpacing.xxl),
+          // Sous la capsule de navigation, posée par-dessus la page.
+          padding: padding.copyWith(
+              top: AppTopNavigation.contentInset + AppSpacing.lg),
           sliver: SliverToBoxAdapter(
               child: Text(UpcomingStrings.title, style: text.displaySmall)),
         ),
@@ -289,111 +291,250 @@ class _UpcomingPoster extends StatelessWidget {
   }
 }
 
-class _Banner extends StatelessWidget {
+/// Le bandeau : les prochains titres suivis et les grandes sorties, une
+/// diapo à la fois, comme le carrousel de l'accueil (manuel : flèches,
+/// ← → au clavier).
+class _Banner extends StatefulWidget {
   const _Banner(
-      {required this.entry, required this.padding, required this.locale});
-  final UpcomingEntry entry;
+      {required this.entries, required this.padding, required this.locale});
+  final List<UpcomingEntry> entries;
   final EdgeInsets padding;
   final String locale;
 
   @override
-  Widget build(BuildContext context) {
-    final height =
-        (MediaQuery.sizeOf(context).height * AppUpcomingLayout.bannerFactor)
-            .clamp(AppUpcomingLayout.bannerMin, AppUpcomingLayout.bannerMax);
+  State<_Banner> createState() => _BannerState();
+}
+
+class _BannerState extends State<_Banner> {
+  int _index = 0;
+
+  UpcomingEntry get _current =>
+      widget.entries[_index.clamp(0, widget.entries.length - 1)];
+
+  @override
+  void didUpdateWidget(covariant _Banner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final previous = oldWidget.entries.isEmpty
+        ? null
+        : oldWidget.entries[_index.clamp(0, oldWidget.entries.length - 1)];
+    final kept =
+        widget.entries.indexWhere((e) => e.identity == previous?.identity);
+    _index = kept < 0 ? 0 : kept;
+  }
+
+  void _go(int delta) {
+    if (widget.entries.length < 2) return;
+    setState(() => _index = (_index + delta) % widget.entries.length);
+    _precache();
+  }
+
+  ImageData? _image(UpcomingEntry entry) {
     final backdrop = entry.backdropPath ?? entry.posterPath;
-    final image = backdrop == null
+    return backdrop == null
         ? null
         : ImageData(
             path: tmdbImage(backdrop, size: 'w1280'),
             key: 'upcoming-banner:${entry.identity}');
+  }
+
+  void _precache() {
+    final length = widget.entries.length;
+    if (length < 2) return;
+    for (final i in {(_index + 1) % length, (_index - 1) % length}) {
+      final image = _image(widget.entries[i]);
+      if (image != null) {
+        precacheImage(image.imageProvider, context, onError: (_, __) {});
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _precache();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entry = _current;
+    final height =
+        (MediaQuery.sizeOf(context).height * AppUpcomingLayout.bannerFactor)
+            .clamp(AppUpcomingLayout.bannerMin, AppUpcomingLayout.bannerMax);
+    final image = _image(entry);
     final secondary =
         AppColors.textPrimary.withValues(alpha: .75); // cf. Texte sur image
     final text = Theme.of(context).textTheme;
-    return SizedBox(
-      height: height,
-      child: Stack(fit: StackFit.expand, children: [
-        // Jusqu'au bord de la fenêtre, derrière la capsule.
-        if (image != null)
-          KinosImage(image: image, fit: BoxFit.cover)
-        else
-          const ColoredBox(color: AppColors.surface),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: FractionallySizedBox(
-            heightFactor: AppUpcomingLayout.bannerScrimHeight,
-            widthFactor: 1,
-            child: DecoratedBox(
-                decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                  AppColors.background,
-                  AppColors.scrim.withValues(alpha: .85),
-                  Colors.transparent
-                ]))),
+    final duration =
+        AppMotion.enabled(context) ? AppDurations.heroSlide : Duration.zero;
+    final count = widget.entries.length;
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _go(-1),
+        const SingleActivator(LogicalKeyboardKey.arrowRight): () => _go(1),
+      },
+      child: SizedBox(
+        height: height,
+        child: Stack(fit: StackFit.expand, children: [
+          // Jusqu'au bord de la fenêtre, derrière la capsule et la barre.
+          AnimatedSwitcher(
+            duration: duration,
+            child: KeyedSubtree(
+              key: ValueKey(entry.identity),
+              child: image != null
+                  ? KinosImage(image: image, fit: BoxFit.cover)
+                  : const ColoredBox(color: AppColors.surface),
+            ),
           ),
-        ),
-        Padding(
-          padding: padding.copyWith(bottom: AppSpacing.lg),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(UpcomingStrings.bannerDate(entry, locale),
-                  style: text.bodyMedium?.copyWith(color: secondary)),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(entry.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.displayMedium
-                      ?.copyWith(color: AppColors.textPrimary)),
-              if (entry.reasons.isNotEmpty || entry.big) ...[
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                    entry.reasons.isNotEmpty
-                        ? entry.reasons.join(' · ')
-                        : UpcomingStrings.bigRelease,
-                    style: text.bodyMedium?.copyWith(color: secondary)),
-              ],
-              const SizedBox(height: AppSpacing.md),
-              MediaNavigation(
-                previewImage: image,
-                builder: (context) => FocusRing(
-                  borderRadius: AppRadii.controlBorder,
-                  focusNode: MediaNavigationScope.focusOf(context),
-                  onActivate: () => openUpcoming(context, entry),
-                  child: DecoratedBox(
-                    decoration: const BoxDecoration(
-                        color: AppColors.textPrimary,
-                        borderRadius: AppRadii.controlBorder),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        if (!entry.requested) ...[
-                          const Icon(Icons.add_rounded,
-                              color: AppColors.background),
-                          const SizedBox(width: AppSpacing.xxs),
+          // Fondu vers le fond de la page, dans sa couleur exacte : aucune
+          // ligne là où le bandeau s'arrête.
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: FractionallySizedBox(
+              heightFactor: AppUpcomingLayout.bannerScrimHeight,
+              widthFactor: 1,
+              child: DecoratedBox(
+                  decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          stops: const [
+                    0,
+                    .3,
+                    1
+                  ],
+                          colors: [
+                    AppColors.background,
+                    AppColors.background.withValues(alpha: .85),
+                    AppColors.background.withValues(alpha: 0),
+                  ]))),
+            ),
+          ),
+          Padding(
+            padding: widget.padding.copyWith(bottom: AppSpacing.lg),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: duration,
+                    layoutBuilder: (current, previous) => Stack(
+                        alignment: Alignment.bottomLeft,
+                        children: [...previous, if (current != null) current]),
+                    child: Column(
+                      key: ValueKey(entry.identity),
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(UpcomingStrings.bannerDate(entry, widget.locale),
+                            style: text.bodyMedium?.copyWith(color: secondary)),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(entry.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.displayMedium
+                                ?.copyWith(color: AppColors.textPrimary)),
+                        if (entry.reasons.isNotEmpty || entry.big) ...[
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                              entry.reasons.isNotEmpty
+                                  ? entry.reasons.join(' · ')
+                                  : UpcomingStrings.bigRelease,
+                              style:
+                                  text.bodyMedium?.copyWith(color: secondary)),
                         ],
-                        Text(
-                            entry.requested
-                                ? UpcomingStrings.open
-                                : UpcomingStrings.toRequest,
-                            style: text.labelLarge
-                                ?.copyWith(color: AppColors.background)),
-                      ]),
+                        const SizedBox(height: AppSpacing.md),
+                        _BannerAction(entry: entry, image: image),
+                      ],
                     ),
                   ),
                 ),
-              ),
-            ],
+                if (count > 1)
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    for (var i = 0; i < count; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(left: AppSpacing.xxs),
+                        child: AnimatedContainer(
+                          duration: duration,
+                          width: i == _index ? AppSpacing.lg : AppSpacing.xs,
+                          height: AppSpacing.xxs,
+                          decoration: BoxDecoration(
+                              color: AppColors.textPrimary
+                                  .withValues(alpha: i == _index ? 1 : .35),
+                              borderRadius: const BorderRadius.all(
+                                  Radius.circular(AppSpacing.xxs))),
+                        ),
+                      ),
+                    const SizedBox(width: AppSpacing.sm),
+                    _Arrow(
+                        icon: Icons.chevron_left_rounded, onTap: () => _go(-1)),
+                    const SizedBox(width: AppSpacing.xxs),
+                    _Arrow(
+                        icon: Icons.chevron_right_rounded, onTap: () => _go(1)),
+                  ]),
+              ],
+            ),
           ),
-        ),
-      ]),
+        ]),
+      ),
     );
   }
+}
+
+class _BannerAction extends StatelessWidget {
+  const _BannerAction({required this.entry, required this.image});
+  final UpcomingEntry entry;
+  final ImageData? image;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return MediaNavigation(
+      key: ValueKey(entry.identity),
+      previewImage: image,
+      builder: (context) => FocusRing(
+        borderRadius: AppRadii.controlBorder,
+        focusNode: MediaNavigationScope.focusOf(context),
+        onActivate: () => openUpcoming(context, entry),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+              color: AppColors.textPrimary,
+              borderRadius: AppRadii.controlBorder),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (!entry.requested) ...[
+                const Icon(Icons.add_rounded, color: AppColors.background),
+                const SizedBox(width: AppSpacing.xxs),
+              ],
+              Text(
+                  entry.requested
+                      ? UpcomingStrings.open
+                      : UpcomingStrings.toRequest,
+                  style:
+                      text.labelLarge?.copyWith(color: AppColors.background)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Arrow extends StatelessWidget {
+  const _Arrow({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => FocusRing(
+        borderRadius: AppRadii.controlBorder,
+        onActivate: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xxs),
+          child: Icon(icon, color: AppColors.textPrimary),
+        ),
+      );
 }
 
 class _Controls extends StatelessWidget {

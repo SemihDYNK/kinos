@@ -254,21 +254,28 @@ List<UpcomingSection> groupUpcoming(List<UpcomingEntry> entries, DateTime today,
   return sections;
 }
 
-/// Le titre du bandeau : le prochain titre suivi, avec une image de fond
-/// de préférence.
-UpcomingEntry? upcomingFeatured(List<UpcomingEntry> entries) {
-  final followed = [
+/// Les diapos du bandeau : les prochains titres suivis, puis les plus
+/// attendues des grandes sorties des deux mois à venir, avec une image de
+/// fond.
+List<UpcomingEntry> upcomingFeatured(List<UpcomingEntry> entries,
+    {DateTime? today, int followed = 3, int total = 8}) {
+  final now = today ?? DateTime.now();
+  final horizon = DateTime(now.year, now.month + 2, now.day);
+  final dated = [
     for (final e in entries)
-      if (e.reasons.isNotEmpty && e.date != null) e
+      if (e.date != null && e.backdropPath != null) e
+  ];
+  final mine = [
+    for (final e in dated)
+      if (e.reasons.isNotEmpty) e
   ]..sort(compareUpcoming);
-  final candidates = followed.isEmpty
-      ? ([
-          for (final e in entries)
-            if (e.date != null) e
-        ]..sort(compareUpcoming))
-      : followed;
-  return candidates.where((e) => e.backdropPath != null).firstOrNull ??
-      candidates.firstOrNull;
+  final picked = mine.take(followed).toList();
+  final big = [
+    for (final e in dated)
+      if (e.big && !picked.contains(e) && !e.date!.isAfter(horizon)) e
+  ]..sort((a, b) => b.popularity.compareTo(a.popularity));
+  picked.addAll(big.take(total - picked.length));
+  return picked;
 }
 
 /// Ce que l'on peut suivre depuis la fiche Seerr d'un film ou d'une série :
