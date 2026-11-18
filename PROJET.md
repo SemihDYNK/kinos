@@ -438,6 +438,15 @@ alimente le profil de goût des recommandations, jamais les candidats.
 Il sert aussi, depuis v0.13.0, à écarter les films déjà vus des rangées
 Letterboxd de l'accueil et à afficher sa propre note en repli.
 
+Synchronisation du journal (après v0.15.0) : le flux RSS public du
+profil relié (même pseudo et même cadence de 12 h que les amis,
+`letterboxdDiarySyncProvider`) donne les ~50 dernières entrées, avec
+identifiant TMDB et date de visionnage. Chaque nouvelle entrée est
+marquée vue dans Jellyfin si le film est dans la bibliothèque (à sa date
+de visionnage), puis fusionnée dans l'instantané pour le profil de goût.
+Une entrée n'est appliquée qu'une fois, même démarquée ensuite. L'import
+par fichier, lui, ne marque rien dans Jellyfin.
+
 ### Persistance locale (Drift, `lib/models/syncing/`)
 
 `AppDatabase`, schéma v4, 6 tables : `DatabaseItems` (cache Jellyfin
@@ -587,6 +596,9 @@ Plezy/Plex reste de côté.
 
 Ouverts côté code, dans un ordre de priorité suggéré :
 
+- **Page « Prochainement »** — conçue le 18 novembre 2026, aucun code.
+  Voir § Page « Prochainement » ci-dessous.
+
 - **Lot Seerr "découverte hors catalogue"** — committé et publié ; reste à
   valider contre les vrais serveurs et à mesurer le rendu. Ce lot conserve son délai propre ; le client Seerr historique
   est désormais borné à 30 secondes. La présentation des erreurs HTTP reste
@@ -614,3 +626,62 @@ Ouverts côté code, dans un ordre de priorité suggéré :
 - **Trousseau macOS** (Bugs connus 7) — dès qu'un Developer ID existe.
 - **9 messages non traduits** et **relecture du `NOTICE`** avant
   publication (déjà notés dans `CLAUDE.md` § En attente).
+
+### Page « Prochainement » (conception validée le 18 novembre 2026)
+
+Une page de la barre latérale avec les films et séries qui sortent
+bientôt : ce que l'on suit, puis les grandes sorties.
+
+**Activation.** Masquée par défaut : ni entrée dans la barre latérale ni
+rafraîchissement tant qu'elle n'est pas activée. Interrupteur et région
+dans les réglages ; plus tard, l'assistant du premier lancement écrira
+dans ces mêmes réglages. La désactiver garde les suivis. Sans Seerr
+relié au profil, la page n'existe pas (une version réduite à
+Sonarr/Radarr serait trop pauvre).
+
+**Sources.**
+- Seerr (passerelle TMDB) : personnes, sagas, studios, chaînes, séries,
+  grandes sorties. Le cœur du suivi.
+- Sonarr/Radarr (calendriers) : dates exactes de ce qu'ils gèrent déjà.
+- Jellyfin : prochains épisodes connus, en dernier recours.
+
+**Suivis.** Liste par profil en base locale (Drift, migration), chaque
+élément avec son type et son identifiant TMDB. On suit depuis les
+fiches et par clic droit (« Suivre », « Suivre la saga » sur un film
+d'une saga), sans écran de gestion dédié.
+- Acteurs : rôles principaux seulement, c'est-à-dire les 3 à 5 premiers
+  du générique TMDB (`order`). Un second rôle passe s'il a un personnage
+  nommé et est dans les 8 premiers (approximation de « dans la promo »).
+  Exclus : apparitions dans son propre rôle, doublages courts, émissions,
+  talk-shows, courts-métrages. Séries : distribution principale de la
+  saison à venir, jamais les invités.
+- Réalisateurs : la réalisation seulement, ni production ni écriture.
+- Studios et chaînes (Apple TV+, HBO, A24…) : une nouvelle série d'une
+  chaîne suivie arrive avec « Demander » mis en avant sur la tuile
+  (première saison ; pour une série déjà en bibliothèque, la nouvelle
+  saison), puis le statut Seerr de la demande. Toujours au clic, jamais
+  automatique.
+
+**Dates.** Région par profil, par défaut le pays de la langue de
+l'interface. Pour un film, la date de la région et son type (salle,
+numérique, physique, télévision) ; sans date dans la région, la date
+mondiale la plus proche marquée « hors région ». Pour une série, la
+date de diffusion de la chaîne d'origine.
+
+**Page.** Frise chronologique de ce que l'on suit (cette semaine, ce
+mois-ci, plus tard, date inconnue), puis la section « Les grandes
+sorties » : sorties à venir et tendance de la région, filtrées par un
+seuil de popularité, films et séries. Un titre suivi reste dans la
+frise avec ses raisons et un repère « grande sortie », jamais en double.
+Grilles de 6 à 8 colonnes ; chaque tuile porte la date et son type, la
+ou les raisons du suivi (« Denis Villeneuve », « Saga Dune », « A24 »)
+et les actions « Demander » ou « Ouvrir ». Filtres : films/séries, ce
+que je suis / grandes sorties / tout. Un titre trouvé par plusieurs
+suivis forme une seule tuile, avec toutes ses raisons.
+
+**Rafraîchissement.** Une fois par jour, avec un cache, seulement si la
+page est activée.
+
+**Plus tard.** Suivi implicite (séries regardées, réalisateurs bien
+notés), notifications, demande automatique pour une chaîne suivie,
+assistant du premier lancement, rangée « Bientôt » sur l'accueil.
