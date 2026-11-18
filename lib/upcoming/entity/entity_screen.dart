@@ -10,7 +10,6 @@ import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/widgets/shared/frosted_surface.dart';
-import 'package:kinos/widgets/shared/key_hint.dart';
 import 'package:kinos/widgets/shared/scroll_pinned_back_button.dart';
 
 import '../upcoming_models.dart';
@@ -251,7 +250,6 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
               : null,
         ),
       ),
-      // Toujours là : les raccourcis des tuiles y sont rappelés.
       SliverPadding(
         padding: padding.copyWith(top: AppSpacing.md),
         sliver: SliverToBoxAdapter(
@@ -270,7 +268,6 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
                     selected: !acting,
                     onTap: () =>
                         setState(() => _role = UpcomingRole.directing)),
-                const KeyHint('R'),
                 const SizedBox(width: AppSpacing.md),
               ],
               if (!person && _kind != UpcomingFollowKind.collection) ...[
@@ -284,11 +281,8 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
                       onTap: () => ref
                           .read(entityProvider(_key).notifier)
                           .setSort(sort)),
-                const KeyHint('O'),
                 const SizedBox(width: AppSpacing.md),
               ],
-              const TileKeyHints(),
-              const SizedBox(width: AppSpacing.md),
               if (state.checking > 0)
                 Text(EntityStrings.checking(state.checking),
                     style: AppTypography.meta
@@ -588,7 +582,7 @@ class _EntityBanner extends StatelessWidget {
                     spacing: AppSpacing.xs,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (follow != null) ...[follow!, const KeyHint('S')],
+                      if (follow != null) follow!,
                       if (biography != null && biography.trim().isNotEmpty)
                         _Chip(
                             kind == UpcomingFollowKind.person

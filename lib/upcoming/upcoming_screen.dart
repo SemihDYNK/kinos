@@ -20,7 +20,6 @@ import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/kinos_image.dart';
-import 'package:kinos/widgets/shared/key_hint.dart';
 
 import 'upcoming_logic.dart';
 import 'upcoming_models.dart';
@@ -465,10 +464,10 @@ class _Controls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget group(List<Widget> chips, String key) => Row(
+    Widget group(List<Widget> chips) => Row(
         mainAxisSize: MainAxisSize.min,
         spacing: AppSpacing.xxs,
-        children: [...chips, KeyHint(key)]);
+        children: chips);
     return Wrap(
       spacing: AppSpacing.lg,
       runSpacing: AppSpacing.xs,
@@ -481,7 +480,7 @@ class _Controls extends StatelessWidget {
             (UpcomingTypeFilter.series, UpcomingStrings.series),
           ])
             _Chip(label, selected: type == value, onTap: () => onType(value)),
-        ], 'F'),
+        ]),
         group([
           for (final (value, label) in [
             (UpcomingScopeFilter.both, UpcomingStrings.both),
@@ -489,17 +488,16 @@ class _Controls extends StatelessWidget {
             (UpcomingScopeFilter.big, UpcomingStrings.big),
           ])
             _Chip(label, selected: scope == value, onTap: () => onScope(value)),
-        ], 'G'),
+        ]),
         group([
           _Chip(UpcomingStrings.byWeek,
               selected: !byMonth, onTap: () => onByMonth(false)),
           _Chip(UpcomingStrings.byMonth,
               selected: byMonth, onTap: () => onByMonth(true)),
-        ], 'V'),
+        ]),
         group([
           _Chip(UpcomingStrings.refresh, selected: false, onTap: onRefresh),
-        ], 'R'),
-        const TileKeyHints(),
+        ]),
         Text(status,
             style: AppTypography.meta.copyWith(color: AppColors.textSecondary)),
       ],
