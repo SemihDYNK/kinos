@@ -668,16 +668,48 @@ numérique, physique, télévision) ; sans date dans la région, la date
 mondiale la plus proche marquée « hors région ». Pour une série, la
 date de diffusion de la chaîne d'origine.
 
-**Page.** Frise chronologique de ce que l'on suit (cette semaine, ce
-mois-ci, plus tard, date inconnue), puis la section « Les grandes
-sorties » : sorties à venir et tendance de la région, filtrées par un
-seuil de popularité, films et séries. Un titre suivi reste dans la
-frise avec ses raisons et un repère « grande sortie », jamais en double.
-Grilles de 6 à 8 colonnes ; chaque tuile porte la date et son type, la
-ou les raisons du suivi (« Denis Villeneuve », « Saga Dune », « A24 »)
-et les actions « Demander » ou « Ouvrir ». Filtres : films/séries, ce
-que je suis / grandes sorties / tout. Un titre trouvé par plusieurs
-suivis forme une seule tuile, avec toutes ses raisons.
+**Page** (maquettes validées le 18 novembre 2026).
+- Bandeau du prochain titre suivi, au traitement de l'accueil : date et
+  type de sortie, grand titre, raisons, « À demander » et « Fiche ».
+- Rangée « Vos suivis » (pastilles photo/logo vers leur page, clic
+  droit pour ne plus suivre).
+- Une frise unique : ce que l'on suit et les grandes sorties (sorties à
+  venir et tendance de la région, au-dessus d'un seuil de popularité,
+  films et séries) mêlés à leur date, la raison « Grande sortie » le cas
+  échéant. Un titre suivi et très attendu garde ses raisons et un repère
+  « grande sortie », jamais en double.
+- Découpage réglable, plus fin par défaut : cette semaine, semaine
+  prochaine, puis une section par semaine titrée par sa date marquante,
+  puis « Plus tard » ; bascule par mois (`V`), retenue par profil.
+- Tuiles au style de l'accueil : « + À demander » (ou le statut de la
+  demande, l'épisode, la saison) en bas à gauche sur la jaquette, date en
+  pastille en haut à gauche, titre puis raisons en dessous. Grilles de 6
+  à 8 colonnes. Un titre trouvé par plusieurs suivis forme une seule
+  tuile, avec toutes ses raisons.
+- Filtres avec raccourcis visibles : films/séries (`F`), suivis /
+  grandes sorties / les deux (`G`). `D` demander, `S` suivre.
+
+**Pages à suivre** (même gabarit pour personne, studio, chaîne, saga).
+- Bandeau : photo et nom en très grand (personne), logo sur fond plat
+  `#141414` (studio, chaîne), image d'un film (saga) ; bouton Suivre
+  (`S`).
+- Sections : « À venir », « Dans votre bibliothèque », puis le reste
+  du catalogue avec « À demander ». Une saga suit l'ordre de sortie.
+- Personne : pas de page à part pour les réalisateurs, la page s'adapte
+  au métier ; sélecteur Acteur / Réalisateur (`R`), le suivi porte sur
+  le rôle choisi. Les sections ne gardent que les rôles principaux
+  (règle ci-dessus), y compris côté bibliothèque ; tout le reste
+  (seconds rôles, caméos, propre rôle, voix, épisodes isolés) va dans
+  « Apparaît dans », en liste de texte sans jaquettes. Remplace la page
+  personne héritée de Fladder.
+- Studio, chaîne : filtres type (`F`) et ordre (récents, mieux notés,
+  populaires, `O`).
+- Accès : distribution et équipe cliquables sur les fiches (réalisateur
+  en premier), studios et chaîne en liens avec logo, ligne « Fait
+  partie de la saga … », clic droit « Suivre… » partout. Identifiants
+  TMDB : celui de la personne dans Jellyfin, ceux des studios, chaînes
+  et sagas dans la fiche Seerr. Sans Seerr : contenu Jellyfin seul,
+  pas de bouton Suivre.
 
 **Rafraîchissement.** Une fois par jour, avec un cache, seulement si la
 page est activée.
