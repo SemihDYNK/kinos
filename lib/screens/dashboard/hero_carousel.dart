@@ -29,6 +29,7 @@ class HeroCarousel extends ConsumerStatefulWidget {
       {required this.items,
       this.onCurrentChanged,
       this.actionsBuilder,
+      this.metaBuilder,
       this.contentStart = 0,
       super.key});
 
@@ -37,6 +38,10 @@ class HeroCarousel extends ConsumerStatefulWidget {
   final double contentStart;
   final Widget Function(BuildContext context, ItemBaseModel item)?
       actionsBuilder;
+
+  /// Remplace la ligne sous le titre (année, genre, durée) : la date de
+  /// sortie d'un titre à venir.
+  final String Function(ItemBaseModel item)? metaBuilder;
 
   static double minHeightFor(AppDensity density) => density == AppDensity.couch
       ? AppHeroLayout.couchHeight
@@ -248,7 +253,9 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
     }
   }
 
-  String _metaLine(ItemBaseModel item) => [
+  String _metaLine(ItemBaseModel item) =>
+      widget.metaBuilder?.call(item) ??
+      [
         item.overview.yearAired?.toString(),
         item.overview.genreItems.firstOrNull?.name ??
             item.overview.genres.firstOrNull,

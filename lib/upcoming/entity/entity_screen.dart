@@ -475,29 +475,34 @@ class _EntityBanner extends StatelessWidget {
     return SizedBox(
       height: height,
       child: Stack(fit: StackFit.expand, children: [
-        if (logo)
-          const ColoredBox(color: AppColors.surface)
-        else if (kind == UpcomingFollowKind.collection && backdrop != null)
-          KinosImage(
-              image: ImageData(
-                  path: tmdbImage(backdrop, size: 'w1280'),
-                  key: 'entity-backdrop:$backdrop'),
-              fit: BoxFit.cover)
-        else if (kind == UpcomingFollowKind.person && posters.isNotEmpty)
-          Opacity(
-              opacity: AppUpcomingLayout.mosaicOpacity,
-              child: _PosterMosaic(posters: posters)),
-        if (!logo) ...[
-          fade(Alignment.bottomCenter, Alignment.topCenter),
-          if (kind == UpcomingFollowKind.person)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                  widthFactor: .7,
-                  heightFactor: 1,
-                  child: fade(Alignment.centerLeft, Alignment.centerRight)),
-            ),
-        ],
+        // L'image s'arrête juste avant le bord du bandeau : son liseré
+        // tombe sous le fondu, opaque à cet endroit. Plus de ligne.
+        Padding(
+          padding:
+              const EdgeInsets.only(bottom: AppUpcomingLayout.bannerEdgeInset),
+          child: logo
+              ? const ColoredBox(color: AppColors.surface)
+              : kind == UpcomingFollowKind.collection && backdrop != null
+                  ? KinosImage(
+                      image: ImageData(
+                          path: tmdbImage(backdrop, size: 'w1280'),
+                          key: 'entity-backdrop:$backdrop'),
+                      fit: BoxFit.cover)
+                  : kind == UpcomingFollowKind.person && posters.isNotEmpty
+                      ? Opacity(
+                          opacity: AppUpcomingLayout.mosaicOpacity,
+                          child: _PosterMosaic(posters: posters))
+                      : const SizedBox.shrink(),
+        ),
+        fade(Alignment.bottomCenter, Alignment.topCenter),
+        if (kind == UpcomingFollowKind.person)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+                widthFactor: .7,
+                heightFactor: 1,
+                child: fade(Alignment.centerLeft, Alignment.centerRight)),
+          ),
         Padding(
           padding: padding.copyWith(bottom: AppSpacing.lg),
           child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [

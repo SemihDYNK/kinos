@@ -273,6 +273,13 @@ class UpcomingSource {
         big: big,
         status: status,
         jellyfinId: jellyfin is String && jellyfin.isNotEmpty ? jellyfin : null,
-        popularity: popularity is num ? popularity.toDouble() : 0);
+        popularity: popularity is num ? popularity.toDouble() : 0,
+        overview: details['overview'] is String
+            ? (details['overview'] as String).trim()
+            : '',
+        genres: [
+          for (final g in _list(details['genres']))
+            if (g['name'] is String) g['name'] as String
+        ]);
   }
 }

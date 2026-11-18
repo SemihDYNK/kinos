@@ -15,6 +15,7 @@ class HomeHeroSection extends ConsumerWidget {
       required this.resumeItems,
       required this.contentPadding,
       this.actionsBuilder,
+      this.metaBuilder,
       this.footerSliver,
       super.key});
   final List<ItemBaseModel> heroItems;
@@ -23,6 +24,7 @@ class HomeHeroSection extends ConsumerWidget {
   final Widget? footerSliver;
   final Widget Function(BuildContext context, ItemBaseModel item)?
       actionsBuilder;
+  final String Function(ItemBaseModel item)? metaBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,7 +55,8 @@ class HomeHeroSection extends ConsumerWidget {
             child: HeroCarousel(
                 items: heroItems,
                 contentStart: sidebar,
-                actionsBuilder: actionsBuilder)),
+                actionsBuilder: actionsBuilder,
+                metaBuilder: metaBuilder)),
         if (footerSliver != null) footerSliver!,
         if (resumeItems.isNotEmpty)
           SliverPadding(

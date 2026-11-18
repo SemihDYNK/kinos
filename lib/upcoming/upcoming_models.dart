@@ -85,6 +85,8 @@ class UpcomingEntry {
     this.status = SeerrMediaStatus.unknown,
     this.jellyfinId,
     this.popularity = 0,
+    this.overview = '',
+    this.genres = const [],
   });
 
   /// `movie` ou `tv`.
@@ -112,6 +114,10 @@ class UpcomingEntry {
   final String? jellyfinId;
   final double popularity;
 
+  /// Synopsis et genres, pour le bandeau.
+  final String overview;
+  final List<String> genres;
+
   bool get isMovie => type == 'movie';
   String get identity => 'tmdb:$type:$id';
 
@@ -136,7 +142,9 @@ class UpcomingEntry {
       big: big ?? this.big,
       status: status,
       jellyfinId: jellyfinId,
-      popularity: popularity);
+      popularity: popularity,
+      overview: overview,
+      genres: genres);
 
   Map<String, Object?> toJson() => {
         't': type,
@@ -154,6 +162,8 @@ class UpcomingEntry {
         'st': status.index,
         if (jellyfinId != null) 'j': jellyfinId,
         'pop': popularity,
+        if (overview.isNotEmpty) 'ov': overview,
+        if (genres.isNotEmpty) 'gn': genres,
       };
 
   static UpcomingEntry? fromJson(Object? json) {
@@ -188,7 +198,13 @@ class UpcomingEntry {
             ? SeerrMediaStatus.values[st]
             : SeerrMediaStatus.unknown,
         jellyfinId: j is String && j.isNotEmpty ? j : null,
-        popularity: pop is num ? pop.toDouble() : 0);
+        popularity: pop is num ? pop.toDouble() : 0,
+        overview: json['ov'] is String ? json['ov'] as String : '',
+        genres: [
+          if (json['gn'] is List)
+            for (final g in json['gn'] as List)
+              if (g is String) g
+        ]);
   }
 }
 

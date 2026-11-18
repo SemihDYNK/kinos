@@ -284,6 +284,10 @@ abstract final class AppUpcomingLayout {
   /// Le voile du bandeau couvre sa partie basse, sous le texte.
   static const bannerScrimHeight = .75;
 
+  /// L'image du bandeau s'arrête à cette distance du bord bas, sous le
+  /// fondu opaque : son bord antialiasé dessinait une ligne.
+  static const bannerEdgeInset = 2.0;
+
   /// Page d'une personne : portrait carré à côté du nom, mosaïque de ses
   /// affiches en fond (rangées, opacité sous le voile).
   static const portraitSize = 136.0;

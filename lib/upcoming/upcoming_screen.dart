@@ -1,4 +1,9 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart' show BaseItemDto;
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/models/items/movie_model.dart';
+import 'package:kinos/models/items/series_model.dart';
+import 'package:kinos/screens/dashboard/home_hero_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,12 +68,33 @@ class _UpcomingScreenState extends ConsumerState<UpcomingScreen> {
     final sections = groupUpcoming(entries, DateTime.now(),
         byMonth: state.settings?.byMonth ?? false);
     final featured = upcomingFeatured(state.entries ?? const []);
+    final byIdentity = {for (final e in featured) e.identity: e};
     final text = Theme.of(context).textTheme;
 
     final slivers = <Widget>[
       if (featured.isNotEmpty)
-        SliverToBoxAdapter(
-            child: _Banner(entries: featured, padding: padding, locale: locale))
+        // Le carrousel de l'accueil : mêmes mouvements, même dominante
+        // teintée, mêmes flèches.
+        HomeHeroSection(
+          heroItems: [for (final e in featured) upcomingHeroItem(e)],
+          resumeItems: const [],
+          contentPadding: padding,
+          metaBuilder: (item) {
+            final entry = byIdentity[item.id];
+            if (entry == null) return '';
+            return [
+              UpcomingStrings.bannerDate(entry, locale),
+              if (entry.reasons.isNotEmpty)
+                entry.reasons.join(' · ')
+              else if (entry.big)
+                UpcomingStrings.bigRelease,
+            ].join(' · ');
+          },
+          actionsBuilder: (context, item) => switch (byIdentity[item.id]) {
+            final entry? => _BannerAction(entry: entry),
+            null => const SizedBox.shrink(),
+          },
+        )
       else
         SliverPadding(
           // Sous la capsule de navigation, posée par-dessus la page.
@@ -189,6 +215,34 @@ RecommendationTile upcomingTile(UpcomingEntry entry, String locale,
         entry: entry, image: image, locale: locale, pill: pill, label: label),
     navigate: (context) => openUpcoming(context, entry, image: image),
   );
+}
+
+ImageData? _poster(UpcomingEntry entry) => entry.posterPath == null
+    ? null
+    : ImageData(
+        path: tmdbImage(entry.posterPath!), key: 'upcoming:${entry.identity}');
+
+/// Un titre à venir sous la forme d'un élément du carrousel de l'accueil :
+/// titre, image de fond, affiche, synopsis, genres. Son identifiant est
+/// celui du titre TMDB, jamais un élément Jellyfin.
+ItemBaseModel upcomingHeroItem(UpcomingEntry entry) {
+  final dto = BaseItemDto(
+      id: entry.identity,
+      name: entry.title,
+      overview: entry.overview,
+      genres: entry.genres,
+      productionYear: entry.date?.year,
+      premiereDate: entry.date);
+  final backdrop = entry.backdropPath ?? entry.posterPath;
+  final images = ImagesData(primary: _poster(entry), backDrop: [
+    if (backdrop != null)
+      ImageData(
+          path: tmdbImage(backdrop, size: 'w1280'),
+          key: 'upcoming-banner:${entry.identity}')
+  ]);
+  return entry.isMovie
+      ? MovieModel.fromBaseDto(dto, null).copyWith(images: images)
+      : SeriesModel.fromBaseDto(dto, null).copyWith(images: images);
 }
 
 /// Ouvre la page d'un suivi : personne, studio, chaîne, saga ; une série
@@ -321,210 +375,20 @@ class _UpcomingPoster extends StatelessWidget {
   }
 }
 
-/// Le bandeau : les prochains titres suivis et les grandes sorties, une
-/// diapo à la fois, comme le carrousel de l'accueil (manuel : flèches,
-/// ← → au clavier).
-class _Banner extends StatefulWidget {
-  const _Banner(
-      {required this.entries, required this.padding, required this.locale});
-  final List<UpcomingEntry> entries;
-  final EdgeInsets padding;
-  final String locale;
-
-  @override
-  State<_Banner> createState() => _BannerState();
-}
-
-class _BannerState extends State<_Banner> {
-  int _index = 0;
-
-  UpcomingEntry get _current =>
-      widget.entries[_index.clamp(0, widget.entries.length - 1)];
-
-  @override
-  void didUpdateWidget(covariant _Banner oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final previous = oldWidget.entries.isEmpty
-        ? null
-        : oldWidget.entries[_index.clamp(0, oldWidget.entries.length - 1)];
-    final kept =
-        widget.entries.indexWhere((e) => e.identity == previous?.identity);
-    _index = kept < 0 ? 0 : kept;
-  }
-
-  void _go(int delta) {
-    if (widget.entries.length < 2) return;
-    setState(() => _index = (_index + delta) % widget.entries.length);
-    _precache();
-  }
-
-  ImageData? _image(UpcomingEntry entry) {
-    final backdrop = entry.backdropPath ?? entry.posterPath;
-    return backdrop == null
-        ? null
-        : ImageData(
-            path: tmdbImage(backdrop, size: 'w1280'),
-            key: 'upcoming-banner:${entry.identity}');
-  }
-
-  void _precache() {
-    final length = widget.entries.length;
-    if (length < 2) return;
-    for (final i in {(_index + 1) % length, (_index - 1) % length}) {
-      final image = _image(widget.entries[i]);
-      if (image != null) {
-        precacheImage(image.imageProvider, context, onError: (_, __) {});
-      }
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _precache();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final entry = _current;
-    final height =
-        (MediaQuery.sizeOf(context).height * AppUpcomingLayout.bannerFactor)
-            .clamp(AppUpcomingLayout.bannerMin, AppUpcomingLayout.bannerMax);
-    final image = _image(entry);
-    final secondary =
-        AppColors.textPrimary.withValues(alpha: .75); // cf. Texte sur image
-    final text = Theme.of(context).textTheme;
-    final duration =
-        AppMotion.enabled(context) ? AppDurations.heroSlide : Duration.zero;
-    final count = widget.entries.length;
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _go(-1),
-        const SingleActivator(LogicalKeyboardKey.arrowRight): () => _go(1),
-      },
-      child: SizedBox(
-        height: height,
-        child: Stack(fit: StackFit.expand, children: [
-          // Jusqu'au bord de la fenêtre, derrière la capsule et la barre.
-          AnimatedSwitcher(
-            duration: duration,
-            child: KeyedSubtree(
-              key: ValueKey(entry.identity),
-              child: image != null
-                  ? KinosImage(image: image, fit: BoxFit.cover)
-                  : const ColoredBox(color: AppColors.surface),
-            ),
-          ),
-          // Fondu vers le fond de la page, dans sa couleur exacte : aucune
-          // ligne là où le bandeau s'arrête.
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: FractionallySizedBox(
-              heightFactor: AppUpcomingLayout.bannerScrimHeight,
-              widthFactor: 1,
-              child: DecoratedBox(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          stops: const [
-                    0,
-                    .3,
-                    1
-                  ],
-                          colors: [
-                    AppColors.background,
-                    AppColors.background.withValues(alpha: .85),
-                    AppColors.background.withValues(alpha: 0),
-                  ]))),
-            ),
-          ),
-          Padding(
-            padding: widget.padding.copyWith(bottom: AppSpacing.lg),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: duration,
-                    layoutBuilder: (current, previous) => Stack(
-                        alignment: Alignment.bottomLeft,
-                        children: [...previous, if (current != null) current]),
-                    child: Column(
-                      key: ValueKey(entry.identity),
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(UpcomingStrings.bannerDate(entry, widget.locale),
-                            style: text.bodyMedium?.copyWith(color: secondary)),
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(entry.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.displayMedium
-                                ?.copyWith(color: AppColors.textPrimary)),
-                        if (entry.reasons.isNotEmpty || entry.big) ...[
-                          const SizedBox(height: AppSpacing.xxs),
-                          Text(
-                              entry.reasons.isNotEmpty
-                                  ? entry.reasons.join(' · ')
-                                  : UpcomingStrings.bigRelease,
-                              style:
-                                  text.bodyMedium?.copyWith(color: secondary)),
-                        ],
-                        const SizedBox(height: AppSpacing.md),
-                        _BannerAction(entry: entry, image: image),
-                      ],
-                    ),
-                  ),
-                ),
-                if (count > 1)
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    for (var i = 0; i < count; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(left: AppSpacing.xxs),
-                        child: AnimatedContainer(
-                          duration: duration,
-                          width: i == _index ? AppSpacing.lg : AppSpacing.xs,
-                          height: AppSpacing.xxs,
-                          decoration: BoxDecoration(
-                              color: AppColors.textPrimary
-                                  .withValues(alpha: i == _index ? 1 : .35),
-                              borderRadius: const BorderRadius.all(
-                                  Radius.circular(AppSpacing.xxs))),
-                        ),
-                      ),
-                    const SizedBox(width: AppSpacing.sm),
-                    _Arrow(
-                        icon: Icons.chevron_left_rounded, onTap: () => _go(-1)),
-                    const SizedBox(width: AppSpacing.xxs),
-                    _Arrow(
-                        icon: Icons.chevron_right_rounded, onTap: () => _go(1)),
-                  ]),
-              ],
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-}
-
 class _BannerAction extends StatelessWidget {
-  const _BannerAction({required this.entry, required this.image});
+  const _BannerAction({required this.entry});
   final UpcomingEntry entry;
-  final ImageData? image;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return MediaNavigation(
       key: ValueKey(entry.identity),
-      previewImage: image,
+      previewImage: _poster(entry),
       builder: (context) => FocusRing(
         borderRadius: AppRadii.controlBorder,
         focusNode: MediaNavigationScope.focusOf(context),
-        onActivate: () => openUpcoming(context, entry),
+        onActivate: () => openUpcoming(context, entry, image: _poster(entry)),
         child: DecoratedBox(
           decoration: const BoxDecoration(
               color: AppColors.textPrimary,
@@ -549,22 +413,6 @@ class _BannerAction extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Arrow extends StatelessWidget {
-  const _Arrow({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => FocusRing(
-        borderRadius: AppRadii.controlBorder,
-        onActivate: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xxs),
-          child: Icon(icon, color: AppColors.textPrimary),
-        ),
-      );
 }
 
 class _Controls extends StatelessWidget {

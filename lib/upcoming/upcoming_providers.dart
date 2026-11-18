@@ -157,7 +157,7 @@ class UpcomingController extends StateNotifier<UpcomingState> {
       [
         // Version du calcul : une frise d'une version précédente est
         // refaite.
-        'v2',
+        'v3',
         settings.region,
         _appLocale(ref).languageCode,
         ...([for (final f in follows) f.key]..sort()),
