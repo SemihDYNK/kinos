@@ -133,6 +133,10 @@ amis, rangées d'accueil) — détail dans `PROJET.md`.
 v0.14.0 (12 novembre) ajoute la rangée « Genres » et les pages de genre.
 v0.15.0 (16 novembre) nettoie les réglages et étend le langage de mouvement
 (fiches, tuiles, démarrage) — détail dans `PROJET.md`.
+v0.16.0 (18 novembre) ajoute la page Prochainement (suivis, pages personne,
+studio, chaîne et saga, personnes dans la recherche), la nouvelle intro de
+démarrage avec ses sons et la synchronisation du journal Letterboxd —
+détail dans `PROJET.md`.
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 

@@ -96,6 +96,36 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
+## v0.16.0 (18 novembre)
+
+- **Prochainement** (`lib/upcoming/`) : page masquée par défaut, activée
+  avec sa région dans les réglages du profil (Seerr requis). Frise unique
+  des suivis, des grandes sorties de la région et de ce que Radarr/Sonarr
+  surveillent, à la semaine ou au mois ; carrousel de l'accueil en tête.
+  Suivis depuis « Suivre… » sur les fiches.
+- **Pages personne, studio, chaîne et saga** : à venir, bibliothèque, reste
+  à demander ; rôles principaux seulement, le reste dans « Apparaît
+  dans ». Remplacent la page personne héritée quand Seerr est relié ;
+  réalisateur et scénariste cliquables sur les fiches ; personnes et
+  studios dans la recherche de la capsule.
+- **Intro de démarrage** : version longue (gros plan, pièces venues des
+  bords, clapperboard K, KINOS, faisceau de projecteur, aurore aux
+  couleurs du film) au premier lancement depuis le démarrage de la
+  machine, courte ensuite ; sons (clap, faisceau, fenêtre, nappe) ;
+  réglage Animation de démarrage (auto, complète, rapide, ancienne).
+- **Letterboxd** : le journal public est relu toutes les 12 h ; les films
+  vus ailleurs sont marqués vus dans Jellyfin et nourrissent le goût.
+- **Accueil** : le bandeau recule en profondeur au défilement ; démarrage
+  à froid plus rapide (cache d'images persistant).
+- **Fluidité** : fonds TMDB des fiches Seerr en `w1280` (plus en
+  `original`), jaquettes en `w342`, frise en cache lue hors du fil de
+  l'interface ; `KINOS_FRAME_LOG=1` consigne les images lentes par écran.
+- **Un seul appel à demander** : « + À demander » sur la jaquette,
+  partout.
+- **macOS** : mpv sort enfin l'image (CocoaPods, SwiftPM désactivé).
+- **CI** : miroirs apt plus rapides ; releases 0.12.2–0.12.4 retaguées
+  (`v1.12.x` était une faute de frappe).
+
 ## v0.15.0 (16 novembre)
 
 - **Réglages** : une vingtaine de réglages sans effet retirés de l'interface

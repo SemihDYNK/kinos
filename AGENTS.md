@@ -133,6 +133,10 @@ amis, rangées d'accueil) — détail dans `PROJET.md`.
 v0.14.0 (12 novembre) ajoute la rangée « Genres » et les pages de genre.
 v0.15.0 (16 novembre) nettoie les réglages et étend le langage de mouvement
 (fiches, tuiles, démarrage) — détail dans `PROJET.md`.
+v0.16.0 (18 novembre) ajoute la page Prochainement (suivis, pages personne,
+studio, chaîne et saga, personnes dans la recherche), la nouvelle intro de
+démarrage avec ses sons et la synchronisation du journal Letterboxd —
+détail dans `PROJET.md`.
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 
@@ -146,6 +150,11 @@ Feuille de route, priorité validée le 29 octobre 2026 :
       candidats recommandés
 - [ ] Mode salon (double densité, déjà porté par le thème — reste
       l'activation/bascule de bout en bout), après stabilisation
+- [ ] Tutoriel de premier démarrage : une fois le serveur ajouté, une
+      fenêtre guide la configuration de Seerr (et des pages qui en
+      dépendent, dont Prochainement et sa région), Letterboxd, AniList et
+      Sonarr/Radarr. Chaque étape, et le tutoriel entier, peut être passée ;
+      tout reste réglable ensuite dans les paramètres
 - [ ] Version distribuable propre, en toute fin : validation globale,
       rangement des modifications, traductions, sécurité et licences
 
