@@ -34,10 +34,17 @@ jobs:
           channel: stable
           cache: true
       - name: Install Linux test dependencies
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
+          # Le miroir EC2 du runner tombe parfois à quelques Ko/s (170 Mo de
+          # paquets dépassaient 10 min) : miroirs Azure puis officiel d'abord.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf 'http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://archive.ubuntu.com/ubuntu/\tpriority:2\n' \
+              | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          fi
           sudo apt-get update -o Acquire::Retries=3
-          sudo apt-get install -y -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
+          sudo apt-get install -y --no-install-recommends \
+            -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
             libmpv-dev libsecret-1-dev libgtk-3-dev
       - run: flutter pub get --enforce-lockfile
       - run: flutter analyze --no-pub --no-fatal-infos
@@ -181,10 +188,17 @@ jobs:
           channel: stable
           cache: true
       - name: Install Linux build dependencies
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
+          # Le miroir EC2 du runner tombe parfois à quelques Ko/s (170 Mo de
+          # paquets dépassaient 10 min) : miroirs Azure puis officiel d'abord.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf 'http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://archive.ubuntu.com/ubuntu/\tpriority:2\n' \
+              | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          fi
           sudo apt-get update -o Acquire::Retries=3
-          sudo apt-get install -y -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
+          sudo apt-get install -y --no-install-recommends \
+            -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
             ninja-build libgtk-3-dev libmpv-dev libsecret-1-dev \
             patchelf cmake clang pkg-config liblzma-dev zsync
       - run: flutter pub get --enforce-lockfile
