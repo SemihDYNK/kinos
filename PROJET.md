@@ -596,8 +596,12 @@ Plezy/Plex reste de côté.
 
 Ouverts côté code, dans un ordre de priorité suggéré :
 
-- **Page « Prochainement »** — conçue le 18 novembre 2026, aucun code.
-  Voir § Page « Prochainement » ci-dessous.
+- **Page « Prochainement »** — livrée le 18 novembre 2026 (`lib/upcoming/`) :
+  page, réglages, suivis depuis « Suivre… » sur les fiches, frise et
+  bandeau à plusieurs diapos. Restent les pages personne/studio/chaîne/
+  saga, les raccourcis `D`/`S` sur une tuile, les dates Sonarr/Radarr et
+  la traduction des libellés (`upcoming_strings.dart`). Voir § Page
+  « Prochainement » ci-dessous.
 
 - **Lot Seerr "découverte hors catalogue"** — committé et publié ; reste à
   valider contre les vrais serveurs et à mesurer le rendu. Ce lot conserve son délai propre ; le client Seerr historique
@@ -645,7 +649,8 @@ Sonarr/Radarr serait trop pauvre).
 - Sonarr/Radarr (calendriers) : dates exactes de ce qu'ils gèrent déjà.
 - Jellyfin : prochains épisodes connus, en dernier recours.
 
-**Suivis.** Liste par profil en base locale (Drift, migration), chaque
+**Suivis.** Liste par profil dans la table `Settings` (portée par profil,
+comme Letterboxd : pas de nouvelle table), avec la frise en cache ; chaque
 élément avec son type et son identifiant TMDB. On suit depuis les
 fiches et par clic droit (« Suivre », « Suivre la saga » sur un film
 d'une saga), sans écran de gestion dédié.
