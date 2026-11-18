@@ -70,6 +70,7 @@ import 'package:kinos/letterboxd/home/letterboxd_watchlist_screen.dart'
     as _i52;
 import 'package:kinos/models/items/images_models.dart' as _i53;
 import 'package:kinos/screens/dashboard/genre_page_screen.dart' as _i54;
+import 'package:kinos/upcoming/upcoming_screen.dart' as _i55;
 
 /// generated route for
 /// [_i1.AboutSettingsPage]
@@ -747,6 +748,22 @@ class LetterboxdWatchlistRoute extends _i37.PageRouteInfo<void> {
     name,
     builder: (data) {
       return const _i52.LetterboxdWatchlistScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [_i55.UpcomingScreen]
+class UpcomingRoute extends _i37.PageRouteInfo<void> {
+  const UpcomingRoute({List<_i37.PageRouteInfo>? children})
+      : super(UpcomingRoute.name, initialChildren: children);
+
+  static const String name = 'UpcomingRoute';
+
+  static _i37.PageInfo page = _i37.PageInfo(
+    name,
+    builder: (data) {
+      return const _i55.UpcomingScreen();
     },
   );
 }

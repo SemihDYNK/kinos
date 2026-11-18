@@ -1,4 +1,5 @@
 import 'package:kinos/screens/shared/media_navigation.dart';
+import 'package:kinos/upcoming/upcoming_follow_dialog.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -155,6 +156,9 @@ class SeerrDetailsScreen extends ConsumerWidget {
                           await launchUrl(context, officialTrailerUrl);
                         },
                       ),
+                    ...upcomingFollowActions(context, ref,
+                        mediaType == 'movie' ? 'movie' : 'tv',
+                        '$tmdbId'),
                     if (hasVisibleRequests && currentPoster.mediaInfo != null)
                       ItemActionButton(
                         icon: const Icon(IconsaxPlusLinear.setting_4),

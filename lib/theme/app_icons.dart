@@ -8,6 +8,8 @@ abstract final class AppIcons {
   static const seriesSelected = CupertinoIcons.tv_fill;
   static const requests = CupertinoIcons.paperplane;
   static const requestsSelected = CupertinoIcons.paperplane_fill;
+  static const upcoming = CupertinoIcons.calendar;
+  static const upcomingSelected = CupertinoIcons.calendar_today;
   static const activity = CupertinoIcons.chart_bar;
   static const activitySelected = CupertinoIcons.chart_bar_fill;
   static const settings = CupertinoIcons.gear_alt;

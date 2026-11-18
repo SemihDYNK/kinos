@@ -1,4 +1,6 @@
 import 'package:kinos/letterboxd/friends/letterboxd_friends_dialog.dart';
+import 'package:kinos/upcoming/upcoming_providers.dart';
+import 'package:kinos/upcoming/upcoming_strings.dart';
 import 'package:kinos/letterboxd/letterboxd_import_dialog.dart';
 import 'package:kinos/anilist/anilist_account_dialog.dart';
 import 'dart:io';
@@ -350,6 +352,29 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
               subLabel: Text(_seerrStatusLabel(context, user?.seerrCredentials, seerrUser)),
               onTap: () => showSeerrConnectionDialog(context),
             ),
+            if (user?.seerrCredentials?.isConfigured ?? false) ...[
+              SettingsListTileCheckbox(
+                label: const Text(UpcomingStrings.settingsTitle),
+                subLabel: const Text(UpcomingStrings.settingsDesc),
+                value: ref.watch(upcomingProvider.select((s) => s.enabled)),
+                onChanged: (value) => ref
+                    .read(upcomingProvider.notifier)
+                    .setEnabled(value ?? !ref.read(upcomingProvider).enabled),
+              ),
+              if (ref.watch(upcomingProvider.select((s) => s.enabled)))
+                SettingsListTileEnum(
+                  label: const Text(UpcomingStrings.regionTitle),
+                  current: UpcomingStrings.regionName(
+                      ref.watch(upcomingProvider.select((s) => s.settings?.region)) ?? 'FR'),
+                  itemBuilder: (context) => [
+                    for (final MapEntry(key: code, value: name) in UpcomingStrings.regions.entries)
+                      ItemActionButton(
+                        label: Text(name),
+                        action: () => ref.read(upcomingProvider.notifier).setRegion(code),
+                      ),
+                  ],
+                ),
+            ],
             if (seerrUser?.canManageRequests ?? false)
               SettingsListTileCheckbox(
                 label: Text(context.localized.seerrRequestNotifications),

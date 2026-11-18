@@ -314,11 +314,14 @@ final letterboxdImportProvider = StateNotifierProvider.autoDispose<
 
 /// Client Seerr pour résoudre les films hors bibliothèque, null sans
 /// service configuré sur le profil.
-DiscoveryClient? letterboxdDiscoveryClient(
-        SeerrCredentialsModel? credentials) =>
+DiscoveryClient? letterboxdDiscoveryClient(SeerrCredentialsModel? credentials,
+        {Duration interval = const Duration(milliseconds: 500),
+        int concurrency = 2}) =>
     credentials?.isConfigured != true
         ? null
         : DiscoveryClient(
+            interval: interval,
+            concurrency: concurrency,
             baseUrl: Uri.parse(
                 (KinosConfig.seerrBaseUrl ?? credentials!.serverUrl).trim()),
             headers: {

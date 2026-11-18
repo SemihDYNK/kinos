@@ -274,6 +274,25 @@ abstract final class AppDetailLayout {
       : AppHeroLayout.minHeight;
 }
 
+/// Page « Prochainement ».
+abstract final class AppUpcomingLayout {
+  /// Hauteur du bandeau, en part de la hauteur de la fenêtre, bornée.
+  static const bannerFactor = .46;
+  static const bannerMin = 300.0;
+  static const bannerMax = 540.0;
+
+  /// Le voile du bandeau couvre sa partie basse, sous le texte.
+  static const bannerScrimHeight = .75;
+
+  /// Pastilles « Vos suivis ».
+  static const followAvatar = 56.0;
+  static const followWidth = 88.0;
+
+  /// Touche de raccourci affichée à côté d'un filtre.
+  static const keyHintPadding =
+      EdgeInsets.symmetric(horizontal: 5, vertical: 1);
+}
+
 abstract final class AppManagementLayout {
   static const settingsNavigationWidth = 272.0;
   static const settingsSplitWidth = 1000.0;

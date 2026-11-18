@@ -1,4 +1,6 @@
 import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/upcoming/upcoming_providers.dart';
+import 'package:kinos/upcoming/upcoming_strings.dart';
 import 'package:kinos/screens/shared/kinos_icon.dart';
 import 'dart:ui' as ui;
 
@@ -113,6 +115,7 @@ class SideNavigationRail extends ConsumerWidget {
       context: context,
       seerrAvailable: seerrAvailable,
       arrAvailable: arrAvailable,
+      upcomingAvailable: ref.watch(upcomingAvailableProvider),
       views: ref
           .watch(viewsProvider)
           .views
@@ -369,6 +372,7 @@ class SideNavigationRail extends ConsumerWidget {
     required BuildContext context,
     required bool seerrAvailable,
     required bool arrAvailable,
+    required bool upcomingAvailable,
     required List<ViewModel> views,
   }) {
     final currentRouteName = context.router.current.name;
@@ -395,6 +399,14 @@ class SideNavigationRail extends ConsumerWidget {
           selectedIcon: AppIcons.requestsSelected,
           selected: currentRouteName == SeerrRoute.name,
           onTap: () => context.router.navigate(const SeerrRoute()),
+        ),
+      if (upcomingAvailable)
+        _RailDestination(
+          label: UpcomingStrings.title,
+          icon: AppIcons.upcoming,
+          selectedIcon: AppIcons.upcomingSelected,
+          selected: currentRouteName == UpcomingRoute.name,
+          onTap: () => context.router.navigate(const UpcomingRoute()),
         ),
       if (arrAvailable)
         _RailDestination(

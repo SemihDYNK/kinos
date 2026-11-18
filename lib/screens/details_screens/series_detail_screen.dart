@@ -1,4 +1,5 @@
 import 'package:kinos/anilist/anilist_mapping_dialog.dart';
+import 'package:kinos/upcoming/upcoming_follow_dialog.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -218,6 +219,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
                         context, 'Informations techniques', technicalInfo),
                   ),
                 anilistMappingAction(context, details),
+                ...upcomingFollowActions(
+                    context, ref, 'tv', details.overview.tmdbId),
                 ...details.generateActions(
                   context,
                   ref,

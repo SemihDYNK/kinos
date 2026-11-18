@@ -76,6 +76,10 @@ final List<AutoRoute> homeRoutes = [
     path: 'seerr',
   ),
   AutoRoute(
+    page: UpcomingRoute.page,
+    path: 'upcoming',
+  ),
+  AutoRoute(
     page: FavouritesRoute.page,
     path: 'favourites',
   ),

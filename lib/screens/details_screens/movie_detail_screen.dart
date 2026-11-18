@@ -1,4 +1,5 @@
 import 'package:kinos/letterboxd/friends/letterboxd_friends_section.dart';
+import 'package:kinos/upcoming/upcoming_follow_dialog.dart';
 import 'package:kinos/anilist/anilist_mapping_dialog.dart';
 import 'package:kinos/models/items/movie_model.dart';
 import 'package:flutter/material.dart';
@@ -205,6 +206,8 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
                         context, 'Informations techniques', technicalInfo),
                   ),
                 anilistMappingAction(context, details),
+                ...upcomingFollowActions(
+                    context, ref, 'movie', details.overview.tmdbId),
                 ...details.generateActions(
                   context,
                   ref,
