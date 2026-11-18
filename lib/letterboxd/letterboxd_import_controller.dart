@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kinos/models/seerr_credentials_model.dart';
 import 'package:kinos/providers/database_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/recommendations/providers/recommendation_providers.dart';
@@ -308,19 +309,25 @@ final letterboxdImportProvider = StateNotifierProvider.autoDispose<
           sub.close();
         }
       },
-      createClient: () => credentials?.isConfigured != true
-          ? null
-          : DiscoveryClient(
-              baseUrl: Uri.parse(
-                  (KinosConfig.seerrBaseUrl ?? credentials!.serverUrl).trim()),
-              headers: {
-                  if (credentials!.apiKey.trim().isNotEmpty)
-                    'X-Api-Key': credentials.apiKey.trim()
-                  else if (credentials.sessionCookie.trim().isNotEmpty)
-                    'Cookie': credentials.sessionCookie.trim(),
-                  ...credentials.customHeaders
-                }));
+      createClient: () => letterboxdDiscoveryClient(credentials));
 });
+
+/// Client Seerr pour résoudre les films hors bibliothèque, null sans
+/// service configuré sur le profil.
+DiscoveryClient? letterboxdDiscoveryClient(
+        SeerrCredentialsModel? credentials) =>
+    credentials?.isConfigured != true
+        ? null
+        : DiscoveryClient(
+            baseUrl: Uri.parse(
+                (KinosConfig.seerrBaseUrl ?? credentials!.serverUrl).trim()),
+            headers: {
+                if (credentials!.apiKey.trim().isNotEmpty)
+                  'X-Api-Key': credentials.apiKey.trim()
+                else if (credentials.sessionCookie.trim().isNotEmpty)
+                  'Cookie': credentials.sessionCookie.trim(),
+                ...credentials.customHeaders
+              });
 final letterboxdPickExportProvider =
     Provider<Future<Uint8List?> Function()>((ref) => () async {
           final result = await FilePicker.platform.pickFiles(

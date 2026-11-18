@@ -81,8 +81,11 @@ class _State extends ConsumerState<LetterboxdFriendsDialog> {
               const Text(
                   'Kinos lit les profils publics des comptes que vous suivez '
                   'sur Letterboxd pour afficher leurs notes sur les fiches des '
-                  'films. Seul votre pseudo est nécessaire, jamais votre mot '
-                  'de passe. Les comptes privés restent invisibles.'),
+                  'films. Les films de votre journal (vus au cinéma, '
+                  'ailleurs) sont marqués vus dans Jellyfin et enrichissent '
+                  'vos recommandations. Seul votre pseudo est nécessaire, '
+                  'jamais votre mot de passe. Les comptes privés restent '
+                  'invisibles.'),
               const SizedBox(height: AppSpacing.md),
               if (account == null) ...[
                 TextField(

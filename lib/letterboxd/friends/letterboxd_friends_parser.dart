@@ -59,6 +59,9 @@ String? normalizeLetterboxdUsername(String raw) {
   return _username.hasMatch(value) ? value.toLowerCase() : null;
 }
 
+/// Texte d'une page ou d'un flux Letterboxd, entités HTML décodées.
+String decodeLetterboxdText(String text) => _decode(text);
+
 String _decode(String text) => text
     .replaceAll('&amp;', '&')
     .replaceAll('&quot;', '"')

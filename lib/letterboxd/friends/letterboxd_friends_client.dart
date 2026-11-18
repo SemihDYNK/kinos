@@ -122,6 +122,10 @@ class LetterboxdFriendsClient {
     return html == null ? null : filmSlugFromPage(html);
   }
 
+  /// Flux RSS du journal de [username] (les ~50 dernières entrées), null
+  /// si le profil n'existe pas.
+  Future<String?> diary(String username) => _page('$username/rss/');
+
   /// Photo de profil de [username], null s'il n'en a pas.
   Future<String?> profileAvatar(String username) async {
     final html = await _page('$username/', urgent: true);

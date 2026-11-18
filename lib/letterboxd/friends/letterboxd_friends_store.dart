@@ -75,6 +75,29 @@ class LetterboxdFriendsStore {
   Future<void> saveAccount(LetterboxdFriendsAccount account) =>
       _put('account', account.toJson());
 
+  /// Entrées du journal déjà reprises (identifiants du flux RSS) : une
+  /// entrée n'est appliquée qu'une fois, même si on la démarque ensuite
+  /// dans Jellyfin.
+  Future<({Set<String> seen, DateTime? syncedAt})> diary() async {
+    final json = await _json('diary');
+    if (json is! Map) return (seen: <String>{}, syncedAt: null);
+    final t = json['t'];
+    return (
+      seen: {
+        if (json['g'] is List)
+          for (final g in json['g'] as List)
+            if (g is String) g
+      },
+      syncedAt: t is int ? DateTime.fromMillisecondsSinceEpoch(t) : null,
+    );
+  }
+
+  Future<void> saveDiary(Iterable<String> seen, DateTime syncedAt) =>
+      _put('diary', {
+        'g': seen.toList(),
+        't': syncedAt.millisecondsSinceEpoch,
+      });
+
   /// Délie le compte et efface tout ce qui en venait.
   Future<void> clear() => db.transaction(() async {
         for (final row in await db.getSettingsForScope(scope).get()) {

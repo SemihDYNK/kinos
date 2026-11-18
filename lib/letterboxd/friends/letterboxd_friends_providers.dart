@@ -1,9 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
+import 'package:kinos/letterboxd/letterboxd_import_controller.dart'
+    show letterboxdDiscoveryClient;
+import 'package:kinos/letterboxd/letterboxd_matching.dart';
+import 'package:kinos/letterboxd/letterboxd_model.dart';
 import 'package:kinos/letterboxd/letterboxd_providers.dart';
+import 'package:kinos/letterboxd/letterboxd_store.dart';
+import 'package:kinos/models/item_base_model.dart';
+import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/connectivity_provider.dart'
+    show offlineStateProvider;
 import 'package:kinos/providers/dashboard/hero_items_provider.dart';
 import 'package:kinos/providers/database_provider.dart';
+import 'package:kinos/providers/user_provider.dart';
 
+import 'letterboxd_diary.dart';
 import 'letterboxd_friends_client.dart';
 import 'letterboxd_friends_parser.dart';
 import 'letterboxd_friends_store.dart';
@@ -185,6 +199,8 @@ class LetterboxdFriendsSyncController
     final store = ref.read(letterboxdFriendsStoreProvider);
     final account = await store?.account();
     if (store == null || account == null) return;
+    // Le journal d'abord : une seule requête, indépendante des amis.
+    unawaited(ref.read(letterboxdDiarySyncProvider.notifier).sync(force: force));
     final last = account.syncedAt;
     if (!force &&
         last != null &&
@@ -241,3 +257,123 @@ final letterboxdHeroPreloadProvider = Provider.autoDispose<void>((ref) {
     }
   }
 });
+
+/// Synchronisation du journal Letterboxd (films vus ailleurs, au cinéma) :
+/// vrai pendant le travail. Même compte et même fréquence que les amis.
+final letterboxdDiarySyncProvider =
+    StateNotifierProvider.autoDispose<LetterboxdDiarySyncController, bool>(
+        (ref) {
+  ref.keepAlive();
+  return LetterboxdDiarySyncController(ref);
+});
+
+class LetterboxdDiarySyncController extends StateNotifier<bool> {
+  LetterboxdDiarySyncController(this.ref) : super(false) {
+    ref.listen(letterboxdScopeProvider, (previous, next) {
+      if (previous != next) _generation++;
+    });
+  }
+
+  final Ref ref;
+  int _generation = 0;
+
+  /// Synchronise si un compte est relié et que la dernière lecture du
+  /// journal date de plus de [letterboxdFriendsRefresh] (ou toujours, si
+  /// [force]).
+  Future<void> sync({bool force = false}) async {
+    if (state || ref.read(offlineStateProvider)) return;
+    final store = ref.read(letterboxdFriendsStoreProvider);
+    final scope = ref.read(letterboxdScopeProvider);
+    final account = await store?.account();
+    if (store == null || scope == null || account == null || !mounted) return;
+    final last = (await store.diary()).syncedAt;
+    if (!force &&
+        last != null &&
+        DateTime.now().difference(last) < letterboxdFriendsRefresh) {
+      return;
+    }
+    final generation = ++_generation;
+    bool cancelled() => !mounted || generation != _generation;
+    state = true;
+    final seerr = letterboxdDiscoveryClient(
+        ref.read(userProvider.select((u) => u?.seerrCredentials)));
+    final resolver = seerr == null ? null : LetterboxdResolver(seerr);
+    try {
+      await LetterboxdDiarySync(
+              fetch: ref.read(letterboxdFriendsClientProvider).diary,
+              friends: store,
+              snapshots: LetterboxdStore(ref.read(appDatabaseProvider), scope),
+              library: _JellyfinDiaryLibrary(ref),
+              resolve: resolver?.details)
+          .run(account.username, cancelled: cancelled);
+    } catch (_) {
+      // Réessayé à la prochaine synchronisation.
+    } finally {
+      seerr?.close();
+      if (mounted) state = false;
+    }
+  }
+}
+
+/// Champs nécessaires aux traits du profil de goût.
+const _traitFields = [
+  ItemFields.genres,
+  ItemFields.people,
+  ItemFields.studios,
+  ItemFields.tags,
+  ItemFields.providerids,
+  ItemFields.originaltitle,
+];
+
+class _JellyfinDiaryLibrary implements LetterboxdDiaryLibrary {
+  _JellyfinDiaryLibrary(this.ref);
+  final Ref ref;
+
+  @override
+  Future<Map<int, LetterboxdLibraryMovie>> movies(Set<int> tmdbIds) async {
+    final response = await ref.read(jellyApiProvider).usersUserIdItemsGet(
+        recursive: true,
+        includeItemTypes: [BaseItemKind.movie],
+        fields: [ItemFields.providerids],
+        enableImages: false,
+        enableUserData: true);
+    final items = response.body?.items;
+    if (!response.isSuccessful || items == null) {
+      throw StateError('Jellyfin');
+    }
+    final movies = <int, LetterboxdLibraryMovie>{};
+    for (final item in items) {
+      final id = item.id;
+      final tmdb = item.providerIds?.entries
+          .where((e) => e.key.toLowerCase() == 'tmdb')
+          .map((e) => int.tryParse('${e.value}'))
+          .firstOrNull;
+      if (id == null || tmdb == null || !tmdbIds.contains(tmdb)) continue;
+      final played = item.userData?.played ?? false;
+      // Plusieurs versions du même film : vu si l'une l'est.
+      movies[tmdb] = (
+        id: movies[tmdb]?.played == false && !played ? movies[tmdb]!.id : id,
+        played: played || (movies[tmdb]?.played ?? false),
+      );
+    }
+    return movies;
+  }
+
+  @override
+  Future<List<LetterboxdWork>> works(List<String> ids) async {
+    final response = await ref.read(jellyApiProvider).usersUserIdItemsGet(
+        ids: ids, fields: _traitFields, enableImages: false);
+    return letterboxdLibraryWorks([
+      for (final item in response.body?.items ?? const [])
+        ItemBaseModel.fromBaseDto(item, ref)
+    ]);
+  }
+
+  @override
+  Future<void> markPlayed(String id, DateTime watchedOn) async {
+    final response = await ref
+        .read(jellyApiProvider)
+        .usersUserIdPlayedItemsItemIdPost(itemId: id, datePlayed: watchedOn);
+    if (!response.isSuccessful) throw StateError('Jellyfin');
+  }
+}

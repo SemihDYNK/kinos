@@ -29,7 +29,10 @@ class _SectionsState extends ConsumerState<LetterboxdHomeSections> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(letterboxdHomeRefreshProvider.notifier).ensure();
+      if (!mounted) return;
+      ref.read(letterboxdHomeRefreshProvider.notifier).ensure();
+      // Les films vus ailleurs depuis la dernière fois (au cinéma…).
+      ref.read(letterboxdDiarySyncProvider.notifier).sync();
     });
   }
 
