@@ -194,6 +194,15 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
           header: state.header,
           fallbackName: widget.name ?? '',
           padding: padding,
+          // Stable pendant le tri des rôles : seules les apparitions
+          // évidentes (propre rôle, voix) sont écartées.
+          posters: <String>{
+            for (final t in [
+              ...state.acting,
+              ...state.directing
+            ]..sort((a, b) => b.popularity.compareTo(a.popularity)))
+              if (t.posterPath != null && !isAppearance(t)) t.posterPath!
+          }.take(40).toList(),
           follow: available && follow != null
               ? _FollowButton(
                   label: switch ((_kind, role, followed)) {
@@ -393,11 +402,15 @@ class _EntityBanner extends StatelessWidget {
       required this.header,
       required this.fallbackName,
       required this.padding,
+      this.posters = const [],
       this.follow});
   final UpcomingFollowKind kind;
   final EntityHeader? header;
   final String fallbackName;
   final EdgeInsets padding;
+
+  /// Personne : ses affiches les plus connues, en mosaïque de fond.
+  final List<String> posters;
   final Widget? follow;
 
   void _biography(BuildContext context) => showDialog<void>(
@@ -470,21 +483,10 @@ class _EntityBanner extends StatelessWidget {
                   path: tmdbImage(backdrop, size: 'w1280'),
                   key: 'entity-backdrop:$backdrop'),
               fit: BoxFit.cover)
-        else if (image != null)
-          // Le portrait à droite, fondu dans la page vers le texte.
-          Align(
-            alignment: Alignment.centerRight,
-            child: FractionallySizedBox(
-              widthFactor: .46,
-              heightFactor: 1,
-              child: KinosImage(
-                  image: ImageData(
-                      path: tmdbImage(image, size: 'h632'),
-                      key: 'entity-photo:$image'),
-                  fit: BoxFit.cover,
-                  alignment: const Alignment(0, -.4)),
-            ),
-          ),
+        else if (kind == UpcomingFollowKind.person && posters.isNotEmpty)
+          Opacity(
+              opacity: AppUpcomingLayout.mosaicOpacity,
+              child: _PosterMosaic(posters: posters)),
         if (!logo) ...[
           fade(Alignment.bottomCenter, Alignment.topCenter),
           if (kind == UpcomingFollowKind.person)
@@ -498,59 +500,125 @@ class _EntityBanner extends StatelessWidget {
         ],
         Padding(
           padding: padding.copyWith(bottom: AppSpacing.lg),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (logo && image != null) ...[
-                DecoratedBox(
-                  decoration: const BoxDecoration(
-                      color: AppColors.textPrimary,
-                      borderRadius: AppRadii.cardBorder),
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    child: SizedBox(
-                      height: AppUpcomingLayout.followAvatar,
-                      child: KinosImage(
-                          image: ImageData(
-                              path: tmdbImage(image, size: 'w300'),
-                              key: 'entity-logo:$image'),
-                          fit: BoxFit.contain),
-                    ),
-                  ),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            if (kind == UpcomingFollowKind.person && image != null) ...[
+              ClipRRect(
+                borderRadius: AppRadii.cardBorder,
+                child: SizedBox.square(
+                  dimension: AppUpcomingLayout.portraitSize,
+                  child: KinosImage(
+                      image: ImageData(
+                          path: tmdbImage(image, size: 'w300'),
+                          key: 'entity-photo:$image'),
+                      fit: BoxFit.cover,
+                      alignment: const Alignment(0, -.5)),
                 ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-              if (header?.context.isNotEmpty ?? false)
-                Text(header!.context,
-                    style: text.bodyMedium?.copyWith(color: secondary)),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(header?.name ?? fallbackName,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.displayMedium
-                      ?.copyWith(color: AppColors.textPrimary)),
-              const SizedBox(height: AppSpacing.md),
-              Wrap(
-                spacing: AppSpacing.xs,
-                crossAxisAlignment: WrapCrossAlignment.center,
+              ),
+              const SizedBox(width: AppSpacing.lg),
+            ],
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (follow != null) ...[follow!, const KeyHint('S')],
-                  if (biography != null && biography.trim().isNotEmpty)
-                    _Chip(
-                        kind == UpcomingFollowKind.person
-                            ? 'Biographie'
-                            : 'Présentation',
-                        selected: false,
-                        onTap: () => _biography(context)),
+                  if (logo && image != null) ...[
+                    DecoratedBox(
+                      decoration: const BoxDecoration(
+                          color: AppColors.textPrimary,
+                          borderRadius: AppRadii.cardBorder),
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        child: SizedBox(
+                          height: AppUpcomingLayout.followAvatar,
+                          child: KinosImage(
+                              image: ImageData(
+                                  path: tmdbImage(image, size: 'w300'),
+                                  key: 'entity-logo:$image'),
+                              fit: BoxFit.contain),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                  if (header?.context.isNotEmpty ?? false)
+                    Text(header!.context,
+                        style: text.bodyMedium?.copyWith(color: secondary)),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(header?.name ?? fallbackName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.displayMedium
+                          ?.copyWith(color: AppColors.textPrimary)),
+                  const SizedBox(height: AppSpacing.md),
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (follow != null) ...[follow!, const KeyHint('S')],
+                      if (biography != null && biography.trim().isNotEmpty)
+                        _Chip(
+                            kind == UpcomingFollowKind.person
+                                ? 'Biographie'
+                                : 'Présentation',
+                            selected: false,
+                            onTap: () => _biography(context)),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ]),
         ),
       ]),
     );
   }
+}
+
+/// Les affiches d'une personne, côte à côte sur quelques rangées, en
+/// boucle si elles ne suffisent pas à remplir la largeur.
+class _PosterMosaic extends StatelessWidget {
+  const _PosterMosaic({required this.posters});
+  final List<String> posters;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          const rows = AppUpcomingLayout.mosaicRows;
+          const gap = AppSpacing.xxs;
+          final height = (constraints.maxHeight - gap * (rows - 1)) / rows;
+          final width = height * AppMedia.posterAspectRatio;
+          final columns = (constraints.maxWidth / (width + gap)).ceil() + 1;
+          return ClipRect(
+            child: OverflowBox(
+              alignment: Alignment.topLeft,
+              maxWidth: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: gap,
+                children: [
+                  for (var row = 0; row < rows; row++)
+                    Row(spacing: gap, children: [
+                      for (var column = 0; column < columns; column++)
+                        SizedBox(
+                          width: width,
+                          height: height,
+                          child: KinosImage(
+                              image: ImageData(
+                                  path: tmdbImage(
+                                      posters[(row * columns + column) %
+                                          posters.length],
+                                      size: 'w342'),
+                                  key:
+                                      'mosaic:${posters[(row * columns + column) % posters.length]}'),
+                              fit: BoxFit.cover),
+                        ),
+                    ]),
+                ],
+              ),
+            ),
+          );
+        },
+      );
 }
 
 class _FollowButton extends StatelessWidget {
