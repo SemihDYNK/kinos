@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'dart:io' show Platform;
 import 'package:kinos/util/frame_log.dart';
 import 'package:kinos/util/motion_input.dart';
 import 'dart:ui';
@@ -32,6 +34,11 @@ void main(List<String> args) async {
   final bootstrap = await bootstrapApplication(args);
 
   FrameLog.startIfRequested();
+  // Mise au point de la fluidité (mode profil seulement) : chaque
+  // construction de widget apparaît dans la timeline.
+  if (!kReleaseMode && Platform.environment['KINOS_PROFILE_BUILDS'] == '1') {
+    debugProfileBuildsEnabled = true;
+  }
   runApp(
     ProviderScope(
       overrides: [
