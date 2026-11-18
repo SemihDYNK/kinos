@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:kinos/screens/shared/startup_aurora.dart';
+import 'package:kinos/screens/shared/startup_frame_log.dart';
 import 'package:kinos/screens/shared/startup_mark.dart';
 import 'package:kinos/theme/app_theme.dart';
 
@@ -111,6 +112,7 @@ class _StartupCurtainState extends State<StartupCurtain>
       final previous = _controller.value;
       final next = previous + step.inMicroseconds / duration;
       _soundAt(previous, next, duration);
+      _markPhase(next);
       if (next >= 1) {
         _finish(true);
       } else {
@@ -141,6 +143,22 @@ class _StartupCurtainState extends State<StartupCurtain>
             : AppMotion.startupIntroClap) -
         AppDurations.startupSoundLead.inMicroseconds / duration;
     if (previous < clap && next >= clap) onClap();
+  }
+
+  /// Phase de l'intro pour le relevé des images lentes.
+  void _markPhase(double value) {
+    if (_exiting) {
+      StartupFrameLog.phase(value < AppMotion.startupIntroBeamOpen.begin
+          ? StartupPhase.beam
+          : StartupPhase.reveal);
+      return;
+    }
+    final clap = widget.word
+        ? AppMotion.startupIntroAssemblyEnd * AppMotion.startupIntroClap
+        : AppMotion.startupIntroClap;
+    StartupFrameLog.phase(widget.intro && value >= clap
+        ? StartupPhase.aurora
+        : StartupPhase.assembly);
   }
 
   void _finish(bool completed) {
@@ -236,6 +254,7 @@ class _StartupCurtainState extends State<StartupCurtain>
     } else {
       // Le signe est assemblé : ce qui suit est de l'attente.
       _waitingSince ??= DateTime.now();
+      StartupFrameLog.phase(StartupPhase.waiting);
       setState(() => _assembled = true);
       widget.onLogoReady?.call();
     }

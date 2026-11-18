@@ -15,6 +15,7 @@ import 'package:kinos/providers/theme/palette_service_provider.dart';
 import 'package:kinos/providers/views_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/shared/startup_curtain.dart';
+import 'package:kinos/screens/shared/startup_frame_log.dart';
 import 'package:kinos/screens/shared/startup_home.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/screens/shared/route_wrapper.dart';
@@ -70,6 +71,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // Relevé des images lentes, jusqu'à la fin de la révélation.
+    if (ref.read(argumentsStateProvider).newWindow != true) {
+      StartupFrameLog.start();
+    }
     WidgetsBinding.instance.addPostFrameCallback((value) async {
       _prepareSounds();
       final AccountModel? lastUsedAccount =
@@ -148,6 +153,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     // Les derniers sons finissent leur fondu avant d'être
                     // libérés.
                     _sounds?.release();
+                    StartupFrameLog.stop();
                     overlayRef
                         .read(startupCurtainPhaseProvider.notifier)
                         .state = StartupCurtainPhase.none;
