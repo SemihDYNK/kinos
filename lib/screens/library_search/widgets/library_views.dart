@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:kinos/widgets/shared/cross_axis_sliver_builder.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -128,8 +129,8 @@ class LibraryViews extends ConsumerWidget {
     switch (ref.watch(libraryViewTypeProvider)) {
       case LibraryViewTypes.grid:
         Widget createGrid(List<ItemBaseModel> items) {
-          return SliverLayoutBuilder(builder: (context, constraints) {
-            final width = constraints.crossAxisExtent;
+          return CrossAxisSliverBuilder(builder: (context, crossAxisExtent) {
+            final width = crossAxisExtent;
             final cinema = items
                 .every((item) => item is MovieModel || item is SeriesModel);
             final crossAxisCount = cinema

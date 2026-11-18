@@ -1,4 +1,5 @@
 import 'package:kinos/screens/shared/media_navigation.dart';
+import 'package:kinos/widgets/shared/cross_axis_sliver_builder.dart';
 import 'package:flutter/material.dart';
 
 import 'package:kinos/models/item_base_model.dart';
@@ -43,8 +44,8 @@ class SingleRowSection extends StatelessWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    return SliverLayoutBuilder(builder: (context, constraints) {
-      final width = constraints.crossAxisExtent - contentPadding.horizontal;
+    return CrossAxisSliverBuilder(builder: (context, crossAxisExtent) {
+      final width = crossAxisExtent - contentPadding.horizontal;
       final columns = context.tokens.density.columnsFor(width);
       // Une seule ligne : le reste est tronqué, jamais affiché ni défilable.
       final visible = items.take(columns).toList();

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kinos/widgets/shared/cross_axis_sliver_builder.dart';
 import 'package:kinos/arr/providers/arr_jellyfin_link_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -396,8 +397,8 @@ class RecommendationRowGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverLayoutBuilder(builder: (context, constraints) {
-      final width = constraints.crossAxisExtent - contentPadding.horizontal;
+    return CrossAxisSliverBuilder(builder: (context, crossAxisExtent) {
+      final width = crossAxisExtent - contentPadding.horizontal;
       final columns = context.tokens.density.columnsFor(width);
       final visible = tiles.take(columns).toList();
       final tileWidth =
@@ -462,8 +463,8 @@ class RecommendationTileGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverLayoutBuilder(builder: (context, constraints) {
-      final width = constraints.crossAxisExtent - contentPadding.horizontal;
+    return CrossAxisSliverBuilder(builder: (context, crossAxisExtent) {
+      final width = crossAxisExtent - contentPadding.horizontal;
       final columns = context.tokens.density.columnsFor(width);
       final tileWidth =
           (width - (columns - 1) * AppSpacing.gridGap) / columns;

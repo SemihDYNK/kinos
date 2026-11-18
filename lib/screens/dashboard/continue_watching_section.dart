@@ -1,4 +1,5 @@
 import 'package:kinos/screens/shared/media_navigation.dart';
+import 'package:kinos/widgets/shared/cross_axis_sliver_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -103,9 +104,9 @@ class _ContinueWatchingSectionState extends State<ContinueWatchingSection> {
     if (widget.items.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
-    return SliverLayoutBuilder(builder: (context, constraints) {
+    return CrossAxisSliverBuilder(builder: (context, crossAxisExtent) {
       final width =
-          constraints.crossAxisExtent - widget.contentPadding.horizontal;
+          crossAxisExtent - widget.contentPadding.horizontal;
       final columns = (width / AppMedia.resumeTargetWidth).floor().clamp(4, 5);
       final tileWidth = (width - (columns - 1) * AppSpacing.gridGap) / columns;
       final theme = Theme.of(context).textTheme;

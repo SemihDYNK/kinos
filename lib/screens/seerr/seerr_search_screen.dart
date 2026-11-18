@@ -1,4 +1,5 @@
 import 'package:kinos/screens/seerr/seerr_discover_screen.dart';
+import 'package:kinos/widgets/shared/cross_axis_sliver_builder.dart';
 import 'package:flutter/material.dart';
 
 import 'package:auto_route/auto_route.dart';
@@ -271,9 +272,8 @@ class _SeerrSearchScreenState extends ConsumerState<SeerrSearchScreen> {
                 else ...[
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverLayoutBuilder(
-                      builder: (context, constraints) {
-                        final width = constraints.crossAxisExtent;
+                    sliver: CrossAxisSliverBuilder(builder: (context, crossAxisExtent) {
+                        final width = crossAxisExtent;
                         final zoom = ref.watch(clientSettingsProvider
                             .select((value) => value.posterSize));
                         final crossAxisCount =
