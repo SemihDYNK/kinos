@@ -23,3 +23,25 @@ class KeyHint extends StatelessWidget {
         ),
       );
 }
+
+/// Les raccourcis d'une tuile, rappelés à côté des filtres : `D` demander,
+/// `S` suivre.
+class TileKeyHints extends StatelessWidget {
+  const TileKeyHints({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppTypography.meta.copyWith(color: AppColors.textSecondary);
+    return Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: AppSpacing.xxs,
+        children: [
+          Text('Sur une tuile :', style: style),
+          const KeyHint('D'),
+          Text('demander', style: style),
+          const SizedBox(width: AppSpacing.xxs),
+          const KeyHint('S'),
+          Text('suivre', style: style),
+        ]);
+  }
+}

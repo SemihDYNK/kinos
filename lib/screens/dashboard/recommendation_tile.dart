@@ -53,6 +53,9 @@ class RecommendationTile {
   final Widget Function(BuildContext context) buildPoster;
   final Future<void> Function(BuildContext context) navigate;
 
+  /// Raccourcis de la tuile quand elle a le focus (demander, suivre…).
+  final Map<ShortcutActivator, void Function(BuildContext context)> shortcuts;
+
   const RecommendationTile({
     required this.identity,
     this.previewImage,
@@ -60,6 +63,7 @@ class RecommendationTile {
     this.subtitle,
     required this.buildPoster,
     required this.navigate,
+    this.shortcuts = const {},
   });
 
   factory RecommendationTile.jellyfin({required ItemBaseModel item}) {
@@ -498,7 +502,13 @@ class _RecommendationTileWidgetState extends State<_RecommendationTileWidget> {
     return MediaNavigation(
         key: ValueKey(tile.identity),
         previewImage: tile.previewImage,
-        builder: (context) => FocusRing(
+        builder: (context) => CallbackShortcuts(
+            bindings: {
+              for (final MapEntry(key: key, value: action)
+                  in tile.shortcuts.entries)
+                key: () => action(context),
+            },
+            child: FocusRing(
               posterMotion: true,
               focusNode: MediaNavigationScope.focusOf(context),
               onActivate: () => _open(context),
@@ -530,6 +540,6 @@ class _RecommendationTileWidgetState extends State<_RecommendationTileWidget> {
                     ),
                     PosterCaption(title: tile.title, subtitle: tile.subtitle),
                   ]),
-            ));
+            )));
   }
 }

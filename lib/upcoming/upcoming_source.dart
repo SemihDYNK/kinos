@@ -183,9 +183,17 @@ class UpcomingSource {
   }
 
   /// [failed] reçoit chaque suivi illisible : les autres passent quand même.
+  ///
+  /// [managed] : ce que Radarr et Sonarr surveillent et qui sort bientôt,
+  /// ajouté comme un suivi (raison « Dans Radarr », « Dans Sonarr »).
   Future<List<UpcomingEntry>> load(List<UpcomingFollow> follows,
-      {void Function(UpcomingFollow follow)? failed}) async {
+      {void Function(UpcomingFollow follow)? failed,
+      List<({String type, int id, String reason})> managed = const []}) async {
     _candidates.clear();
+    for (final item in managed) {
+      final candidate = _add(item.type, item.id)..seasonsOnly = false;
+      candidate.reasons[item.reason] = null;
+    }
     for (final follow in follows) {
       try {
         await _collect(follow);

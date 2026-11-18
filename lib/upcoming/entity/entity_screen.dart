@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/screens/dashboard/recommendation_tile.dart';
 import 'package:kinos/theme/app_theme.dart';
@@ -15,6 +16,7 @@ import 'package:kinos/widgets/shared/scroll_pinned_back_button.dart';
 import '../upcoming_models.dart';
 import '../upcoming_providers.dart';
 import '../upcoming_screen.dart' show openUpcoming, upcomingTile;
+import '../upcoming_strings.dart';
 import 'entity_models.dart';
 import 'entity_providers.dart';
 
@@ -101,11 +103,11 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
   }
 
   static String _subtitle(EntityTitle t, {bool role = false}) => [
-        if (!t.isMovie) 'Série',
-        if (t.date != null) '${t.date!.year}' else 'Annoncé',
+        if (!t.isMovie) EntityStrings.series,
+        if (t.date != null) '${t.date!.year}' else EntityStrings.announced,
         if (role && t.character != null) t.character!,
         if (!t.isMovie && t.episodes != null && t.episodes! > 0)
-          '${t.episodes} ép.',
+          '${t.episodes} ${EntityStrings.episodes}',
       ].join(' · ');
 
   @override
@@ -152,13 +154,32 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
             : true)
           t
     ];
-    final library = [
-      for (final t in released)
-        if (t.inLibrary) t
-    ];
+    // Studio, chaîne : la bibliothèque vient de Jellyfin (tout ce qu'il
+    // range sous ce nom), pas des seules pages de catalogue chargées.
+    final owner = _kind == UpcomingFollowKind.company ||
+        _kind == UpcomingFollowKind.network;
+    final header = state.header;
+    final jellyfin = owner && header != null && header.name.isNotEmpty
+        ? ref
+            .watch(entityLibraryProvider((
+              name: header.name,
+              series: _kind == UpcomingFollowKind.network
+            )))
+            .valueOrNull
+        : null;
+    final owned = {
+      for (final item in jellyfin ?? const <ItemBaseModel>[])
+        if (item.overview.tmdbId case final id?) id
+    };
+    final library = jellyfin != null
+        ? const <EntityTitle>[]
+        : [
+            for (final t in released)
+              if (t.inLibrary) t
+          ];
     final rest = [
       for (final t in released)
-        if (!t.inLibrary) t
+        if (!t.inLibrary && !owned.contains('${t.id}')) t
     ];
 
     Widget heading(String title, [String? detail]) => SliverPadding(
@@ -211,69 +232,71 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
                       UpcomingRole.directing,
                       false
                     ) =>
-                      'Suivre ses réalisations',
+                      EntityStrings.followDirecting,
                     (UpcomingFollowKind.person, UpcomingRole.directing, true) =>
-                      'Réalisations suivies',
-                    (UpcomingFollowKind.person, _, false) => 'Suivre ses rôles',
-                    (UpcomingFollowKind.person, _, true) => 'Rôles suivis',
+                      EntityStrings.followedDirecting,
+                    (UpcomingFollowKind.person, _, false) =>
+                      EntityStrings.followActing,
+                    (UpcomingFollowKind.person, _, true) =>
+                      EntityStrings.followedActing,
                     (UpcomingFollowKind.collection, _, false) =>
-                      'Suivre la saga',
-                    (UpcomingFollowKind.collection, _, true) => 'Saga suivie',
-                    (_, _, false) => 'Suivre',
-                    (_, _, true) => 'Suivi',
+                      EntityStrings.followSaga,
+                    (UpcomingFollowKind.collection, _, true) =>
+                      EntityStrings.followedSaga,
+                    (_, _, false) => EntityStrings.follow,
+                    (_, _, true) => EntityStrings.followed,
                   },
                   followed: followed,
                   onTap: _toggleFollow)
               : null,
         ),
       ),
-      if (person && state.acting.isNotEmpty && state.directing.isNotEmpty ||
-          _kind == UpcomingFollowKind.company ||
-          _kind == UpcomingFollowKind.network ||
-          state.checking > 0)
-        SliverPadding(
-          padding: padding.copyWith(top: AppSpacing.md),
-          sliver: SliverToBoxAdapter(
-            child: Wrap(
-              spacing: AppSpacing.xxs,
-              runSpacing: AppSpacing.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                if (person &&
-                    state.acting.isNotEmpty &&
-                    state.directing.isNotEmpty) ...[
-                  _Chip('Interprétation · ${state.acting.length}',
-                      selected: acting,
-                      onTap: () => setState(() => _role = UpcomingRole.acting)),
-                  _Chip('Réalisation · ${state.directing.length}',
-                      selected: !acting,
-                      onTap: () =>
-                          setState(() => _role = UpcomingRole.directing)),
-                  const KeyHint('R'),
-                  const SizedBox(width: AppSpacing.md),
-                ],
-                if (!person && _kind != UpcomingFollowKind.collection) ...[
-                  for (final (sort, label) in [
-                    (EntitySort.recent, 'Les plus récents'),
-                    (EntitySort.rated, 'Les mieux notés'),
-                    (EntitySort.popular, 'Populaires'),
-                  ])
-                    _Chip(label,
-                        selected: state.sort == sort,
-                        onTap: () => ref
-                            .read(entityProvider(_key).notifier)
-                            .setSort(sort)),
-                  const KeyHint('O'),
-                  const SizedBox(width: AppSpacing.md),
-                ],
-                if (state.checking > 0)
-                  Text('Tri des rôles… ${state.checking}',
-                      style: AppTypography.meta
-                          .copyWith(color: AppColors.textSecondary)),
+      // Toujours là : les raccourcis des tuiles y sont rappelés.
+      SliverPadding(
+        padding: padding.copyWith(top: AppSpacing.md),
+        sliver: SliverToBoxAdapter(
+          child: Wrap(
+            spacing: AppSpacing.xxs,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (person &&
+                  state.acting.isNotEmpty &&
+                  state.directing.isNotEmpty) ...[
+                _Chip('${EntityStrings.acting} · ${state.acting.length}',
+                    selected: acting,
+                    onTap: () => setState(() => _role = UpcomingRole.acting)),
+                _Chip('${EntityStrings.directing} · ${state.directing.length}',
+                    selected: !acting,
+                    onTap: () =>
+                        setState(() => _role = UpcomingRole.directing)),
+                const KeyHint('R'),
+                const SizedBox(width: AppSpacing.md),
               ],
-            ),
+              if (!person && _kind != UpcomingFollowKind.collection) ...[
+                for (final (sort, label) in [
+                  (EntitySort.recent, EntityStrings.recent),
+                  (EntitySort.rated, EntityStrings.rated),
+                  (EntitySort.popular, EntityStrings.popular),
+                ])
+                  _Chip(label,
+                      selected: state.sort == sort,
+                      onTap: () => ref
+                          .read(entityProvider(_key).notifier)
+                          .setSort(sort)),
+                const KeyHint('O'),
+                const SizedBox(width: AppSpacing.md),
+              ],
+              const TileKeyHints(),
+              const SizedBox(width: AppSpacing.md),
+              if (state.checking > 0)
+                Text(EntityStrings.checking(state.checking),
+                    style: AppTypography.meta
+                        .copyWith(color: AppColors.textSecondary)),
+            ],
           ),
         ),
+      ),
       if (state.loading)
         const SliverPadding(
           padding: EdgeInsets.only(top: AppSpacing.xxl),
@@ -284,26 +307,31 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
         SliverPadding(
           padding: padding.copyWith(top: AppSpacing.xl),
           sliver: SliverToBoxAdapter(
-            child: Text('Seerr ne répond pas.',
+            child: Text(EntityStrings.failed,
                 style:
                     text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
           ),
         )
       else ...[
         if (upcoming.isNotEmpty) ...[
-          heading('À venir', '${upcoming.length}'),
+          heading(EntityStrings.upcoming, '${upcoming.length}'),
           grid(upcoming, pill: true),
         ],
-        if (library.isNotEmpty) ...[
-          heading('Dans votre bibliothèque', '${library.length}'),
+        if (jellyfin != null && jellyfin.isNotEmpty) ...[
+          heading(EntityStrings.library, '${jellyfin.length}'),
+          RecommendationTileGrid(tiles: [
+            for (final item in jellyfin) RecommendationTile.jellyfin(item: item)
+          ], contentPadding: padding),
+        ] else if (library.isNotEmpty) ...[
+          heading(EntityStrings.library, '${library.length}'),
           grid(library, label: false),
         ],
         if (rest.isNotEmpty) ...[
           heading(
               switch (_kind) {
-                UpcomingFollowKind.person => 'Le reste de sa filmographie',
-                UpcomingFollowKind.collection => 'À demander',
-                _ => 'Catalogue',
+                UpcomingFollowKind.person => EntityStrings.restPerson,
+                UpcomingFollowKind.collection => EntityStrings.restSaga,
+                _ => EntityStrings.catalogue,
               },
               '${rest.length}'),
           grid(rest),
@@ -316,7 +344,7 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
                 alignment: Alignment.centerLeft,
                 child: state.loadingMore
                     ? const CircularProgressIndicator()
-                    : _Chip('Voir plus',
+                    : _Chip(EntityStrings.more,
                         selected: false,
                         onTap: () =>
                             ref.read(entityProvider(_key).notifier).loadMore()),
@@ -324,8 +352,8 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
             ),
           ),
         if (appearances.isNotEmpty) ...[
-          heading('Apparaît dans',
-              'seconds rôles, caméos, voix · ${appearances.length}'),
+          heading(EntityStrings.appearances,
+              EntityStrings.appearancesDetail(appearances.length)),
           SliverPadding(
             padding: padding,
             sliver: SliverToBoxAdapter(
@@ -360,12 +388,13 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
         ],
         if (upcoming.isEmpty &&
             library.isEmpty &&
+            (jellyfin ?? const []).isEmpty &&
             rest.isEmpty &&
             appearances.isEmpty)
           SliverPadding(
             padding: padding.copyWith(top: AppSpacing.xl),
             sliver: SliverToBoxAdapter(
-              child: Text('Rien à montrer.',
+              child: Text(EntityStrings.nothing,
                   style: text.bodyMedium
                       ?.copyWith(color: AppColors.textSecondary)),
             ),
@@ -437,7 +466,7 @@ class _EntityBanner extends StatelessWidget {
                     child: TextButton(
                         autofocus: true,
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Fermer')),
+                        child: const Text(EntityStrings.close)),
                   ),
                 ]),
           ),
@@ -563,8 +592,8 @@ class _EntityBanner extends StatelessWidget {
                       if (biography != null && biography.trim().isNotEmpty)
                         _Chip(
                             kind == UpcomingFollowKind.person
-                                ? 'Biographie'
-                                : 'Présentation',
+                                ? EntityStrings.biography
+                                : EntityStrings.presentation,
                             selected: false,
                             onTap: () => _biography(context)),
                     ],

@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:kinos/arr/models/arr_calendar_entry.dart';
+import 'package:kinos/arr/providers/arr_search_providers.dart';
+import 'package:kinos/arr/services/arr_api_client.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
@@ -14,6 +17,7 @@ import 'package:kinos/providers/user_provider.dart';
 
 import 'upcoming_models.dart';
 import 'upcoming_source.dart';
+import 'upcoming_strings.dart';
 import 'upcoming_store.dart';
 
 final _log = Logger('Upcoming');
@@ -143,21 +147,28 @@ class UpcomingController extends StateNotifier<UpcomingState> {
     final settings = await store.settings(
         defaultRegion: defaultUpcomingRegion(_appLocale(ref)));
     final follows = await store.follows();
-    final cache = await store.cache();
     if (!mounted) return;
-    state = UpcomingState(
-        loaded: true,
-        settings: settings,
-        follows: follows,
-        entries: cache?.entries,
-        at: cache?.at);
+    // La frise elle-même attend l'ouverture de la page (cf. [refresh]) :
+    // ce contrôleur naît avec la barre latérale, pendant l'intro.
+    state = UpcomingState(loaded: true, settings: settings, follows: follows);
+  }
+
+  bool _cacheRead = false;
+
+  Future<UpcomingCache?> _readCache() async {
+    final cache = await store?.cache();
+    if (!_cacheRead && mounted && cache != null && state.entries == null) {
+      state = state.copyWith(entries: cache.entries, at: cache.at);
+    }
+    _cacheRead = true;
+    return cache;
   }
 
   String _signature(UpcomingSettings settings, List<UpcomingFollow> follows) =>
       [
         // Version du calcul : une frise d'une version précédente est
         // refaite.
-        'v3',
+        'v4',
         settings.region,
         _appLocale(ref).languageCode,
         ...([for (final f in follows) f.key]..sort()),
@@ -228,6 +239,41 @@ class UpcomingController extends StateNotifier<UpcomingState> {
     _debounce = Timer(const Duration(seconds: 2), () => refresh(force: true));
   }
 
+  /// Ce que Radarr et Sonarr surveillent et qui sort dans les quatre mois,
+  /// pas encore téléchargé. Un service absent ou injoignable n'ajoute
+  /// rien.
+  Future<List<({String type, int id, String reason})>> _managed(
+      DateTime now) async {
+    final end = now.add(const Duration(days: 120));
+    final managed = <({String type, int id, String reason})>[];
+    final seen = <String>{};
+    final radarr = ref.read(radarrClientProvider);
+    final sonarr = ref.read(sonarrClientProvider);
+    for (final (calendar, type, reason) in [
+      (radarr?.fetchCalendar(now, end), 'movie', UpcomingStrings.inRadarr),
+      (sonarr?.fetchCalendar(now, end), 'tv', UpcomingStrings.inSonarr),
+    ]) {
+      if (calendar == null) continue;
+      try {
+        if (await calendar case ArrSuccess(:final data)) {
+          for (final entry in data) {
+            final id = entry.tmdbId;
+            if (id == null ||
+                !entry.monitored ||
+                entry.status == ArrCalendarStatus.downloaded ||
+                !seen.add('$type:$id')) {
+              continue;
+            }
+            managed.add((type: type, id: id, reason: reason));
+          }
+        }
+      } catch (error) {
+        _log.warning('Calendrier $reason illisible : $error');
+      }
+    }
+    return managed;
+  }
+
   /// Recalcule la frise si elle est trop ancienne, si la région ou les
   /// suivis ont changé (ou toujours, si [force]).
   Future<void> refresh({bool force = false}) async {
@@ -239,8 +285,9 @@ class UpcomingController extends StateNotifier<UpcomingState> {
     }
     final credentials = ref.read(userProvider)?.seerrCredentials;
     final signature = _signature(settings, state.follows);
+    // La lecture forcée n'a besoin du cache que pour l'afficher d'abord.
+    final cache = !force || !_cacheRead ? await _readCache() : null;
     if (!force) {
-      final cache = await store.cache();
       if (cache != null &&
           cache.signature == signature &&
           DateTime.now().difference(cache.at) < upcomingRefresh) {
@@ -268,6 +315,7 @@ class UpcomingController extends StateNotifier<UpcomingState> {
               region: settings.region,
               today: now)
           .load(state.follows,
+              managed: await _managed(now),
               failed: (f) => _log.warning('Suivi illisible : ${f.key}'));
       _log.info('Frise : ${entries.length} titres, '
           '${state.follows.length} suivis, région ${settings.region}');

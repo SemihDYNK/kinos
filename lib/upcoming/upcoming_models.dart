@@ -215,5 +215,7 @@ String? tmdbPath(Object? value) =>
         ? value
         : null;
 
-String tmdbImage(String path, {String size = 'w500'}) =>
+/// Les jaquettes des grilles font ~200 px de large : `w342` suffit, deux
+/// fois moins lourd à télécharger et à décoder que `w500`.
+String tmdbImage(String path, {String size = 'w342'}) =>
     'https://image.tmdb.org/t/p/$size$path';

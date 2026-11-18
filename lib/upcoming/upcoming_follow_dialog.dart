@@ -82,8 +82,9 @@ class _State extends ConsumerState<UpcomingFollowDialog> {
   }
 
   static String _kind(UpcomingFollow f) => switch (f.kind) {
-        UpcomingFollowKind.person =>
-          f.role == UpcomingRole.directing ? 'Réalisation' : 'Interprétation',
+        UpcomingFollowKind.person => f.role == UpcomingRole.directing
+            ? EntityStrings.directing
+            : EntityStrings.acting,
         UpcomingFollowKind.company => UpcomingStrings.studio,
         UpcomingFollowKind.network => UpcomingStrings.network,
         UpcomingFollowKind.collection => UpcomingStrings.saga,
@@ -140,7 +141,7 @@ class _State extends ConsumerState<UpcomingFollowDialog> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Fermer')),
+                    child: const Text(EntityStrings.close)),
               ),
             ],
           ),
@@ -222,7 +223,7 @@ class _Row extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             // Sa page : filmographie, catalogue, saga.
             Tooltip(
-              message: 'Ouvrir sa page',
+              message: EntityStrings.openPage,
               child: FocusRing(
                 borderRadius: AppRadii.controlBorder,
                 onActivate: () {

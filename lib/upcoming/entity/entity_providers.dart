@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kinos/letterboxd/letterboxd_import_controller.dart'
     show letterboxdDiscoveryClient;
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
+import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/person_model.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
@@ -13,6 +15,7 @@ import '../upcoming_logic.dart' show isMainRole;
 import '../upcoming_models.dart';
 import '../upcoming_providers.dart';
 import '../upcoming_store.dart';
+import '../upcoming_strings.dart';
 import 'entity_models.dart';
 
 /// Une page à suivre : personne, studio, chaîne ou saga.
@@ -203,17 +206,12 @@ class EntityController extends StateNotifier<EntityState> {
             biography: details['biography'] as String?,
             knownFor: knownFor,
             context: [
-              switch (knownFor) {
-                'Directing' => 'Réalisation',
-                'Acting' => 'Interprétation',
-                'Writing' => 'Scénario',
-                'Production' => 'Production',
-                _ => null,
-              },
-              if (born.isNotEmpty) 'né·e en $born',
-              if (directing.isNotEmpty) '${directing.length} réalisations',
-              if (acting.isNotEmpty) '${acting.length} rôles',
-            ].nonNulls.join(' · ')),
+              EntityStrings.department(knownFor),
+              if (born.isNotEmpty) EntityStrings.born(born),
+              if (directing.isNotEmpty)
+                EntityStrings.directingCount(directing.length),
+              if (acting.isNotEmpty) EntityStrings.actingCount(acting.length),
+            ].where((s) => s.isNotEmpty).join(' · ')),
         acting: acting,
         directing: directing,
         main: main);
@@ -279,7 +277,7 @@ class EntityController extends StateNotifier<EntityState> {
             name: details['name'] as String? ?? '',
             image: tmdbPath(details['logoPath']),
             context: [
-              _network ? 'Chaîne' : 'Studio',
+              _network ? EntityStrings.network : EntityStrings.studio,
               if (country != null && country.isNotEmpty) country,
             ].join(' · ')),
         upcoming: _list(upcoming['results'])
@@ -361,7 +359,7 @@ class EntityController extends StateNotifier<EntityState> {
             image: tmdbPath(details['posterPath']),
             backdrop: tmdbPath(details['backdropPath']),
             biography: details['overview'] as String?,
-            context: 'Saga · ${parts.length} films'),
+            context: EntityStrings.saga(parts.length)),
         catalogue: parts);
   }
 }
@@ -379,4 +377,33 @@ final jellyfinPersonTmdbProvider =
     if (key.toLowerCase() == 'tmdb') return int.tryParse('$value');
   }
   return null;
+});
+
+/// Ce que Jellyfin range sous un studio ou une chaîne (même nom que dans
+/// TMDB, dont viennent ses métadonnées), du plus récent au plus ancien :
+/// toute la bibliothèque, pas seulement les pages de catalogue chargées.
+final entityLibraryProvider = FutureProvider.autoDispose
+    .family<List<ItemBaseModel>, ({String name, bool series})>(
+        (ref, key) async {
+  final api = ref.read(jellyApiProvider);
+  final studios = await api.studiosGet(
+      searchTerm: key.name, enableImages: false, limit: 20);
+  final ids = [
+    for (final s in studios.body?.items ?? const <BaseItemDto>[])
+      if (s.id != null && s.name?.toLowerCase() == key.name.toLowerCase()) s.id!
+  ];
+  if (ids.isEmpty) return const [];
+  final items = await api.usersUserIdItemsGet(
+      studioIds: ids,
+      recursive: true,
+      includeItemTypes: [key.series ? BaseItemKind.series : BaseItemKind.movie],
+      sortBy: [ItemSortBy.premieredate],
+      sortOrder: [SortOrder.descending],
+      fields: [ItemFields.providerids],
+      enableUserData: true,
+      limit: 300);
+  return [
+    for (final item in items.body?.items ?? const <BaseItemDto>[])
+      ItemBaseModel.fromBaseDto(item, ref)
+  ];
 });

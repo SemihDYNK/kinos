@@ -597,13 +597,11 @@ Plezy/Plex reste de côté.
 
 Ouverts côté code, dans un ordre de priorité suggéré :
 
-- **Page « Prochainement »** — livrée le 18 novembre 2026 (`lib/upcoming/`) :
-  page, réglages, suivis depuis « Suivre… » sur les fiches, frise et
-  bandeau à plusieurs diapos. Restent les pages personne/studio/chaîne/
-  saga, les raccourcis `D`/`S` sur une tuile, les dates Sonarr/Radarr et
-  la traduction des libellés (`upcoming_strings.dart`). Voir § Page
-  « Prochainement » ci-dessous.
-
+- **Page « Prochainement »** — livrée le 18 novembre 2026 (`lib/upcoming/`),
+  complète : page, réglages, suivis, frise (avec Radarr/Sonarr), carrousel de
+  l'accueil, pages personne/studio/chaîne/saga, raccourcis `D`/`S` sur les
+  tuiles. Libellés réunis dans `upcoming_strings.dart` pour la traduction.
+  Voir § Page « Prochainement » ci-dessous.
 - **Lot Seerr "découverte hors catalogue"** — committé et publié ; reste à
   valider contre les vrais serveurs et à mesurer le rendu. Ce lot conserve son délai propre ; le client Seerr historique
   est désormais borné à 30 secondes. La présentation des erreurs HTTP reste
@@ -723,3 +721,22 @@ page est activée.
 **Plus tard.** Suivi implicite (séries regardées, réalisateurs bien
 notés), notifications, demande automatique pour une chaîne suivie,
 assistant du premier lancement, rangée « Bientôt » sur l'accueil.
+
+**Livré, détails d'implémentation** (18 novembre 2026).
+- Bandeau : le carrousel de l'accueil (`HomeHeroSection`), les titres à
+  venir convertis en éléments (image, affiche, synopsis, genres de Seerr) ;
+  `metaBuilder` pour la ligne de date, `titleScale` (½) faute de logos.
+- Radarr et Sonarr : leurs films et séries surveillés qui sortent dans les
+  quatre mois entrent dans la frise comme des suivis (« Dans Radarr »,
+  « Dans Sonarr »), d'après l'identifiant TMDB de leur calendrier.
+- Pages à suivre (`lib/upcoming/entity/`) : personne (mosaïque de ses
+  affiches et portrait carré, rôles principaux vérifiés film par film une
+  seule fois, cache par personne), studio et chaîne (catalogue Seerr page
+  par page, trois tris ; « Dans votre bibliothèque » lu dans Jellyfin par
+  le nom du studio), saga (ordre de sortie). La page personne remplace
+  celle héritée quand Seerr est relié ; réalisateur et scénariste sont des
+  liens sur les fiches.
+- Raccourcis d'une tuile : `D` ouvre la demande Seerr, `S` la fenêtre
+  « Suivre… » du titre ; rappelés à côté des filtres.
+- Performances : la frise en cache n'est lue qu'à l'ouverture de la page,
+  décodée et encodée hors du fil de l'interface ; jaquettes en `w342`.

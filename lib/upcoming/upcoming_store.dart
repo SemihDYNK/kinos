@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:kinos/models/syncing/database_item.dart';
 
@@ -84,23 +85,22 @@ class UpcomingStore {
   Future<void> saveFollows(List<UpcomingFollow> follows) =>
       _put('follows', [for (final f in follows) f.toJson()]);
 
+  /// La frise en cache, décodée hors du fil de l'interface (quelques
+  /// centaines d'entrées).
   Future<UpcomingCache?> cache() async {
-    final json = await _json('cache');
-    if (json is! Map || json['t'] is! int || json['s'] is! String) return null;
-    return UpcomingCache(
-        at: DateTime.fromMillisecondsSinceEpoch(json['t'] as int),
-        signature: json['s'] as String,
-        entries: [
-          if (json['e'] is List)
-            ...(json['e'] as List).map(UpcomingEntry.fromJson).nonNulls
-        ]);
+    final row = await db.getSetting('cache', scope: scope);
+    if (row == null) return null;
+    return Isolate.run(() => _decodeCache(row.value));
   }
 
-  Future<void> saveCache(UpcomingCache cache) => _put('cache', {
-        't': cache.at.millisecondsSinceEpoch,
-        's': cache.signature,
-        'e': [for (final e in cache.entries) e.toJson()],
-      });
+  Future<void> saveCache(UpcomingCache cache) async {
+    final encoded = await Isolate.run(() => jsonEncode({
+          't': cache.at.millisecondsSinceEpoch,
+          's': cache.signature,
+          'e': [for (final e in cache.entries) e.toJson()],
+        }));
+    await db.setSetting('cache', encoded, scope: scope);
+  }
 
   /// Rôles principaux déjà vérifiés pour une personne (identité du titre →
   /// rôle principal ou non) : la fiche de chaque film n'est lue qu'une
@@ -116,4 +116,21 @@ class UpcomingStore {
 
   Future<void> saveRoles(int personId, Map<String, bool> roles) =>
       _put('roles:$personId', roles);
+}
+
+UpcomingCache? _decodeCache(String value) {
+  final Object? json;
+  try {
+    json = jsonDecode(value);
+  } on FormatException {
+    return null;
+  }
+  if (json is! Map || json['t'] is! int || json['s'] is! String) return null;
+  return UpcomingCache(
+      at: DateTime.fromMillisecondsSinceEpoch(json['t'] as int),
+      signature: json['s'] as String,
+      entries: [
+        if (json['e'] is List)
+          ...(json['e'] as List).map(UpcomingEntry.fromJson).nonNulls
+      ]);
 }

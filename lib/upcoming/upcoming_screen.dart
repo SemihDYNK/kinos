@@ -1,4 +1,7 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:kinos/screens/seerr/widgets/seerr_request_popup.dart'
+    show openSeerrRequestPopup;
+import 'upcoming_follow_dialog.dart' show showUpcomingFollowDialog;
 import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart' show BaseItemDto;
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/movie_model.dart';
@@ -116,11 +119,11 @@ class _UpcomingScreenState extends ConsumerState<UpcomingScreen> {
             onByMonth: (m) => ref.read(upcomingProvider.notifier).setByMonth(m),
             status: [
               if (state.settings != null) state.settings!.region,
-              '${state.follows.length} suivis',
+              UpcomingStrings.followCount(state.follows.length),
               if (state.refreshing)
                 UpcomingStrings.refreshing
               else if (state.at != null)
-                'mis à jour ${UpcomingStrings.updated(state.at)}',
+                UpcomingStrings.updatedLine(state.at),
             ].join(' · '),
             onRefresh: () =>
                 ref.read(upcomingProvider.notifier).refresh(force: true),
@@ -215,6 +218,7 @@ RecommendationTile upcomingTile(UpcomingEntry entry, String locale,
     buildPoster: (context) => _UpcomingPoster(
         entry: entry, image: image, locale: locale, pill: pill, label: label),
     navigate: (context) => openUpcoming(context, entry, image: image),
+    shortcuts: upcomingShortcuts(entry, image: image),
   );
 }
 
@@ -282,18 +286,41 @@ Future<void> openUpcoming(BuildContext context, UpcomingEntry entry,
         tag: MediaNavigationScope.tagOf(context),
         mediaType: entry.type,
         tmdbId: entry.id,
-        poster: SeerrDashboardPosterModel(
-            id: entry.identity,
-            type: entry.isMovie ? SeerrMediaType.movie : SeerrMediaType.tvshow,
-            tmdbId: entry.id,
-            title: entry.title,
-            overview: '',
-            images: ImagesData(primary: image),
-            mediaStatus: entry.status,
-            jellyfinItemId: entry.jellyfinId,
-            releaseYear: entry.date?.year.toString()),
+        poster: _seerrPoster(entry, image),
       ));
 }
+
+SeerrDashboardPosterModel _seerrPoster(UpcomingEntry entry, ImageData? image) =>
+    SeerrDashboardPosterModel(
+        id: entry.identity,
+        type: entry.isMovie ? SeerrMediaType.movie : SeerrMediaType.tvshow,
+        tmdbId: entry.id,
+        title: entry.title,
+        overview: entry.overview,
+        images: ImagesData(primary: image),
+        mediaStatus: entry.status,
+        jellyfinItemId: entry.jellyfinId,
+        releaseYear: entry.date?.year.toString());
+
+/// `D` : la fenêtre de demande Seerr, sans passer par la fiche. Rien pour
+/// un titre déjà demandé ou disponible.
+Future<void> requestUpcoming(BuildContext context, UpcomingEntry entry,
+    {ImageData? image}) async {
+  if (entry.requested) return;
+  await openSeerrRequestPopup(context, _seerrPoster(entry, image));
+}
+
+/// Les raccourcis d'une tuile : `D` demander, `S` suivre (la fenêtre
+/// « Suivre… » du titre).
+Map<ShortcutActivator, void Function(BuildContext)> upcomingShortcuts(
+        UpcomingEntry entry,
+        {ImageData? image}) =>
+    {
+      const SingleActivator(LogicalKeyboardKey.keyD): (context) =>
+          requestUpcoming(context, entry, image: image),
+      const SingleActivator(LogicalKeyboardKey.keyS): (context) =>
+          showUpcomingFollowDialog(context, type: entry.type, tmdbId: entry.id),
+    };
 
 class _UpcomingPoster extends StatelessWidget {
   const _UpcomingPoster(
@@ -472,6 +499,7 @@ class _Controls extends StatelessWidget {
         group([
           _Chip(UpcomingStrings.refresh, selected: false, onTap: onRefresh),
         ], 'R'),
+        const TileKeyHints(),
         Text(status,
             style: AppTypography.meta.copyWith(color: AppColors.textSecondary)),
       ],
@@ -560,7 +588,7 @@ class _FollowsRow extends ConsumerWidget {
         position: RelativeRect.fromRect(
             origin & const Size(1, 1), Offset.zero & overlay.size),
         items: [
-          const PopupMenuItem(value: false, child: Text('Ouvrir')),
+          const PopupMenuItem(value: false, child: Text(EntityStrings.open)),
           const PopupMenuItem(
               value: true, child: Text(UpcomingStrings.unfollow)),
         ]);

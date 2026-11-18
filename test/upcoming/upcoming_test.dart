@@ -255,4 +255,28 @@ void main() {
     ], today: today);
     expect(featured.map((e) => e.id), [4, 2, 3, 1]);
   });
+
+  test('Radarr and Sonarr titles join as followed, with their reason',
+      () async {
+    final source = UpcomingSource(
+        (path, {query = const {}}) async => switch (path) {
+              'tv/9' => {
+                  'name': 'Signal',
+                  'nextEpisodeToAir': {
+                    'airDate': '2026-11-25',
+                    'seasonNumber': 2,
+                    'episodeNumber': 4
+                  },
+                },
+              _ => <String, dynamic>{},
+            },
+        map: <T, R>(input, action) => Future.wait(input.map(action)),
+        region: 'FR',
+        today: today);
+    final entries = await source.load(const [],
+        managed: const [(type: 'tv', id: 9, reason: 'Dans Sonarr')]);
+    expect(entries.single.reasons, ['Dans Sonarr']);
+    // Une série gérée garde ses épisodes, comme une série suivie.
+    expect(entries.single.release, UpcomingRelease.episode);
+  });
 }

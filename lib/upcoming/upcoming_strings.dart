@@ -12,6 +12,8 @@ abstract final class UpcomingStrings {
   static const regionTitle = 'Région des sorties';
   static const followsTitle = 'Vos suivis';
   static const bigRelease = 'Grande sortie';
+  static const inRadarr = 'Dans Radarr';
+  static const inSonarr = 'Dans Sonarr';
   static const toRequest = 'À demander';
   static const requested = 'Demandé';
   static const available = 'Disponible';
@@ -176,6 +178,9 @@ abstract final class UpcomingStrings {
     }
   }
 
+  static String followCount(int n) => '$n suivis';
+  static String updatedLine(DateTime? at) => 'mis à jour ${updated(at)}';
+
   static String updated(DateTime? at) {
     if (at == null) return '';
     final age = DateTime.now().difference(at);
@@ -184,4 +189,53 @@ abstract final class UpcomingStrings {
     if (age.inDays < 1) return 'il y a ${age.inHours} h';
     return 'il y a ${age.inDays} j';
   }
+}
+
+/// Libellés des pages personne, studio, chaîne et saga.
+abstract final class EntityStrings {
+  static const series = 'Série';
+  static const announced = 'Annoncé';
+  static const episodes = 'ép.';
+  static const followDirecting = 'Suivre ses réalisations';
+  static const followedDirecting = 'Réalisations suivies';
+  static const followActing = 'Suivre ses rôles';
+  static const followedActing = 'Rôles suivis';
+  static const followSaga = 'Suivre la saga';
+  static const followedSaga = 'Saga suivie';
+  static const follow = 'Suivre';
+  static const followed = 'Suivi';
+  static const acting = 'Interprétation';
+  static const directing = 'Réalisation';
+  static const recent = 'Les plus récents';
+  static const rated = 'Les mieux notés';
+  static const popular = 'Populaires';
+  static String checking(int n) => 'Tri des rôles… $n';
+  static const failed = 'Seerr ne répond pas.';
+  static const upcoming = 'À venir';
+  static const library = 'Dans votre bibliothèque';
+  static const restPerson = 'Le reste de sa filmographie';
+  static const restSaga = 'À demander';
+  static const catalogue = 'Catalogue';
+  static const more = 'Voir plus';
+  static const appearances = 'Apparaît dans';
+  static String appearancesDetail(int n) => 'seconds rôles, caméos, voix · $n';
+  static const nothing = 'Rien à montrer.';
+  static const close = 'Fermer';
+  static const biography = 'Biographie';
+  static const presentation = 'Présentation';
+  static const open = 'Ouvrir';
+  static const openPage = 'Ouvrir sa page';
+  static const studio = 'Studio';
+  static const network = 'Chaîne';
+  static String saga(int films) => 'Saga · $films films';
+  static String department(String? known) => switch (known) {
+        'Directing' => 'Réalisation',
+        'Acting' => 'Interprétation',
+        'Writing' => 'Scénario',
+        'Production' => 'Production',
+        _ => '',
+      };
+  static String born(String year) => 'né·e en $year';
+  static String directingCount(int n) => '$n réalisations';
+  static String actingCount(int n) => '$n rôles';
 }

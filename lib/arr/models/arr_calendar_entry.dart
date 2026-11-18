@@ -1,5 +1,6 @@
 import 'package:kinos/arr/models/arr_library_item.dart';
-import 'package:kinos/arr/models/arr_media_detail.dart' show resolveArrFanartUrl;
+import 'package:kinos/arr/models/arr_media_detail.dart'
+    show resolveArrFanartUrl;
 import 'package:kinos/arr/models/arr_service.dart';
 
 /// Statut d'une entrée de calendrier — 3 jetons sémantiques seulement
@@ -79,7 +80,12 @@ class ArrCalendarEntry {
     required this.fanartUrl,
     required this.monitored,
     required this.episodeId,
+    this.tmdbId,
   });
+
+  /// Identifiant TMDB du film ou de la série, quand Radarr/Sonarr le
+  /// connaît (page Prochainement).
+  final int? tmdbId;
 
   /// `true` quand la date affichée n'est pas la plus évidente pour ce
   /// service (Sonarr n'a qu'une date, toujours "évidente") — pilote la
@@ -126,12 +132,13 @@ class ArrCalendarEntry {
       dateBasis: basis,
       status: computeArrCalendarStatus(
           hasFile: hasFile, referenceDate: date.toLocal()),
-      posterUrl:
-          resolveArrPosterUrl(images, baseUrl: baseUrl, apiKey: apiKey),
-      fanartUrl:
-          resolveArrFanartUrl(images, baseUrl: baseUrl, apiKey: apiKey),
+      posterUrl: resolveArrPosterUrl(images, baseUrl: baseUrl, apiKey: apiKey),
+      fanartUrl: resolveArrFanartUrl(images, baseUrl: baseUrl, apiKey: apiKey),
       monitored: json['monitored'] as bool? ?? false,
       episodeId: null,
+      tmdbId: json['tmdbId'] is int && json['tmdbId'] != 0
+          ? json['tmdbId'] as int
+          : null,
     );
   }
 
@@ -160,15 +167,16 @@ class ArrCalendarEntry {
       dateBasis: ArrCalendarDateBasis.air,
       status: computeArrCalendarStatus(
           hasFile: hasFile, referenceDate: air.toLocal()),
-      posterUrl:
-          resolveArrPosterUrl(images, baseUrl: baseUrl, apiKey: apiKey),
-      fanartUrl:
-          resolveArrFanartUrl(images, baseUrl: baseUrl, apiKey: apiKey),
+      posterUrl: resolveArrPosterUrl(images, baseUrl: baseUrl, apiKey: apiKey),
+      fanartUrl: resolveArrFanartUrl(images, baseUrl: baseUrl, apiKey: apiKey),
       // Surveillance de la série (nécessite `includeSeries=true`), pas de
       // l'épisode : "basculer la surveillance" agit toujours à l'échelle
       // série, cohérent avec la fiche détail.
       monitored: seriesMap?['monitored'] as bool? ?? false,
       episodeId: json['id'] as int?,
+      tmdbId: seriesMap?['tmdbId'] is int && seriesMap?['tmdbId'] != 0
+          ? seriesMap!['tmdbId'] as int
+          : null,
     );
   }
 }
