@@ -235,6 +235,14 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
                         cinematic: true,
                         people: details.overview.people,
                         info: info,
+                        links: {
+                          context.localized.director(
+                                  details.overview.directors.length):
+                              details.overview.directors,
+                          context.localized.writer(
+                                  details.overview.writers.length):
+                              details.overview.writers,
+                        },
                         contentPadding: padding),
                   ),
                 ),

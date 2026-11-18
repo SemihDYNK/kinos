@@ -89,6 +89,17 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
         EntitySort.values[(state.sort.index + 1) % EntitySort.values.length]);
   }
 
+  static int _byPosterThenDate(EntityTitle a, EntityTitle b) {
+    if ((a.posterPath == null) != (b.posterPath == null)) {
+      return a.posterPath == null ? 1 : -1;
+    }
+    final da = a.date, db = b.date;
+    if (da == null || db == null) {
+      return da == db ? 0 : (da == null ? 1 : -1);
+    }
+    return da.compareTo(db);
+  }
+
   static String _subtitle(EntityTitle t, {bool role = false}) => [
         if (!t.isMovie) 'Série',
         if (t.date != null) '${t.date!.year}' else 'Annoncé',
@@ -124,12 +135,16 @@ class _EntityScreenState extends ConsumerState<EntityScreen> {
               if (!state.isMain(t)) t
           ]
         : const <EntityTitle>[];
-    final upcoming = person || _kind == UpcomingFollowKind.collection
-        ? [
-            for (final t in main)
-              if (t.upcoming(today)) t
-          ]
-        : state.upcoming;
+    // À venir : ceux qui ont déjà une affiche d'abord (les projets à peine
+    // annoncés n'en ont pas), puis du plus proche au plus lointain.
+    final upcoming = [
+      ...(person || _kind == UpcomingFollowKind.collection
+          ? [
+              for (final t in main)
+                if (t.upcoming(today)) t
+            ]
+          : state.upcoming)
+    ]..sort(_byPosterThenDate);
     final released = [
       for (final t in main)
         if (person || _kind == UpcomingFollowKind.collection

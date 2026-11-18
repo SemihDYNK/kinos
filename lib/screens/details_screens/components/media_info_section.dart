@@ -17,11 +17,16 @@ class MediaInfoSection extends StatelessWidget {
   final EdgeInsets contentPadding;
   final bool cinematic;
 
+  /// Personnes d'une ligne d'[info] (réalisation, scénario), par libellé :
+  /// leurs noms deviennent des liens vers leur page.
+  final Map<String, List<Person>> links;
+
   const MediaInfoSection({
     required this.people,
     required this.info,
     required this.contentPadding,
     this.cinematic = false,
+    this.links = const {},
     super.key,
   });
 
@@ -49,7 +54,7 @@ class MediaInfoSection extends StatelessWidget {
 
           final cast =
               _CastGrid(people: people, width: castWidth, showRoles: cinematic);
-          final panel = _InfoPanel(info: info, compact: cinematic);
+          final panel = _InfoPanel(info: info, compact: cinematic, links: links);
 
           // Un seul groupe de traversal : l'ordre de lecture (grille de
           // casting puis panneau) reste cohérent que les colonnes soient
@@ -342,7 +347,25 @@ class _InfoPanel extends StatelessWidget {
   final List<({String label, String value})> info;
 
   final bool compact;
-  const _InfoPanel({required this.info, this.compact = false});
+  final Map<String, List<Person>> links;
+  const _InfoPanel(
+      {required this.info, this.compact = false, this.links = const {}});
+
+  Widget _value(BuildContext context, ({String label, String value}) entry) {
+    final style = Theme.of(context)
+        .textTheme
+        .bodyMedium
+        ?.copyWith(color: AppColors.textPrimary);
+    final people = links[entry.label];
+    if (people == null || people.isEmpty) return Text(entry.value, style: style);
+    return Wrap(children: [
+      for (final (i, person) in people.indexed)
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          _PersonLink(person: person, style: style),
+          if (i < people.length - 1) Text(', ', style: style),
+        ]),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -371,12 +394,7 @@ class _InfoPanel extends StatelessWidget {
                             child: Text(entry.label,
                                 style: Theme.of(context).textTheme.bodySmall)),
                         const SizedBox(width: AppSpacing.xs),
-                        Expanded(
-                            child: Text(entry.value,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(color: AppColors.textPrimary))),
+                        Expanded(child: _value(context, entry)),
                       ],
                     )
                   : Column(
@@ -386,13 +404,7 @@ class _InfoPanel extends StatelessWidget {
                           entry.label,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        Text(
-                          entry.value,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: AppColors.textPrimary),
-                        ),
+                        _value(context, entry),
                       ],
                     ),
             ),
@@ -400,4 +412,34 @@ class _InfoPanel extends StatelessWidget {
       );
     });
   }
+}
+
+/// Un nom qui ouvre la page de la personne, souligné au survol et au focus.
+class _PersonLink extends StatefulWidget {
+  const _PersonLink({required this.person, this.style});
+  final Person person;
+  final TextStyle? style;
+
+  @override
+  State<_PersonLink> createState() => _PersonLinkState();
+}
+
+class _PersonLinkState extends State<_PersonLink> {
+  bool _active = false;
+
+  @override
+  Widget build(BuildContext context) => FocusRing(
+        borderRadius: AppRadii.controlBorder,
+        onActivate: () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => PersonDetailScreen(person: widget.person))),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _active = true),
+          onExit: (_) => setState(() => _active = false),
+          child: Text(widget.person.name,
+              style: widget.style?.copyWith(
+                  decoration: _active ? TextDecoration.underline : null,
+                  decorationColor: AppColors.textPrimary)),
+        ),
+      );
 }
