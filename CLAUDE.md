@@ -146,6 +146,11 @@ Feuille de route, priorité validée le 29 octobre 2026 :
       candidats recommandés
 - [ ] Mode salon (double densité, déjà porté par le thème — reste
       l'activation/bascule de bout en bout), après stabilisation
+- [ ] Tutoriel de premier démarrage : une fois le serveur ajouté, une
+      fenêtre guide la configuration de Seerr (et des pages qui en
+      dépendent, dont Prochainement et sa région), Letterboxd, AniList et
+      Sonarr/Radarr. Chaque étape, et le tutoriel entier, peut être passée ;
+      tout reste réglable ensuite dans les paramètres
 - [ ] Version distribuable propre, en toute fin : validation globale,
       rangement des modifications, traductions, sécurité et licences
 

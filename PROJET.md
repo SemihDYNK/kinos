@@ -590,7 +590,8 @@ courante et son texte secondaire dérivé.
 Feuille de route produit (ordre, justification) : voir `CLAUDE.md` §
 Feuille de route. Priorités validées le 29 octobre 2026 : stabilisation
 de Kinos normal (y compris validation Seerr) → AniList → import
-Letterboxd → mode salon → préparation de la version distribuable propre,
+Letterboxd → mode salon → tutoriel de premier démarrage (ajouté le 18
+novembre) → préparation de la version distribuable propre,
 en toute fin. **AniList et Letterboxd sont livrés** (novembre 2026). Le Lab
 Plezy/Plex reste de côté.
 
