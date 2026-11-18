@@ -47,6 +47,22 @@ abstract final class StartupAurora {
     ];
   }
 
+  /// L'aurore en attendant la dominante du film : des gris profonds, jamais
+  /// clairs (éclaircie, une dominante neutre donnait des taches presque
+  /// blanches). Le fond change quand même au clap.
+  static List<Color> get neutral => [
+        for (final lightness in AppMotion.startupAuroraNeutralLightness)
+          HSLColor.fromColor(AppColors.heroFallback)
+              .withSaturation(0)
+              .withLightness(lightness)
+              .toColor(),
+      ];
+
+  /// Passage d'un jeu de couleurs à l'autre, tache par tache.
+  static List<Color> blend(List<Color> from, List<Color> to, double t) => [
+        for (var i = 0; i < to.length; i++) Color.lerp(from[i], to[i], t)!,
+      ];
+
   /// Peint l'aurore sur [rect] : le fond, puis chaque tache, avec
   /// [intensity] de 0 (fond seul) à 1. [blendMode] permet de la poser dans
   /// un calque sans en changer la transparence (srcATop).

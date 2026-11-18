@@ -348,10 +348,10 @@ class StartupIntroBeam extends CustomPainter {
         1.5;
     final background = Paint()..color = AppColors.background;
     // L'aurore née au clap, au même instant de son mouvement.
-    // Sans dominante (pas encore calculée), pas d'aurore : le fond seul.
+    // Sans dominante (pas encore calculée), l'aurore neutre en gris profonds.
     final aurora =
-        tint == null ? const <Color>[] : StartupAurora.colorsFor(tint!);
-    final glowing = tint == null ? 0.0 : 1.0;
+        tint == null ? StartupAurora.neutral : StartupAurora.colorsFor(tint!);
+    const glowing = 1.0;
     if (on <= 0 || length <= 0) {
       StartupAurora.paint(canvas, Offset.zero & size,
           colors: aurora, intensity: glowing);

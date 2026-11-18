@@ -471,6 +471,8 @@ abstract final class AppMotion {
   static const startupAuroraLightness = [.44, .14, .30, .22];
   // Écart de teinte de chaque tache par rapport à la dominante (degrés).
   static const startupAuroraHues = [0.0, 40.0, -35.0, 70.0];
+  // Aurore neutre, en attendant la dominante du film : gris profonds.
+  static const startupAuroraNeutralLightness = [.16, .06, .11, .09];
   static const startupAuroraSaturation = .70;
   // Vitesse de dérive : elle n'a que deux secondes environ pour se voir.
   static const startupAuroraSpeed = .9;
