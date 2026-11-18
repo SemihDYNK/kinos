@@ -169,7 +169,12 @@ class _UpcomingScreenState extends ConsumerState<UpcomingScreen> {
 /// La tuile d'un titre à venir, au style de l'accueil : date en pastille,
 /// « À demander » ou le statut de la demande sur la jaquette, raisons et
 /// type de sortie en dessous.
-RecommendationTile upcomingTile(UpcomingEntry entry, String locale) {
+///
+/// [subtitle] remplace la légende (année, rôle, sur les pages à suivre) ;
+/// sans [pill], pas de date sur la jaquette ; [label] montre « À
+/// demander » ou le statut (inutile pour un titre de la bibliothèque).
+RecommendationTile upcomingTile(UpcomingEntry entry, String locale,
+    {String? subtitle, bool pill = true, bool label = true}) {
   final image = entry.posterPath == null
       ? null
       : ImageData(
@@ -179,11 +184,28 @@ RecommendationTile upcomingTile(UpcomingEntry entry, String locale) {
     identity: ('upcoming', entry.identity),
     previewImage: image,
     title: entry.title,
-    subtitle: UpcomingStrings.caption(entry),
-    buildPoster: (context) =>
-        _UpcomingPoster(entry: entry, image: image, locale: locale),
+    subtitle: subtitle ?? UpcomingStrings.caption(entry),
+    buildPoster: (context) => _UpcomingPoster(
+        entry: entry, image: image, locale: locale, pill: pill, label: label),
     navigate: (context) => openUpcoming(context, entry, image: image),
   );
+}
+
+/// Ouvre la page d'un suivi : personne, studio, chaîne, saga ; une série
+/// ouvre sa fiche.
+Future<void> openFollow(BuildContext context, UpcomingFollow follow) {
+  if (follow.kind == UpcomingFollowKind.tv) {
+    return openUpcoming(
+        context,
+        UpcomingEntry(
+            type: 'tv',
+            id: follow.id,
+            title: follow.name,
+            release: UpcomingRelease.unknown,
+            posterPath: follow.image));
+  }
+  return context.router.push(
+      EntityRoute(kind: follow.kind.name, id: follow.id, name: follow.name));
 }
 
 /// Ouvre la fiche Jellyfin si le titre y est, sinon sa fiche Seerr (où
@@ -220,10 +242,16 @@ Future<void> openUpcoming(BuildContext context, UpcomingEntry entry,
 
 class _UpcomingPoster extends StatelessWidget {
   const _UpcomingPoster(
-      {required this.entry, required this.image, required this.locale});
+      {required this.entry,
+      required this.image,
+      required this.locale,
+      this.pill = true,
+      this.label = true});
   final UpcomingEntry entry;
   final ImageData? image;
   final String locale;
+  final bool pill;
+  final bool label;
 
   @override
   Widget build(BuildContext context) {
@@ -235,7 +263,7 @@ class _UpcomingPoster extends StatelessWidget {
         ),
       _ => (Icons.schedule_rounded, UpcomingStrings.requested),
     };
-    final pill = UpcomingStrings.pill(entry, locale);
+    final date = pill ? UpcomingStrings.pill(entry, locale) : '';
     final meta = AppTypography.meta.copyWith(color: AppColors.textPrimary);
     return Stack(fit: StackFit.expand, children: [
       if (image case final image?)
@@ -244,23 +272,24 @@ class _UpcomingPoster extends StatelessWidget {
         const Center(
             child: Icon(Icons.movie_creation_outlined,
                 color: AppColors.textDisabled)),
-      Align(
-        alignment: Alignment.bottomCenter,
-        child: FractionallySizedBox(
-          heightFactor: .6,
-          widthFactor: 1,
-          child: DecoratedBox(
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                AppColors.scrim.withValues(alpha: .85),
-                Colors.transparent
-              ]))),
+      if (this.label)
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: FractionallySizedBox(
+            heightFactor: .6,
+            widthFactor: 1,
+            child: DecoratedBox(
+                decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                  AppColors.scrim.withValues(alpha: .85),
+                  Colors.transparent
+                ]))),
+          ),
         ),
-      ),
-      if (pill.isNotEmpty)
+      if (date.isNotEmpty)
         Positioned(
           left: AppSpacing.xs,
           top: AppSpacing.xs,
@@ -271,22 +300,23 @@ class _UpcomingPoster extends StatelessWidget {
                     const BorderRadius.all(Radius.circular(AppSpacing.xxs))),
             child: Padding(
               padding: AppUpcomingLayout.keyHintPadding,
-              child: Text(pill, style: meta),
+              child: Text(date, style: meta),
             ),
           ),
         ),
-      Positioned(
-        left: AppSpacing.xs,
-        right: AppSpacing.xs,
-        bottom: AppSpacing.xs,
-        child: Row(children: [
-          Icon(icon, size: meta.fontSize, color: AppColors.textPrimary),
-          const SizedBox(width: AppSpacing.xxs),
-          Expanded(
-              child: Text(label,
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: meta)),
-        ]),
-      ),
+      if (this.label)
+        Positioned(
+          left: AppSpacing.xs,
+          right: AppSpacing.xs,
+          bottom: AppSpacing.xs,
+          child: Row(children: [
+            Icon(icon, size: meta.fontSize, color: AppColors.textPrimary),
+            const SizedBox(width: AppSpacing.xxs),
+            Expanded(
+                child: Text(label,
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: meta)),
+          ]),
+        ),
     ]);
   }
 }
@@ -681,11 +711,14 @@ class _FollowsRow extends ConsumerWidget {
         position: RelativeRect.fromRect(
             origin & const Size(1, 1), Offset.zero & overlay.size),
         items: [
+          const PopupMenuItem(value: false, child: Text('Ouvrir')),
           const PopupMenuItem(
               value: true, child: Text(UpcomingStrings.unfollow)),
         ]);
     if (choice == true) {
       await ref.read(upcomingProvider.notifier).unfollow(follow.key);
+    } else if (choice == false && context.mounted) {
+      await openFollow(context, follow);
     }
   }
 
@@ -706,7 +739,7 @@ class _FollowsRow extends ConsumerWidget {
                     _menu(context, ref, follow, d.globalPosition),
                 child: FocusRing(
                   borderRadius: AppRadii.cardBorder,
-                  onActivate: () => _menu(context, ref, follow, null),
+                  onActivate: () => openFollow(context, follow),
                   child: SizedBox(
                     width: AppUpcomingLayout.followWidth,
                     child: Column(children: [

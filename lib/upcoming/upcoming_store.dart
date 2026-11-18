@@ -101,4 +101,19 @@ class UpcomingStore {
         's': cache.signature,
         'e': [for (final e in cache.entries) e.toJson()],
       });
+
+  /// Rôles principaux déjà vérifiés pour une personne (identité du titre →
+  /// rôle principal ou non) : la fiche de chaque film n'est lue qu'une
+  /// fois.
+  Future<Map<String, bool>> roles(int personId) async {
+    final json = await _json('roles:$personId');
+    if (json is! Map) return {};
+    return {
+      for (final e in json.entries)
+        if (e.key is String && e.value is bool) e.key as String: e.value as bool
+    };
+  }
+
+  Future<void> saveRoles(int personId, Map<String, bool> roles) =>
+      _put('roles:$personId', roles);
 }

@@ -28,6 +28,7 @@ class CatalogNavigationBar extends ConsumerWidget {
       DetailsRoute.name,
       SeerrDetailsRoute.name,
       ArrTitleDetailsRoute.name,
+      EntityRoute.name,
       PhotoViewerRoute.name,
       LiveTvRoute.name,
     }.contains(route);

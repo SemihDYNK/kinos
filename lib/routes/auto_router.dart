@@ -122,6 +122,10 @@ final List<AutoRoute> detailsRoutes = [
       path: 'seerr/:mediaType/:tmdbId',
       customRouteBuilder: mediaPageRoute),
   CustomRoute(
+      page: EntityRoute.page,
+      path: 'entity/:kind/:id',
+      customRouteBuilder: mediaPageRoute),
+  CustomRoute(
       page: ArrTitleDetailsRoute.page,
       path: 'arr/title',
       customRouteBuilder: mediaPageRoute),

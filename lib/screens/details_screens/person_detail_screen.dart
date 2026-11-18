@@ -1,4 +1,8 @@
 import 'package:kinos/theme/app_icons.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/upcoming/entity/entity_providers.dart';
+import 'package:kinos/upcoming/entity/entity_screen.dart';
+import 'package:kinos/upcoming/upcoming_models.dart';
 import 'package:flutter/material.dart';
 
 import 'package:collection/collection.dart';
@@ -33,6 +37,24 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Seerr relié : la page Kinos de la personne (filmographie complète,
+    // rôles principaux, à venir, suivre), d'après son identifiant TMDB.
+    final seerr = ref.watch(userProvider
+        .select((u) => u?.seerrCredentials?.isConfigured ?? false));
+    if (!seerr) return _legacy(context);
+    return ref.watch(jellyfinPersonTmdbProvider(widget.person.id)).when(
+        data: (tmdbId) => tmdbId == null
+            ? _legacy(context)
+            : EntityScreen(
+                kind: UpcomingFollowKind.person.name,
+                id: tmdbId,
+                name: widget.person.name),
+        loading: () => const ColoredBox(color: AppColors.background),
+        error: (_, __) => _legacy(context));
+  }
+
+  /// La page héritée, sans Seerr : ce que Jellyfin connaît.
+  Widget _legacy(BuildContext context) {
     final details = ref.watch(providerID);
     return DetailScaffold(
       label: details?.name ?? "",

@@ -13,6 +13,7 @@ import 'package:kinos/widgets/shared/item_actions.dart';
 import 'upcoming_logic.dart';
 import 'upcoming_models.dart';
 import 'upcoming_providers.dart';
+import 'upcoming_screen.dart' show openFollow;
 import 'upcoming_strings.dart';
 
 /// L'action « Suivre… » d'une fiche, si la page Prochainement est active
@@ -218,6 +219,26 @@ class _Row extends StatelessWidget {
                     : Icons.add_circle_outline_rounded,
                 color:
                     followed ? AppColors.textPrimary : AppColors.textSecondary),
+            const SizedBox(width: AppSpacing.xs),
+            // Sa page : filmographie, catalogue, saga.
+            Tooltip(
+              message: 'Ouvrir sa page',
+              child: FocusRing(
+                borderRadius: AppRadii.controlBorder,
+                onActivate: () {
+                  // Le contexte de la fenêtre disparaît avec elle : celui
+                  // du navigateur reste.
+                  final navigator = Navigator.of(context);
+                  navigator.pop();
+                  openFollow(navigator.context, follow);
+                },
+                child: const Padding(
+                  padding: EdgeInsets.all(AppSpacing.xxs),
+                  child: Icon(Icons.arrow_forward_rounded,
+                      color: AppColors.textSecondary),
+                ),
+              ),
+            ),
           ]),
         ),
       ),

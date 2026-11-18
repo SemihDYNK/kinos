@@ -71,6 +71,7 @@ import 'package:kinos/letterboxd/home/letterboxd_watchlist_screen.dart'
 import 'package:kinos/models/items/images_models.dart' as _i53;
 import 'package:kinos/screens/dashboard/genre_page_screen.dart' as _i54;
 import 'package:kinos/upcoming/upcoming_screen.dart' as _i55;
+import 'package:kinos/upcoming/entity/entity_screen.dart' as _i56;
 
 /// generated route for
 /// [_i1.AboutSettingsPage]
@@ -750,6 +751,66 @@ class LetterboxdWatchlistRoute extends _i37.PageRouteInfo<void> {
       return const _i52.LetterboxdWatchlistScreen();
     },
   );
+}
+
+/// generated route for
+/// [_i56.EntityScreen]
+class EntityRoute extends _i37.PageRouteInfo<EntityRouteArgs> {
+  EntityRoute({
+    required String kind,
+    required int id,
+    String? name,
+    _i39.Key? key,
+    List<_i37.PageRouteInfo>? children,
+  }) : super(
+          EntityRoute.name,
+          args: EntityRouteArgs(kind: kind, id: id, name: name, key: key),
+          rawPathParams: {'kind': kind, 'id': id},
+          initialChildren: children,
+        );
+
+  static const String name = 'EntityRoute';
+
+  static _i37.PageInfo page = _i37.PageInfo(
+    name,
+    builder: (data) {
+      final pathParams = data.inheritedPathParams;
+      final args = data.argsAs<EntityRouteArgs>(
+        orElse: () => EntityRouteArgs(
+          kind: pathParams.getString('kind'),
+          id: pathParams.getInt('id'),
+        ),
+      );
+      return _i56.EntityScreen(
+        kind: args.kind,
+        id: args.id,
+        name: args.name,
+        key: args.key,
+      );
+    },
+  );
+}
+
+class EntityRouteArgs {
+  const EntityRouteArgs({
+    required this.kind,
+    required this.id,
+    this.name,
+    this.key,
+  });
+
+  final String kind;
+
+  final int id;
+
+  final String? name;
+
+  final _i39.Key? key;
+
+  @override
+  String toString() {
+    return 'EntityRouteArgs{kind: $kind, id: $id, name: $name, key: $key}';
+  }
 }
 
 /// generated route for
