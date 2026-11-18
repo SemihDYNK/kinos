@@ -284,6 +284,10 @@ abstract final class AppUpcomingLayout {
   /// Le voile du bandeau couvre sa partie basse, sous le texte.
   static const bannerScrimHeight = .75;
 
+  /// Titres du carrousel : TMDB ne fournit pas de logo par Seerr, le titre
+  /// écrit en pleine taille écrasait la diapo.
+  static const heroTitleScale = .5;
+
   /// L'image du bandeau s'arrête à cette distance du bord bas, sous le
   /// fondu opaque : son bord antialiasé dessinait une ligne.
   static const bannerEdgeInset = 2.0;

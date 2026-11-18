@@ -16,6 +16,7 @@ class HomeHeroSection extends ConsumerWidget {
       required this.contentPadding,
       this.actionsBuilder,
       this.metaBuilder,
+      this.titleScale = 1,
       this.footerSliver,
       super.key});
   final List<ItemBaseModel> heroItems;
@@ -25,6 +26,7 @@ class HomeHeroSection extends ConsumerWidget {
   final Widget Function(BuildContext context, ItemBaseModel item)?
       actionsBuilder;
   final String Function(ItemBaseModel item)? metaBuilder;
+  final double titleScale;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,7 +58,8 @@ class HomeHeroSection extends ConsumerWidget {
                 items: heroItems,
                 contentStart: sidebar,
                 actionsBuilder: actionsBuilder,
-                metaBuilder: metaBuilder)),
+                metaBuilder: metaBuilder,
+                titleScale: titleScale)),
         if (footerSliver != null) footerSliver!,
         if (resumeItems.isNotEmpty)
           SliverPadding(

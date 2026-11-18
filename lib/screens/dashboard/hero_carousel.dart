@@ -30,6 +30,7 @@ class HeroCarousel extends ConsumerStatefulWidget {
       this.onCurrentChanged,
       this.actionsBuilder,
       this.metaBuilder,
+      this.titleScale = 1,
       this.contentStart = 0,
       super.key});
 
@@ -42,6 +43,10 @@ class HeroCarousel extends ConsumerStatefulWidget {
   /// Remplace la ligne sous le titre (année, genre, durée) : la date de
   /// sortie d'un titre à venir.
   final String Function(ItemBaseModel item)? metaBuilder;
+
+  /// Taille des titres écrits, pour des diapos sans logo (cf.
+  /// [MediaHeroTitle.textScale]).
+  final double titleScale;
 
   static double minHeightFor(AppDensity density) => density == AppDensity.couch
       ? AppHeroLayout.couchHeight
@@ -310,7 +315,8 @@ class _HeroCarouselState extends ConsumerState<HeroCarousel>
                                     child: MediaHeroTitle(
                                         title: item.title,
                                         logo: item.tvPosterLogo,
-                                        availableWidth: contentWidth)),
+                                        availableWidth: contentWidth,
+                                        textScale: widget.titleScale)),
                                 AppMotion.heroTitleReveal,
                                 'hero-title-reveal'),
                             const SizedBox(height: AppSpacing.md),

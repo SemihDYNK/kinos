@@ -79,6 +79,7 @@ class _UpcomingScreenState extends ConsumerState<UpcomingScreen> {
           heroItems: [for (final e in featured) upcomingHeroItem(e)],
           resumeItems: const [],
           contentPadding: padding,
+          titleScale: AppUpcomingLayout.heroTitleScale,
           metaBuilder: (item) {
             final entry = byIdentity[item.id];
             if (entry == null) return '';

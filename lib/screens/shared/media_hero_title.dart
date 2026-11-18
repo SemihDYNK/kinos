@@ -8,10 +8,14 @@ class MediaHeroTitle extends StatelessWidget {
       {required this.title,
       required this.logo,
       required this.availableWidth,
+      this.textScale = 1,
       super.key});
   final String title;
   final ImageData? logo;
   final double availableWidth;
+
+  /// Taille du titre écrit (sans logo), relative à celle de l'accueil.
+  final double textScale;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +24,8 @@ class MediaHeroTitle extends StatelessWidget {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: AppTypography.heroEditorial.copyWith(
-            fontSize: AppHeroLayout.titleSizeFor(availableWidth, density)));
+            fontSize: AppHeroLayout.titleSizeFor(availableWidth, density) *
+                textScale));
     return Semantics(
         label: title,
         child: ExcludeSemantics(
