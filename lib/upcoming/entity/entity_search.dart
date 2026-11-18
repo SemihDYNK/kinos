@@ -50,11 +50,15 @@ final entitySearchProvider = FutureProvider.autoDispose
   // comme pour la recherche de titres.
   final encoded = Uri.encodeComponent(query);
   final language = search.language.split('-').first;
-  try {
+  Future<Map<String, dynamic>> safe(Future<Map<String, dynamic>> request) =>
+      request.catchError((_) => <String, dynamic>{});
+  {
     final (people, companies) = await (
-      client.get('search',
-          query: {'query': encoded, 'page': '1'}, language: language),
-      client.get('search/company', query: {'query': encoded, 'page': '1'}),
+      safe(client.get('search',
+          query: {'query': encoded, 'page': '1'}, language: language)),
+      // Les studios : Seerr passe la requête telle quelle à TMDB (pas de
+      // double encodage) et rend sa réponse brute, en snake_case.
+      safe(client.get('search/company', query: {'query': query, 'page': '1'})),
     ).wait;
     return [
       for (final p in list(people['results'])
@@ -83,15 +87,13 @@ final entitySearchProvider = FutureProvider.autoDispose
             kind: UpcomingFollowKind.company,
             id: c['id'] as int,
             name: c['name'] as String? ?? '',
-            image: tmdbPath(c['logoPath']),
+            image: tmdbPath(c['logo_path'] ?? c['logoPath']),
             detail: [
               EntityStrings.studio,
-              if (c['originCountry'] case final String country
-                  when country.isNotEmpty)
+              if ((c['origin_country'] ?? c['originCountry'])
+                  case final String country when country.isNotEmpty)
                 country,
             ].join(' · ')),
     ];
-  } catch (_) {
-    return const [];
   }
 });

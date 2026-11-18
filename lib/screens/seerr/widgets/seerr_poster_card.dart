@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:kinos/screens/dashboard/recommendation_tile.dart' show RequestLabel;
 import 'package:kinos/theme/app_icons.dart';
 import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:kinos/widgets/shared/frosted_surface.dart';
@@ -15,7 +16,6 @@ import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/seerr/widgets/seerr_request_popup.dart';
 import 'package:kinos/seerr/seerr_models.dart';
 import 'package:kinos/theme/app_theme.dart';
-import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/focus_provider.dart';
 import 'package:kinos/util/localization_helper.dart';
@@ -126,51 +126,14 @@ class SeerrPosterCard extends ConsumerWidget {
       onSecondaryTapDown: (details) =>
           _showContextMenu(context, itemActions, ref, details.globalPosition),
       onLongPress: () => _showBottomSheet(context, itemActions, ref),
-      focusedOverlays: [
-        // Sobre au survol : cadre fin sur voile sombre, jamais une
-        // pastille pleine colorée (règle du projet, cf. FilterButton).
-        if (!poster.hasDisplayStatus &&
-            canRequest &&
-            AdaptiveLayout.inputDeviceOf(context) == InputDevice.pointer)
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xs),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.scrim.withValues(alpha: 0.55),
-                  borderRadius: AppRadii.controlBorder,
-                  border: Border.all(
-                      color: AppColors.textPrimary.withValues(alpha: 0.4)),
-                ),
-                child: InkWell(
-                  borderRadius: AppRadii.controlBorder,
-                  onTap: () => openSeerrRequestPopup(context, poster),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(IconsaxPlusLinear.add_square,
-                            color: AppColors.textPrimary, size: 18),
-                        const SizedBox(width: AppSpacing.xxs),
-                        Text(
-                          context.localized.request,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: AppColors.textPrimary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
       overlays: [
+        // La mention de l'accueil, toujours visible : plus de bouton
+        // « Demander » au survol (la demande reste au clic droit et sur
+        // la fiche).
+        // Posée au-dessus du bouton de la carte : elle laisse passer le
+        // clic.
+        if (!poster.hasDisplayStatus && canRequest)
+          const IgnorePointer(child: RequestLabel()),
         if (poster.hasDisplayStatus && !showStatus)
           Align(
             alignment: Alignment.topRight,

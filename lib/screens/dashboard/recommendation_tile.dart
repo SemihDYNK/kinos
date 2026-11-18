@@ -321,6 +321,19 @@ class RequestPoster extends StatelessWidget {
               imageErrorBuilder: (_, __, ___) => _missingPoster())
         else
           _missingPoster(),
+        const RequestLabel(),
+      ]);
+}
+
+/// La mention « + À demander » d'une jaquette, sur son voile sombre : la
+/// seule forme de l'appel à demander, partout dans l'app (accueil,
+/// Prochainement, cartes Seerr).
+class RequestLabel extends StatelessWidget {
+  const RequestLabel({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      Stack(fit: StackFit.expand, children: [
         Align(
           alignment: Alignment.bottomCenter,
           child: FractionallySizedBox(
