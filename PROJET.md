@@ -653,14 +653,15 @@ Ouverts côté code, dans un ordre de priorité suggéré :
   si souhaité.
 - **Tests sur la synchronisation/téléchargement offline** (Bugs connus
   5) — avant toute modification non triviale de cette zone.
-- **Letterboxd bloque Kinos** (constaté le 21 novembre 2026) — Cloudflare
-  renvoie 403 à toutes les requêtes du client HTTP de Kinos (amis, notes,
-  critiques, rangées d'accueil) alors qu'un navigateur passe. Pas de
-  contournement de la protection anti-robots. Voie retenue, à reprendre
-  plus tard : demander l'accès à l'API officielle de Letterboxd. Les données
-  déjà en cache restent affichées.
+- **Limite de débit Letterboxd** (21 novembre 2026) — après une rafale de
+  requêtes (premier passage des critiques et vérifications), Cloudflare a
+  renvoyé 403 pendant un moment, puis a de nouveau répondu. Le client fait
+  désormais une pause de 30 min (ou `Retry-After`) sur tout 403/429, espace
+  ses requêtes de fond de 2 s, et plafonne un passage complet des
+  critiques à 10 pages par ami. Aucun contournement de la protection
+  anti-robots. L'API officielle reste la voie propre, à demander plus tard.
 - **Critiques Letterboxd des amis** — livré le 21 novembre 2026 (lecture,
-  carte, spoilers), inopérant tant que Letterboxd bloque ; conçu ainsi : La synchronisation des amis lit aussi `<pseudo>/films/reviews/`
+  carte, spoilers) ; conçu ainsi : La synchronisation des amis lit aussi `<pseudo>/films/reviews/`
   (extrait, note, date, j'aime, spoilers ; incrémental comme les notes) ;
   texte complet lu à l'ouverture puis gardé. Sur la fiche, la cellule d'un
   ami qui a écrit porte un signe discret (trait de guillemet), extrait au

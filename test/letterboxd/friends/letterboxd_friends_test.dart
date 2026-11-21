@@ -329,4 +329,31 @@ void main() {
       expect((await store.reviewsIndex())['d']!['ana']!.id, '4');
     });
   });
+
+  group('reviews pass', () {
+    late AppDatabase db;
+    setUp(() {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      db = AppDatabase(
+          container.read(Provider<Ref>((ref) => ref)), NativeDatabase.memory());
+    });
+    tearDown(() => db.close());
+
+    test('a first pass stops at its page cap and counts as complete', () async {
+      final client = FakeClient([friend('ana')], {});
+      client.reviewPages['ana'] = [
+        for (var p = 0; p < 6; p++)
+          [LetterboxdReview(id: '$p', slug: 's$p', excerpt: 'x')]
+      ];
+      final store = LetterboxdFriendsStore(db, 'P');
+      final sync = LetterboxdFriendsSync(client, store, reviewPagesPerPass: 3);
+      await sync.syncReviews(friend('ana'), cancelled: () => false);
+      expect(client.requested,
+          ['reviews:ana:1', 'reviews:ana:2', 'reviews:ana:3']);
+      final saved = (await store.reviews('ana'))!;
+      expect(saved.reviews.length, 3);
+      expect(saved.fullAt, isNotNull);
+    });
+  });
 }

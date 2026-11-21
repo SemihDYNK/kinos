@@ -14,12 +14,23 @@ class LetterboxdUnavailable implements Exception {
   String toString() => 'LetterboxdUnavailable($status)';
 }
 
+/// Letterboxd a refusé une requête (403, 429) : trop de pages lues trop
+/// vite. Plus aucune requête ne part avant [until].
+class LetterboxdPaused extends LetterboxdUnavailable {
+  const LetterboxdPaused(super.status, this.until);
+  final DateTime until;
+  @override
+  String toString() => 'LetterboxdPaused($status, jusqu\'à $until)';
+}
+
 /// Accès en lecture aux pages publiques de letterboxd.com, une requête à la
 /// fois et espacées : on reste un visiteur discret.
 class LetterboxdFriendsClient {
   LetterboxdFriendsClient(
       {http.Client? client,
       this.spacing = const Duration(seconds: 1),
+      this.backgroundSpacing = const Duration(seconds: 2),
+      this.pause = const Duration(minutes: 30),
       this.timeout = const Duration(seconds: 20)})
       : _client = client ?? http.Client();
 
@@ -32,8 +43,25 @@ class LetterboxdFriendsClient {
   };
 
   final http.Client _client;
+
+  /// Écart minimal avant une requête attendue à l'écran.
   final Duration spacing;
+
+  /// Écart minimal avant une requête de fond (synchronisation, rangées) :
+  /// plus lent, pour ne pas déclencher la limite de débit.
+  final Duration backgroundSpacing;
+
+  /// Pause après un refus de Letterboxd (403, 429), sauf `Retry-After`.
+  final Duration pause;
   final Duration timeout;
+  DateTime? _pausedUntil;
+
+  /// Fin de la pause en cours, ou null.
+  DateTime? get pausedUntil {
+    final until = _pausedUntil;
+    return until != null && until.isAfter(DateTime.now()) ? until : null;
+  }
+
   final _urgent = Queue<_Request>();
   final _background = Queue<_Request>();
   bool _draining = false;
@@ -55,12 +83,17 @@ class LetterboxdFriendsClient {
     if (_draining) return;
     _draining = true;
     while (_urgent.isNotEmpty || _background.isNotEmpty) {
-      final next = _urgent.isNotEmpty
-          ? _urgent.removeFirst()
-          : _background.removeFirst();
+      final urgent = _urgent.isNotEmpty;
+      final next = urgent ? _urgent.removeFirst() : _background.removeFirst();
+      // En pause après un refus : rien ne part, la file se vide aussitôt.
+      if (pausedUntil case final until?) {
+        next.done.completeError(LetterboxdPaused(null, until));
+        continue;
+      }
       final last = _last;
       if (last != null) {
-        final wait = spacing - DateTime.now().difference(last);
+        final wait = (urgent ? spacing : backgroundSpacing) -
+            DateTime.now().difference(last);
         if (wait > Duration.zero) await Future<void>.delayed(wait);
       }
       _last = DateTime.now();
@@ -81,6 +114,13 @@ class LetterboxdFriendsClient {
   Future<String?> _page(String path, {bool urgent = false}) async {
     final response = await _get(base.resolve(path), urgent: urgent);
     if (response.statusCode == 404) return null;
+    if (response.statusCode == 403 || response.statusCode == 429) {
+      final retry = int.tryParse(response.headers['retry-after'] ?? '');
+      final until = DateTime.now()
+          .add(retry != null && retry > 0 ? Duration(seconds: retry) : pause);
+      _pausedUntil = until;
+      throw LetterboxdPaused(response.statusCode, until);
+    }
     if (response.statusCode != 200) {
       throw LetterboxdUnavailable(response.statusCode);
     }

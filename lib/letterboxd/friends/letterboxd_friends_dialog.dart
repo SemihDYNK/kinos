@@ -54,6 +54,8 @@ class _State extends ConsumerState<LetterboxdFriendsDialog> {
     }
     return switch (sync.error) {
       'profile' => 'Profil @${account.username} introuvable ou privé.',
+      'paused' => 'Letterboxd limite les requêtes : nouvel essai après '
+          '${TimeOfDay.fromDateTime(sync.pausedUntil ?? DateTime.now()).format(context)}.',
       'network' => 'Letterboxd ne répond pas. Nouvel essai plus tard.',
       _ => account.syncedAt == null
           ? 'Jamais synchronisé.'

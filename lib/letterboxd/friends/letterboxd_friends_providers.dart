@@ -167,13 +167,21 @@ final letterboxdFriendsFilmProvider = FutureProvider.autoDispose.family<
 /// État de la synchronisation en cours, s'il y en a une.
 class LetterboxdFriendsSyncState {
   const LetterboxdFriendsSyncState(
-      {this.running = false, this.done = 0, this.total = 0, this.error});
+      {this.running = false,
+      this.done = 0,
+      this.total = 0,
+      this.error,
+      this.pausedUntil});
   final bool running;
   final int done;
   final int total;
 
-  /// « profile » (pseudo introuvable) ou « network ».
+  /// « profile » (pseudo introuvable), « paused » (Letterboxd limite les
+  /// requêtes) ou « network ».
   final String? error;
+
+  /// Fin de la pause demandée par Letterboxd.
+  final DateTime? pausedUntil;
 }
 
 // autoDispose pour pouvoir suivre le profil actif, mais gardé en vie : une
@@ -262,6 +270,15 @@ class LetterboxdFriendsSyncController
     // Le journal d'abord : une seule requête, indépendante des amis.
     unawaited(
         ref.read(letterboxdDiarySyncProvider.notifier).sync(force: force));
+    // Letterboxd a demandé une pause : rien ne part avant sa fin.
+    final paused = ref.read(letterboxdFriendsClientProvider).pausedUntil;
+    if (paused != null) {
+      if (force && mounted) {
+        state =
+            LetterboxdFriendsSyncState(error: 'paused', pausedUntil: paused);
+      }
+      return;
+    }
     final last = account.syncedAt;
     if (!force &&
         last != null &&
@@ -291,6 +308,13 @@ class LetterboxdFriendsSyncController
     } on LetterboxdProfileNotFound {
       if (!cancelled()) {
         state = const LetterboxdFriendsSyncState(error: 'profile');
+      }
+    } on LetterboxdPaused catch (pause) {
+      _log.warning('Letterboxd limite les requêtes (${pause.status}) : '
+          'pause jusqu\'à ${pause.until}');
+      if (!cancelled()) {
+        state = LetterboxdFriendsSyncState(
+            error: 'paused', pausedUntil: pause.until);
       }
     } catch (error, stack) {
       // « Letterboxd ne répond pas » couvre tout : la vraie cause au journal.

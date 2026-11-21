@@ -20,11 +20,17 @@ class LetterboxdProfileNotFound implements Exception {
 /// compte des notes retirées.
 class LetterboxdFriendsSync {
   LetterboxdFriendsSync(this.client, this.store,
-      {this.fullEvery = const Duration(days: 30), this.maxPages = 150});
+      {this.fullEvery = const Duration(days: 30),
+      this.maxPages = 150,
+      this.reviewPagesPerPass = 10});
   final LetterboxdFriendsClient client;
   final LetterboxdFriendsStore store;
   final Duration fullEvery;
   final int maxPages;
+
+  /// Pages de critiques lues par passage complet (~12 par page) : les plus
+  /// récentes suffisent, les suivantes arrivent au fil des passes.
+  final int reviewPagesPerPass;
 
   /// [onFriend] est appelé après chaque ami enregistré (fait, total).
   Future<void> run(String username,
@@ -67,6 +73,9 @@ class LetterboxdFriendsSync {
     // autres amis, il est consigné et retenté à la prochaine passe.
     try {
       await syncReviews(friend, cancelled: cancelled);
+    } on LetterboxdPaused {
+      // Letterboxd demande une pause : on arrête tout, pas seulement lui.
+      rethrow;
     } catch (error) {
       _log.warning('Critiques de ${friend.username} illisibles : $error');
     }
@@ -87,7 +96,8 @@ class LetterboxdFriendsSync {
     };
     final fetched = <String, LetterboxdReview>{};
     var complete = false;
-    for (var page = 1; page <= maxPages; page++) {
+    final pages = full ? reviewPagesPerPass : maxPages;
+    for (var page = 1; page <= pages; page++) {
       if (cancelled()) return;
       final result = await client.reviews(friend.username, page);
       for (final review in result.items) {
@@ -97,7 +107,9 @@ class LetterboxdFriendsSync {
       }
       final nothingNew =
           !full && result.items.every((r) => known.contains(r.id));
-      if (!result.hasNext || nothingNew) {
+      // Un passage complet s'arrête au plafond : les critiques plus
+      // anciennes sont laissées, le passage compte comme terminé.
+      if (!result.hasNext || nothingNew || (full && page == pages)) {
         complete = true;
         break;
       }
