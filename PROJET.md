@@ -653,6 +653,19 @@ Ouverts côté code, dans un ordre de priorité suggéré :
   si souhaité.
 - **Tests sur la synchronisation/téléchargement offline** (Bugs connus
   5) — avant toute modification non triviale de cette zone.
+- **Critiques Letterboxd des amis** — conçu le 21 novembre 2026, aucun
+  code. La synchronisation des amis lit aussi `<pseudo>/films/reviews/`
+  (extrait, note, date, j'aime, spoilers ; incrémental comme les notes) ;
+  texte complet lu à l'ouverture puis gardé. Sur la fiche, la cellule d'un
+  ami qui a écrit porte un signe discret (trait de guillemet), extrait au
+  survol, compteur « 8 amis · 3 critiques ». Lecture : la cellule
+  s'agrandit en carte (container transform), texte en typographie
+  éditoriale, spoilers voilés, ← → d'un ami à l'autre, Échap la referme ;
+  sa propre critique en tête.
+- **Écrire une critique en fin de visionnage** — mis de côté, loin
+  (21 novembre 2026). Pas d'API d'écriture publique chez Letterboxd ; piste
+  retenue si on y revient : carte « Votre avis » en fin de film, texte
+  copié puis page Letterboxd ouverte, demande d'accès à leur API à côté.
 - **Déconnexion Discord au play** — idée notée, mis de côté, aucun code
   (vérifier `pactl list sinks` avant/pendant lecture avec Discord en
   vocal).
