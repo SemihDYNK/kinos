@@ -271,7 +271,8 @@ class LetterboxdFriendsSyncController
     unawaited(
         ref.read(letterboxdDiarySyncProvider.notifier).sync(force: force));
     // Letterboxd a demandé une pause : rien ne part avant sa fin.
-    final paused = ref.read(letterboxdFriendsClientProvider).pausedUntil;
+    final paused = ref.read(letterboxdFriendsClientProvider).pausedUntil ??
+        await store.pausedUntil();
     if (paused != null) {
       if (force && mounted) {
         state =
@@ -310,12 +311,14 @@ class LetterboxdFriendsSyncController
         state = const LetterboxdFriendsSyncState(error: 'profile');
       }
     } on LetterboxdPaused catch (pause) {
+      await store.savePause(pause.until);
       _log.warning('Letterboxd refuse ${pause.path} (${pause.status}, '
           'cf-mitigated: ${pause.challenge ?? '-'}) : pause jusqu\'à '
           '${pause.until}');
       if (!cancelled()) {
         state = LetterboxdFriendsSyncState(
-            error: 'paused', pausedUntil: pause.until);
+            error: pause.challenge == 'challenge' ? 'blocked' : 'paused',
+            pausedUntil: pause.until);
       }
     } catch (error, stack) {
       // « Letterboxd ne répond pas » couvre tout : la vraie cause au journal.

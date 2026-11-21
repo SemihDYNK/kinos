@@ -99,6 +99,17 @@ class LetterboxdFriendsStore {
         't': syncedAt.millisecondsSinceEpoch,
       });
 
+  /// Pause demandée par Letterboxd, gardée d'un lancement à l'autre.
+  Future<DateTime?> pausedUntil() async {
+    final json = await _json('pause');
+    if (json is! int) return null;
+    final until = DateTime.fromMillisecondsSinceEpoch(json);
+    return until.isAfter(DateTime.now()) ? until : null;
+  }
+
+  Future<void> savePause(DateTime until) =>
+      _put('pause', until.millisecondsSinceEpoch);
+
   /// Délie le compte et efface tout ce qui en venait.
   Future<void> clear() => db.transaction(() async {
         for (final row in await db.getSettingsForScope(scope).get()) {

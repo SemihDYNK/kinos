@@ -38,6 +38,7 @@ class LetterboxdFriendsClient {
       this.spacing = const Duration(seconds: 1),
       this.backgroundSpacing = const Duration(seconds: 2),
       this.pause = const Duration(minutes: 30),
+      this.challengePause = const Duration(hours: 24),
       this.timeout = const Duration(seconds: 20)})
       : _client = client ?? http.Client();
 
@@ -60,6 +61,9 @@ class LetterboxdFriendsClient {
 
   /// Pause après un refus de Letterboxd (403, 429), sauf `Retry-After`.
   final Duration pause;
+
+  /// Pause après une vérification anti-robots de Cloudflare.
+  final Duration challengePause;
   final Duration timeout;
   DateTime? _pausedUntil;
 
@@ -123,8 +127,14 @@ class LetterboxdFriendsClient {
     if (response.statusCode == 404) return null;
     if (response.statusCode == 403 || response.statusCode == 429) {
       final retry = int.tryParse(response.headers['retry-after'] ?? '');
-      final until = DateTime.now()
-          .add(retry != null && retry > 0 ? Duration(seconds: retry) : pause);
+      final challenge = response.headers['cf-mitigated'] == 'challenge';
+      // Une vérification anti-robots (Cloudflare) ne se lève pas en
+      // insistant : Kinos ne la contourne pas et attend une journée.
+      final until = DateTime.now().add(retry != null && retry > 0
+          ? Duration(seconds: retry)
+          : challenge
+              ? challengePause
+              : pause);
       _pausedUntil = until;
       throw LetterboxdPaused(response.statusCode, until,
           path: path, challenge: response.headers['cf-mitigated']);

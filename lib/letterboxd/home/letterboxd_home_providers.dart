@@ -160,8 +160,11 @@ class LetterboxdHomeRefreshController extends StateNotifier<bool> {
   Future<void> ensure() async {
     if (state) return;
     final store = ref.read(letterboxdHomeStoreProvider);
-    final account = await ref.read(letterboxdFriendsStoreProvider)?.account();
+    final friendsStore = ref.read(letterboxdFriendsStoreProvider);
+    final account = await friendsStore?.account();
     if (store == null || account == null || !mounted) return;
+    // Letterboxd a demandé une pause : les rangées gardent leur cache.
+    if (await friendsStore?.pausedUntil() != null) return;
     final generation = ++_generation;
     bool cancelled() => !mounted || generation != _generation;
     state = true;
