@@ -1,7 +1,11 @@
+import 'package:logging/logging.dart';
+
 import 'letterboxd_friends_client.dart';
 import 'letterboxd_friends_parser.dart';
 import 'letterboxd_friends_store.dart';
 import 'letterboxd_reviews.dart';
+
+final _log = Logger('LetterboxdFriends');
 
 /// Profil Letterboxd introuvable (pseudo erroné ou compte supprimé).
 class LetterboxdProfileNotFound implements Exception {
@@ -59,7 +63,13 @@ class LetterboxdFriendsSync {
       {required bool Function() cancelled}) async {
     await _syncRatings(friend, cancelled: cancelled);
     if (cancelled()) return;
-    await syncReviews(friend, cancelled: cancelled);
+    // Les critiques sont un plus : leur échec n'arrête pas les notes des
+    // autres amis, il est consigné et retenté à la prochaine passe.
+    try {
+      await syncReviews(friend, cancelled: cancelled);
+    } catch (error) {
+      _log.warning('Critiques de ${friend.username} illisibles : $error');
+    }
   }
 
   /// Critiques écrites : même principe que les notes — complet la première

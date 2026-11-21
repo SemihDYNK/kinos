@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 
 import 'package:kinos/jellyfin/jellyfin_open_api.enums.swagger.dart';
 import 'package:kinos/letterboxd/letterboxd_import_controller.dart'
@@ -23,6 +24,8 @@ import 'letterboxd_friends_parser.dart';
 import 'letterboxd_reviews.dart';
 import 'letterboxd_friends_store.dart';
 import 'letterboxd_friends_sync.dart';
+
+final _log = Logger('LetterboxdFriends');
 
 /// Délai minimal entre deux synchronisations automatiques.
 const letterboxdFriendsRefresh = Duration(hours: 12);
@@ -289,7 +292,10 @@ class LetterboxdFriendsSyncController
       if (!cancelled()) {
         state = const LetterboxdFriendsSyncState(error: 'profile');
       }
-    } catch (_) {
+    } catch (error, stack) {
+      // « Letterboxd ne répond pas » couvre tout : la vraie cause au journal.
+      _log.warning(
+          'Synchronisation des amis interrompue : $error', error, stack);
       if (!cancelled()) {
         state = const LetterboxdFriendsSyncState(error: 'network');
       }
