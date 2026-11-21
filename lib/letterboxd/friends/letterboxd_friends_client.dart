@@ -17,10 +17,17 @@ class LetterboxdUnavailable implements Exception {
 /// Letterboxd a refusé une requête (403, 429) : trop de pages lues trop
 /// vite. Plus aucune requête ne part avant [until].
 class LetterboxdPaused extends LetterboxdUnavailable {
-  const LetterboxdPaused(super.status, this.until);
+  const LetterboxdPaused(super.status, this.until, {this.path, this.challenge});
   final DateTime until;
+
+  /// Page refusée, et l'en-tête `cf-mitigated` de Cloudflare s'il y en a
+  /// un (`challenge` : vérification anti-robots, pas une limite de débit).
+  final String? path;
+  final String? challenge;
   @override
-  String toString() => 'LetterboxdPaused($status, jusqu\'à $until)';
+  String toString() =>
+      'LetterboxdPaused($status, ${path ?? '?'}, ${challenge ?? '-'}, '
+      'jusqu\'à $until)';
 }
 
 /// Accès en lecture aux pages publiques de letterboxd.com, une requête à la
@@ -119,7 +126,8 @@ class LetterboxdFriendsClient {
       final until = DateTime.now()
           .add(retry != null && retry > 0 ? Duration(seconds: retry) : pause);
       _pausedUntil = until;
-      throw LetterboxdPaused(response.statusCode, until);
+      throw LetterboxdPaused(response.statusCode, until,
+          path: path, challenge: response.headers['cf-mitigated']);
     }
     if (response.statusCode != 200) {
       throw LetterboxdUnavailable(response.statusCode);

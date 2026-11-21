@@ -310,8 +310,9 @@ class LetterboxdFriendsSyncController
         state = const LetterboxdFriendsSyncState(error: 'profile');
       }
     } on LetterboxdPaused catch (pause) {
-      _log.warning('Letterboxd limite les requêtes (${pause.status}) : '
-          'pause jusqu\'à ${pause.until}');
+      _log.warning('Letterboxd refuse ${pause.path} (${pause.status}, '
+          'cf-mitigated: ${pause.challenge ?? '-'}) : pause jusqu\'à '
+          '${pause.until}');
       if (!cancelled()) {
         state = LetterboxdFriendsSyncState(
             error: 'paused', pausedUntil: pause.until);
