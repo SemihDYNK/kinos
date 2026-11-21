@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:kinos/models/syncing/database_item.dart';
 
 import 'letterboxd_friends_parser.dart';
+import 'letterboxd_reviews.dart';
 
 /// Compte Letterboxd relié au profil (pseudo public, aucun secret) et état
 /// de sa dernière synchronisation.
@@ -132,6 +133,63 @@ class LetterboxdFriendsStore {
 
   Future<void> removeRatings(String username) =>
       db.deleteSetting('$_ratingsPrefix$username', scope: scope);
+
+  static const _reviewsPrefix = 'reviews:';
+
+  Future<FriendReviews?> reviews(String username) async {
+    final json = await _json('$_reviewsPrefix$username');
+    if (json is! Map || json['r'] is! Map) return null;
+    final at = json['f'];
+    return FriendReviews({
+      for (final e in (json['r'] as Map).entries)
+        if (e.key is String)
+          if (LetterboxdReview.fromJson(e.value) case final review?)
+            e.key as String: review
+    }, fullAt: at is int ? DateTime.fromMillisecondsSinceEpoch(at) : null);
+  }
+
+  Future<void> saveReviews(String username, FriendReviews reviews) =>
+      _put('$_reviewsPrefix$username', {
+        'r': {
+          for (final e in reviews.reviews.entries) e.key: e.value.toJson()
+        },
+        if (reviews.fullAt != null) 'f': reviews.fullAt!.millisecondsSinceEpoch,
+      });
+
+  Future<void> removeReviews(String username) =>
+      db.deleteSetting('$_reviewsPrefix$username', scope: scope);
+
+  /// Index slug → critiques des amis (pseudo → critique).
+  Future<Map<String, Map<String, LetterboxdReview>>> reviewsIndex() async {
+    final index = <String, Map<String, LetterboxdReview>>{};
+    for (final row in await db.getSettingsForScope(scope).get()) {
+      if (!row.key.startsWith(_reviewsPrefix)) continue;
+      final username = row.key.substring(_reviewsPrefix.length);
+      try {
+        final json = jsonDecode(row.value);
+        final reviews = json is Map ? json['r'] : null;
+        if (reviews is! Map) continue;
+        for (final e in reviews.entries) {
+          final review = LetterboxdReview.fromJson(e.value);
+          if (e.key is String && review != null) {
+            (index[e.key as String] ??= {})[username] = review;
+          }
+        }
+      } on FormatException {
+        continue;
+      }
+    }
+    return index;
+  }
+
+  /// Texte complet d'une critique, gardé une fois lu.
+  Future<String?> reviewText(String id) async {
+    final json = await _json('reviewtext:$id');
+    return json is String ? json : null;
+  }
+
+  Future<void> saveReviewText(String id, String text) =>
+      _put('reviewtext:$id', text);
 
   /// Slug déjà résolu pour un film TMDB : `(slug: null)` si Letterboxd ne
   /// le connaît pas, null si jamais demandé ou trop ancien.

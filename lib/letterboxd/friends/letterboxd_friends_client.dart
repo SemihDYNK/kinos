@@ -4,6 +4,7 @@ import 'dart:collection';
 import 'package:http/http.dart' as http;
 
 import 'letterboxd_friends_parser.dart';
+import 'letterboxd_reviews.dart';
 
 /// Erreur réseau ou réponse inattendue de letterboxd.com.
 class LetterboxdUnavailable implements Exception {
@@ -120,6 +121,21 @@ class LetterboxdFriendsClient {
   Future<String?> filmSlug(String tmdbId) async {
     final html = await _page('tmdb/$tmdbId/', urgent: true);
     return html == null ? null : filmSlugFromPage(html);
+  }
+
+  /// Une page des critiques de [username], des plus récentes aux plus
+  /// anciennes.
+  Future<LetterboxdPage<List<LetterboxdReview>>> reviews(
+      String username, int page) async {
+    final html = await _page(_paged('$username/reviews/', page));
+    if (html == null) return const LetterboxdPage([], hasNext: false);
+    return parseReviewsPage(html);
+  }
+
+  /// Texte complet de la critique [id], lu à son ouverture.
+  Future<String?> reviewText(String id) async {
+    final html = await _page('s/full-text/viewing:$id/', urgent: true);
+    return html == null ? null : letterboxdReviewText(html);
   }
 
   /// Flux RSS du journal de [username] (les ~50 dernières entrées), null

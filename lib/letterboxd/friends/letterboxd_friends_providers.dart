@@ -20,6 +20,7 @@ import 'package:kinos/providers/user_provider.dart';
 import 'letterboxd_diary.dart';
 import 'letterboxd_friends_client.dart';
 import 'letterboxd_friends_parser.dart';
+import 'letterboxd_reviews.dart';
 import 'letterboxd_friends_store.dart';
 import 'letterboxd_friends_sync.dart';
 
@@ -59,6 +60,31 @@ final letterboxdFriendsIndexProvider =
   return index;
 });
 
+/// Index slug → critiques écrites des amis (et les siennes), par pseudo.
+final letterboxdReviewsIndexProvider =
+    FutureProvider.autoDispose<Map<String, Map<String, LetterboxdReview>>>(
+        (ref) async {
+  final store = ref.watch(letterboxdFriendsStoreProvider);
+  if (store == null) return const {};
+  final index = await store.reviewsIndex();
+  ref.keepAlive();
+  return index;
+});
+
+/// Texte complet d'une critique : le cache, sinon letterboxd.com.
+final letterboxdReviewTextProvider = FutureProvider.autoDispose
+    .family<String, LetterboxdReview>((ref, review) async {
+  if (!review.truncated) return review.excerpt;
+  final store = ref.read(letterboxdFriendsStoreProvider);
+  final cached = await store?.reviewText(review.id);
+  if (cached != null) return cached;
+  final text =
+      await ref.read(letterboxdFriendsClientProvider).reviewText(review.id);
+  if (text == null || text.isEmpty) return review.excerpt;
+  await store?.saveReviewText(review.id, text);
+  return text;
+});
+
 /// Ses propres notes (slug → note sur 10), lues sur son profil public.
 final letterboxdMyRatingsProvider =
     FutureProvider.autoDispose<Map<String, int>>((ref) async {
@@ -74,9 +100,14 @@ final letterboxdMyRatingsProvider =
 /// amis de la meilleure à la moins bonne, et sa propre note (profil
 /// Letterboxd, sinon import). Null sans compte relié ou si Letterboxd ne
 /// connaît pas le film.
-final letterboxdFriendsFilmProvider = FutureProvider.autoDispose
-    .family<({String slug, List<FriendRating> ratings, int? mine})?, String>(
-        (ref, tmdbId) async {
+final letterboxdFriendsFilmProvider = FutureProvider.autoDispose.family<
+    ({
+      String slug,
+      List<FriendRating> ratings,
+      int? mine,
+      Map<String, LetterboxdReview> reviews,
+    })?,
+    String>((ref, tmdbId) async {
   // Import Letterboxd lu avant toute attente (note sur 5, demi-points).
   final imported = ref
       .watch(letterboxdSnapshotProvider)
@@ -103,7 +134,31 @@ final letterboxdFriendsFilmProvider = FutureProvider.autoDispose
     ..sort((a, b) => b.rating.compareTo(a.rating));
   final mine = (await ref.watch(letterboxdMyRatingsProvider.future))[slug] ??
       (imported == null ? null : (imported * 2).round());
-  return (slug: slug, ratings: ratings, mine: mine);
+  // Critiques écrites des amis suivis et la sienne (pseudo → critique).
+  final written =
+      (await ref.watch(letterboxdReviewsIndexProvider.future))[slug] ??
+          const <String, LetterboxdReview>{};
+  final friends = written.isEmpty
+      ? const <String, LetterboxdFriend>{}
+      : {for (final f in await store.friends()) f.username: f};
+  final reviews = {
+    for (final MapEntry(:key, :value) in written.entries)
+      if (key == account.username || friends.containsKey(key)) key: value
+  };
+  // Un ami qui a écrit sans noter le film apparaît quand même, après ceux
+  // qui l'ont noté (note de sa critique, ou aucune).
+  final rated = {for (final r in ratings) r.friend.username};
+  ratings.addAll([
+    for (final MapEntry(:key, :value) in reviews.entries)
+      if (key != account.username && !rated.contains(key))
+        (friend: friends[key]!, rating: value.rating ?? 0)
+  ]);
+  return (
+    slug: slug,
+    ratings: ratings,
+    mine: mine ?? reviews[account.username]?.rating,
+    reviews: reviews,
+  );
 });
 
 /// État de la synchronisation en cours, s'il y en a une.
@@ -177,6 +232,7 @@ class LetterboxdFriendsSyncController
       await store.saveAccount(LetterboxdFriendsAccount(username: username));
       ref.invalidate(letterboxdFriendsAccountProvider);
       ref.invalidate(letterboxdFriendsIndexProvider);
+      ref.invalidate(letterboxdReviewsIndexProvider);
       ref.invalidate(letterboxdMyRatingsProvider);
     }
     await sync(force: true);
@@ -189,6 +245,7 @@ class LetterboxdFriendsSyncController
     if (mounted) state = const LetterboxdFriendsSyncState();
     ref.invalidate(letterboxdFriendsAccountProvider);
     ref.invalidate(letterboxdFriendsIndexProvider);
+    ref.invalidate(letterboxdReviewsIndexProvider);
     ref.invalidate(letterboxdMyRatingsProvider);
   }
 
@@ -200,7 +257,8 @@ class LetterboxdFriendsSyncController
     final account = await store?.account();
     if (store == null || account == null) return;
     // Le journal d'abord : une seule requête, indépendante des amis.
-    unawaited(ref.read(letterboxdDiarySyncProvider.notifier).sync(force: force));
+    unawaited(
+        ref.read(letterboxdDiarySyncProvider.notifier).sync(force: force));
     final last = account.syncedAt;
     if (!force &&
         last != null &&
@@ -221,6 +279,7 @@ class LetterboxdFriendsSyncController
         // Les notes apparaissent au fil de l'eau, par lots.
         if (done % 5 == 0 || done == total) {
           ref.invalidate(letterboxdFriendsIndexProvider);
+          ref.invalidate(letterboxdReviewsIndexProvider);
           ref.invalidate(letterboxdMyRatingsProvider);
         }
       });
@@ -238,6 +297,7 @@ class LetterboxdFriendsSyncController
       if (!cancelled()) {
         ref.invalidate(letterboxdFriendsAccountProvider);
         ref.invalidate(letterboxdFriendsIndexProvider);
+        ref.invalidate(letterboxdReviewsIndexProvider);
         ref.invalidate(letterboxdMyRatingsProvider);
       }
     }

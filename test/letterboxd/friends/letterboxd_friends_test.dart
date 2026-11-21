@@ -5,6 +5,7 @@ import 'package:kinos/letterboxd/friends/letterboxd_friends_client.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_parser.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_store.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_sync.dart';
+import 'package:kinos/letterboxd/friends/letterboxd_reviews.dart';
 import 'package:kinos/models/syncing/database_item.dart';
 
 // Extraits fidèles à la structure de letterboxd.com (novembre 2026).
@@ -38,6 +39,17 @@ class FakeClient extends LetterboxdFriendsClient {
     requested.add('$username:$page');
     final list = pages[username] ?? const [];
     return LetterboxdPage(page <= list.length ? list[page - 1] : const {},
+        hasNext: page < list.length);
+  }
+
+  final reviewPages = <String, List<List<LetterboxdReview>>>{};
+
+  @override
+  Future<LetterboxdPage<List<LetterboxdReview>>> reviews(
+      String username, int page) async {
+    requested.add('reviews:$username:$page');
+    final list = reviewPages[username] ?? const [];
+    return LetterboxdPage(page <= list.length ? list[page - 1] : const [],
         hasNext: page < list.length);
   }
 }
@@ -192,7 +204,8 @@ void main() {
         {'heat': 9}
       ];
       await sync.run('me', cancelled: () => false);
-      expect(client.requested, ['me:1', 'ana:1', 'ana:2']);
+      expect(client.requested.where((r) => !r.startsWith('reviews:')),
+          ['me:1', 'ana:1', 'ana:2']);
       expect((await store.ratings('ana'))!.ratings,
           {'ikiru': 10, 'dune': 6, 'heat': 9, 'new': 8});
     });
@@ -245,6 +258,75 @@ void main() {
           await store.slug('1', maxAge: const Duration(days: 7)), (slug: null));
       expect(await store.slug('1', maxAge: Duration.zero), isNull);
       expect(await store.slug('2', maxAge: Duration.zero), (slug: 'ikiru'));
+    });
+  });
+
+  group('reviews', () {
+    const html = '''
+<article class="production-viewing -viewing" data-owner="ana" data-object-id="viewing:42" data-object-name="review"> <div class="react-component figure" data-item-slug="dune-part-two" data-item-link="/film/dune-part-two/"></div>
+<div class="body"><h2 class="primaryname prettify"><a href="/ana/film/dune-part-two/">Dune</a></h2>
+<span class="inline-rating"><svg class="glyph -rating" width="38" aria-label="★★★★½"><title>★★★★½</title></svg></span>
+<span class="date"><time class="timestamp" datetime="2026-03-02">2 Mar 2026</time></span>
+<div class="js-review "><div class="body-text -prose -reset js-review-body js-collapsible-text" data-full-text-url="/s/full-text/viewing:42/"><div class="collapsed-text"><p>Sand &amp; spice.</p><p>Second paragraph…</p></div></div>
+<div class="viewing-actions"><p class="like-link-target" data-format="count" data-count="12"></p></div></div></article>
+<article class="production-viewing -viewing" data-owner="ana" data-object-id="viewing:7" data-object-name="review"> <div class="react-component figure" data-item-slug="mouse"></div>
+<div class="js-review "><p class="body-text -prose js-spoiler-container"><em>This review may contain spoilers.</em></p><div class="body-text -prose -reset js-review-body js-collapsible-text" hidden><p>The end.</p></div>
+<div class="viewing-actions"></div></div></article>
+<div class="paginate-nextprev"><a class="next" href="/ana/reviews/page/2/">Next</a></div>
+''';
+
+    test('a reviews page: slug, stars, date, likes, text, spoilers', () {
+      final page = parseReviewsPage(html);
+      expect(page.hasNext, isTrue);
+      final dune = page.items.first;
+      expect(dune.id, '42');
+      expect(dune.slug, 'dune-part-two');
+      expect(dune.rating, 9);
+      expect(dune.date, DateTime(2026, 3, 2));
+      expect(dune.likes, 12);
+      expect(dune.excerpt, 'Sand & spice.\n\nSecond paragraph…');
+      expect(dune.truncated, isTrue);
+      expect(dune.path, '/ana/film/dune-part-two/');
+      final mouse = page.items.last;
+      expect(mouse.spoilers, isTrue);
+      expect(mouse.excerpt, 'The end.');
+      expect(mouse.truncated, isFalse);
+      expect(LetterboxdReview.fromJson(dune.toJson())!.excerpt, dune.excerpt);
+    });
+
+    late AppDatabase db;
+    setUp(() {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      db = AppDatabase(
+          container.read(Provider<Ref>((ref) => ref)), NativeDatabase.memory());
+    });
+    tearDown(() => db.close());
+
+    test('reviews: later passes stop at the first page with nothing new',
+        () async {
+      final client = FakeClient([friend('ana')], {});
+      LetterboxdReview r(String id, String slug) =>
+          LetterboxdReview(id: id, slug: slug, excerpt: 'x');
+      client.reviewPages['ana'] = [
+        [r('3', 'c'), r('2', 'b')],
+        [r('1', 'a')],
+      ];
+      final store = LetterboxdFriendsStore(db, 'P');
+      final sync = LetterboxdFriendsSync(client, store);
+      await sync.syncReviews(friend('ana'), cancelled: () => false);
+      expect((await store.reviews('ana'))!.reviews.keys,
+          unorderedEquals(['a', 'b', 'c']));
+      client.reviewPages['ana'] = [
+        [r('4', 'd'), r('3', 'c')],
+        [r('2', 'b')],
+        [r('1', 'a')],
+      ];
+      client.requested.clear();
+      await sync.syncReviews(friend('ana'), cancelled: () => false);
+      // Page 1 a du neuf, page 2 rien : on s'arrête là.
+      expect(client.requested, ['reviews:ana:1', 'reviews:ana:2']);
+      expect((await store.reviewsIndex())['d']!['ana']!.id, '4');
     });
   });
 }

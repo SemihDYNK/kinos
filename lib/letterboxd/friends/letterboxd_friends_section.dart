@@ -7,6 +7,8 @@ import 'package:kinos/widgets/shared/appear_in.dart';
 
 import 'letterboxd_friends_parser.dart';
 import 'letterboxd_friends_providers.dart';
+import 'letterboxd_review_card.dart';
+import 'letterboxd_reviews.dart';
 import 'letterboxd_friends_store.dart';
 
 /// « Vos amis sur Letterboxd » : avatars et notes des comptes suivis qui ont
@@ -44,9 +46,12 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
     }
     final ratings = film.ratings;
     final mine = film.mine;
-    final average = ratings.isEmpty
-        ? 0.0
-        : ratings.map((r) => r.rating).reduce((a, b) => a + b) / ratings.length;
+    final scored = [
+      for (final r in ratings)
+        if (r.rating > 0) r.rating
+    ];
+    final average =
+        scored.isEmpty ? 0.0 : scored.reduce((a, b) => a + b) / scored.length;
     // Ta cellule prend la place d'un ami : la rangée reste sur une ligne.
     final limit = AppDetailLayout.friendsVisible - (mine != null ? 1 : 0);
     final folded = ratings.length > limit;
@@ -54,6 +59,32 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
     final account = ref.watch(letterboxdFriendsAccountProvider).valueOrNull;
     final text = Theme.of(context).textTheme;
     final count = ratings.length;
+    // Les critiques écrites, dans l'ordre de la rangée : la sienne d'abord.
+    final myReview = account == null ? null : film.reviews[account.username];
+    final entries = <ReviewEntry>[
+      if (myReview != null)
+        (
+          author: LetterboxdFriend(
+              username: account!.username,
+              name: account.username,
+              avatarUrl: account.avatarUrl),
+          review: myReview,
+          mine: true
+        ),
+      for (final r in ratings)
+        if (film.reviews[r.friend.username] case final review?)
+          (author: r.friend, review: review, mine: false),
+    ];
+    final written = entries.where((e) => !e.mine).length;
+    void openReview(BuildContext cell, String username) {
+      final box = cell.findRenderObject() as RenderBox?;
+      if (box == null) return;
+      showLetterboxdReview(context,
+          entries: entries,
+          index: entries.indexWhere((e) => e.author.username == username),
+          origin: box.localToGlobal(Offset.zero) & box.size);
+    }
+
     final friends = Wrap(
       spacing: AppSpacing.xxs,
       runSpacing: AppSpacing.xxs,
@@ -62,7 +93,12 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
         // Ta photo et ta note d'abord, puis une barre verticale, puis les
         // amis.
         if (mine != null)
-          _MyRatingCell(rating: mine, slug: film.slug, account: account),
+          _MyRatingCell(
+              rating: mine,
+              slug: film.slug,
+              account: account,
+              review: myReview,
+              onOpenReview: (cell) => openReview(cell, account!.username)),
         if (mine != null && ratings.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
@@ -73,7 +109,11 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
                     color: AppColors.textPrimary.withValues(alpha: .35))),
           ),
         for (final rating in visible)
-          _FriendRatingCell(rating: rating, slug: film.slug),
+          _FriendRatingCell(
+              rating: rating,
+              slug: film.slug,
+              review: film.reviews[rating.friend.username],
+              onOpenReview: (cell) => openReview(cell, rating.friend.username)),
         if (folded)
           _MoreCell(
               label: _expanded ? 'Réduire' : '+${count - visible.length}',
@@ -101,7 +141,9 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
                 style: text.titleSmall?.copyWith(color: AppColors.textPrimary)),
             if (ratings.isNotEmpty)
               TextSpan(
-                  text: '  ·  $count ${count > 1 ? 'notes' : 'note'} · moyenne '
+                  text: '  ·  $count ${count > 1 ? 'amis' : 'ami'}'
+                      '${written > 0 ? ' · $written ${written > 1 ? 'critiques' : 'critique'}' : ''}'
+                      ' · moyenne '
                       '${(average / 2).toStringAsFixed(1).replaceAll('.', ',')} / 5',
                   style: text.bodySmall?.copyWith(
                       color: AppColors.textPrimary.withValues(alpha: .75))),
@@ -125,24 +167,47 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
   }
 }
 
+/// Infobulle d'une cellule : le nom, la note, et le début de la critique.
+String _cellTooltip(String name, int rating, LetterboxdReview? review) {
+  final excerpt = review == null || review.spoilers
+      ? null
+      : review.excerpt.split('\n').first;
+  return [
+    name,
+    if (rating > 0) letterboxdStars(rating),
+    if (review?.spoilers ?? false) 'critique (spoilers)',
+    if (excerpt != null && excerpt.isNotEmpty)
+      '« ${excerpt.length > 90 ? '${excerpt.substring(0, 90).trimRight()}…' : excerpt} »',
+  ].join(' · ');
+}
+
 class _FriendRatingCell extends StatelessWidget {
-  const _FriendRatingCell({required this.rating, required this.slug});
+  const _FriendRatingCell(
+      {required this.rating,
+      required this.slug,
+      this.review,
+      required this.onOpenReview});
   final FriendRating rating;
   final String slug;
+  final LetterboxdReview? review;
+  final void Function(BuildContext cell) onOpenReview;
 
   @override
   Widget build(BuildContext context) {
     final friend = rating.friend;
-    final stars = letterboxdStars(rating.rating);
     return Tooltip(
-      message: '${friend.name} · $stars',
+      message: _cellTooltip(friend.name, rating.rating, review),
       child: FocusRing(
         borderRadius: AppRadii.controlBorder,
-        // Ouvre l'avis (ou la note) de l'ami sur letterboxd.com.
-        onActivate: () => launchUrl(
-            context, 'https://letterboxd.com/${friend.username}/film/$slug/'),
+        // Une critique s'ouvre dans l'app ; une note seule, sur
+        // letterboxd.com.
+        onActivate: review != null
+            ? () => onOpenReview(context)
+            : () => launchUrl(context,
+                'https://letterboxd.com/${friend.username}/film/$slug/'),
         child: Semantics(
-          label: '${friend.name}, ${rating.rating / 2} sur 5',
+          label: '${friend.name}, ${rating.rating / 2} sur 5'
+              '${review != null ? ', a écrit une critique' : ''}',
           excludeSemantics: true,
           child: SizedBox(
             width: AppDetailLayout.friendCellWidth,
@@ -150,7 +215,7 @@ class _FriendRatingCell extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
               child: Column(
                 children: [
-                  _Avatar(friend: friend),
+                  _Avatar(friend: friend, review: review != null),
                   const SizedBox(height: AppSpacing.xxs),
                   // Étoiles de taille fixe : la note se lit à leur nombre,
                   // jamais à leur taille.
@@ -166,8 +231,11 @@ class _FriendRatingCell extends StatelessWidget {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.friend});
+  const _Avatar({required this.friend, this.review = false});
   final LetterboxdFriend friend;
+
+  /// Une critique écrite : une pastille-guillemet au coin de la photo.
+  final bool review;
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +243,7 @@ class _Avatar extends StatelessWidget {
         child: Text(friend.name.characters.first.toUpperCase(),
             style: Theme.of(context).textTheme.titleMedium));
     final url = friend.avatarUrl;
-    return SizedBox.square(
+    final photo = SizedBox.square(
       dimension: AppDetailLayout.friendAvatarSize,
       child: ClipOval(
         child: ColoredBox(
@@ -187,6 +255,24 @@ class _Avatar extends StatelessWidget {
         ),
       ),
     );
+    if (!review) return photo;
+    return Stack(clipBehavior: Clip.none, children: [
+      photo,
+      const Positioned(
+        right: -AppSpacing.xxs,
+        bottom: -AppSpacing.xxs,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+              color: AppColors.textPrimary, shape: BoxShape.circle),
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.xxs / 2),
+            child: Icon(Icons.format_quote_rounded,
+                size: AppDetailLayout.reviewMarkSize,
+                color: AppColors.background),
+          ),
+        ),
+      ),
+    ]);
   }
 }
 
@@ -246,22 +332,30 @@ class _Stars extends StatelessWidget {
 /// du film sur letterboxd.com quand ton pseudo est connu.
 class _MyRatingCell extends StatelessWidget {
   const _MyRatingCell(
-      {required this.rating, required this.slug, required this.account});
+      {required this.rating,
+      required this.slug,
+      required this.account,
+      this.review,
+      required this.onOpenReview});
   final int rating;
   final String slug;
   final LetterboxdFriendsAccount? account;
+  final LetterboxdReview? review;
+  final void Function(BuildContext cell) onOpenReview;
 
   @override
   Widget build(BuildContext context) {
     final username = account?.username;
     return Tooltip(
-      message: 'Vous · ${letterboxdStars(rating)}',
+      message: _cellTooltip('Vous', rating, review),
       child: FocusRing(
         borderRadius: AppRadii.controlBorder,
-        onActivate: username == null
-            ? null
-            : () => launchUrl(
-                context, 'https://letterboxd.com/$username/film/$slug/'),
+        onActivate: review != null
+            ? () => onOpenReview(context)
+            : username == null
+                ? null
+                : () => launchUrl(
+                    context, 'https://letterboxd.com/$username/film/$slug/'),
         child: Semantics(
           label: 'Votre note, ${rating / 2} sur 5',
           excludeSemantics: true,
@@ -273,6 +367,7 @@ class _MyRatingCell extends StatelessWidget {
                 children: [
                   // Ta photo Letterboxd, dans le même rond que les amis.
                   _Avatar(
+                      review: review != null,
                       friend: LetterboxdFriend(
                           username: username ?? '',
                           name: username ?? 'Vous',

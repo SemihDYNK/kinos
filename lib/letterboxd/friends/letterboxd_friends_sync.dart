@@ -1,6 +1,7 @@
 import 'letterboxd_friends_client.dart';
 import 'letterboxd_friends_parser.dart';
 import 'letterboxd_friends_store.dart';
+import 'letterboxd_reviews.dart';
 
 /// Profil Letterboxd introuvable (pseudo erroné ou compte supprimé).
 class LetterboxdProfileNotFound implements Exception {
@@ -33,6 +34,7 @@ class LetterboxdFriendsSync {
     final kept = {for (final f in friends) f.username};
     for (final gone in previous.where((f) => !kept.contains(f.username))) {
       await store.removeRatings(gone.username);
+      await store.removeReviews(gone.username);
     }
     // Ses propres notes d'abord : affichées sur les fiches, à côté de
     // celles des amis.
@@ -54,6 +56,54 @@ class LetterboxdFriendsSync {
   }
 
   Future<void> syncFriend(LetterboxdFriend friend,
+      {required bool Function() cancelled}) async {
+    await _syncRatings(friend, cancelled: cancelled);
+    if (cancelled()) return;
+    await syncReviews(friend, cancelled: cancelled);
+  }
+
+  /// Critiques écrites : même principe que les notes — complet la première
+  /// fois (et tous les [fullEvery]), puis jusqu'à la première page sans
+  /// nouveauté.
+  Future<void> syncReviews(LetterboxdFriend friend,
+      {required bool Function() cancelled}) async {
+    final cached = await store.reviews(friend.username);
+    final fullAt = cached?.fullAt;
+    final full = cached == null ||
+        fullAt == null ||
+        DateTime.now().difference(fullAt) > fullEvery;
+    final known = {
+      for (final r in cached?.reviews.values ?? const <LetterboxdReview>[]) r.id
+    };
+    final fetched = <String, LetterboxdReview>{};
+    var complete = false;
+    for (var page = 1; page <= maxPages; page++) {
+      if (cancelled()) return;
+      final result = await client.reviews(friend.username, page);
+      for (final review in result.items) {
+        // La plus récente d'abord : une critique plus ancienne du même
+        // film ne la remplace pas.
+        fetched.putIfAbsent(review.slug, () => review);
+      }
+      final nothingNew =
+          !full && result.items.every((r) => known.contains(r.id));
+      if (!result.hasNext || nothingNew) {
+        complete = true;
+        break;
+      }
+    }
+    if (full && complete) {
+      await store.saveReviews(
+          friend.username, FriendReviews(fetched, fullAt: DateTime.now()));
+    } else {
+      await store.saveReviews(
+          friend.username,
+          FriendReviews({...?cached?.reviews, ...fetched},
+              fullAt: complete && full ? DateTime.now() : fullAt));
+    }
+  }
+
+  Future<void> _syncRatings(LetterboxdFriend friend,
       {required bool Function() cancelled}) async {
     final cached = await store.ratings(friend.username);
     final fullAt = cached?.fullAt;
