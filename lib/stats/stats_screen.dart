@@ -21,6 +21,7 @@ import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/theme/palette_service.dart';
 import 'package:kinos/util/kinos_image.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 
 import 'viewing_backfill.dart';
@@ -73,6 +74,21 @@ final _bannerPaletteProvider = FutureProvider.autoDispose
     .family<HeroPalette, ({String id, ImageProvider image})>((ref, key) => ref
         .read(paletteServiceProvider)
         .forItem(itemId: key.id, image: key.image));
+
+/// La couleur des données (barres, calendrier) : la teinte du film à
+/// l'affiche, éclaircie pour se lire sur le fond. Blanc pour une teinte
+/// grise (repli sans image).
+Color statsDataColor(Color tint) {
+  final hsl = HSLColor.fromColor(tint);
+  if (hsl.saturation < AppStatsLayout.dataMinTintSaturation) {
+    return AppColors.textPrimary;
+  }
+  return hsl
+      .withLightness(AppStatsLayout.dataLightness)
+      .withSaturation(hsl.saturation.clamp(
+          AppStatsLayout.dataSaturationMin, AppStatsLayout.dataSaturationMax))
+      .toColor();
+}
 
 /// « 412 h », « 35 min ».
 String formatHours(int seconds) {
@@ -150,7 +166,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       for (final t in topRated)
         if (t.event.jellyfinId case final id?) id
     ];
-    for (final e in stats?.genreFilms.values ?? const <ViewingEvent>[]) {
+    for (final e in [
+      ...?stats?.genreFilms.values,
+      if (stats?.longestFilm case final film?) film,
+      if (stats?.mostSeen case final seen?) seen.event,
+      if (stats?.oldestFilm case final film?) film,
+    ].where((e) => e.jellyfinId != null)) {
       if (!ids.contains(e.jellyfinId)) ids.add(e.jellyfinId!);
     }
     // Le bandeau : le mieux noté de la période qui est dans la
@@ -196,6 +217,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         });
 
     final onImage = bannerImage != null;
+    final dataColor = statsDataColor(tint);
     // L'en-tête : votre photo, votre nom, et le film à l'affiche.
     final header = Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
       ClipRRect(
@@ -287,6 +309,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     ? 'heures devant l\'écran, mois par mois'
                     : 'heures devant l\'écran, jour par jour',
             child: _Bars(
+                color: dataColor,
                 values: stats.buckets,
                 height: AppStatsLayout.barsHeight,
                 highlight: stats.busiestBucket,
@@ -315,7 +338,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           section('Jour par jour',
               detail: 'une case par jour, plus claire quand vous avez '
                   'regardé davantage',
-              child: _Calendar(year: _period.year!, days: stats.days)),
+              child: _Calendar(
+                  year: _period.year!, days: stats.days, color: dataColor)),
         if (stats.genres.isNotEmpty)
           section('Genres',
               detail: 'l\'image : votre mieux noté du genre',
@@ -343,6 +367,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   detail:
                       'moyenne ${stats.average!.toStringAsFixed(1).replaceAll('.', ',')}',
                   child: _Bars(
+                      color: dataColor,
                       values: stats.ratings,
                       height: AppStatsLayout.ratingBarsHeight,
                       valueLabel: (count) => '$count',
@@ -362,22 +387,21 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         '5'
                       ])),
           ],
-          [section('Records', child: _Records(stats: stats, locale: locale))],
+          [
+            section('Records',
+                child: _Records(
+                    stats: stats,
+                    locale: locale,
+                    color: dataColor,
+                    imageOf: (e) {
+                      final item = byId[e.jellyfinId];
+                      return item?.images?.backDrop?.firstOrNull ??
+                          item?.images?.primary;
+                    }))
+          ],
         ),
-        section(
-          'Votre Wrapped ${_period.year ?? DateTime.now().year}',
-          detail: 'l\'année en quelques diapos, à partager en story · '
-              'disponible en décembre',
-          child: const SizedBox.shrink(),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.lg),
-          child: Text(
-              'Les heures sont exactes pour ce que vous regardez dans Kinos ; '
-              'pour Letterboxd et l\'historique Jellyfin, la durée du titre '
-              'compte quand il a été vu en entier.',
-              style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
-        ),
+        section('Votre Wrapped ${_period.year ?? DateTime.now().year}',
+            detail: 'disponible en décembre', child: const SizedBox.shrink()),
       ],
     ];
 
@@ -522,12 +546,14 @@ class _Numbers extends StatelessWidget {
 /// survol ([tooltip]). La mise en avant [highlight] est plus claire.
 class _Bars extends StatelessWidget {
   const _Bars(
-      {required this.values,
+      {required this.color,
+      required this.values,
       required this.height,
       required this.labels,
       this.valueLabel,
       this.tooltip,
       this.highlight});
+  final Color color;
   final List<int> values;
   final double height;
   final List<String> labels;
@@ -574,7 +600,7 @@ class _Bars extends StatelessWidget {
                           width: double.infinity,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                                color: AppColors.textPrimary.withValues(
+                                color: color.withValues(
                                     alpha: i == highlight ? 1 : .55),
                                 borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(AppSpacing.xxs))),
@@ -606,8 +632,10 @@ class _Bars extends StatelessWidget {
 /// (lundi en haut), plus claire quand on a regardé davantage, les mois
 /// au-dessus et une légende en dessous.
 class _Calendar extends StatelessWidget {
-  const _Calendar({required this.year, required this.days});
+  const _Calendar(
+      {required this.year, required this.days, required this.color});
   final int year;
+  final Color color;
   final Map<DateTime, int> days;
 
   /// Le jour [offset] après [from], en jours du calendrier : une Duration
@@ -636,7 +664,7 @@ class _Calendar extends StatelessWidget {
             dimension: size,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: AppColors.textPrimary.withValues(alpha: alpha),
+                color: color.withValues(alpha: alpha),
                 borderRadius: BorderRadius.circular(size / 5),
               ),
             ),
@@ -798,25 +826,34 @@ class _GenreTiles extends StatelessWidget {
                 builder: (context, reveal) => ClipRRect(
                   borderRadius: AppRadii.cardBorder,
                   child: Stack(fit: StackFit.expand, children: [
-                    const ColoredBox(color: AppColors.surface),
                     if (images[genre.name] case final image?)
                       Transform.scale(
                         scale: 1 + AppMotion.tileImageZoom * reveal,
                         child: KinosImage(image: image, disableBlur: true),
-                      ),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          stops: const [0, .6],
-                          colors: [
-                            AppColors.scrim.withValues(alpha: .85),
-                            AppColors.scrim.withValues(alpha: 0),
-                          ],
-                        ),
-                      ),
-                    ),
+                      )
+                    else
+                      const ColoredBox(color: AppColors.surface),
+                    // Le voile dépasse sous la tuile, coupée par son cadre :
+                    // son bord bas fractionnaire laissait sinon voir une
+                    // ligne claire de l'image.
+                    Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        bottom: -AppHeroLayout.seamGuard,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              stops: const [0, .6],
+                              colors: [
+                                AppColors.scrim.withValues(alpha: .85),
+                                AppColors.scrim.withValues(alpha: 0),
+                              ],
+                            ),
+                          ),
+                        )),
                     Positioned(
                       top: AppSpacing.xs,
                       right: AppSpacing.sm,
@@ -969,9 +1006,15 @@ class _PersonCard extends ConsumerWidget {
 /// Les records en grille de cartes (trois par rangée), à la hauteur exacte
 /// du graphe des notes posé à côté.
 class _Records extends StatelessWidget {
-  const _Records({required this.stats, required this.locale});
+  const _Records(
+      {required this.stats,
+      required this.locale,
+      required this.color,
+      required this.imageOf});
   final ViewingStats stats;
   final String locale;
+  final Color color;
+  final ImageData? Function(ViewingEvent film) imageOf;
 
   /// La hauteur du graphe des notes : valeurs, barres, écart, étiquettes.
   static const height = AppStatsLayout.ratingBarsHeight +
@@ -982,37 +1025,46 @@ class _Records extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     String day(DateTime d) => DateFormat('d MMMM', locale).format(d);
-    final cards = <(String, String)>[
+    final cards = <(String, String, ImageData?)>[
       if (stats.longestFilm case final film?)
         (
           'Plus long film',
-          '${film.title} · ${formatHours(film.runtimeSeconds ?? 0)}'
+          '${film.title} · ${formatHours(film.runtimeSeconds ?? 0)}',
+          imageOf(film)
         ),
       if (stats.mostSeen case final seen?)
-        ('Le plus revu', '${seen.event.title} · ${seen.times} fois'),
+        (
+          'Le plus revu',
+          '${seen.event.title} · ${seen.times} fois',
+          imageOf(seen.event)
+        ),
       if (stats.busiestDay case final busy?)
         (
           'Journée la plus chargée',
           '${day(busy.day)} · ${busy.titles} '
-              '${busy.titles > 1 ? 'titres' : 'titre'} · ${formatHours(busy.seconds)}'
+              '${busy.titles > 1 ? 'titres' : 'titre'} · ${formatHours(busy.seconds)}',
+          null
         ),
       if (stats.streak case final streak?)
         (
           'Plus longue série',
-          '${streak.days} jours d\'affilée · dès le ${day(streak.start)}'
+          '${streak.days} jours d\'affilée · dès le ${day(streak.start)}',
+          null
         ),
       if (stats.longestNight case final night?)
         (
           'Plus longue soirée',
-          '${night.episodes} épisodes · ${day(night.day)}'
+          '${night.episodes} épisodes · ${day(night.day)}',
+          null
         ),
       if (stats.oldestFilm case final film?)
-        ('Le plus ancien', '${film.title} · ${film.year}'),
+        ('Le plus ancien', '${film.title} · ${film.year}', imageOf(film)),
       if (stats.decade case final decade?)
         (
           'Décennie préférée',
           'Années ${decade.decade} · ${decade.films} '
-              '${decade.films > 1 ? 'films' : 'film'}'
+              '${decade.films > 1 ? 'films' : 'film'}',
+          null
         ),
     ].take(6).toList();
     if (cards.isEmpty) {
@@ -1023,34 +1075,54 @@ class _Records extends StatelessWidget {
       for (var i = 0; i < cards.length; i += 3)
         cards.sublist(i, (i + 3).clamp(0, cards.length))
     ];
-    Widget card((String, String) record) => DecoratedBox(
-          decoration: BoxDecoration(
-              color: AppColors.surface,
-              border: Border.all(color: AppColors.border),
-              borderRadius: AppRadii.cardBorder),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-            child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(record.$1,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodySmall
-                          ?.copyWith(color: AppColors.textSecondary)),
-                  const SizedBox(height: AppSpacing.xxs),
-                  Tooltip(
-                    message: record.$2,
-                    child: Text(record.$2,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.bodyMedium
-                            ?.copyWith(color: AppColors.textPrimary)),
+    // Verre dépoli sur l'image du film du record, ou sur un lavis de la
+    // couleur des données pour les records sans film.
+    Widget card((String, String, ImageData?) record) => ClipRRect(
+          borderRadius: AppRadii.cardBorder,
+          child: Stack(fit: StackFit.expand, children: [
+            if (record.$3 case final image?)
+              KinosImage(image: image, disableBlur: true)
+            else
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      color.withValues(alpha: AppStatsLayout.recordWashAlpha),
+                      color.withValues(alpha: 0),
+                    ],
                   ),
-                ]),
-          ),
+                ),
+              ),
+            FrostedSurface(
+              borderRadius: AppRadii.cardBorder,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(record.$1,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.bodySmall?.copyWith(
+                              color: AppColors.textPrimary
+                                  .withValues(alpha: .75))),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Tooltip(
+                        message: record.$2,
+                        child: Text(record.$2,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.bodyMedium
+                                ?.copyWith(color: AppColors.textPrimary)),
+                      ),
+                    ]),
+              ),
+            ),
+          ]),
         );
     return SizedBox(
       height: height,

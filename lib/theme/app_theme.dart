@@ -317,6 +317,16 @@ abstract final class AppStatsLayout {
   /// sous le bandeau (sélecteurs de période et chiffres).
   static const tintTail = 260.0;
 
+  /// Couleur des données : la teinte du film à l'affiche, éclaircie et
+  /// à saturation bornée (blanc sous [dataMinTintSaturation]).
+  static const dataLightness = .68;
+  static const dataSaturationMin = .35;
+  static const dataSaturationMax = .6;
+  static const dataMinTintSaturation = .05;
+
+  /// Lavis de couleur derrière le verre des records sans film.
+  static const recordWashAlpha = .45;
+
   /// Tuiles des genres : six par rangée, trois en fenêtre étroite.
   static const genreColumns = 6;
   static const genreNarrowColumns = 3;
