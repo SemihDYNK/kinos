@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,12 +9,14 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_parser.dart';
 import 'package:kinos/letterboxd/letterboxd_providers.dart';
 import 'package:kinos/ratings/kinos_ratings.dart';
+import 'package:kinos/stats/stats_screen.dart' show statsPersonProvider;
 import 'package:kinos/stats/viewing_log.dart';
 import 'package:kinos/stats/wrapped/film_facts.dart';
 import 'package:kinos/stats/wrapped/wrapped_data.dart';
 import 'package:kinos/stats/wrapped/wrapped_media.dart';
 import 'package:kinos/stats/wrapped/wrapped_motion.dart';
 import 'package:kinos/stats/wrapped/wikiquote.dart';
+import 'package:kinos/stats/wrapped/wrapped_export.dart';
 import 'package:kinos/stats/wrapped/wrapped_providers.dart';
 import 'package:kinos/stats/wrapped/wrapped_quotes.dart';
 import 'package:kinos/stats/wrapped/wrapped_screen.dart';
@@ -218,6 +223,67 @@ void main() {
     expect(find.text('9'), findsWidgets, reason: 'the 9 of 19… stays');
     expect(find.text('8'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the year and act recaps export as PNG stories', (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        letterboxdScopeProvider.overrideWith((ref) => null),
+        kinosRatingStoreProvider.overrideWith((ref) => null),
+        // Pas de réseau en test : ni Wikiquote, ni recherche de personnes.
+        wrappedQuoteProvider.overrideWith((ref, key) async => null),
+        statsPersonProvider.overrideWith((ref, name) async => null),
+      ],
+      child: MaterialApp(
+          theme: buildAppTheme(),
+          home: Builder(builder: (c) {
+            context = c;
+            return const SizedBox();
+          })),
+    ));
+    final w = WrappedInputs(
+        data: data(), art: const {}, tints: const {}, ratings: ratings);
+    final pages = wrappedExportPages(w.withName('Semih'), const [],
+        year: true, acts: true, allSlides: false);
+    expect([
+      for (final p in pages) p.file
+    ], [
+      '00-recap',
+      '01-acte-1-le-temps',
+      '02-acte-2-les-gouts',
+      '03-acte-3-les-films'
+    ]);
+    // Les vraies entrées-sorties passent par runAsync : dans le temps
+    // simulé du test, elles ne se terminent jamais.
+    final dir =
+        (await tester.runAsync(() => Directory.systemTemp.createTemp('w')))!;
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final files = await tester.runAsync(() => exportWrapped(context,
+        dir: dir, pages: pages, formats: {WrappedFormat.story}));
+    expect(files!.length, 4);
+    expect(tester.takeException(), isNull, reason: 'recaps');
+    final codec = await tester.runAsync(
+        () async => ui.instantiateImageCodec(await files.first.readAsBytes()));
+    expect([
+      for (final f in files) f.uri.pathSegments.last
+    ], [
+      '00-recap.png',
+      '01-acte-1-le-temps.png',
+      '02-acte-2-les-gouts.png',
+      '03-acte-3-les-films.png'
+    ]);
+    final frame = await tester.runAsync(() => codec!.getNextFrame());
+    expect((frame!.image.width, frame.image.height), (1080, 1920));
+
+    // Toutes les diapos tiennent aussi en story, dans leur état final.
+    final all = wrappedExportPages(w, buildWrappedSlides(w),
+        year: false, acts: false, allSlides: true);
+    for (final page in all) {
+      await tester.runAsync(() => exportWrapped(context,
+          dir: dir, pages: [page], formats: {WrappedFormat.story}));
+      expect(tester.takeException(), isNull, reason: page.file);
+    }
   });
 
   testWidgets('the recap holds in a 9:16 story', (tester) async {

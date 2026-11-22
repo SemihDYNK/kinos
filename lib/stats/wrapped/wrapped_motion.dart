@@ -49,26 +49,34 @@ class WrappedClock extends InheritedNotifier<Animation<double>> {
   }
 }
 
-/// Les tailles de texte d'une diapo, proportionnelles à sa hauteur.
+/// Les tailles de texte d'une diapo, proportionnelles à sa hauteur, et
+/// bornées par sa largeur : en vertical (story), le texte garde des
+/// proportions lisibles au lieu de suivre la grande hauteur.
 class WrappedType {
   WrappedType(Size size)
       : big = AppTypography.heroEditorial.copyWith(
-            fontSize: size.height * AppWrapped.bigFraction,
+            fontSize: _fit(size, AppWrapped.bigFraction),
             height: 1,
             color: AppColors.textPrimary),
         mid = AppTypography.display.copyWith(
-            fontSize: size.height * AppWrapped.midFraction,
+            fontSize: _fit(size, AppWrapped.midFraction),
             height: 1.15,
             color: AppColors.textPrimary),
         small = AppTypography.body.copyWith(
             fontSize: math.max(
-                AppWrapped.minSmall, size.height * AppWrapped.smallFraction),
+                AppWrapped.minSmall, _fit(size, AppWrapped.smallFraction)),
             height: 1.5,
             color: AppColors.textPrimary.withValues(alpha: .75)),
         cap = AppTypography.overline.copyWith(
-            fontSize: math.max(
-                AppWrapped.minCap, size.height * AppWrapped.capFraction),
+            fontSize:
+                math.max(AppWrapped.minCap, _fit(size, AppWrapped.capFraction)),
             color: AppColors.textPrimary.withValues(alpha: .75));
+
+  /// Une fraction de la hauteur, sans dépasser la même proportion d'une
+  /// largeur au format 16:9.
+  static double _fit(Size size, double fraction) =>
+      math.min(size.height, size.width * 9 / 16 * AppWrapped.storyTextScale) *
+      fraction;
 
   final TextStyle big;
   final TextStyle mid;
@@ -254,8 +262,13 @@ class WrappedTextBlock extends StatelessWidget {
             child: Align(
               alignment: alignment,
               child: ConstrainedBox(
+                // En vertical (story), le texte prend presque toute la
+                // largeur.
                 constraints: BoxConstraints(
-                    maxWidth: constraints.maxWidth * widthFraction),
+                    maxWidth: constraints.maxWidth *
+                        (constraints.maxHeight > constraints.maxWidth
+                            ? .84
+                            : widthFraction)),
                 child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: crossAxisAlignment,

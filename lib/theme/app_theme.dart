@@ -333,6 +333,10 @@ abstract final class AppWrapped {
   static const minCap = 11.0;
   static const minSmall = 13.0;
 
+  /// En vertical, le texte suit la largeur : sa taille est celle d'une
+  /// diapo 16:9 de même largeur, agrandie de ce facteur.
+  static const storyTextScale = 1.5;
+
   /// La frise : hauteur des affiches (fraction de la diapo), écart, vitesse
   /// au-delà de laquelle l'image du film central s'efface (films par
   /// seconde), et sa place une fois rangée.
@@ -365,6 +369,9 @@ abstract final class AppWrapped {
   /// bannière, et le retard de son texte, qui attend la place libérée.
   static const recapShift = 1.6;
   static const recapJoin = 1.8;
+
+  /// Largeur du panneau d'export.
+  static const exportWidth = 440.0;
 
   /// Portraits et avatars.
   static const portraitFraction = .42;

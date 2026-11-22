@@ -6,9 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/ratings/kinos_ratings.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 
+import 'wrapped_export.dart';
 import 'wrapped_media.dart';
 import 'wrapped_motion.dart';
 import 'wrapped_providers.dart';
@@ -42,6 +45,9 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
 
   /// Lecture automatique : chaque diapo passe à la suivante à sa fin.
   bool _auto = false;
+
+  /// Le panneau d'export est ouvert (E, ou le bouton en haut à droite).
+  bool _exporting = false;
 
   /// La diapo qu'on vient de quitter en avançant, et l'avancée de son
   /// horloge : cf. [WrappedEntry].
@@ -111,6 +117,16 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
     });
   }
 
+  void _openExport() => setState(() {
+        _exporting = true;
+        _auto = false;
+      });
+
+  void _closeExport() {
+    setState(() => _exporting = false);
+    _focus.requestFocus();
+  }
+
   void _toggleAuto(List<WrappedSlide> slides) {
     setState(() => _auto = !_auto);
     // Une diapo déjà finie passe tout de suite à la suivante.
@@ -123,7 +139,15 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
     }
     _showHint();
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowRight ||
+    if (_exporting) {
+      // Le panneau garde le clavier ; Échap le referme.
+      if (key != LogicalKeyboardKey.escape) return KeyEventResult.ignored;
+      _closeExport();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.keyE) {
+      _openExport();
+    } else if (key == LogicalKeyboardKey.arrowRight ||
         key == LogicalKeyboardKey.enter) {
       _go(slides, 1);
     } else if (key == LogicalKeyboardKey.arrowLeft) {
@@ -157,13 +181,12 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => unawaited(_warm(art.value!)));
     }
-    final slides = !ready
-        ? const <WrappedSlide>[]
-        : buildWrappedSlides(WrappedInputs(
-            data: data.value!,
-            art: art.value!,
-            tints: tints,
-            ratings: ratings));
+    final inputs = !ready
+        ? null
+        : WrappedInputs(
+            data: data.value!, art: art.value!, tints: tints, ratings: ratings);
+    final slides =
+        inputs == null ? const <WrappedSlide>[] : buildWrappedSlides(inputs);
     final index = slides.indexWhere((s) => s.id == _current);
     final current = slides.isEmpty ? null : slides[index < 0 ? 0 : index];
     final motion = AppMotion.enabled(context);
@@ -225,11 +248,17 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
                           current: slides.indexOf(current),
                           progress: _progress),
                       _Controls(
-                        visible: _hint,
+                        visible: _hint && !_exporting,
+                        onExport: _openExport,
                         auto: _auto,
                         onAuto: () => _toggleAuto(slides),
                         onClose: () => context.router.maybePop(),
                       ),
+                      if (_exporting && inputs != null)
+                        _ExportPanel(
+                            inputs: inputs,
+                            slides: slides,
+                            onClose: _closeExport),
                     ]),
         ),
       ),
@@ -343,8 +372,10 @@ class _Controls extends StatelessWidget {
       {required this.visible,
       required this.auto,
       required this.onAuto,
+      required this.onExport,
       required this.onClose});
   final bool visible;
+  final VoidCallback onExport;
   final bool auto;
   final VoidCallback onAuto;
   final VoidCallback onClose;
@@ -380,6 +411,7 @@ class _Controls extends StatelessWidget {
                     ? 'Arrêter la lecture automatique (Espace)'
                     : 'Lecture automatique (Espace)',
                 onAuto),
+            button(Icons.ios_share_rounded, 'Exporter (E)', onExport),
             button(Icons.close_rounded, 'Fermer (Échap)', onClose),
           ]),
         ),
@@ -388,11 +420,160 @@ class _Controls extends StatelessWidget {
           bottom: AppSpacing.lg,
           child: IgnorePointer(
             child: Text(
-                '← →  naviguer   ·   Espace  lecture auto   ·   Échap  quitter',
+                '← →  naviguer   ·   Espace  lecture auto   ·   E  exporter   ·   Échap  quitter',
                 style: hint),
           ),
         ),
       ]),
+    );
+  }
+}
+
+/// Le panneau d'export, en verre dépoli au-dessus du Wrapped : quelles
+/// pages (le récap de l'année, ceux des actes, toutes les diapos), quels
+/// formats (story, écran), le nom ou non, puis les PNG dans le dossier
+/// d'images. Tout se règle au clavier ; Échap le referme.
+class _ExportPanel extends ConsumerStatefulWidget {
+  const _ExportPanel(
+      {required this.inputs, required this.slides, required this.onClose});
+  final WrappedInputs inputs;
+  final List<WrappedSlide> slides;
+  final VoidCallback onClose;
+
+  @override
+  ConsumerState<_ExportPanel> createState() => _ExportPanelState();
+}
+
+class _ExportPanelState extends ConsumerState<_ExportPanel> {
+  bool _year = true;
+  bool _acts = true;
+  bool _slides = false;
+  final _formats = {WrappedFormat.story};
+  bool _name = false;
+  (int, int)? _progress;
+  Directory? _done;
+  String? _error;
+
+  List<WrappedPage> _pages() => wrappedExportPages(
+      widget.inputs.withName(_name ? ref.read(userProvider)?.name : null),
+      widget.slides,
+      year: _year,
+      acts: _acts,
+      allSlides: _slides);
+
+  Future<void> _export() async {
+    final pages = _pages();
+    if (pages.isEmpty || _formats.isEmpty) return;
+    setState(() {
+      _progress = (0, pages.length * _formats.length);
+      _done = null;
+      _error = null;
+    });
+    try {
+      final dir = await wrappedExportDirectory(widget.inputs.data.year);
+      if (!mounted) return;
+      await exportWrapped(context, dir: dir, pages: pages, formats: _formats,
+          onProgress: (done, total) {
+        if (mounted) setState(() => _progress = (done, total));
+      });
+      if (mounted) setState(() => _done = dir);
+    } catch (error) {
+      if (mounted) setState(() => _error = '$error');
+    } finally {
+      if (mounted) setState(() => _progress = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final busy = _progress != null;
+    final count = _pages().length * _formats.length;
+    Widget check(String label, bool value, ValueChanged<bool> onChanged,
+            {bool autofocus = false}) =>
+        CheckboxListTile(
+          autofocus: autofocus,
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: Text(label),
+          value: value,
+          onChanged: busy ? null : (v) => setState(() => onChanged(v ?? false)),
+        );
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppWrapped.exportWidth),
+        child: FrostedSurface(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: FocusTraversalGroup(
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Exporter votre Wrapped', style: text.titleLarge),
+                    const SizedBox(height: AppSpacing.md),
+                    Text('Pages',
+                        style: text.labelMedium
+                            ?.copyWith(color: AppColors.textSecondary)),
+                    check('Le récap de l\'année', _year, (v) => _year = v,
+                        autofocus: true),
+                    check('Un récap par acte (le temps, les goûts, les films)',
+                        _acts, (v) => _acts = v),
+                    check('Toutes les diapos', _slides, (v) => _slides = v),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text('Formats',
+                        style: text.labelMedium
+                            ?.copyWith(color: AppColors.textSecondary)),
+                    check(
+                        'Story (9:16)',
+                        _formats.contains(WrappedFormat.story),
+                        (v) => v
+                            ? _formats.add(WrappedFormat.story)
+                            : _formats.remove(WrappedFormat.story)),
+                    check(
+                        'Écran (16:9)',
+                        _formats.contains(WrappedFormat.screen),
+                        (v) => v
+                            ? _formats.add(WrappedFormat.screen)
+                            : _formats.remove(WrappedFormat.screen)),
+                    const SizedBox(height: AppSpacing.sm),
+                    check('Afficher mon nom', _name, (v) => _name = v),
+                    const SizedBox(height: AppSpacing.md),
+                    if (_progress case (final done, final total))
+                      Text(
+                          'Image ${done + 1 > total ? total : done + 1} sur $total…',
+                          style: text.bodyMedium)
+                    else if (_done case final dir?)
+                      Text('Enregistré dans ${dir.path}',
+                          style: text.bodyMedium
+                              ?.copyWith(color: AppColors.textSecondary))
+                    else if (_error case final error?)
+                      Text('L\'export a échoué : $error',
+                          style: text.bodyMedium),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: [
+                          FilledButton(
+                              onPressed: busy || count == 0 ? null : _export,
+                              child: Text(count == 0
+                                  ? 'Rien à exporter'
+                                  : 'Exporter ($count ${count > 1 ? 'images' : 'image'})')),
+                          if (_done case final dir?)
+                            OutlinedButton(
+                                onPressed: () => openWrappedDirectory(dir),
+                                child: const Text('Ouvrir le dossier')),
+                          TextButton(
+                              onPressed: busy ? null : widget.onClose,
+                              child: const Text('Fermer (Échap)')),
+                        ]),
+                  ]),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

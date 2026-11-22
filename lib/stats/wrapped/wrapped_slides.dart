@@ -19,6 +19,7 @@ import '../stats_screen.dart'
     show formatHours, statsDataColor, statsPersonProvider;
 import '../viewing_log.dart';
 import 'wrapped_data.dart';
+import 'wrapped_export.dart' show WrappedPage;
 import 'wrapped_media.dart';
 import 'wrapped_motion.dart';
 import 'wrapped_quotes.dart';
@@ -39,11 +40,18 @@ class WrappedInputs {
       {required this.data,
       required this.art,
       required this.tints,
-      required this.ratings});
+      required this.ratings,
+      this.userName});
   final WrappedData data;
   final Map<String, WrappedArt> art;
   final Map<String, Color> tints;
   final Map<String, KinosRating> ratings;
+
+  /// Le nom affiché sur les pages de synthèse (à l'export, si demandé).
+  final String? userName;
+
+  WrappedInputs withName(String? name) => WrappedInputs(
+      data: data, art: art, tints: tints, ratings: ratings, userName: name);
 
   ImageData? backdrop(ViewingEvent e) => art[e.identity]?.backdrop;
   ImageData? poster(ViewingEvent e) => art[e.identity]?.poster;
@@ -346,7 +354,10 @@ class _PosterWall extends StatelessWidget {
     return LayoutBuilder(builder: (context, c) {
       final width = c.maxWidth * 1.7;
       final posterW = width / AppWrapped.wallColumns;
-      final rows = (c.maxHeight * 1.9 / (posterW * 1.5)).ceil();
+      // Autant de rangées que la hauteur du mur en contient, marges
+      // comprises.
+      final rowH = (posterW - AppSpacing.xxs * 2) * 1.5 + AppSpacing.xxs * 2;
+      final rows = (c.maxHeight * 1.9 / rowH).floor();
       var k = 0;
       return ClipRect(
         child: OverflowBox(
@@ -1115,70 +1126,83 @@ class _PersonSlide extends ConsumerWidget {
     final portrait = WrappedClock.at(context, 1, length: 2.4);
     final titles = [for (final e in films.take(2)) e.title];
     return _Frame(builder: (context, size, type) {
-      final h = size.height * AppWrapped.portraitFraction;
+      final vertical = size.height > size.width;
+      final h = size.height * (vertical ? .3 : AppWrapped.portraitFraction);
       return [
         CyclingBackdrops(images),
         const WrappedScrim(),
         Padding(
           padding:
               EdgeInsets.symmetric(horizontal: size.width * AppWrapped.inset),
-          child: Row(children: [
-            if (person?.image case final image?) ...[
-              Opacity(
-                opacity: portrait,
-                child: ClipRRect(
-                  borderRadius: AppRadii.cardBorder,
-                  child: SizedBox(
-                    height: h,
-                    width: h * 3 / 4,
-                    child: KinosImage(
-                        image: ImageData(
-                            path: tmdbImage(image, size: 'h632'),
-                            key: 'wrapped:person:${person!.id}'),
-                        alignment: Alignment.topCenter,
-                        disableBlur: true),
+          // En vertical (story), le portrait passe au-dessus du texte.
+          child: Flex(
+              direction: vertical ? Axis.vertical : Axis.horizontal,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: vertical
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.center,
+              children: [
+                if (person?.image case final image?) ...[
+                  Opacity(
+                    opacity: portrait,
+                    child: ClipRRect(
+                      borderRadius: AppRadii.cardBorder,
+                      child: SizedBox(
+                        height: h,
+                        width: h * 3 / 4,
+                        child: KinosImage(
+                            image: ImageData(
+                                path: tmdbImage(image, size: 'h632'),
+                                key: 'wrapped:person:${person!.id}'),
+                            alignment: Alignment.topCenter,
+                            disableBlur: true),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              SizedBox(width: size.width * .05),
-            ],
-            Expanded(
-              child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    WrappedText(label, style: type.cap, at: 1.8, caps: true),
-                    SizedBox(height: size.height * .02),
-                    WrappedText(name, style: type.mid, at: 2.8, maxLines: 2),
-                    SizedBox(height: size.height * .02),
-                    WrappedText(
-                        '${_films(films.length)} cette année'
-                        '${titles.isEmpty ? '' : ', dont ${_list(titles)}'}.',
-                        style: type.small,
-                        at: 4),
-                    if (quote != null) ...[
-                      SizedBox(height: size.height * .045),
-                      WrappedText(
-                          quote.language == 'fr'
-                              ? '« ${quote.text} »'
-                              : '“${quote.text}”',
-                          style: type.small.copyWith(
-                              color: AppColors.textPrimary,
-                              fontStyle: FontStyle.italic,
-                              fontSize: type.small.fontSize! * 1.3),
-                          at: 5.4),
-                      if (quote.role != null) ...[
-                        SizedBox(height: size.height * .012),
+                  vertical
+                      ? SizedBox(height: size.height * .04)
+                      : SizedBox(width: size.width * .05),
+                ],
+                Flexible(
+                  fit: vertical ? FlexFit.loose : FlexFit.tight,
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        WrappedText(label,
+                            style: type.cap, at: 1.8, caps: true),
+                        SizedBox(height: size.height * .02),
+                        WrappedText(name,
+                            style: type.mid, at: 2.8, maxLines: 2),
+                        SizedBox(height: size.height * .02),
                         WrappedText(
-                            '${quote.role}${quote.film == null ? '' : ' · ${quote.film}'}',
-                            style: type.cap,
-                            at: 6.4,
-                            caps: true),
-                      ],
-                    ],
-                  ]),
-            ),
-          ]),
+                            '${_films(films.length)} cette année'
+                            '${titles.isEmpty ? '' : ', dont ${_list(titles)}'}.',
+                            style: type.small,
+                            at: 4),
+                        if (quote != null) ...[
+                          SizedBox(height: size.height * .045),
+                          WrappedText(
+                              quote.language == 'fr'
+                                  ? '« ${quote.text} »'
+                                  : '“${quote.text}”',
+                              style: type.small.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: type.small.fontSize! * 1.3),
+                              at: 5.4),
+                          if (quote.role != null) ...[
+                            SizedBox(height: size.height * .012),
+                            WrappedText(
+                                '${quote.role}${quote.film == null ? '' : ' · ${quote.film}'}',
+                                style: type.cap,
+                                at: 6.4,
+                                caps: true),
+                          ],
+                        ],
+                      ]),
+                ),
+              ]),
         ),
       ];
     });
@@ -1519,22 +1543,185 @@ class _FilmOfYearSlide extends StatelessWidget {
   }
 }
 
-/// Le récap : le film de l'année en bannière, quatre affiches et quatre
-/// chiffres. Conçu d'abord en vertical (story), décliné en paysage.
+/// Ce qu'une page de synthèse montre : une bannière, un intitulé, un titre
+/// et sa ligne, quatre affiches et quatre chiffres. Le récap de l'année et
+/// ceux de chaque acte partagent cette forme.
+class WrappedSummary {
+  const WrappedSummary({
+    required this.label,
+    required this.headline,
+    this.sub,
+    this.banner,
+    this.posters = const [],
+    this.numbers = const [],
+    this.continuesFilmOfYear = false,
+  });
+  final String label;
+  final String headline;
+  final String? sub;
+  final ImageData? banner;
+  final List<ImageData> posters;
+  final List<(String value, String label)> numbers;
+
+  /// Le récap de l'année : il prolonge la diapo du film de l'année.
+  final bool continuesFilmOfYear;
+}
+
+List<ImageData> _postersOf(WrappedInputs w, Iterable<ViewingEvent> films) => [
+      for (final e in films)
+        if (w.poster(e) case final image?) image
+    ].take(4).toList();
+
+String _lastName(String name) => name.split(' ').last;
+
+/// Le récap de l'année : le film de l'année, ses quatre suivants, et
+/// l'année en quatre chiffres.
+WrappedSummary yearSummary(WrappedInputs w) {
+  final stats = w.data.stats;
+  final best = w.data.filmOfYear;
+  return WrappedSummary(
+    label: 'Film de l\'année',
+    headline: best?.event.title ?? '${stats.films} films',
+    sub: best == null ? null : formatStars(best.rating),
+    banner: best == null ? null : w.backdrop(best.event),
+    posters: _postersOf(w, [for (final r in w.data.runnersUp) r.event]),
+    numbers: [
+      ('${stats.films}', 'films'),
+      (formatHours(stats.seconds), 'devant l\'écran'),
+      (stats.genres.firstOrNull?.name ?? '—', 'genre de l\'année'),
+      (
+        _lastName(stats.directors.firstOrNull?.name ?? '—'),
+        'réalisateur de l\'année'
+      ),
+    ],
+    continuesFilmOfYear: best != null,
+  );
+}
+
+/// Acte I, le temps : les heures, le mois le plus chargé, la série.
+WrappedSummary timeSummary(WrappedInputs w) {
+  final data = w.data;
+  final stats = data.stats;
+  final peak = stats.busiestBucket;
+  final peakFilms = [
+    for (final e in data.timeline)
+      if (peak != null && e.at.month - 1 == peak) e
+  ]..sort((a, b) => (w.rating(b) ?? 0).compareTo(w.rating(a) ?? 0));
+  final lead = peakFilms.firstOrNull ?? data.timeline.lastOrNull;
+  return WrappedSummary(
+    label: 'Acte I · Le temps',
+    headline: formatHours(stats.seconds).replaceFirst(' h', ' heures'),
+    sub: 'devant l\'écran en ${data.year}${_daysPhrase(stats.seconds)}',
+    banner: lead == null ? null : w.backdrop(lead),
+    posters: _postersOf(w, [...peakFilms.skip(1), ...data.timeline.reversed]),
+    numbers: [
+      ('${stats.films}', 'films'),
+      if (stats.episodes > 0)
+        ('${stats.episodes}', 'épisodes')
+      else
+        ('${stats.elsewhere}', 'vus ailleurs'),
+      if (peak != null)
+        (
+          toBeginningOfSentenceCase(DateFormat('MMMM', _locale)
+              .format(DateTime(data.year, peak + 1))),
+          'mois le plus chargé'
+        ),
+      if (stats.streak case final streak?)
+        ('${streak.days} jours', 'plus longue série')
+      else if (stats.busiestDay case final day?)
+        (
+          DateFormat('d MMMM', _locale).format(day.day),
+          'journée la plus chargée'
+        ),
+    ],
+  );
+}
+
+/// Acte II, les goûts : le genre, le réalisateur, l'acteur, les notes.
+WrappedSummary tasteSummary(WrappedInputs w) {
+  final data = w.data;
+  final stats = data.stats;
+  final genre = stats.genres.firstOrNull;
+  final films = [...data.genreFilms]
+    ..sort((a, b) => (w.rating(b) ?? 0).compareTo(w.rating(a) ?? 0));
+  var mode = -1;
+  for (var i = 0; i < 10; i++) {
+    if (stats.ratings[i] > 0 &&
+        (mode < 0 || stats.ratings[i] >= stats.ratings[mode])) {
+      mode = i;
+    }
+  }
+  return WrappedSummary(
+    label: 'Acte II · Les goûts',
+    headline: genre?.name ?? 'Vos goûts',
+    sub: genre == null ? null : '${_films(genre.count)} cette année',
+    banner: films.isEmpty ? null : w.backdrop(films.first),
+    posters: _postersOf(w, data.directorFilms),
+    numbers: [
+      if (stats.directors.firstOrNull case final d?)
+        (_lastName(d.name), 'réalisateur'),
+      if (stats.actors.firstOrNull case final a?) (_lastName(a.name), 'acteur'),
+      if (stats.average case final average?)
+        (NumberFormat('0.0', _locale).format(average), 'note moyenne'),
+      if (mode >= 0) (formatStars(mode + 1), 'note la plus donnée'),
+    ],
+  );
+}
+
+/// Acte III, les films : le plus vieux voyage, les époques, l'ailleurs.
+WrappedSummary filmsSummary(WrappedInputs w) {
+  final data = w.data;
+  final stats = data.stats;
+  final oldest = data.voyage.lastOrNull;
+  final decades = <int, List<ViewingEvent>>{};
+  for (final e in data.voyage) {
+    (decades[e.year! ~/ 10 * 10] ??= []).add(e);
+  }
+  final favourite = decades.entries.fold<MapEntry<int, List<ViewingEvent>>?>(
+      null, (a, b) => a == null || b.value.length > a.value.length ? b : a);
+  final byEra = [
+    for (final d in (decades.keys.toList()..sort((a, b) => b.compareTo(a))))
+      decades[d]!.first
+  ];
+  return WrappedSummary(
+    label: 'Acte III · Les films',
+    headline: oldest == null
+        ? '${stats.films} films'
+        : '${oldest.title} · ${oldest.year}',
+    sub: oldest == null ? null : 'votre plus vieux voyage',
+    banner: oldest == null ? null : w.backdrop(oldest),
+    posters: _postersOf(w, byEra),
+    numbers: [
+      if (favourite != null) ('Années ${favourite.key}', 'décennie préférée'),
+      if (data.medianYear case final median?) ('$median', 'film moyen'),
+      ('${stats.elsewhere}', 'vus ailleurs'),
+      ('${stats.ratings.fold(0, (a, b) => a + b)}', 'films notés'),
+    ],
+  );
+}
+
+/// Une page de synthèse : la bannière à gauche (en haut en vertical), qui
+/// se fond dans le noir, et à droite l'intitulé, le titre, quatre affiches
+/// et quatre chiffres. Conçue d'abord en vertical (story).
 class WrappedRecap extends StatelessWidget {
-  const WrappedRecap({required this.inputs, super.key});
+  const WrappedRecap({required this.inputs, this.summary, super.key});
   final WrappedInputs inputs;
+
+  /// Le récap de l'année par défaut ([yearSummary]).
+  final WrappedSummary? summary;
 
   @override
   Widget build(BuildContext context) {
     final data = inputs.data;
     final stats = data.stats;
+    final content = summary ?? yearSummary(inputs);
     final best = data.filmOfYear;
     // Arrivé du film de l'année : on reprend son image où elle en était,
-    // son texte s'efface, la bannière glisse et se recadre à gauche, puis
-    // le récap s'installe dans la place libérée.
+    // son texte s'efface, la bannière glisse à gauche, puis le récap
+    // s'installe dans la place libérée.
     final entry = WrappedEntry.of(context);
     final joined = WrappedClock.motionOf(context) &&
+        content.continuesFilmOfYear &&
         entry?.from == 'film-of-year' &&
         best != null;
     final d = joined ? AppWrapped.recapJoin : 0.0;
@@ -1547,76 +1734,67 @@ class WrappedRecap extends StatelessWidget {
         1 + AppWrapped.kenBurns * 1.4 * (joined ? entry!.progress : 0);
     return _Frame(builder: (context, size, type) {
       final portrait = size.height > size.width;
-      final posters = [
-        for (final r in data.runnersUp)
-          if (inputs.poster(r.event) case final image?) image
-      ];
-      Widget number(String value, String label, double at) => Column(
+      final posters = content.posters;
+      Widget number((String, String) n, double at) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                WrappedText(value, style: type.mid, at: at + d, maxLines: 1),
-                WrappedText(label, style: type.small, at: at + d + .2),
+                WrappedText(n.$1, style: type.mid, at: at + d, maxLines: 1),
+                WrappedText(n.$2, style: type.small, at: at + d + .2),
               ]);
+      final numbers = content.numbers.take(4).toList();
       final details = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (best != null) ...[
-              WrappedText('Film de l\'année', style: type.small, at: 1 + d),
-              WrappedText(best.event.title,
-                  style: type.mid.copyWith(
-                      fontSize: type.mid.fontSize! * (portrait ? 1.2 : 1)),
-                  at: 1.4 + d,
-                  maxLines: 2),
-              WrappedText(formatStars(best.rating),
+            WrappedText(content.label, style: type.small, at: 1 + d),
+            WrappedText(content.headline,
+                style: type.mid.copyWith(
+                    fontSize: type.mid.fontSize! * (portrait ? 1.2 : 1)),
+                at: 1.4 + d,
+                maxLines: 2),
+            if (content.sub case final sub?)
+              WrappedText(sub,
                   style: type.small.copyWith(color: AppColors.textPrimary),
                   at: 1.8 + d),
-            ],
-            SizedBox(height: size.height * .03),
-            Row(children: [
-              for (final (n, image) in posters.indexed) ...[
-                if (n > 0) const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Opacity(
-                    opacity: WrappedClock.at(context, 2.4 + d + n * .3),
-                    child: AspectRatio(
-                      aspectRatio: 2 / 3,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(AppSpacing.xxs),
-                        child: KinosImage(image: image, disableBlur: true),
+            if (posters.isNotEmpty) ...[
+              SizedBox(height: size.height * .03),
+              Row(children: [
+                for (final (n, image) in posters.indexed) ...[
+                  if (n > 0) const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Opacity(
+                      opacity: WrappedClock.at(context, 2.4 + d + n * .3),
+                      child: AspectRatio(
+                        aspectRatio: 2 / 3,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(AppSpacing.xxs),
+                          child: KinosImage(image: image, disableBlur: true),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-              for (var n = posters.length; n < 4; n++) ...[
-                const SizedBox(width: AppSpacing.xs),
-                const Expanded(child: SizedBox()),
-              ],
-            ]),
-            SizedBox(height: size.height * .035),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: number('${stats.films}', 'films', 4)),
-              Expanded(
-                  child: number(
-                      formatHours(stats.seconds), 'devant l\'écran', 4.3)),
-            ]),
-            SizedBox(height: size.height * .025),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(
-                  child: number(stats.genres.firstOrNull?.name ?? '—',
-                      'genre de l\'année', 4.6)),
-              Expanded(
-                  child: number(
-                      stats.directors.firstOrNull?.name.split(' ').last ?? '—',
-                      'réalisateur de l\'année',
-                      4.9)),
-            ]),
+                ],
+                for (var n = posters.length; n < 4; n++) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  const Expanded(child: SizedBox()),
+                ],
+              ]),
+            ],
+            for (var row = 0; row < numbers.length; row += 2) ...[
+              SizedBox(height: size.height * (row == 0 ? .035 : .025)),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: number(numbers[row], 4 + row * .3)),
+                Expanded(
+                    child: row + 1 < numbers.length
+                        ? number(numbers[row + 1], 4.3 + row * .3)
+                        : const SizedBox()),
+              ]),
+            ],
           ]);
-      final banner = best == null
+      final banner = content.banner == null
           ? const ColoredBox(color: AppColors.heroFallback)
-          : WrappedImage(inputs.backdrop(best.event));
+          : WrappedImage(content.banner);
       // L'image reste visible sur [reach] de la diapo : le dégradé vers le
       // noir couvre toute la diapo et atteint le noir plein bien avant le
       // bord de l'image, décalée vers la gauche. Aucun bord d'image ne
@@ -1633,6 +1811,10 @@ class WrappedRecap extends StatelessWidget {
         ],
       );
       final pad = size.width * (portrait ? .07 : AppWrapped.inset * .7);
+      final header = [
+        'Kinos · ${data.year}',
+        if (inputs.userName case final name?) name,
+      ].join(' · ');
       return [
         // L'image garde la taille du plein cadre et glisse simplement vers
         // la gauche (vers le haut en vertical) ; le dégradé noir couvre ce
@@ -1679,17 +1861,65 @@ class WrappedRecap extends StatelessWidget {
         Positioned(
           left: pad,
           top: pad,
-          child: WrappedText('Kinos · ${data.year}',
-              style: type.cap, at: .4 + d, caps: true),
+          child: WrappedText(header, style: type.cap, at: .4 + d, caps: true),
         ),
         Positioned(
           left: portrait ? pad : size.width * .56,
           right: pad,
           bottom: pad,
           top: portrait ? size.height * .4 : pad * 2,
-          child: Align(alignment: Alignment.bottomLeft, child: details),
+          // Un titre sur deux lignes peut manquer de place en story : le
+          // bloc rétrécit plutôt que de déborder.
+          child: Align(
+              alignment: Alignment.bottomLeft,
+              child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.bottomLeft,
+                  child: SizedBox(
+                      width: portrait
+                          ? size.width - pad * 2
+                          : size.width * .44 - pad,
+                      child: details))),
         ),
       ];
     });
   }
 }
+
+/// Les pages d'un export : le récap de l'année, ceux des trois actes, et
+/// toutes les diapos (sauf le récap, déjà là), dans l'ordre du Wrapped.
+List<WrappedPage> wrappedExportPages(
+  WrappedInputs w,
+  List<WrappedSlide> slides, {
+  required bool year,
+  required bool acts,
+  required bool allSlides,
+}) =>
+    [
+      if (year)
+        WrappedPage(
+            file: '00-recap',
+            seconds: AppWrapped.recap,
+            builder: (_) => WrappedRecap(inputs: w)),
+      if (acts) ...[
+        WrappedPage(
+            file: '01-acte-1-le-temps',
+            seconds: AppWrapped.recap,
+            builder: (_) => WrappedRecap(inputs: w, summary: timeSummary(w))),
+        WrappedPage(
+            file: '02-acte-2-les-gouts',
+            seconds: AppWrapped.recap,
+            builder: (_) => WrappedRecap(inputs: w, summary: tasteSummary(w))),
+        WrappedPage(
+            file: '03-acte-3-les-films',
+            seconds: AppWrapped.recap,
+            builder: (_) => WrappedRecap(inputs: w, summary: filmsSummary(w))),
+      ],
+      if (allSlides)
+        for (final (i, slide) in slides.indexed)
+          if (slide.id != 'recap')
+            WrappedPage(
+                file: '${10 + i}-${slide.id}',
+                seconds: slide.seconds,
+                builder: slide.builder),
+    ];
