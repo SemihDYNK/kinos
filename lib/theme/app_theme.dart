@@ -290,6 +290,27 @@ abstract final class AppDetailLayout {
       : AppHeroLayout.minHeight;
 }
 
+/// Page Statistiques.
+abstract final class AppStatsLayout {
+  /// Portrait carré de l'en-tête.
+  static const portraitSize = 64.0;
+
+  /// Hauteur des histogrammes (activité, notes).
+  static const barsHeight = 120.0;
+  static const ratingBarsHeight = 80.0;
+
+  /// Calendrier : écart entre les cases (la taille suit la largeur).
+  static const dayGap = 2.0;
+  static const dayMaxSize = 14.0;
+
+  /// Barres des classements (genres, réalisateurs, acteurs).
+  static const rankBarHeight = 6.0;
+  static const rankNameWidth = 160.0;
+
+  /// Les deux colonnes des goûts sous cette largeur s'empilent.
+  static const twoColumnsMinWidth = 760.0;
+}
+
 /// Page « Prochainement ».
 abstract final class AppUpcomingLayout {
   /// Hauteur du bandeau, en part de la hauteur de la fenêtre, bornée.

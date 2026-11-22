@@ -327,13 +327,16 @@ class SideNavigationRail extends ConsumerWidget {
                                             AppSpacing.sm,
                                             AppSpacing.xs,
                                             AppSpacing.sm),
+                                        // Votre photo ouvre vos
+                                        // statistiques ; changer de profil
+                                        // se fait dans les paramètres.
                                         child: _RailHint(
-                                          message: context.localized.switchUser,
+                                          message: 'Vos statistiques',
                                           child: FocusRing(
                                             borderRadius:
                                                 AppNavigation.selection,
-                                            onActivate: () =>
-                                                _switchProfile(context, ref),
+                                            onActivate: () => context.router
+                                                .navigate(const StatsRoute()),
                                             child: _ProfileRow(
                                                 user: user,
                                                 expansion: progress),
@@ -419,10 +422,6 @@ class SideNavigationRail extends ConsumerWidget {
     ];
   }
 
-  Future<void> _switchProfile(BuildContext context, WidgetRef ref) async {
-    await ref.read(userProvider.notifier).logoutUser();
-    if (context.mounted) context.router.replaceAll([LoginRoute()]);
-  }
 }
 
 class _RailDivider extends StatelessWidget {

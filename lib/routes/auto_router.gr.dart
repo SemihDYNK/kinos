@@ -72,6 +72,7 @@ import 'package:kinos/models/items/images_models.dart' as _i53;
 import 'package:kinos/screens/dashboard/genre_page_screen.dart' as _i54;
 import 'package:kinos/upcoming/upcoming_screen.dart' as _i55;
 import 'package:kinos/upcoming/entity/entity_screen.dart' as _i56;
+import 'package:kinos/stats/stats_screen.dart' as _i57;
 
 /// generated route for
 /// [_i1.AboutSettingsPage]
@@ -811,6 +812,22 @@ class EntityRouteArgs {
   String toString() {
     return 'EntityRouteArgs{kind: $kind, id: $id, name: $name, key: $key}';
   }
+}
+
+/// generated route for
+/// [_i57.StatsScreen]
+class StatsRoute extends _i37.PageRouteInfo<void> {
+  const StatsRoute({List<_i37.PageRouteInfo>? children})
+      : super(StatsRoute.name, initialChildren: children);
+
+  static const String name = 'StatsRoute';
+
+  static _i37.PageInfo page = _i37.PageInfo(
+    name,
+    builder: (data) {
+      return const _i57.StatsScreen();
+    },
+  );
 }
 
 /// generated route for

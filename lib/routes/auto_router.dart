@@ -80,6 +80,10 @@ final List<AutoRoute> homeRoutes = [
     path: 'upcoming',
   ),
   AutoRoute(
+    page: StatsRoute.page,
+    path: 'stats',
+  ),
+  AutoRoute(
     page: FavouritesRoute.page,
     path: 'favourites',
   ),
