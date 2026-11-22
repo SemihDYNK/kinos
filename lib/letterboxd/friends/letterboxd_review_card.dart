@@ -23,10 +23,14 @@ typedef ReviewEntry = ({
 /// Ouvre la critique [index] de [entries] : la tuile naît de la photo de
 /// l'ami ([origin], sa cellule en coordonnées globales), s'ouvre en cercle
 /// depuis elle et s'y referme.
+///
+/// [originOf] donne la cellule d'un ami : en passant d'une critique à
+/// l'autre, la tuile glisse jusqu'à sa photo.
 Future<void> showLetterboxdReview(BuildContext context,
     {required List<ReviewEntry> entries,
     required int index,
-    required Rect origin}) {
+    required Rect origin,
+    Rect? Function(String username)? originOf}) {
   final motion = AppMotion.enabled(context);
   return Navigator.of(context).push(PageRouteBuilder<void>(
     opaque: false,
@@ -37,7 +41,11 @@ Future<void> showLetterboxdReview(BuildContext context,
     reverseTransitionDuration:
         motion ? AppDurations.heroSlide * .7 : Duration.zero,
     pageBuilder: (context, animation, _) => _ReviewOverlay(
-        animation: animation, origin: origin, entries: entries, index: index),
+        animation: animation,
+        origin: origin,
+        originOf: originOf,
+        entries: entries,
+        index: index),
   ));
 }
 
@@ -45,10 +53,12 @@ class _ReviewOverlay extends StatefulWidget {
   const _ReviewOverlay(
       {required this.animation,
       required this.origin,
+      this.originOf,
       required this.entries,
       required this.index});
   final Animation<double> animation;
   final Rect origin;
+  final Rect? Function(String username)? originOf;
   final List<ReviewEntry> entries;
   final int index;
 
@@ -81,23 +91,19 @@ class _ReviewOverlayState extends State<_ReviewOverlay> {
     });
   }
 
+  // Dernière cellule connue : un ami hors de la rangée repliée garde la
+  // tuile où elle est.
+  late Rect _anchor = widget.origin;
+
+  static Offset _avatarOf(Rect cell) => Offset(cell.center.dx,
+      cell.top + AppSpacing.xxs + AppDetailLayout.friendAvatarSize / 2);
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    // Le centre de la photo de l'ami, en haut de sa cellule.
-    final avatar = Offset(
-        widget.origin.center.dx,
-        widget.origin.top +
-            AppSpacing.xxs +
-            AppDetailLayout.friendAvatarSize / 2);
-    // Assez grand pour couvrir toute la tuile, où qu'elle soit posée.
-    final reach = [
-      Offset.zero,
-      Offset(size.width, 0),
-      Offset(0, size.height),
-      Offset(size.width, size.height),
-    ].map((c) => (c - avatar).distance).reduce((a, b) => a > b ? a : b);
     final motion = AppMotion.enabled(context);
+    _anchor = widget.originOf?.call(widget.entries[_index].author.username) ??
+        _anchor;
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _go(-1),
@@ -107,55 +113,76 @@ class _ReviewOverlayState extends State<_ReviewOverlay> {
       },
       child: Focus(
         autofocus: true,
-        child: AnimatedBuilder(
-          animation: _curve,
-          builder: (context, child) {
-            final t = _curve.value;
-            // La photo s'ouvre en cercle jusqu'à révéler toute la tuile.
-            return ClipPath(
-              clipper: _CircleReveal(avatar,
-                  lerpDouble(AppDetailLayout.friendAvatarSize / 2, reach, t)!),
-              child: Opacity(
-                  opacity: const Interval(0, .35).transform(t), child: child),
+        // La tuile glisse d'une photo à l'autre.
+        child: TweenAnimationBuilder<Offset>(
+          tween: Tween(end: _avatarOf(_anchor)),
+          duration: motion ? AppDurations.heroSlide : Duration.zero,
+          curve: AppMotion.easeOut,
+          builder: (context, avatar, tile) {
+            final layout = _TileLayout(avatar: avatar);
+            // Le cercle s'arrête aux coins de la tuile, pas de la fenêtre :
+            // toute sa course se voit.
+            final rect = layout.tileRect(size, layout.maxChildSize(size));
+            final reach = [
+              rect.topLeft,
+              rect.topRight,
+              rect.bottomLeft,
+              rect.bottomRight
+            ].map((c) => (c - avatar).distance).reduce((a, b) => a > b ? a : b);
+            return AnimatedBuilder(
+              animation: _curve,
+              builder: (context, child) {
+                final t = _curve.value;
+                return Transform.scale(
+                  // Un léger agrandissement depuis la photo, avec le cercle.
+                  scale: lerpDouble(.9, 1, t)!,
+                  origin: avatar - size.center(Offset.zero),
+                  child: ClipPath(
+                    clipper: _CircleReveal(
+                        avatar,
+                        lerpDouble(
+                            AppDetailLayout.friendAvatarSize / 2, reach, t)!),
+                    child: Opacity(
+                        opacity: const Interval(0, .6, curve: Curves.easeOut)
+                            .transform(t),
+                        child: child),
+                  ),
+                );
+              },
+              child: CustomSingleChildLayout(delegate: layout, child: tile),
             );
           },
-          child: CustomSingleChildLayout(
-            delegate: _TileLayout(avatar: avatar),
-            child: FrostedSurface(
-              child: AnimatedSize(
+          child: FrostedSurface(
+            child: AnimatedSize(
+              duration: motion ? AppDurations.unroll : Duration.zero,
+              curve: AppMotion.easeOut,
+              alignment: Alignment.topLeft,
+              child: AnimatedSwitcher(
                 duration: motion ? AppDurations.unroll : Duration.zero,
-                curve: AppMotion.easeOut,
-                alignment: Alignment.topLeft,
-                child: AnimatedSwitcher(
-                  duration: motion ? AppDurations.unroll : Duration.zero,
-                  switchInCurve: AppMotion.easeOut,
-                  layoutBuilder: (current, previous) => Stack(
-                      alignment: Alignment.topLeft,
-                      children: [...previous, if (current != null) current]),
-                  transitionBuilder: (child, animation) {
-                    final incoming = child.key == ValueKey(_index);
-                    final from = incoming
-                        ? _direction.toDouble()
-                        : -_direction.toDouble();
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                          position: Tween(
-                                  begin: Offset(from * .06, 0),
-                                  end: Offset.zero)
-                              .animate(animation),
-                          child: child),
-                    );
-                  },
-                  child: _ReviewPage(
-                    key: ValueKey(_index),
-                    entry: widget.entries[_index],
-                    position: '${_index + 1} / ${widget.entries.length}',
-                    onPrevious: _index > 0 ? () => _go(-1) : null,
-                    onNext: _index < widget.entries.length - 1
-                        ? () => _go(1)
-                        : null,
-                  ),
+                switchInCurve: AppMotion.easeOut,
+                layoutBuilder: (current, previous) => Stack(
+                    alignment: Alignment.topLeft,
+                    children: [...previous, if (current != null) current]),
+                transitionBuilder: (child, animation) {
+                  final incoming = child.key == ValueKey(_index);
+                  final from =
+                      incoming ? _direction.toDouble() : -_direction.toDouble();
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                        position: Tween(
+                                begin: Offset(from * .06, 0), end: Offset.zero)
+                            .animate(animation),
+                        child: child),
+                  );
+                },
+                child: _ReviewPage(
+                  key: ValueKey(_index),
+                  entry: widget.entries[_index],
+                  position: '${_index + 1} / ${widget.entries.length}',
+                  onPrevious: _index > 0 ? () => _go(-1) : null,
+                  onNext:
+                      _index < widget.entries.length - 1 ? () => _go(1) : null,
                 ),
               ),
             ),
@@ -186,6 +213,16 @@ class _TileLayout extends SingleChildLayoutDelegate {
   const _TileLayout({required this.avatar});
   final Offset avatar;
 
+  /// La plus grande tuile possible dans une fenêtre de taille [size].
+  Size maxChildSize(Size size) {
+    final c = getConstraintsForChild(BoxConstraints.loose(size));
+    return Size(c.maxWidth, c.maxHeight);
+  }
+
+  /// Où se pose une tuile de taille [child].
+  Rect tileRect(Size size, Size child) =>
+      getPositionForChild(size, child) & child;
+
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
     final width = (constraints.maxWidth - AppSpacing.md * 2)
@@ -200,10 +237,14 @@ class _TileLayout extends SingleChildLayoutDelegate {
   @override
   Offset getPositionForChild(Size size, Size child) {
     const inset = AppSpacing.md + AppDetailLayout.friendAvatarSize / 2;
-    final x = (avatar.dx - inset)
-        .clamp(AppSpacing.md, size.width - child.width - AppSpacing.md);
-    final y = (avatar.dy - inset)
-        .clamp(AppSpacing.md, size.height - child.height - AppSpacing.md);
+    final x = (avatar.dx - inset).clamp(
+        AppSpacing.md,
+        (size.width - child.width - AppSpacing.md)
+            .clamp(AppSpacing.md, double.infinity));
+    final y = (avatar.dy - inset).clamp(
+        AppSpacing.md,
+        (size.height - child.height - AppSpacing.md)
+            .clamp(AppSpacing.md, double.infinity));
     return Offset(x.toDouble(), y.toDouble());
   }
 

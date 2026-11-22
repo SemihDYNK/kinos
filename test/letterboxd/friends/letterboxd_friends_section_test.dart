@@ -9,6 +9,7 @@ import 'package:kinos/letterboxd/friends/letterboxd_friends_section.dart';
 import 'package:kinos/letterboxd/letterboxd_providers.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 
 import '../../widgets/seerr_discovery_section_test.dart' show TestUser;
 
@@ -195,8 +196,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Un chef-d\'œuvre.'), findsOneWidget);
     expect(find.text('1 / 2'), findsOneWidget);
+    final first = tester.getTopLeft(find.byType(FrostedSurface)).dx;
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
+    // La tuile a suivi la photo de Cy, plus à droite dans la rangée.
+    expect(tester.getTopLeft(find.byType(FrostedSurface)).dx,
+        greaterThan(first));
     // Critique à spoilers : voilée jusqu'à « Afficher quand même ».
     expect(find.text('La fin !'), findsNothing);
     await tester.tap(find.text('Afficher quand même'));

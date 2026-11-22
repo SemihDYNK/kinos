@@ -25,6 +25,20 @@ class LetterboxdFriendsSection extends ConsumerStatefulWidget {
 class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
   bool _expanded = false;
 
+  // Un repère par cellule : la tuile d'une critique suit la photo de l'ami
+  // qu'elle montre.
+  final _cells = <String, GlobalKey>{};
+  GlobalKey _cell(String username) =>
+      _cells.putIfAbsent(username, () => GlobalKey(debugLabel: username));
+
+  /// Rectangle d'une cellule à l'écran, null si elle n'est pas affichée
+  /// (rangée repliée).
+  Rect? _cellRect(String username) {
+    final box = _cells[username]?.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -82,7 +96,8 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
       showLetterboxdReview(context,
           entries: entries,
           index: entries.indexWhere((e) => e.author.username == username),
-          origin: box.localToGlobal(Offset.zero) & box.size);
+          origin: box.localToGlobal(Offset.zero) & box.size,
+          originOf: _cellRect);
     }
 
     final friends = Wrap(
@@ -94,6 +109,7 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
         // amis.
         if (mine != null)
           _MyRatingCell(
+              key: _cell(account?.username ?? ''),
               rating: mine,
               slug: film.slug,
               account: account,
@@ -110,6 +126,7 @@ class _SectionState extends ConsumerState<LetterboxdFriendsSection> {
           ),
         for (final rating in visible)
           _FriendRatingCell(
+              key: _cell(rating.friend.username),
               rating: rating,
               slug: film.slug,
               review: film.reviews[rating.friend.username],
@@ -183,7 +200,8 @@ String _cellTooltip(String name, int rating, LetterboxdReview? review) {
 
 class _FriendRatingCell extends StatelessWidget {
   const _FriendRatingCell(
-      {required this.rating,
+      {super.key,
+      required this.rating,
       required this.slug,
       this.review,
       required this.onOpenReview});
@@ -332,7 +350,8 @@ class _Stars extends StatelessWidget {
 /// du film sur letterboxd.com quand ton pseudo est connu.
 class _MyRatingCell extends StatelessWidget {
   const _MyRatingCell(
-      {required this.rating,
+      {super.key,
+      required this.rating,
       required this.slug,
       required this.account,
       this.review,
