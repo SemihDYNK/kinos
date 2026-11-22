@@ -6,6 +6,7 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/seerr_api_provider.dart';
+import 'package:kinos/providers/seerr_service_provider.dart' show SeerrLocalAuthFailure;
 import 'package:kinos/providers/seerr_dashboard_provider.dart';
 import 'package:kinos/providers/seerr_user_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
@@ -253,7 +254,7 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
       }
     } catch (e) {
       if (mounted) {
-        final message = _sanitizeErrorMessage(e);
+        final message = _localAuthMessage(e);
         error = message;
         KinosSnack.show(message, context: context);
       }
@@ -266,6 +267,23 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
       }
     }
   }
+
+  /// La raison d'un échec de connexion locale, d'après la réponse de Seerr.
+  /// Seerr ne cherche un compte local que par e-mail (en minuscules), et un
+  /// compte créé sans mot de passe ne peut pas se connecter.
+  static String _localAuthMessage(Object error) => switch (error) {
+        SeerrLocalAuthFailure(status: 403) =>
+          'Seerr refuse ces identifiants. Utilisez l\'e-mail du compte local '
+              '(pas son nom) et son mot de passe Seerr ; un compte créé sans '
+              'mot de passe doit en recevoir un dans Seerr (Utilisateurs → '
+              'le compte → Mot de passe).',
+        SeerrLocalAuthFailure(status: 500, :final message?)
+            when message.contains('disabled') =>
+          'La connexion par mot de passe est désactivée dans Seerr.',
+        SeerrLocalAuthFailure(:final status, :final message) =>
+          'Seerr a refusé la connexion ($status${message == null ? '' : ' : $message'}).',
+        _ => _sanitizeErrorMessage(error),
+      };
 
   Future<void> _loginJellyfin() async {
     if (!await _beginProcessing()) return;
@@ -554,7 +572,8 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
                 spacing: 12,
                 children: [
                   OutlinedTextField(
-                    label: context.localized.emailUsername,
+                    // Seerr ne connaît un compte local que par son e-mail.
+                    label: context.localized.email,
                     controller: localEmailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,

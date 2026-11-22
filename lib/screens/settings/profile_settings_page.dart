@@ -1,4 +1,5 @@
 import 'package:kinos/letterboxd/friends/letterboxd_friends_dialog.dart';
+import 'package:kinos/letterboxd/letterboxd_import_controller.dart' show letterboxdImportProvider;
 import 'package:kinos/upcoming/upcoming_providers.dart';
 import 'package:kinos/upcoming/upcoming_strings.dart';
 import 'package:kinos/letterboxd/letterboxd_import_dialog.dart';
@@ -402,7 +403,13 @@ class _UserSettingsPageState extends ConsumerState<ProfileSettingsPage> with Wid
         ),
         SettingsListTile(
           label: Text(context.localized.letterboxdTitle),
-          subLabel: Text(context.localized.letterboxdHint),
+          // Un import en cours (même fenêtre fermée) montre sa progression.
+          subLabel: Text(switch (ref.watch(letterboxdImportProvider)) {
+            final s when s.busy && s.total > 0 =>
+              'Import en cours · ${s.done} / ${s.total} films',
+            final s when s.busy => 'Import en cours…',
+            _ => context.localized.letterboxdHint,
+          }),
           onTap: () => showLetterboxdImportDialog(context),
         ),
         SettingsListTile(

@@ -1,4 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:kinos/letterboxd/letterboxd_import_controller.dart'
+    show letterboxdImportProvider;
+import 'package:kinos/letterboxd/letterboxd_import_dialog.dart'
+    show showLetterboxdImportDialog;
+import 'package:kinos/screens/shared/kinos_notification_overlay.dart'
+    show KinosSnack;
 import 'package:flutter/material.dart' hide ConnectionState;
 
 import 'package:auto_route/auto_route.dart';
@@ -80,6 +86,18 @@ class _NavigationScaffoldState extends ConsumerState<NavigationScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    // Un import Letterboxd poursuivi en arrière-plan prévient quand il a
+    // fini, où qu'on soit dans l'app.
+    ref.listen(letterboxdImportProvider, (previous, next) {
+      if (previous?.busy == true && next.saved) {
+        KinosSnack.show(
+            'Import Letterboxd terminé · ${next.done} films reconnus sur '
+            '${next.total}',
+            context: context,
+            actionLabel: 'Voir',
+            onActionPressed: () => showLetterboxdImportDialog(context));
+      }
+    });
     final views = ref.watch(viewsProvider.select((value) => value.views));
     final playerState = ref.watch(mediaPlaybackProvider.select((value) => value.state));
     final currentItem = ref.watch(playBackModel.select((value) => value?.item));

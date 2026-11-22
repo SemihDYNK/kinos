@@ -46,6 +46,12 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
   final DiscoveryClient? Function()? createClient;
   DiscoveryClient? _client;
   int _generation = 0;
+
+  // La fenêtre d'import est ouverte : elle montre l'aperçu à valider.
+  // Fermée, l'import continue et s'enregistre seul à la fin.
+  int _views = 0;
+  void attachView() => _views++;
+  void detachView() => _views = _views > 0 ? _views - 1 : 0;
   LetterboxdImportController(
       {required this.store,
       required this.loadLibrary,
@@ -187,6 +193,10 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
             networkWarning: warning,
             total: films.length,
             done: films.length);
+        // Personne ne regarde l'aperçu : l'import continuait en arrière-plan,
+        // il s'enregistre tel quel (les titres non reconnus restent à
+        // rapprocher plus tard depuis la fenêtre).
+        if (_views == 0) await commit();
       }
     } finally {
       client?.close();
@@ -257,7 +267,14 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
           LetterboxdSnapshot(
               updatedAt: DateTime.now().toUtc(), records: preview.records),
           isCurrent: () => _active(generation));
-      if (_active(generation)) state = const LetterboxdImportState(saved: true);
+      if (_active(generation)) {
+        state = LetterboxdImportState(
+            saved: true,
+            total: preview.records.length,
+            done: preview.records
+                .where((r) => r.work?.traits.isNotEmpty == true)
+                .length);
+      }
     } catch (_) {
       if (_active(generation)) {
         state = LetterboxdImportState(
@@ -293,6 +310,8 @@ final _letterboxdLibraryProvider =
 });
 final letterboxdImportProvider = StateNotifierProvider.autoDispose<
     LetterboxdImportController, LetterboxdImportState>((ref) {
+  // Gardé en vie : un import continue quand on ferme sa fenêtre.
+  ref.keepAlive();
   final scope = ref.watch(letterboxdScopeProvider);
   final credentials =
       ref.watch(userProvider.select((u) => u?.seerrCredentials));

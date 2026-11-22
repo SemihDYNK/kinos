@@ -20,6 +20,21 @@ class LetterboxdImportDialog extends ConsumerStatefulWidget {
 
 class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
   bool picking = false;
+  late final LetterboxdImportController _controller =
+      ref.read(letterboxdImportProvider.notifier);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.attachView();
+  }
+
+  @override
+  void dispose() {
+    _controller.detachView();
+    super.dispose();
+  }
+
   Future<void> pick() async {
     final scope = ref.read(letterboxdScopeProvider);
     setState(() => picking = true);
@@ -186,12 +201,26 @@ class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
                               FilledButton(
                                   onPressed: busy ? null : controller.commit,
                                   child: Text(l.letterboxdConfirm)),
-                            TextButton(
-                                onPressed: () {
-                                  controller.cancel();
-                                  Navigator.of(context).pop();
-                                },
-                                child: Text(busy ? l.cancel : l.close)),
+                            if (state.busy) ...[
+                              // L'analyse continue sans la fenêtre, et
+                              // l'import s'enregistre seul à la fin.
+                              TextButton(
+                                  onPressed: () {
+                                    controller.cancel();
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: Text(l.cancel)),
+                              FilledButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text(
+                                      'Continuer en arrière-plan')),
+                            ] else
+                              TextButton(
+                                  onPressed: () {
+                                    if (picking) controller.cancel();
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: Text(picking ? l.cancel : l.close)),
                           ]),
                     ]))));
   }

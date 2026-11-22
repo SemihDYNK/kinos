@@ -92,6 +92,7 @@ void main() {
                       : detail(42)),
                   200);
             })));
+    c.attachView();
     addTearDown(c.dispose);
     await c.prepare(bytes);
     expect(c.state.records.single.work!.tmdbId, 42);
@@ -127,6 +128,7 @@ void main() {
                       }
                     : detail(int.parse(request.url.pathSegments.last))),
                 200))));
+    c.attachView();
     addTearDown(c.dispose);
     await c.prepare(bytes);
     expect(c.state.records.single.work, isNull);
@@ -145,6 +147,7 @@ void main() {
             headers: {},
             interval: Duration.zero,
             client: MockClient((_) async => http.Response('', 503))));
+    c.attachView();
     addTearDown(c.dispose);
     await c.prepare(bytes);
     expect(c.state.ready, isTrue);

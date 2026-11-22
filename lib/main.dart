@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:kinos/widgets/shared/kinos_error_view.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode;
 import 'dart:io' show Platform;
 import 'package:kinos/util/frame_log.dart';
 import 'package:kinos/util/motion_input.dart';
@@ -34,6 +35,11 @@ void main(List<String> args) async {
   final bootstrap = await bootstrapApplication(args);
 
   FrameLog.startIfRequested();
+  // Plus d'écran gris quand un écran plante : un écran Kinos qui explique
+  // et propose l'accueil ou les paramètres (le rouge de débogage reste).
+  if (!kDebugMode) {
+    ErrorWidget.builder = (details) => KinosErrorView(details);
+  }
   // Mise au point de la fluidité (mode profil seulement) : chaque
   // construction de widget apparaît dans la timeline.
   if (!kReleaseMode && Platform.environment['KINOS_PROFILE_BUILDS'] == '1') {

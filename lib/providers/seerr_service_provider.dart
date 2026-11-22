@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -689,7 +690,7 @@ class SeerrService {
       headers: headers,
     );
     if (!response.isSuccessful) {
-      throw HttpException('Local authentication failed (${response.statusCode})');
+      throw SeerrLocalAuthFailure(response.statusCode, _serverMessage(response));
     }
     final cookie = _extractSessionCookie(response);
     if (cookie == null || cookie.isEmpty) {
@@ -748,6 +749,19 @@ class SeerrService {
     return cookie;
   }
 
+  /// Message d'erreur renvoyé par Seerr (`message` ou `error`), s'il y en a.
+  String? _serverMessage(Response<dynamic> response) {
+    try {
+      final body = response.bodyString;
+      final json = jsonDecode(body);
+      if (json is Map) {
+        final message = json['message'] ?? json['error'];
+        if (message is String && message.isNotEmpty) return message;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   String? _extractSessionCookie(Response<dynamic> response) {
     final setCookie = response.base.headers['set-cookie'];
     if (setCookie == null || setCookie.isEmpty) {
@@ -755,4 +769,16 @@ class SeerrService {
     }
     return setCookie.split(';').first.trim();
   }
+}
+
+/// Échec de la connexion locale à Seerr : son code et son message, pour
+/// dire à l'utilisateur ce qui cloche.
+class SeerrLocalAuthFailure implements Exception {
+  const SeerrLocalAuthFailure(this.status, this.message);
+  final int status;
+  final String? message;
+
+  @override
+  String toString() =>
+      'Local authentication failed ($status${message == null ? '' : ': $message'})';
 }

@@ -31,12 +31,26 @@ void main() {
     final c = LetterboxdImportController(
         store: store, loadLibrary: () async => [], isCurrent: () => true);
     addTearDown(c.dispose);
+    // La fenêtre est ouverte : l'aperçu attend sa confirmation.
+    c.attachView();
     await c.prepare(bytes);
     expect(c.state.ready, isTrue);
     expect(c.state.records.length, 1);
     expect(c.state.records.single.work, isNull);
     expect((await store.read()).records, isEmpty);
     await c.commit();
+    expect((await store.read()).records.length, 1);
+  });
+  test('closed window: the import goes on and saves itself', () async {
+    final c = LetterboxdImportController(
+        store: store, loadLibrary: () async => [], isCurrent: () => true);
+    addTearDown(c.dispose);
+    c.attachView();
+    final job = c.prepare(bytes);
+    c.detachView();
+    await job;
+    expect(c.state.saved, isTrue);
+    expect(c.state.total, 1);
     expect((await store.read()).records.length, 1);
   });
   test('cancelled library request cannot install a late preview or save',
