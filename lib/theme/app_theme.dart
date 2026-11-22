@@ -297,12 +297,12 @@ abstract final class AppStatsLayout {
 
   /// Hauteur des histogrammes (activité, notes).
   static const barsHeight = 120.0;
-  static const ratingBarsHeight = 80.0;
+  static const ratingBarsHeight = 104.0;
 
-  /// Calendrier : écart entre les cases (la taille suit la largeur, toute
-  /// la largeur disponible jusqu'à [dayMaxSize]).
+  /// Calendrier : écart entre les cases ; la taille suit la largeur, pour
+  /// remplir toute la ligne jusqu'à [dayMaxSize].
   static const dayGap = 3.0;
-  static const dayMaxSize = 24.0;
+  static const dayMaxSize = 40.0;
 
   /// Rangée des mois au-dessus du calendrier, des valeurs au-dessus des
   /// barres.

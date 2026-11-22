@@ -587,15 +587,17 @@ class _Bars extends StatelessWidget {
         ]),
       ),
       const SizedBox(height: AppSpacing.xxs),
-      Row(children: [
-        for (final label in labels)
-          Expanded(
-              child: Text(label,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: meta)),
-      ]),
+      SizedBox(
+          height: AppStatsLayout.labelRowHeight,
+          child: Row(children: [
+            for (final label in labels)
+              Expanded(
+                  child: Text(label,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      style: meta)),
+          ])),
     ]);
   }
 }
@@ -964,59 +966,110 @@ class _PersonCard extends ConsumerWidget {
   }
 }
 
+/// Les records en grille de cartes (trois par rangée), à la hauteur exacte
+/// du graphe des notes posé à côté.
 class _Records extends StatelessWidget {
   const _Records({required this.stats, required this.locale});
   final ViewingStats stats;
   final String locale;
 
+  /// La hauteur du graphe des notes : valeurs, barres, écart, étiquettes.
+  static const height = AppStatsLayout.ratingBarsHeight +
+      AppStatsLayout.labelRowHeight * 2 +
+      AppSpacing.xxs;
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final night = stats.longestNight;
-    final film = stats.longestFilm;
-    final seen = stats.mostSeen;
-    final cards = [
-      if (night != null)
-        (
-          'Plus longue soirée',
-          '${night.episodes} épisodes · ${DateFormat('d MMMM y', locale).format(night.day)}'
-        ),
-      if (film != null)
+    String day(DateTime d) => DateFormat('d MMMM', locale).format(d);
+    final cards = <(String, String)>[
+      if (stats.longestFilm case final film?)
         (
           'Plus long film',
           '${film.title} · ${formatHours(film.runtimeSeconds ?? 0)}'
         ),
-      if (seen != null)
+      if (stats.mostSeen case final seen?)
         ('Le plus revu', '${seen.event.title} · ${seen.times} fois'),
-    ];
+      if (stats.busiestDay case final busy?)
+        (
+          'Journée la plus chargée',
+          '${day(busy.day)} · ${busy.titles} '
+              '${busy.titles > 1 ? 'titres' : 'titre'} · ${formatHours(busy.seconds)}'
+        ),
+      if (stats.streak case final streak?)
+        (
+          'Plus longue série',
+          '${streak.days} jours d\'affilée · dès le ${day(streak.start)}'
+        ),
+      if (stats.longestNight case final night?)
+        (
+          'Plus longue soirée',
+          '${night.episodes} épisodes · ${day(night.day)}'
+        ),
+      if (stats.oldestFilm case final film?)
+        ('Le plus ancien', '${film.title} · ${film.year}'),
+      if (stats.decade case final decade?)
+        (
+          'Décennie préférée',
+          'Années ${decade.decade} · ${decade.films} '
+              '${decade.films > 1 ? 'films' : 'film'}'
+        ),
+    ].take(6).toList();
     if (cards.isEmpty) {
       return Text('Pas encore de record.',
           style: text.bodySmall?.copyWith(color: AppColors.textSecondary));
     }
-    return Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
-      for (final (label, value) in cards)
-        DecoratedBox(
+    final rows = [
+      for (var i = 0; i < cards.length; i += 3)
+        cards.sublist(i, (i + 3).clamp(0, cards.length))
+    ];
+    Widget card((String, String) record) => DecoratedBox(
           decoration: BoxDecoration(
               color: AppColors.surface,
               border: Border.all(color: AppColors.border),
               borderRadius: AppRadii.cardBorder),
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
             child: Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label,
+                  Text(record.$1,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: text.bodySmall
                           ?.copyWith(color: AppColors.textSecondary)),
                   const SizedBox(height: AppSpacing.xxs),
-                  Text(value,
-                      style: text.bodyMedium
-                          ?.copyWith(color: AppColors.textPrimary)),
+                  Tooltip(
+                    message: record.$2,
+                    child: Text(record.$2,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.bodyMedium
+                            ?.copyWith(color: AppColors.textPrimary)),
+                  ),
                 ]),
           ),
-        ),
-    ]);
+        );
+    return SizedBox(
+      height: height,
+      child: Column(children: [
+        for (final (index, row) in rows.indexed) ...[
+          if (index > 0) const SizedBox(height: AppSpacing.sm),
+          Expanded(
+            child:
+                Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              for (var i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                    child: i < row.length ? card(row[i]) : const SizedBox()),
+              ],
+            ]),
+          ),
+        ],
+      ]),
+    );
   }
 }
 

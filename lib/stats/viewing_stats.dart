@@ -44,6 +44,10 @@ class ViewingStats {
     required this.mostSeen,
     required this.busiestBucket,
     required this.years,
+    this.busiestDay,
+    this.streak,
+    this.oldestFilm,
+    this.decade,
   });
 
   /// Séances de films, épisodes, séries différentes.
@@ -90,6 +94,19 @@ class ViewingStats {
   /// Années qui ont au moins une séance, de la plus récente à la plus
   /// ancienne.
   final List<int> years;
+
+  /// Le jour le plus chargé (en temps), avec son nombre de titres.
+  final ({DateTime day, int titles, int seconds})? busiestDay;
+
+  /// La plus longue suite de jours consécutifs avec au moins une séance
+  /// (deux jours au moins).
+  final ({DateTime start, int days})? streak;
+
+  /// Le film le plus ancien vu sur la période (par année de sortie).
+  final ViewingEvent? oldestFilm;
+
+  /// La décennie de sortie la plus vue (« 2010 » pour les années 2010).
+  final ({int decade, int films})? decade;
 
   bool get isEmpty => films + episodes == 0;
 }
@@ -193,15 +210,28 @@ ViewingStats computeStats(List<ViewingEvent> all,
   int? ratingOf(ViewingEvent e) => rated[e.identity]?.rating;
   final topGenres = _top(genres);
   final genreFilms = <String, ViewingEvent>{};
-  for (final g in topGenres) {
+  final used = <String>{};
+  ViewingEvent? illustrate(String genre, {required bool distinct}) {
     ViewingEvent? best;
     for (final e in movies) {
-      if (e.jellyfinId == null || !e.genres.contains(g.name)) continue;
+      if (e.jellyfinId == null || !e.genres.contains(genre)) continue;
+      // Un film n'illustre qu'un genre : le suivant prend un autre film.
+      if (distinct && used.contains(e.identity)) continue;
       final r = ratingOf(e) ?? -1,
           br = best == null ? -2 : ratingOf(best) ?? -1;
       if (r > br || (r == br && e.at.isAfter(best!.at))) best = e;
     }
-    if (best != null) genreFilms[g.name] = best;
+    return best;
+  }
+
+  for (final g in topGenres) {
+    // Sans film propre au genre, un film déjà pris plutôt qu'une tuile vide.
+    final best = illustrate(g.name, distinct: true) ??
+        illustrate(g.name, distinct: false);
+    if (best != null) {
+      genreFilms[g.name] = best;
+      used.add(best.identity);
+    }
   }
 
   // Les records.
@@ -228,6 +258,43 @@ ViewingStats computeStats(List<ViewingEvent> all,
       .where((l) => l.length > 1)
       .fold<List<ViewingEvent>?>(
           null, (best, l) => best == null || l.length > best.length ? l : best);
+  // Le jour le plus chargé, la plus longue suite de jours.
+  final titlesPerDay = <DateTime, int>{};
+  for (final e in events) {
+    final day = DateTime(e.at.year, e.at.month, e.at.day);
+    titlesPerDay[day] = (titlesPerDay[day] ?? 0) + 1;
+  }
+  final busiestDay = days.entries.isEmpty
+      ? null
+      : days.entries.reduce((a, b) => b.value > a.value ? b : a);
+  final sortedDays = days.keys.toList()..sort();
+  ({DateTime start, int days})? streak;
+  for (var i = 0, run = 1; i < sortedDays.length; i++) {
+    final next = i + 1 < sortedDays.length ? sortedDays[i + 1] : null;
+    final current = sortedDays[i];
+    if (next != null &&
+        DateTime(current.year, current.month, current.day + 1) == next) {
+      run++;
+      continue;
+    }
+    if (run > 1 && (streak == null || run > streak.days)) {
+      streak = (start: sortedDays[i - run + 1], days: run);
+    }
+    run = 1;
+  }
+
+  // Le plus ancien, la décennie préférée (par année de sortie).
+  final dated = movies.where((e) => e.year != null).toList();
+  final oldest =
+      dated.isEmpty ? null : dated.reduce((a, b) => b.year! < a.year! ? b : a);
+  final decades = <int, int>{};
+  for (final e in dated) {
+    decades[e.year! ~/ 10 * 10] = (decades[e.year! ~/ 10 * 10] ?? 0) + 1;
+  }
+  final decade = decades.entries.isEmpty
+      ? null
+      : decades.entries.reduce((a, b) => b.value > a.value ? b : a);
+
   var busiest = -1;
   for (var i = 0; i < buckets.length; i++) {
     if (buckets[i] > 0 && (busiest < 0 || buckets[i] > buckets[busiest])) {
@@ -268,5 +335,15 @@ ViewingStats computeStats(List<ViewingEvent> all,
     mostSeen: seen == null ? null : (event: seen.last, times: seen.length),
     busiestBucket: busiest < 0 ? null : busiest,
     years: years,
+    busiestDay: busiestDay == null
+        ? null
+        : (
+            day: busiestDay.key,
+            titles: titlesPerDay[busiestDay.key] ?? 0,
+            seconds: busiestDay.value
+          ),
+    streak: streak,
+    oldestFilm: oldest,
+    decade: decade == null ? null : (decade: decade.key, films: decade.value),
   );
 }

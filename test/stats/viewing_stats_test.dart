@@ -80,6 +80,8 @@ void main() {
     expect(stats.longestFilm!.identity, 'tmdb:movie:2');
     expect(stats.mostSeen!.times, 2);
     expect(stats.years, [2026, 2025]);
+    expect(stats.busiestDay!.day, DateTime(2026, 8, 12), reason: '3 h film');
+    expect(stats.streak, isNull, reason: 'no two days in a row');
   });
 
   test('all time: one bar per year, every rating', () {
@@ -90,6 +92,12 @@ void main() {
         computeStats(events, ratings, const StatsPeriod(year: 2026, month: 8));
     expect(month.buckets.length, 31);
     expect(month.films, 2);
+    final streak = computeStats([
+      for (final d in [3, 4, 5, 9, 10]) movie('m$d', DateTime(2026, 3, d)),
+      movie('old', DateTime(2026, 3, 20)),
+    ], const {}, const StatsPeriod(year: 2026))
+        .streak!;
+    expect((streak.start, streak.days), (DateTime(2026, 3, 3), 3));
   });
 
   testWidgets('the page shows the year and switches to all time',
