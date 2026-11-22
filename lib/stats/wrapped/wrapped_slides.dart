@@ -1774,19 +1774,29 @@ class _MonthDial extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final radius = size.shortestSide / 2;
-    final inner = radius * .46, outer = radius * .86;
+    final inner = radius * .6, outer = radius * .86;
     final top = months.fold(0, (a, b) => a > b ? a : b);
+    final width = radius * .06;
     for (var i = 0; i < 12; i++) {
       final angle = (i + .5) / 12 * 2 * math.pi - math.pi / 2;
       final direction = Offset(math.cos(angle), math.sin(angle));
       final value = top == 0 ? 0.0 : months[i] / top;
-      final length = inner + (outer - inner) * math.max(.06, value);
+      final length = inner + (outer - inner) * math.max(.04, value);
+      // Le rail du mois, en entier et en transparence…
+      canvas.drawLine(
+          center + direction * inner,
+          center + direction * outer,
+          Paint()
+            ..color = ink.withValues(alpha: .12)
+            ..strokeWidth = width
+            ..strokeCap = StrokeCap.round);
+      // …et ses heures par-dessus.
       canvas.drawLine(
           center + direction * inner,
           center + direction * length,
           Paint()
-            ..color = ink.withValues(alpha: i == peak ? 1 : .38)
-            ..strokeWidth = radius * .085
+            ..color = ink.withValues(alpha: i == peak ? 1 : .55)
+            ..strokeWidth = width
             ..strokeCap = StrokeCap.round);
       final text = TextPainter(
           text: TextSpan(
@@ -1806,6 +1816,33 @@ class _MonthDial extends CustomPainter {
   @override
   bool shouldRepaint(_MonthDial old) =>
       old.months != months || old.peak != peak || old.ink != ink;
+}
+
+/// Le film de chaque story (sa couleur, son affiche en duotone) : jamais
+/// le même d'une page à l'autre. Le film de l'année et le plus vieux sont
+/// fixés ; le genre et le mois le plus chargé prennent le premier film qui
+/// n'est pas déjà pris.
+Map<WrappedSummaryKind, ViewingEvent?> _storyLeads(WrappedInputs w) {
+  final data = w.data;
+  final year = data.filmOfYear?.event;
+  final films = data.voyage.lastOrNull;
+  final taken = {year?.identity, films?.identity};
+  ViewingEvent? free(Iterable<ViewingEvent> candidates) {
+    final pick =
+        candidates.where((e) => !taken.contains(e.identity)).firstOrNull ??
+            candidates.firstOrNull;
+    taken.add(pick?.identity);
+    return pick;
+  }
+
+  final taste = free(_genreFilms(w));
+  final time = free([..._peakFilms(w), ...data.timeline.reversed]);
+  return {
+    WrappedSummaryKind.year: year,
+    WrappedSummaryKind.time: time,
+    WrappedSummaryKind.taste: taste,
+    WrappedSummaryKind.films: films,
+  };
 }
 
 /// Une page de synthèse composée pour le vertical (story), d'après les
@@ -1828,13 +1865,7 @@ class _StoryPage extends ConsumerWidget {
     final data = w.data;
     final stats = data.stats;
     // Le film qui donne sa couleur et son image à la page.
-    final ViewingEvent? lead = switch (kind) {
-      WrappedSummaryKind.year => data.filmOfYear?.event,
-      WrappedSummaryKind.time =>
-        _peakFilms(w).firstOrNull ?? data.timeline.lastOrNull,
-      WrappedSummaryKind.taste => _genreFilms(w).firstOrNull,
-      WrappedSummaryKind.films => data.voyage.lastOrNull,
-    };
+    final lead = _storyLeads(w)[kind];
     final ground = storyColor(w.tint(lead));
     final ink = storyInk(ground);
     final soft = ink.withValues(alpha: .72);
@@ -1916,7 +1947,8 @@ class _StoryPage extends ConsumerWidget {
       final content = switch (kind) {
         WrappedSummaryKind.year =>
           _yearStory(context, u, capText, condText, poster, body, soft),
-        WrappedSummaryKind.time => _timeStory(u, capText, condText, body, ink),
+        WrappedSummaryKind.time =>
+          _timeStory(u, capText, condText, poster, body, ink),
         WrappedSummaryKind.taste =>
           _tasteStory(ref, u, capText, condText, body, ink, soft, line),
         WrappedSummaryKind.films =>
@@ -2072,18 +2104,20 @@ class _StoryPage extends ConsumerWidget {
       double u,
       Widget Function(String) cap,
       Widget Function(String, double, {int maxLines}) cond,
+      Widget Function(ImageData?, double) poster,
       TextStyle body,
       Color ink) {
     final data = inputs.data;
     final stats = data.stats;
     final peak = stats.busiestBucket;
+    final peakPosters = _postersOf(inputs, _peakFilms(inputs));
     final hours = formatHours(stats.seconds).split(' ');
     return (
       Column(mainAxisSize: MainAxisSize.min, children: [
         cap('Acte I · Le temps'),
         SizedBox(height: 5 * u),
         SizedBox.square(
-          dimension: 80 * u,
+          dimension: 72 * u,
           child: CustomPaint(
             painter: _MonthDial(
                 months: stats.buckets,
@@ -2093,7 +2127,7 @@ class _StoryPage extends ConsumerWidget {
                     fontSize: 3 * u, fontWeight: FontWeight.w600)),
             child: Center(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                cond(hours.first, 24 * u),
+                cond(hours.first, 20 * u),
                 cap(hours.length > 1 && hours.last == 'h'
                     ? 'heures'
                     : hours.last),
@@ -2102,11 +2136,19 @@ class _StoryPage extends ConsumerWidget {
           ),
         ),
         SizedBox(height: 3 * u),
-        Text(
-            'devant l\'écran en ${data.year}${_daysPhrase(stats.seconds)}'
-                .replaceFirst(', soit', ', soit'),
-            textAlign: TextAlign.center,
-            style: body),
+        Text('devant l\'écran en ${data.year}${_daysPhrase(stats.seconds)}',
+            textAlign: TextAlign.center, style: body),
+        if (peak != null && peakPosters.isNotEmpty) ...[
+          SizedBox(height: 7 * u),
+          cap('En ${DateFormat('MMMM', _locale).format(DateTime(data.year, peak + 1))}'),
+          SizedBox(height: 3 * u),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            for (final (i, image) in peakPosters.indexed) ...[
+              if (i > 0) SizedBox(width: 2.4 * u),
+              poster(image, (85 - 7.2) * u / 4),
+            ],
+          ]),
+        ],
       ]),
       [
         if (peak != null)
