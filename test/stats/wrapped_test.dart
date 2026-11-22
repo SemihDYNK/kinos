@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -243,5 +245,11 @@ void main() {
     ]);
     expect(wrappedMoodAsset(WrappedMood.tension),
         'asset:///assets/sounds/wrapped_tension.ogg');
+    // Chaque humeur a sa musique dans l'application.
+    for (final mood in WrappedMood.values) {
+      expect(
+          File('assets/sounds/wrapped_${mood.name}.ogg').existsSync(), isTrue,
+          reason: mood.name);
+    }
   });
 }

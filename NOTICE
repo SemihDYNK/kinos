@@ -68,3 +68,16 @@ by xkeril (https://freesound.org/s/701104/).
 All four are released under Creative Commons 0 (public domain dedication),
 https://creativecommons.org/publicdomain/zero/1.0/; they were trimmed,
 faded and level-adjusted for Kinos.
+
+Wrapped music
+-------------
+The yearly Wrapped plays music by Kevin MacLeod (incompetech.com), licensed
+under Creative Commons: By Attribution 4.0 License,
+https://creativecommons.org/licenses/by/4.0/:
+assets/sounds/wrapped_piano.ogg is "Feather Waltz",
+assets/sounds/wrapped_tension.ogg is "Division",
+assets/sounds/wrapped_ampleur.ogg is "Five Armies",
+assets/sounds/wrapped_melancolie.ogg is "Sad Trio",
+assets/sounds/wrapped_legerete.ogg is "Easy Lemon".
+They were level-matched, given short fades in and out, and converted to
+Ogg Vorbis for Kinos; the music itself is unchanged.
