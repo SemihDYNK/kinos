@@ -102,6 +102,63 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
     ..sort((a, b) => (w.rating(b) ?? 0).compareTo(w.rating(a) ?? 0));
   final filmOfYear = data.filmOfYear?.event;
 
+  // Une image de film ne sert qu'une fois : les films qui ont leur propre
+  // diapo (film de l'année, hot takes, amis, plus vieux voyage) sont
+  // réservés, puis chaque diapo prend, dans l'ordre, des films pas encore
+  // montrés. Faute de mieux, elle reprend un film déjà vu plutôt qu'un
+  // fond vide.
+  final used = <String>{
+    if (filmOfYear != null) filmOfYear.identity,
+    if (data.publicLoves case final t?) t.film.identity,
+    if (data.youLove case final t?) t.film.identity,
+    if ((data.friendsDisagree ?? data.friendsAgree) case final t?)
+      t.film.identity,
+    if (data.voyage.lastOrNull case final e?) e.identity,
+  };
+  List<ImageData> fresh(Iterable<ViewingEvent> candidates, {int take = 6}) {
+    final picked = <ViewingEvent>[];
+    for (final e in candidates) {
+      if (picked.length >= take) break;
+      if (used.contains(e.identity) || w.backdrop(e) == null) continue;
+      if (picked.any((p) => p.identity == e.identity)) continue;
+      picked.add(e);
+    }
+    if (picked.isEmpty) {
+      picked.addAll(candidates.where((e) => w.backdrop(e) != null).take(1));
+    }
+    used.addAll(picked.map((e) => e.identity));
+    return [for (final e in picked) w.backdrop(e)!];
+  }
+
+  final streak = stats.streak;
+  final busy = stats.busiestDay;
+  final streakEnd = streak == null
+      ? null
+      : DateTime(streak.start.year, streak.start.month,
+          streak.start.day + streak.days);
+  final rhythmImages = fresh(data.timeline.where((e) => streak == null
+      ? busy != null && DateUtils.isSameDay(e.at, busy.day)
+      : !e.at.isBefore(streak.start) && e.at.isBefore(streakEnd!)));
+  final genreImages = fresh(genreTop);
+  final directorImages = fresh(data.directorFilms);
+  final actorImages = fresh(data.actorFilms);
+  final ratingColumns = List.generate(10, (_) => <ViewingEvent>[]);
+  for (final e in films) {
+    if (w.rating(e) case final r?) ratingColumns[r - 1].add(e);
+  }
+  // La note la plus donnée : la colonne mise en avant, et son fond.
+  var mode = -1;
+  for (var i = 0; i < 10; i++) {
+    if (ratingColumns[i].isNotEmpty &&
+        (mode < 0 || ratingColumns[i].length >= ratingColumns[mode].length)) {
+      mode = i;
+    }
+  }
+  final ratingImages =
+      mode < 0 ? const <ImageData>[] : fresh(ratingColumns[mode]);
+  final agreementImages =
+      fresh([for (final r in stats.topRated) r.event], take: 4);
+
   return [
     WrappedSlide(
         id: 'opening',
@@ -131,7 +188,7 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
       WrappedSlide(
           id: 'rhythm',
           seconds: AppWrapped.rhythm,
-          builder: (_) => _RhythmSlide(inputs: w)),
+          builder: (_) => _RhythmSlide(inputs: w, images: rhythmImages)),
     WrappedSlide(
         id: 'act2',
         seconds: AppWrapped.act,
@@ -144,7 +201,7 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
       WrappedSlide(
           id: 'genre',
           seconds: AppWrapped.genre,
-          builder: (_) => _GenreSlide(inputs: w, films: genreTop)),
+          builder: (_) => _GenreSlide(inputs: w, images: genreImages)),
     if (data.series.isNotEmpty)
       WrappedSlide(
           id: 'series',
@@ -158,7 +215,8 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
               inputs: w,
               label: 'Votre réalisateur',
               name: director.name,
-              films: data.directorFilms)),
+              films: data.directorFilms,
+              images: directorImages)),
     if (stats.actors.firstOrNull case final actor?)
       WrappedSlide(
           id: 'actor',
@@ -167,12 +225,17 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
               inputs: w,
               label: 'Votre acteur',
               name: actor.name,
-              films: data.actorFilms)),
+              films: data.actorFilms,
+              images: actorImages)),
     if (stats.average != null)
       WrappedSlide(
           id: 'ratings',
           seconds: AppWrapped.ratings,
-          builder: (_) => _RatingsSlide(inputs: w, films: films)),
+          builder: (_) => _RatingsSlide(
+              inputs: w,
+              columns: ratingColumns,
+              mode: mode,
+              images: ratingImages)),
     if (data.friendsDisagree ?? data.friendsAgree case final take?)
       WrappedSlide(
           id: 'friends',
@@ -193,7 +256,8 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
       WrappedSlide(
           id: 'agreement',
           seconds: AppWrapped.hotTake,
-          builder: (_) => _AgreementSlide(inputs: w, gap: gap)),
+          builder: (_) =>
+              _AgreementSlide(inputs: w, gap: gap, images: agreementImages)),
     WrappedSlide(
         id: 'act3',
         seconds: AppWrapped.act,
@@ -780,8 +844,9 @@ class _VoyageSlide extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _RhythmSlide extends StatelessWidget {
-  const _RhythmSlide({required this.inputs});
+  const _RhythmSlide({required this.inputs, required this.images});
   final WrappedInputs inputs;
+  final List<ImageData> images;
 
   @override
   Widget build(BuildContext context) {
@@ -793,14 +858,6 @@ class _RhythmSlide extends StatelessWidget {
     final to = streak == null
         ? null
         : DateTime(from!.year, from.month, from.day + streak.days - 1);
-    final images = [
-      for (final e in inputs.data.timeline)
-        if (streak == null
-            ? busy != null && DateUtils.isSameDay(e.at, busy.day)
-            : !e.at.isBefore(from!) &&
-                e.at.isBefore(DateTime(to!.year, to.month, to.day + 1)))
-          if (inputs.backdrop(e) case final image?) image
-    ];
     return _Frame(
         builder: (context, size, type) => [
               CyclingBackdrops(images),
@@ -830,9 +887,9 @@ class _RhythmSlide extends StatelessWidget {
 }
 
 class _GenreSlide extends StatelessWidget {
-  const _GenreSlide({required this.inputs, required this.films});
+  const _GenreSlide({required this.inputs, required this.images});
   final WrappedInputs inputs;
-  final List<ViewingEvent> films;
+  final List<ImageData> images;
 
   @override
   Widget build(BuildContext context) {
@@ -841,10 +898,7 @@ class _GenreSlide extends StatelessWidget {
     final others = [for (final g in genres.skip(1).take(4)) g.name];
     return _Frame(
         builder: (context, size, type) => [
-              CyclingBackdrops([
-                for (final e in films.take(6))
-                  if (inputs.backdrop(e) case final image?) image
-              ]),
+              CyclingBackdrops(images),
               const WrappedScrim(),
               WrappedTextBlock(children: [
                 WrappedText('Votre genre', style: type.cap, at: .4, caps: true),
@@ -917,11 +971,13 @@ class _PersonSlide extends ConsumerWidget {
       {required this.inputs,
       required this.label,
       required this.name,
-      required this.films});
+      required this.films,
+      required this.images});
   final WrappedInputs inputs;
   final String label;
   final String name;
   final List<ViewingEvent> films;
+  final List<ImageData> images;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -931,10 +987,7 @@ class _PersonSlide extends ConsumerWidget {
     return _Frame(builder: (context, size, type) {
       final h = size.height * AppWrapped.portraitFraction;
       return [
-        CyclingBackdrops([
-          for (final e in films.take(6))
-            if (inputs.backdrop(e) case final image?) image
-        ]),
+        CyclingBackdrops(images),
         const WrappedScrim(),
         Padding(
           padding:
@@ -983,28 +1036,32 @@ class _PersonSlide extends ConsumerWidget {
 }
 
 /// Vos notes en piles d'affiches : chaque colonne, de ½ à 5 étoiles, se
-/// remplit film après film ; seule la plus haute note reste éclairée.
+/// remplit film après film, sur les images de votre note la plus donnée.
+/// À la fin, cette colonne-là reste seule éclairée, et la phrase dit
+/// pourquoi.
 class _RatingsSlide extends StatelessWidget {
-  const _RatingsSlide({required this.inputs, required this.films});
+  const _RatingsSlide(
+      {required this.inputs,
+      required this.columns,
+      required this.mode,
+      required this.images});
   final WrappedInputs inputs;
-  final List<ViewingEvent> films;
+  final List<List<ViewingEvent>> columns;
+  final int mode;
+  final List<ImageData> images;
 
   @override
   Widget build(BuildContext context) {
-    final columns = List.generate(10, (_) => <ViewingEvent>[]);
-    for (final e in films) {
-      if (inputs.rating(e) case final r?) columns[r - 1].add(e);
-    }
     final total = columns.fold(0, (a, c) => a + c.length);
     final step = total == 0 ? 0.0 : math.min(.09, 5.5 / total);
     final litAt = .6 + total * step + .6;
     final lit = WrappedClock.at(context, litAt, length: 1.4);
-    final top = columns.lastIndexWhere((c) => c.isNotEmpty);
     final average = inputs.data.stats.average;
     const labels = ['½', '1', '', '2', '', '3', '', '4', '', '5'];
+    final modeCount = mode < 0 ? 0 : columns[mode].length;
     return _Frame(builder: (context, size, type) {
       final left = size.width * AppWrapped.inset;
-      final areaTop = size.height * .32;
+      final areaTop = size.height * .34;
       final areaBottom = size.height * .14;
       final areaH = size.height - areaTop - areaBottom;
       final colW = (size.width - left * 2) / 10;
@@ -1015,7 +1072,10 @@ class _RatingsSlide extends StatelessWidget {
       for (var col = 0; col < 10; col++) {
         final n = columns[col].length;
         final offset =
-            n <= 1 ? 0.0 : math.min(posterH * .18, (areaH - posterH) / (n - 1));
+            n <= 1 ? 0.0 : math.min(posterH * .3, (areaH - posterH) / (n - 1));
+        // Les autres notes s'estompent : pas de cadre gris, juste moins de
+        // lumière sur leurs affiches.
+        final fade = col == mode ? 1.0 : 1 - lit * .7;
         for (var j = 0; j < n; j++) {
           final p = WrappedClock.at(context, .6 + k++ * step, length: .9);
           stacks.add(Positioned(
@@ -1024,7 +1084,7 @@ class _RatingsSlide extends StatelessWidget {
             width: posterW,
             height: posterH,
             child: Opacity(
-              opacity: p,
+              opacity: p * fade,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppSpacing.xxs),
                 child: inputs.poster(columns[col][j]) == null
@@ -1036,29 +1096,25 @@ class _RatingsSlide extends StatelessWidget {
             ),
           ));
         }
-        if (col != top) {
-          stacks.add(Positioned(
-            left: left + col * colW,
-            top: areaTop - posterH,
-            width: colW,
-            height: areaH + posterH,
-            child: IgnorePointer(
-                child: ColoredBox(
-                    color: AppColors.background.withValues(alpha: .65 * lit))),
-          ));
-        }
         stacks.add(Positioned(
           left: left + col * colW,
           top: size.height - areaBottom + AppSpacing.xs,
           width: colW,
-          child:
-              Text(labels[col], textAlign: TextAlign.center, style: type.cap),
+          child: Text(labels[col],
+              textAlign: TextAlign.center,
+              style: col == mode
+                  ? type.small.copyWith(color: AppColors.textPrimary)
+                  : type.cap),
         ));
       }
       return [
+        CyclingBackdrops(images),
+        ColoredBox(
+            color: AppColors.scrim.withValues(alpha: AppWrapped.ratingsVeil)),
         ...stacks,
         Positioned(
           left: left,
+          right: left,
           top: size.height * .1,
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1069,6 +1125,14 @@ class _RatingsSlide extends StatelessWidget {
                   'Moyenne ${NumberFormat('0.0', _locale).format(average)}',
                   style: type.mid,
                   at: litAt),
+            if (mode >= 0) ...[
+              SizedBox(height: size.height * .015),
+              WrappedText(
+                  'Votre note la plus fréquente : ${formatStars(mode + 1)}, '
+                  'pour ${_films(modeCount)}.',
+                  style: type.small,
+                  at: litAt + .8),
+            ],
           ]),
         ),
       ];
@@ -1205,20 +1269,18 @@ class _HotTakeSlide extends StatelessWidget {
 }
 
 class _AgreementSlide extends StatelessWidget {
-  const _AgreementSlide({required this.inputs, required this.gap});
+  const _AgreementSlide(
+      {required this.inputs, required this.gap, required this.images});
   final WrappedInputs inputs;
   final double gap;
+  final List<ImageData> images;
 
   @override
   Widget build(BuildContext context) {
-    final films = [
-      for (final r in inputs.data.stats.topRated)
-        if (inputs.backdrop(r.event) case final image?) image
-    ];
     final stars = NumberFormat('0.#', _locale).format(gap);
     return _Frame(
         builder: (context, size, type) => [
-              CyclingBackdrops(films),
+              CyclingBackdrops(images),
               const WrappedScrim(),
               WrappedTextBlock(children: [
                 WrappedText('Vous et le public',
@@ -1392,7 +1454,9 @@ class WrappedRecap extends StatelessWidget {
       final fade = LinearGradient(
         begin: portrait ? Alignment.topCenter : Alignment.centerLeft,
         end: portrait ? Alignment.bottomCenter : Alignment.centerRight,
-        stops: const [0, .55, 1],
+        // Totalement transparent avant le bord : le bord fractionnaire du
+        // calque ne laisse plus de liseré clair.
+        stops: const [0, .55, .96],
         colors: const [Colors.white, Colors.white, Colors.transparent],
       );
       final pad = size.width * (portrait ? .07 : AppWrapped.inset * .7);

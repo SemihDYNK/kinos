@@ -313,6 +313,9 @@ abstract final class AppWrapped {
   static const actSecondAlpha = .45;
   static const actAccentAlpha = .22;
 
+  /// Voile sur les images derrière les piles d'affiches des notes.
+  static const ratingsVeil = .8;
+
   /// Durée de chaque image quand plusieurs films se relaient (secondes).
   static const backdropCycle = 3.2;
 

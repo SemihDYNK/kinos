@@ -24,9 +24,10 @@ bool wrappedAvailable(int year, {DateTime? now}) {
       Platform.environment['KINOS_WRAPPED_ANYTIME'] == '1';
 }
 
-/// Le Wrapped d'une année, en plein écran : les diapos défilent seules,
-/// calées sur leur durée ; les flèches passent ou reviennent, Espace met en
-/// pause, Échap referme.
+/// Le Wrapped d'une année, en plein écran. Chaque diapo joue son
+/// mouvement puis reste à l'écran le temps qu'on la lise : les flèches
+/// passent ou reviennent, Espace lance ou coupe la lecture automatique,
+/// Échap referme.
 @RoutePage()
 class YearWrappedScreen extends ConsumerStatefulWidget {
   const YearWrappedScreen({@PathParam('year') required this.year, super.key});
@@ -38,7 +39,9 @@ class YearWrappedScreen extends ConsumerStatefulWidget {
 
 class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
   String? _current;
-  bool _paused = false;
+
+  /// Lecture automatique : chaque diapo passe à la suivante à sa fin.
+  bool _auto = false;
   bool _hint = true;
   Timer? _hintTimer;
   final _progress = ValueNotifier<double>(0);
@@ -90,13 +93,19 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
     final next = (index < 0 ? 0 : index) + delta;
     if (next >= slides.length) {
       // Le récap reste à l'écran : on ne boucle pas.
-      setState(() => _paused = true);
+      setState(() => _auto = false);
       return;
     }
     setState(() {
       _current = slides[next.clamp(0, slides.length - 1)].id;
       _progress.value = 0;
     });
+  }
+
+  void _toggleAuto(List<WrappedSlide> slides) {
+    setState(() => _auto = !_auto);
+    // Une diapo déjà finie passe tout de suite à la suivante.
+    if (_auto && _progress.value >= 1) _go(slides, 1);
   }
 
   KeyEventResult _onKey(List<WrappedSlide> slides, KeyEvent event) {
@@ -111,7 +120,7 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
     } else if (key == LogicalKeyboardKey.arrowLeft) {
       _go(slides, -1);
     } else if (key == LogicalKeyboardKey.space) {
-      setState(() => _paused = !_paused);
+      _toggleAuto(slides);
     } else if (key == LogicalKeyboardKey.escape) {
       context.router.maybePop();
     } else {
@@ -177,7 +186,6 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
                           child: _SlideHost(
                             key: ValueKey(current.id),
                             slide: current,
-                            paused: _paused,
                             motion: motion,
                             // L'ancienne diapo, encore là pendant le fondu,
                             // ne pilote plus rien.
@@ -187,7 +195,8 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
                               }
                             },
                             onDone: () {
-                              if (current.id == (_current ?? slides.first.id)) {
+                              if (_auto &&
+                                  current.id == (_current ?? slides.first.id)) {
                                 _go(slides, 1);
                               }
                             },
@@ -199,9 +208,9 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
                           current: slides.indexOf(current),
                           progress: _progress),
                       _Controls(
-                        visible: _hint || _paused,
-                        paused: _paused,
-                        onPause: () => setState(() => _paused = !_paused),
+                        visible: _hint,
+                        auto: _auto,
+                        onAuto: () => _toggleAuto(slides),
                         onClose: () => context.router.maybePop(),
                       ),
                     ]),
@@ -216,13 +225,11 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
 class _SlideHost extends StatefulWidget {
   const _SlideHost(
       {required this.slide,
-      required this.paused,
       required this.motion,
       required this.onTick,
       required this.onDone,
       super.key});
   final WrappedSlide slide;
-  final bool paused;
   final bool motion;
   final ValueChanged<double> onTick;
   final VoidCallback onDone;
@@ -245,15 +252,7 @@ class _SlideHostState extends State<_SlideHost>
   @override
   void initState() {
     super.initState();
-    if (!widget.paused) _clock.forward();
-  }
-
-  @override
-  void didUpdateWidget(_SlideHost old) {
-    super.didUpdateWidget(old);
-    if (widget.paused != old.paused) {
-      widget.paused ? _clock.stop() : _clock.forward();
-    }
+    _clock.forward();
   }
 
   @override
@@ -313,17 +312,17 @@ class _Progress extends StatelessWidget {
       );
 }
 
-/// Pause et fermeture en haut à droite, et les raccourcis en bas : visibles
+/// Lecture automatique et fermeture en haut à droite, et les raccourcis en bas : visibles
 /// au mouvement de la souris ou à une touche, puis ils s'effacent.
 class _Controls extends StatelessWidget {
   const _Controls(
       {required this.visible,
-      required this.paused,
-      required this.onPause,
+      required this.auto,
+      required this.onAuto,
       required this.onClose});
   final bool visible;
-  final bool paused;
-  final VoidCallback onPause;
+  final bool auto;
+  final VoidCallback onAuto;
   final VoidCallback onClose;
 
   @override
@@ -351,8 +350,12 @@ class _Controls extends StatelessWidget {
           top: top + AppSpacing.md,
           right: AppSpacing.screenPadding,
           child: Row(children: [
-            button(paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                paused ? 'Lecture (Espace)' : 'Pause (Espace)', onPause),
+            button(
+                auto ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                auto
+                    ? 'Arrêter la lecture automatique (Espace)'
+                    : 'Lecture automatique (Espace)',
+                onAuto),
             button(Icons.close_rounded, 'Fermer (Échap)', onClose),
           ]),
         ),
@@ -361,7 +364,7 @@ class _Controls extends StatelessWidget {
           bottom: AppSpacing.lg,
           child: IgnorePointer(
             child: Text(
-                '← →  naviguer   ·   Espace  pause   ·   Échap  quitter',
+                '← →  naviguer   ·   Espace  lecture auto   ·   Échap  quitter',
                 style: hint),
           ),
         ),

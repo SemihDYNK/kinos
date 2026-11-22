@@ -108,6 +108,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 5));
     expect(find.text('Votre année 2026'), findsOneWidget);
+    // Manuel par défaut : la diapo reste après son mouvement.
+    await tester.pump(const Duration(seconds: 30));
+    expect(find.text('Votre année 2026'), findsOneWidget);
+    // Espace lance la lecture automatique : la diapo finie passe aussitôt.
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('ACTE I'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump(const Duration(seconds: 3));
 
     final seen = <String>{};
     for (var i = 0; i < 20; i++) {
