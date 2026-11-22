@@ -43,6 +43,18 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
   Timer? _hintTimer;
   final _progress = ValueNotifier<double>(0);
   final _focus = FocusNode(debugLabel: 'wrapped');
+  bool _warmed = false;
+
+  /// Toutes les affiches de l'année, chargées pendant l'ouverture : la
+  /// frise défile ensuite sans case vide ni à-coup de décodage.
+  Future<void> _warm(Map<String, WrappedArt> art) async {
+    for (final a in art.values) {
+      if (!mounted) return;
+      if (a.poster case final poster?) {
+        await precacheImage(poster.imageProvider, context, onError: (_, __) {});
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -122,6 +134,11 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
             style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)));
 
     final ready = data.valueOrNull != null && art.valueOrNull != null;
+    if (ready && !_warmed) {
+      _warmed = true;
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => unawaited(_warm(art.value!)));
+    }
     final slides = !ready
         ? const <WrappedSlide>[]
         : buildWrappedSlides(WrappedInputs(

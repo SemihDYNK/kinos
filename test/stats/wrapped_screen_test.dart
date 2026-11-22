@@ -36,10 +36,27 @@ ViewingEvent film(int n, DateTime at,
         directors: [director],
         cast: const ['Toshiro Mifune']);
 
+ViewingEvent episode(String series, int n, DateTime at) => ViewingEvent(
+    identity: 'jellyfin:$series$n',
+    kind: 'episode',
+    title: 'Épisode $n',
+    seriesTitle: series,
+    at: at,
+    runtimeSeconds: 2400,
+    jellyfinId: '$series$n',
+    genres: const ['Drame']);
+
+final episodes = [
+  for (var n = 1; n <= 4; n++)
+    episode('Severance', n, DateTime(year, 2, 8, 20 + n)),
+  episode('Andor', 1, DateTime(year, 3, 1)),
+];
+
 final events = [
   for (var n = 1; n <= 12; n++)
     film(n, DateTime(year, n <= 6 ? 7 : n - 6, n <= 6 ? 10 + n : 3),
         genre: n.isEven ? 'Drame' : 'Thriller'),
+  ...episodes,
 ];
 
 final ratings = {
@@ -101,6 +118,7 @@ void main() {
         'ACTE I',
         'VOUS AVEZ PASSÉ',
         'VOTRE GENRE',
+        'VOS SÉRIES',
         'VOTRE RÉALISATEUR',
         'VOS NOTES',
         'VOS AMIS NE SONT PAS D\'ACCORD',
@@ -116,7 +134,52 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     }
     expect(tester.takeException(), isNull);
-    expect(seen.length, 11, reason: 'seen: $seen');
+    expect(seen.length, 12, reason: 'seen: $seen');
+  });
+
+  test('the timeline speed never jumps nor goes backwards', () {
+    final path =
+        smoothPath([(0, 0, 0), (.5, 40, 20), (.64, 43, 20), (1, 90, 0)]);
+    var previous = path(0);
+    var speed = 0.0;
+    for (var i = 1; i <= 1000; i++) {
+      final x = i / 1000, p = path(x);
+      expect(p, greaterThanOrEqualTo(previous - 1e-9));
+      final v = (p - previous) * 1000;
+      expect((v - speed).abs(), lessThan(5), reason: 'at $x');
+      previous = p;
+      speed = v;
+    }
+    expect(path(.5), closeTo(40, 1e-9));
+    expect(path(1), closeTo(90, 1e-9));
+  });
+
+  testWidgets('a year of series only still plays', (tester) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final wrapped = computeWrapped(episodes, const {}, year);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        letterboxdScopeProvider.overrideWith((ref) => null),
+        kinosRatingStoreProvider.overrideWith((ref) => null),
+        wrappedDataProvider(year).overrideWith((ref) async => wrapped),
+        wrappedArtProvider(year).overrideWith((ref) async => const {}),
+        wrappedTintsProvider(year).overrideWith((ref) async => const {}),
+      ],
+      child: MaterialApp(
+          theme: buildAppTheme(), home: const YearWrappedScreen(year: year)),
+    ));
+    var series = false;
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pump(const Duration(seconds: 6));
+      series |= find.text('5 épisodes').evaluate().isNotEmpty;
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump(const Duration(seconds: 2));
+    }
+    expect(tester.takeException(), isNull);
+    expect(series, isTrue);
   });
 
   testWidgets('the recap holds in a 9:16 story', (tester) async {

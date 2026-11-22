@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:kinos/letterboxd/friends/letterboxd_friends_providers.dart'
+    show letterboxdFriendsAccountProvider;
 import 'package:kinos/letterboxd/friends/letterboxd_friends_store.dart'
     show FriendRating;
 import 'package:kinos/models/items/images_models.dart';
@@ -96,11 +98,6 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
   final data = w.data;
   final stats = data.stats;
   final films = {for (final e in data.timeline) e.identity: e}.values.toList();
-  final peakFilm = stats.busiestBucket == null
-      ? null
-      : data.timeline
-          .where((e) => e.at.month - 1 == stats.busiestBucket)
-          .firstOrNull;
   final genreTop = [...data.genreFilms]
     ..sort((a, b) => (w.rating(b) ?? 0).compareTo(w.rating(a) ?? 0));
   final filmOfYear = data.filmOfYear?.event;
@@ -116,7 +113,14 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
         builder: (_) => _ActCard(
             number: 'Acte I',
             title: 'Le temps',
-            color: w.tint(peakFilm ?? films.firstOrNull),
+            colors: [
+              for (final e in [
+                ...data.timeline
+                    .where((e) => e.at.month - 1 == stats.busiestBucket),
+                ...films,
+              ].take(3))
+                w.tint(e)
+            ],
             focus: const Alignment(-.6, -.4))),
     if (data.timeline.isNotEmpty)
       WrappedSlide(
@@ -134,13 +138,18 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
         builder: (_) => _ActCard(
             number: 'Acte II',
             title: 'Les goûts',
-            color: w.tint(genreTop.firstOrNull),
+            colors: [for (final e in genreTop.take(3)) w.tint(e)],
             focus: const Alignment(.5, -.3))),
     if (stats.genres.isNotEmpty)
       WrappedSlide(
           id: 'genre',
           seconds: AppWrapped.genre,
           builder: (_) => _GenreSlide(inputs: w, films: genreTop)),
+    if (data.series.isNotEmpty)
+      WrappedSlide(
+          id: 'series',
+          seconds: AppWrapped.genre,
+          builder: (_) => _SeriesSlide(inputs: w)),
     if (stats.directors.firstOrNull case final director?)
       WrappedSlide(
           id: 'director',
@@ -191,7 +200,10 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
         builder: (_) => _ActCard(
             number: 'Acte III',
             title: 'Les films',
-            color: w.tint(filmOfYear),
+            colors: [
+              if (filmOfYear != null) w.tint(filmOfYear),
+              for (final r in data.runnersUp.take(2)) w.tint(r.event),
+            ],
             focus: const Alignment(0, .4))),
     if (data.voyage.length >= 2)
       WrappedSlide(
@@ -340,45 +352,86 @@ class _Opening extends StatelessWidget {
 
 /// Le carton d'un acte : son numéro et son titre, sur un dégradé léger de
 /// la couleur de ce qui suit, qui recule doucement.
+/// Le carton d'un acte, en 60-30-10 sur les couleurs de trois de ses
+/// films : la teinte du premier en fond (60), celle du deuxième en grande
+/// nappe qui dérive (30), celle du troisième pour le numéro de l'acte et
+/// un halo discret derrière le titre (10). Le tout recule doucement.
 class _ActCard extends StatelessWidget {
   const _ActCard(
       {required this.number,
       required this.title,
-      required this.color,
+      required this.colors,
       required this.focus});
   final String number;
   final String title;
-  final Color color;
+
+  /// Teintes de trois films de l'acte (les absentes reprennent la
+  /// première).
+  final List<Color> colors;
   final Alignment focus;
 
   @override
   Widget build(BuildContext context) {
     final settle = WrappedClock.at(context, 0, length: 6);
-    return _Frame(
-        builder: (context, size, type) => [
-              Transform.scale(
-                scale: 1.15 - .15 * settle,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: focus,
-                      radius: 1.1,
-                      colors: [
-                        statsDataColor(color).withValues(alpha: .4),
-                        statsDataColor(color).withValues(alpha: 0),
-                      ],
-                    ),
-                  ),
-                ),
+    final drift = WrappedClock.at(context, 0,
+        length: AppWrapped.act, curve: Curves.easeInOutSine);
+    Color pick(int i) => i < colors.length
+        ? colors[i]
+        : colors.isEmpty
+            ? AppColors.heroFallback
+            : colors.first;
+    final base = pick(0);
+    final second = statsDataColor(pick(1));
+    final accent = statsDataColor(pick(2));
+    return _Frame(builder: (context, size, type) {
+      final secondCenter =
+          Alignment.lerp(focus, Alignment(focus.x * .6, focus.y * .6), drift)!;
+      return [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [base, Color.lerp(base, AppColors.scrim, .55)!],
+            ),
+          ),
+        ),
+        Transform.scale(
+          scale: 1.15 - .15 * settle,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: secondCenter,
+                radius: .95,
+                colors: [
+                  second.withValues(alpha: AppWrapped.actSecondAlpha),
+                  second.withValues(alpha: 0),
+                ],
               ),
-              Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  WrappedText(number, style: type.cap, at: .6, caps: true),
-                  SizedBox(height: size.height * .025),
-                  WrappedText(title, style: type.mid, at: 1.6),
-                ]),
-              ),
-            ]);
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              radius: .32,
+              colors: [
+                accent.withValues(alpha: AppWrapped.actAccentAlpha * settle),
+                accent.withValues(alpha: 0),
+              ],
+            ),
+          ),
+        ),
+        Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            WrappedText(number,
+                style: type.cap.copyWith(color: accent), at: .6, caps: true),
+            SizedBox(height: size.height * .025),
+            WrappedText(title, style: type.mid, at: 1.6),
+          ]),
+        ),
+      ];
+    });
   }
 }
 
@@ -388,12 +441,44 @@ class _ActCard extends StatelessWidget {
 
 double _easeInOut(double x) => Curves.easeInOutCubic.transform(x.clamp(0, 1));
 
+/// Un trajet qui passe par chaque repère (avancement, position, vitesse)
+/// avec une vitesse continue (Hermite cubique). Les vitesses trop fortes
+/// pour un segment sont bridées, pour que la frise ne recule jamais.
+double Function(double x) smoothPath(List<(double, double, double)> keys) {
+  final k = [...keys];
+  for (var j = 0; j < k.length; j++) {
+    var v = k[j].$3;
+    for (final n in [j - 1, j]) {
+      if (n < 0 || n + 1 >= k.length) continue;
+      final slope = (k[n + 1].$2 - k[n].$2) / (k[n + 1].$1 - k[n].$1);
+      v = math.min(v, 3 * slope * .9);
+    }
+    k[j] = (k[j].$1, k[j].$2, math.max(0, v));
+  }
+  return (double x) {
+    x = x.clamp(0.0, 1.0);
+    var n = 0;
+    while (n < k.length - 2 && x > k[n + 1].$1) {
+      n++;
+    }
+    final (x0, p0, v0) = k[n];
+    final (x1, p1, v1) = k[n + 1];
+    final h = x1 - x0;
+    final t = ((x - x0) / h).clamp(0.0, 1.0);
+    final t2 = t * t, t3 = t2 * t;
+    return (2 * t3 - 3 * t2 + 1) * p0 +
+        (t3 - 2 * t2 + t) * h * v0 +
+        (-2 * t3 + 3 * t2) * p1 +
+        (t3 - t2) * h * v1;
+  };
+}
+
 /// Une frise d'affiches qui défile selon [path] (indice fractionnaire du
 /// film au centre, pour un avancement de 0 à 1 sur [travel] secondes). Le
 /// fond suit la vitesse : la couleur des films qui passent quand elle va
 /// vite, l'image du film central quand elle ralentit. À l'arrêt, la frise
 /// se range (ou s'efface) et le voile de lecture arrive sous [texts].
-class _Frise extends StatelessWidget {
+class _Frise extends StatefulWidget {
   const _Frise({
     required this.inputs,
     required this.items,
@@ -414,7 +499,47 @@ class _Frise extends StatelessWidget {
   final Widget? Function(double x, WrappedType type, Size size)? overlay;
 
   @override
+  State<_Frise> createState() => _FriseState();
+}
+
+class _FriseState extends State<_Frise> {
+  /// Le film dont l'image est en fond : il ne change que quand la frise
+  /// ralentit assez pour qu'on la voie. À pleine vitesse, aucune image
+  /// n'est chargée ni décodée pour rien.
+  int _banner = 0;
+  bool _warmed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_warmed) return;
+    _warmed = true;
+    // Les images des moments lents : le départ, le ralenti, l'arrivée.
+    final last = widget.items.length - 1;
+    final stops = {
+      0,
+      for (final x in [.5, .57, .64, 1.0])
+        widget.path(x).round().clamp(0, last),
+      last,
+    };
+    for (final i in stops) {
+      final image = widget.inputs.backdrop(widget.items[i]);
+      if (image != null) {
+        precacheImage(image.imageProvider, context, onError: (_, __) {});
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final inputs = widget.inputs;
+    final items = widget.items;
+    final travel = widget.travel;
+    final path = widget.path;
+    final label = widget.label;
+    final texts = widget.texts;
+    final fadeOut = widget.fadeOut;
+    final overlay = widget.overlay;
     final motion = WrappedClock.motionOf(context);
     final t = WrappedClock.seconds(context);
     final x = motion ? (t / travel).clamp(0.0, 1.0) : 1.0;
@@ -431,6 +556,7 @@ class _Frise extends StatelessWidget {
     final c = i.round().clamp(0, items.length - 1);
     final clear =
         x >= 1 ? 1.0 : (1 - speed / AppWrapped.friseClearSpeed).clamp(0.0, 1.0);
+    if (clear > .02) _banner = c;
 
     Color tintAt(double at) {
       final a = at.floor().clamp(0, items.length - 1);
@@ -460,8 +586,8 @@ class _Frise extends StatelessWidget {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 700),
             child: KenBurns(
-                key: ValueKey(c),
-                child: WrappedImage(inputs.backdrop(items[c]))),
+                key: ValueKey(_banner),
+                child: WrappedImage(inputs.backdrop(items[_banner]))),
           ),
         ),
         ColoredBox(color: AppColors.scrim.withValues(alpha: .35)),
@@ -537,19 +663,18 @@ class _TimeSlide extends StatelessWidget {
     final peakCount =
         peak == null ? 0 : items.where((e) => e.at.month - 1 == peak).length;
     const travel = AppWrapped.time - 4;
-    // Accélère jusqu'au mois le plus chargé, s'y attarde, puis repart et
-    // freine jusqu'au dernier film de l'année.
-    double path(double x) {
-      if (peakStart <= 0 || peakCount < 2 || last < 6) {
-        return _easeInOut(x) * last;
-      }
-      final dwell = math.min(3.0, peakCount - 1.0);
-      if (x < .5) return _easeInOut(x / .5) * peakStart;
-      if (x < .64) return peakStart + (x - .5) / .14 * dwell;
-      return peakStart +
-          dwell +
-          _easeInOut((x - .64) / .36) * (last - peakStart - dwell);
-    }
+    // Accélère jusqu'au mois le plus chargé, y ralentit sans s'arrêter,
+    // puis repart et freine jusqu'au dernier film de l'année. La vitesse
+    // reste continue d'un bout à l'autre : aucun à-coup.
+    final dwell = math.min(3.0, peakCount - 1.0);
+    final path = peakStart <= 0 || peakCount < 2 || last < 6
+        ? (double x) => _easeInOut(x) * last
+        : smoothPath([
+            (0, 0, 0),
+            (.5, peakStart.toDouble(), dwell / .14),
+            (.64, peakStart + dwell, dwell / .14),
+            (1, last, 0),
+          ]);
 
     final month = peak == null
         ? ''
@@ -736,6 +861,55 @@ class _GenreSlide extends StatelessWidget {
   }
 }
 
+/// Vos séries : la plus regardée en tête, et la plus longue soirée.
+class _SeriesSlide extends StatelessWidget {
+  const _SeriesSlide({required this.inputs});
+  final WrappedInputs inputs;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = inputs.data;
+    final stats = data.stats;
+    final top = data.series.first;
+    final night = stats.longestNight;
+    final count = stats.series;
+    return _Frame(
+        builder: (context, size, type) => [
+              CyclingBackdrops([
+                for (final s in data.series)
+                  if (inputs.art['series:${s.name}']?.backdrop
+                      case final image?)
+                    image
+              ]),
+              const WrappedScrim(),
+              WrappedTextBlock(children: [
+                WrappedText('Vos séries', style: type.cap, at: .4, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    '${stats.episodes} ${stats.episodes > 1 ? 'épisodes' : 'épisode'}',
+                    style: type.big,
+                    at: 1.4),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    '$count ${count > 1 ? 'séries' : 'série'}, ${top.name} en tête '
+                    'avec ${top.episodes.length} '
+                    '${top.episodes.length > 1 ? 'épisodes' : 'épisode'}.',
+                    style: type.small,
+                    at: 3),
+                if (night != null) ...[
+                  SizedBox(height: size.height * .015),
+                  WrappedText(
+                      'Plus longue soirée : ${night.episodes} épisodes'
+                      '${night.series == null ? '' : ' de ${night.series}'}, '
+                      'le ${DateFormat('d MMMM', _locale).format(night.day)}.',
+                      style: type.small,
+                      at: 4.2),
+                ],
+              ]),
+            ]);
+  }
+}
+
 /// Le réalisateur ou l'acteur de l'année : son portrait net devant ses
 /// films qui se relaient.
 class _PersonSlide extends ConsumerWidget {
@@ -904,7 +1078,7 @@ class _RatingsSlide extends StatelessWidget {
 
 /// Le film où vos amis Letterboxd ne sont pas d'accord avec vous, ou le
 /// seul qui vous a tous mis d'accord.
-class _FriendsSlide extends StatelessWidget {
+class _FriendsSlide extends ConsumerWidget {
   const _FriendsSlide(
       {required this.inputs, required this.take, required this.disagree});
   final WrappedInputs inputs;
@@ -912,7 +1086,9 @@ class _FriendsSlide extends StatelessWidget {
   final bool disagree;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Votre photo Letterboxd, à côté de celles de vos amis.
+    final me = ref.watch(letterboxdFriendsAccountProvider).valueOrNull;
     final friends = [...take.ratings]..sort((a, b) => b.rating - a.rating);
     final shown = friends.take(8).toList();
     final average = _publicNumber(take.friends);
@@ -971,7 +1147,8 @@ class _FriendsSlide extends StatelessWidget {
             for (final (n, FriendRating f) in shown.indexed)
               person(
                   f.friend.name, f.friend.avatarUrl, f.rating, 2.6 + n * .35),
-            person('', null, take.mine, 2.6 + shown.length * .35 + .6,
+            person(me?.username ?? '', me?.avatarUrl, take.mine,
+                2.6 + shown.length * .35 + .6,
                 me: true),
           ]),
           SizedBox(height: size.height * .03),

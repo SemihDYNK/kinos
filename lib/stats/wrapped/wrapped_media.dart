@@ -37,9 +37,44 @@ final wrappedArtProvider = FutureProvider.autoDispose
       items[item.id] = item;
     }
   }
+  // Les séries : l'épisode donne sa série, la série ses images.
+  final episodes = [
+    for (final s in data.series)
+      if (s.episodes.firstWhere((e) => e.jellyfinId != null,
+              orElse: () => s.episodes.first)
+          case final e when e.jellyfinId != null)
+        (s.name, e.jellyfinId!)
+  ];
+  final seriesArt = <String, WrappedArt>{};
+  if (episodes.isNotEmpty) {
+    final episodeItems = await api.usersUserIdItemsGet(
+        ids: [for (final e in episodes) e.$2], enableUserData: false);
+    final seriesOf = {
+      for (final dto in episodeItems.body?.items ?? const <BaseItemDto>[])
+        if (dto.seriesId != null) dto.id: dto.seriesId!
+    };
+    final ids = seriesOf.values.toSet().toList();
+    if (ids.isNotEmpty) {
+      final shows =
+          await api.usersUserIdItemsGet(ids: ids, enableUserData: false);
+      final byId = {
+        for (final dto in shows.body?.items ?? const <BaseItemDto>[])
+          dto.id: ItemBaseModel.fromBaseDto(dto, ref)
+      };
+      for (final (name, episode) in episodes) {
+        final show = byId[seriesOf[episode]];
+        if (show == null) continue;
+        seriesArt['series:$name'] = (
+          poster: show.images?.primary,
+          backdrop: show.images?.backDrop?.firstOrNull ?? show.images?.primary,
+        );
+      }
+    }
+  }
   ref.keepAlive();
   return {
     for (final e in films.values) e.identity: _artOf(e, items, data),
+    ...seriesArt,
   };
 });
 

@@ -87,6 +87,7 @@ class WrappedData {
     required this.moods,
     required this.hook,
     this.facts = const {},
+    this.series = const [],
   });
 
   final int year;
@@ -121,6 +122,10 @@ class WrappedData {
   /// Les ambiances des trois actes : le temps, les goûts, les films.
   final List<WrappedMood> moods;
   final WrappedHook? hook;
+
+  /// Les séries de l'année, de la plus regardée à la moins : leurs
+  /// épisodes vus.
+  final List<({String name, List<ViewingEvent> episodes})> series;
 
   /// Les faits du public par film TMDB (images des films hors
   /// bibliothèque).
@@ -286,8 +291,19 @@ WrappedData computeWrapped(
     genreFilms: stats.genres.firstOrNull?.count ?? 0,
   ));
 
+  final bySeries = <String, List<ViewingEvent>>{};
+  for (final e in all) {
+    if (!e.isMovie && e.at.year == year) {
+      (bySeries[e.seriesTitle ?? e.title] ??= []).add(e);
+    }
+  }
+  final series = [
+    for (final e in bySeries.entries) (name: e.key, episodes: e.value)
+  ]..sort((a, b) => b.episodes.length.compareTo(a.episodes.length));
+
   final top = stats.topRated;
   return WrappedData(
+    series: series.take(5).toList(),
     year: year,
     stats: stats,
     timeline: timeline,

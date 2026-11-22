@@ -308,6 +308,11 @@ abstract final class AppWrapped {
   /// Avancée lente de l'image sur toute la diapo.
   static const kenBurns = .06;
 
+  /// Cartons d'acte : la nappe du deuxième film (30) et le halo du
+  /// troisième (10).
+  static const actSecondAlpha = .45;
+  static const actAccentAlpha = .22;
+
   /// Durée de chaque image quand plusieurs films se relaient (secondes).
   static const backdropCycle = 3.2;
 
@@ -343,7 +348,7 @@ abstract final class AppWrapped {
 
   /// Portraits et avatars.
   static const portraitFraction = .42;
-  static const avatarFraction = .07;
+  static const avatarFraction = .1;
 
   /// Indication des raccourcis, effacée après ce délai sans mouvement.
   static const hintDelay = Duration(seconds: 3);
