@@ -1,4 +1,6 @@
 import 'package:kinos/anilist/anilist_mapping_dialog.dart';
+import 'package:kinos/ratings/kinos_rating_button.dart';
+import 'package:kinos/ratings/kinos_ratings.dart' show ratingIdentity;
 import 'package:kinos/upcoming/upcoming_follow_dialog.dart';
 import 'package:flutter/material.dart';
 
@@ -200,6 +202,12 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
         ref.read(providerId.notifier).updateUserData(item, response.bodyOrThrow);
       },
       isPlayed: item.userData.played,
+      rating: KinosRatingButton(
+          identity: ratingIdentity(
+              movie: false,
+              tmdbId: details?.overview.tmdbId,
+              jellyfinId: item.id),
+          title: item.name),
       onTogglePlayed: () async {
         final response = await ref.read(userProvider.notifier).markAsPlayed(
               !item.userData.played,

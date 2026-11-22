@@ -12,6 +12,8 @@ import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/database_provider.dart';
 import 'package:kinos/recommendations/models/trait.dart';
 
+import 'package:kinos/ratings/kinos_ratings.dart';
+
 import 'viewing_log.dart';
 import 'viewing_recorder.dart';
 
@@ -178,6 +180,11 @@ class ViewingBackfill {
     try {
       final snapshot =
           await LetterboxdStore(ref.read(appDatabaseProvider), scope).read();
+      // Les notes Letterboxd deviennent des notes Kinos (jamais par-dessus
+      // une note donnée dans Kinos).
+      await ref
+          .read(kinosRatingsProvider.notifier)
+          .seed(letterboxdRatings(snapshot));
       final ids = {
         for (final r in snapshot.records)
           if (r.work?.jellyfinId case final id?) id

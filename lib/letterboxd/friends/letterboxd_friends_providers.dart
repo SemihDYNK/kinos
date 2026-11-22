@@ -18,6 +18,7 @@ import 'package:kinos/providers/dashboard/hero_items_provider.dart';
 import 'package:kinos/providers/database_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 
+import 'package:kinos/ratings/kinos_ratings.dart' show kinosRatingsProvider;
 import 'package:kinos/stats/viewing_backfill.dart' show viewingBackfillProvider;
 
 import 'letterboxd_diary.dart';
@@ -158,10 +159,12 @@ final letterboxdFriendsFilmProvider = FutureProvider.autoDispose.family<
       if (key != account.username && !rated.contains(key))
         (friend: friends[key]!, rating: value.rating ?? 0)
   ]);
+  // La note Kinos (donnée sur la fiche) l'emporte sur celle de Letterboxd.
+  final kinos = ref.watch(kinosRatingsProvider)['tmdb:movie:$tmdbId']?.value;
   return (
     slug: slug,
     ratings: ratings,
-    mine: mine ?? reviews[account.username]?.rating,
+    mine: kinos ?? mine ?? reviews[account.username]?.rating,
     reviews: reviews,
   );
 });

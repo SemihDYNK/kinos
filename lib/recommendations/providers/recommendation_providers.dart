@@ -1,4 +1,5 @@
 import 'package:kinos/letterboxd/letterboxd_model.dart';
+import 'package:kinos/ratings/kinos_ratings.dart';
 import 'package:kinos/letterboxd/letterboxd_matching.dart';
 import 'package:kinos/letterboxd/letterboxd_providers.dart';
 import 'dart:async';
@@ -319,11 +320,23 @@ final recommendationResultProvider =
   final unwatched = await unwatchedFuture;
   final arrEntries = await arrFuture;
 
-  final events = mergeLetterboxdEvents([
-    ...buildJellyfinWatchEvents(played, now: now),
-    ...buildJellyfinWatchEvents(resumable, now: now),
-  ], imported.records,
-      letterboxdLibraryWorks([...played, ...resumable, ...unwatched]));
+  // Les notes Kinos (données sur les fiches, ou reprises de Letterboxd)
+  // fixent le poids d'un visionnage dans le profil de goût.
+  final identities = {
+    for (final item in [...played, ...resumable, ...unwatched])
+      item.id: ratingIdentity(
+          movie: item.type == KinosItemType.movie,
+          tmdbId: item.overview.tmdbId,
+          jellyfinId: item.id)
+  };
+  final events = applyKinosRatings(
+      mergeLetterboxdEvents([
+        ...buildJellyfinWatchEvents(played, now: now),
+        ...buildJellyfinWatchEvents(resumable, now: now),
+      ], imported.records,
+          letterboxdLibraryWorks([...played, ...resumable, ...unwatched])),
+      ref.read(kinosRatingsProvider),
+      (id) => identities[id]);
   final jellyfinCandidates = buildJellyfinCandidates(unwatched);
   final arrCandidatesRaw = buildArrCandidates(arrEntries);
   // `played` ∪ `unwatched` couvre toute la bibliothèque (cf.

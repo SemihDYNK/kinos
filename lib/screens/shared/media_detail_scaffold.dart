@@ -83,6 +83,9 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
   final bool isPlayed;
   final VoidCallback? onTogglePlayed;
 
+  /// La note Kinos, après « Vu » dans la rangée des actions.
+  final Widget? rating;
+
   /// Menu "..." — null si rien à proposer (masque le bouton).
   final List<ItemAction>? Function(BuildContext context)? actions;
 
@@ -113,6 +116,7 @@ class MediaDetailScaffold extends ConsumerStatefulWidget {
     this.onToggleFavourite,
     this.isPlayed = false,
     this.onTogglePlayed,
+    this.rating,
     this.actions,
     required this.content,
     super.key,
@@ -454,6 +458,7 @@ class _TitleBlock extends StatelessWidget {
                           ? context.localized.markAsUnwatched
                           : context.localized.markAsWatched,
                       widget.onTogglePlayed!),
+                if (widget.rating != null) widget.rating!,
                 if (onMore != null)
                   action(const Icon(AppIcons.more),
                       context.localized.moreOptions, onMore!),

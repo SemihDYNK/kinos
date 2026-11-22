@@ -251,6 +251,12 @@ abstract final class AppDetailLayout {
   static const reviewTextSize = 15.0;
   static const reviewTextHeight = 1.55;
 
+  /// Note Kinos : bouton de la fiche (hauteur des boutons d'action),
+  /// étoiles du bouton et de la saisie.
+  static const ratingButtonHeight = 40.0;
+  static const ratingStarSize = 16.0;
+  static const ratingDialogStarSize = 44.0;
+
   /// Marque d'une critique sous la note d'un ami.
   static const reviewMarkSize = 12.0;
   static const seriesViewportFraction = .68;
