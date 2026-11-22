@@ -1530,6 +1530,21 @@ class WrappedRecap extends StatelessWidget {
     final data = inputs.data;
     final stats = data.stats;
     final best = data.filmOfYear;
+    // Arrivé du film de l'année : on reprend son image où elle en était,
+    // son texte s'efface, la bannière glisse et se recadre à gauche, puis
+    // le récap s'installe dans la place libérée.
+    final entry = WrappedEntry.of(context);
+    final joined = WrappedClock.motionOf(context) &&
+        entry?.from == 'film-of-year' &&
+        best != null;
+    final d = joined ? AppWrapped.recapJoin : 0.0;
+    final shift = joined
+        ? WrappedClock.at(context, .4,
+            length: AppWrapped.recapShift, curve: Curves.easeInOutCubic)
+        : 1.0;
+    final leave = joined ? 1 - WrappedClock.at(context, 0, length: .6) : 0.0;
+    final startScale =
+        1 + AppWrapped.kenBurns * 1.4 * (joined ? entry!.progress : 0);
     return _Frame(builder: (context, size, type) {
       final portrait = size.height > size.width;
       final posters = [
@@ -1540,23 +1555,23 @@ class WrappedRecap extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                WrappedText(value, style: type.mid, at: at, maxLines: 1),
-                WrappedText(label, style: type.small, at: at + .2),
+                WrappedText(value, style: type.mid, at: at + d, maxLines: 1),
+                WrappedText(label, style: type.small, at: at + d + .2),
               ]);
       final details = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             if (best != null) ...[
-              WrappedText('Film de l\'année', style: type.small, at: 1),
+              WrappedText('Film de l\'année', style: type.small, at: 1 + d),
               WrappedText(best.event.title,
                   style: type.mid.copyWith(
                       fontSize: type.mid.fontSize! * (portrait ? 1.2 : 1)),
-                  at: 1.4,
+                  at: 1.4 + d,
                   maxLines: 2),
               WrappedText(formatStars(best.rating),
                   style: type.small.copyWith(color: AppColors.textPrimary),
-                  at: 1.8),
+                  at: 1.8 + d),
             ],
             SizedBox(height: size.height * .03),
             Row(children: [
@@ -1564,7 +1579,7 @@ class WrappedRecap extends StatelessWidget {
                 if (n > 0) const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Opacity(
-                    opacity: WrappedClock.at(context, 2.4 + n * .3),
+                    opacity: WrappedClock.at(context, 2.4 + d + n * .3),
                     child: AspectRatio(
                       aspectRatio: 2 / 3,
                       child: ClipRRect(
@@ -1623,19 +1638,45 @@ class WrappedRecap extends StatelessWidget {
         Positioned(
           left: 0,
           top: 0,
-          right: portrait ? 0 : size.width * (1 - reach),
-          bottom: portrait ? size.height * (1 - reach) : 0,
-          child: KenBurns(child: banner),
+          right: portrait ? 0 : size.width * (1 - reach) * shift,
+          bottom: portrait ? size.height * (1 - reach) * shift : 0,
+          child: joined
+              ? ClipRect(
+                  child: Transform.scale(
+                      scale: startScale + (1 - startScale) * shift,
+                      child: banner))
+              : KenBurns(child: banner),
         ),
+        if (joined && shift < 1) WrappedScrim(opacity: 1 - shift),
         Positioned.fill(
             child: IgnorePointer(
-                child:
-                    DecoratedBox(decoration: BoxDecoration(gradient: fade)))),
+                child: Opacity(
+                    opacity: shift,
+                    child: DecoratedBox(
+                        decoration: BoxDecoration(gradient: fade))))),
+        // Le texte du film de l'année, tel qu'on le quitte, qui s'efface.
+        if (joined && leave > 0)
+          Opacity(
+            opacity: leave,
+            child: WrappedTextBlock(children: [
+              WrappedText('Votre film de l\'année',
+                  style: type.cap, at: -99, caps: true),
+              SizedBox(height: size.height * .025),
+              WrappedText(best.event.title,
+                  style: type.big, at: -99, maxLines: 2),
+              SizedBox(height: size.height * .025),
+              WrappedText(
+                  '${formatStars(best.rating)} · parmi '
+                  '${_films(stats.ratings.fold(0, (a, b) => a + b))} notés cette année.',
+                  style: type.small,
+                  at: -99),
+            ]),
+          ),
         Positioned(
           left: pad,
           top: pad,
           child: WrappedText('Kinos · ${data.year}',
-              style: type.cap, at: .4, caps: true),
+              style: type.cap, at: .4 + d, caps: true),
         ),
         Positioned(
           left: portrait ? pad : size.width * .56,

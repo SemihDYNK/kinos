@@ -361,6 +361,11 @@ abstract final class AppWrapped {
   /// Le compteur de l'année : durée du roulement d'un chiffre.
   static const rollDuration = Duration(milliseconds: 600);
 
+  /// Le récap qui prolonge le film de l'année : durée du glissement de la
+  /// bannière, et le retard de son texte, qui attend la place libérée.
+  static const recapShift = 1.6;
+  static const recapJoin = 1.8;
+
   /// Portraits et avatars.
   static const portraitFraction = .42;
   static const avatarFraction = .1;

@@ -431,3 +431,23 @@ class _RollingCharState extends State<_RollingChar>
         ),
       );
 }
+
+/// D'où l'on arrive sur une diapo : la diapo précédente (en avançant) et
+/// l'avancée de son horloge au moment de la quitter. Une diapo peut ainsi
+/// prolonger la précédente au lieu de repartir de zéro.
+class WrappedEntry extends InheritedWidget {
+  const WrappedEntry(
+      {required this.from,
+      required this.progress,
+      required super.child,
+      super.key});
+  final String? from;
+  final double progress;
+
+  static WrappedEntry? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<WrappedEntry>();
+
+  @override
+  bool updateShouldNotify(WrappedEntry old) =>
+      old.from != from || old.progress != progress;
+}

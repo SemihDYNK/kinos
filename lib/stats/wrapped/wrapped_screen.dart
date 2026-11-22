@@ -42,6 +42,11 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
 
   /// Lecture automatique : chaque diapo passe à la suivante à sa fin.
   bool _auto = false;
+
+  /// La diapo qu'on vient de quitter en avançant, et l'avancée de son
+  /// horloge : cf. [WrappedEntry].
+  String? _from;
+  double _fromProgress = 0;
   bool _hint = true;
   Timer? _hintTimer;
   final _progress = ValueNotifier<double>(0);
@@ -96,7 +101,11 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
       setState(() => _auto = false);
       return;
     }
+    final leaving = slides[index < 0 ? 0 : index].id;
+    final progress = _progress.value;
     setState(() {
+      _from = delta > 0 ? leaving : null;
+      _fromProgress = progress;
       _current = slides[next.clamp(0, slides.length - 1)].id;
       _progress.value = 0;
     });
@@ -182,11 +191,19 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
                               details.localPosition.dx < width / 3 ? -1 : 1);
                         },
                         child: AnimatedSwitcher(
-                          duration: motion ? AppWrapped.fade : Duration.zero,
+                          // Le récap prolonge le film de l'année : même
+                          // image, sans fondu.
+                          duration: motion &&
+                                  !(current.id == 'recap' &&
+                                      _from == 'film-of-year')
+                              ? AppWrapped.fade
+                              : Duration.zero,
                           child: _SlideHost(
                             key: ValueKey(current.id),
                             slide: current,
                             motion: motion,
+                            from: _from,
+                            fromProgress: _fromProgress,
                             // L'ancienne diapo, encore là pendant le fondu,
                             // ne pilote plus rien.
                             onTick: (value) {
@@ -226,11 +243,15 @@ class _SlideHost extends StatefulWidget {
   const _SlideHost(
       {required this.slide,
       required this.motion,
+      required this.from,
+      required this.fromProgress,
       required this.onTick,
       required this.onDone,
       super.key});
   final WrappedSlide slide;
   final bool motion;
+  final String? from;
+  final double fromProgress;
   final ValueChanged<double> onTick;
   final VoidCallback onDone;
 
@@ -266,7 +287,10 @@ class _SlideHostState extends State<_SlideHost>
         duration: widget.slide.seconds,
         motion: widget.motion,
         progress: _clock,
-        child: Builder(builder: widget.slide.builder),
+        child: WrappedEntry(
+            from: widget.from,
+            progress: widget.fromProgress,
+            child: Builder(builder: widget.slide.builder)),
       );
 }
 
