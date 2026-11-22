@@ -379,6 +379,11 @@ abstract final class AppWrapped {
   static const homeCardTitle = 56.0;
   static const homeMinFilms = 5;
 
+  /// L'année en filigrane de la carte, et le décalage (fraction de sa
+  /// taille) qui recentre des chiffres sans jambage dans leur boîte.
+  static const homeCardWatermark = 170.0;
+  static const digitDrop = .02;
+
   /// La story : largeur du logo (pages 16:9), la couleur franche de son
   /// fond (saturation bornée, clarté fixe), le papier crème des films sans
   /// couleur, l'opacité de l'affiche en duotone (sur fond sombre, sur fond

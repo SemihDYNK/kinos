@@ -118,13 +118,23 @@ class WrappedHomeCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                Positioned(
+                // L'année en filigrane, centrée en hauteur : la boîte du
+                // texte garde sous les chiffres la place d'un jambage qu'ils
+                // n'ont pas, d'où le léger décalage vers le bas.
+                Positioned.fill(
                   right: AppSpacing.lg,
-                  top: -AppWrapped.homeCardHeight * .12,
-                  child: Text('$year',
-                      style: cond.copyWith(
-                          fontSize: AppWrapped.homeCardHeight * 1.05,
-                          color: ink.withValues(alpha: .12))),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Transform.translate(
+                      offset: const Offset(0,
+                          AppWrapped.homeCardWatermark * AppWrapped.digitDrop),
+                      child: Text('$year',
+                          style: cond.copyWith(
+                              fontSize: AppWrapped.homeCardWatermark,
+                              height: 1,
+                              color: ink.withValues(alpha: .12))),
+                    ),
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
