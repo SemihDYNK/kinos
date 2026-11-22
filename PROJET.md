@@ -653,6 +653,25 @@ Ouverts côté code, dans un ordre de priorité suggéré :
   si souhaité.
 - **Tests sur la synchronisation/téléchargement offline** (Bugs connus
   5) — avant toute modification non triviale de cette zone.
+- **Statistiques et Wrapped** — conçu le 22 novembre 2026, aucun code ;
+  démarrage sur signal de l'utilisateur. Ordre : (1) journal de visionnage
+  local (table Drift + migration) : chaque lecture Kinos (date, durée
+  regardée, terminée), plus l'historique Letterboxd (export, journal RSS)
+  et la dernière lecture Jellyfin en repli, doublons fusionnés ; (2)
+  import Letterboxd qui alimente ce journal, avec en option « marquer aussi
+  comme vus dans Jellyfin » à la date du dernier visionnage, après
+  confirmation ; (3) note Kinos en cinq étoiles par demi-étoile, comme
+  Letterboxd, locale, initialisée depuis Letterboxd, éditable au clavier sur
+  la fiche, utilisée par les recommandations ; (4) page Statistiques,
+  ouverte depuis la photo de profil de la barre latérale (le changement de
+  profil passe dans les paramètres, comme sur Letterboxd) : par année,
+  mois, depuis toujours ; chiffres en grand, activité par mois et
+  calendrier, genres, réalisateurs, acteurs, studios, décennies, notes,
+  records ; (5) Wrapped dès le 1er décembre et pour chaque année passée :
+  plein écran, une diapo à la fois, clavier ; chaque diapo aussi en
+  portrait 9:16 (1080 × 1920) pour les stories, export PNG (une diapo ou
+  toutes) dans Images, partage sur Mac, diapos masquables avant export ;
+  vidéo MP4 plus tard.
 - **Letterboxd vérifie les robots** (21 novembre 2026) — Cloudflare répond
   `403` avec `cf-mitigated: challenge` dès la 3ᵉ requête d'une
   synchronisation (`<pseudo>/following/page/3/`) : une vérification
