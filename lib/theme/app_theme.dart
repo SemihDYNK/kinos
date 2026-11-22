@@ -373,6 +373,12 @@ abstract final class AppWrapped {
   /// Largeur du panneau d'export.
   static const exportWidth = 440.0;
 
+  /// La carte du Wrapped sur l'accueil (décembre) : hauteur, taille du
+  /// titre, et le nombre de films en dessous duquel elle ne s'affiche pas.
+  static const homeCardHeight = 180.0;
+  static const homeCardTitle = 56.0;
+  static const homeMinFilms = 5;
+
   /// La story : largeur du logo (pages 16:9), la couleur franche de son
   /// fond (saturation bornée, clarté fixe), le papier crème des films sans
   /// couleur, l'opacité de l'affiche en duotone (sur fond sombre, sur fond

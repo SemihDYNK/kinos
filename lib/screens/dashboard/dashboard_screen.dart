@@ -4,6 +4,7 @@ import 'package:kinos/widgets/shared/page_motion.dart';
 import 'dart:async';
 import 'package:kinos/providers/dashboard/catalog_navigation_provider.dart';
 import 'package:kinos/screens/dashboard/catalog_home_screen.dart';
+import 'package:kinos/stats/wrapped/wrapped_home_card.dart';
 
 import 'package:flutter/material.dart';
 
@@ -185,6 +186,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               resumeItems: continueWatching,
               contentPadding: padding,
             ),
+            // En décembre, l'annonce du Wrapped de l'année, sous « Continuer
+            // à regarder ».
+            WrappedHomeCard(contentPadding: padding),
             // Les genres, tout de suite sous « Continuer à regarder » : un accès
             // direct qui évite de défiler. Une rangée de tuiles remplace
             // l'empilement d'une rangée par genre ; chaque tuile mène à la
