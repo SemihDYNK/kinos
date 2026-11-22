@@ -550,7 +550,7 @@ double Function(double x) smoothPath(List<(double, double, double)> keys) {
 /// film au centre, pour un avancement de 0 à 1 sur [travel] secondes). Le
 /// fond suit la vitesse : la couleur des films qui passent quand elle va
 /// vite, l'image du film central quand elle ralentit. À l'arrêt, la frise
-/// se range (ou s'efface) et le voile de lecture arrive sous [texts].
+/// se range et le voile de lecture arrive sous [texts].
 class _Frise extends StatefulWidget {
   const _Frise({
     required this.inputs,
@@ -559,7 +559,6 @@ class _Frise extends StatefulWidget {
     required this.path,
     required this.label,
     required this.texts,
-    this.fadeOut = false,
     this.overlay,
   });
   final WrappedInputs inputs;
@@ -568,7 +567,6 @@ class _Frise extends StatefulWidget {
   final double Function(double x) path;
   final String Function(ViewingEvent e) label;
   final List<Widget> Function(WrappedType type, Size size) texts;
-  final bool fadeOut;
   final Widget? Function(double x, WrappedType type, Size size)? overlay;
 
   @override
@@ -611,7 +609,6 @@ class _FriseState extends State<_Frise> {
     final path = widget.path;
     final label = widget.label;
     final texts = widget.texts;
-    final fadeOut = widget.fadeOut;
     final overlay = widget.overlay;
     final motion = WrappedClock.motionOf(context);
     final t = WrappedClock.seconds(context);
@@ -666,18 +663,12 @@ class _FriseState extends State<_Frise> {
         ColoredBox(color: AppColors.scrim.withValues(alpha: .35)),
         WrappedScrim(opacity: settle),
         Opacity(
-          opacity: fadeOut
-              ? 1 - settle
-              : 1 - settle * (1 - AppWrapped.friseSettleOpacity),
+          opacity: 1 - settle * (1 - AppWrapped.friseSettleOpacity),
           child: Transform.translate(
-            offset: Offset(
-                0,
-                fadeOut
-                    ? 0
-                    : settle * size.height * AppWrapped.friseSettleOffset),
+            offset:
+                Offset(0, settle * size.height * AppWrapped.friseSettleOffset),
             child: Transform.scale(
-              scale:
-                  fadeOut ? 1 : 1 - settle * (1 - AppWrapped.friseSettleScale),
+              scale: 1 - settle * (1 - AppWrapped.friseSettleScale),
               child: Stack(children: [
                 for (var k = math.max(0, c - reach);
                     k <= math.min(items.length - 1, c + reach);
@@ -736,18 +727,11 @@ class _TimeSlide extends StatelessWidget {
     final peakCount =
         peak == null ? 0 : items.where((e) => e.at.month - 1 == peak).length;
     const travel = AppWrapped.time - 4;
-    // Accélère jusqu'au mois le plus chargé, y ralentit sans s'arrêter,
-    // puis repart et freine jusqu'au dernier film de l'année. La vitesse
-    // reste continue d'un bout à l'autre : aucun à-coup.
-    final dwell = math.min(3.0, peakCount - 1.0);
-    final path = peakStart <= 0 || peakCount < 2 || last < 6
-        ? (double x) => _easeInOut(x) * last
-        : smoothPath([
-            (0, 0, 0),
-            (.5, peakStart.toDouble(), dwell / .14),
-            (.64, peakStart + dwell, dwell / .14),
-            (1, last, 0),
-          ]);
+    // Un seul élan : la frise accélère, traverse l'année, puis freine
+    // jusqu'au dernier film. Pas de ralenti en chemin : le mois le plus
+    // chargé se lit au passage.
+    double path(double x) => _easeInOut(x) * last;
+    final peakEnd = peakStart + peakCount - 1;
 
     final month = peak == null
         ? ''
@@ -762,8 +746,10 @@ class _TimeSlide extends StatelessWidget {
       overlay: peak == null || peakCount < 2
           ? null
           : (x, type, size) {
-              final on = ((x - .5) / .03).clamp(0.0, 1.0) *
-                  ((.66 - x) / .03).clamp(0.0, 1.0);
+              // Visible tant que la frise traverse ce mois-là.
+              final i = path(x);
+              final on = (i - peakStart + 1).clamp(0.0, 1.0) *
+                  (peakEnd + 1 - i).clamp(0.0, 1.0);
               if (on == 0) return null;
               return Positioned(
                 left: size.width * AppWrapped.inset,
@@ -804,6 +790,9 @@ class _TimeSlide extends StatelessWidget {
   }
 }
 
+/// Le voyage dans le temps : vos films en colonnes par décennie de
+/// sortie. La caméra part des années récentes et glisse lentement vers le
+/// passé ; arrivée au bout, l'image du plus vieux film emplit l'écran.
 class _VoyageSlide extends StatelessWidget {
   const _VoyageSlide({required this.inputs});
   final WrappedInputs inputs;
@@ -811,40 +800,116 @@ class _VoyageSlide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = inputs.data;
-    final items = data.voyage;
-    final last = (items.length - 1).toDouble();
-    const travel = AppWrapped.voyage - 4;
-    final oldest = items.last;
+    final oldest = data.voyage.last;
     final median = data.medianYear;
-    return _Frise(
-      inputs: inputs,
-      items: items,
-      travel: travel,
-      fadeOut: true,
-      // Vite dans les années récentes, puis de plus en plus lent à mesure
-      // qu'on remonte les décennies.
-      path: (x) =>
-          (x < .4
-              ? Curves.easeInCubic.transform(x / .4) * .4
-              : .4 + Curves.easeOutCubic.transform((x - .4) / .6) * .6) *
-          last,
-      label: (e) => '${e.year ?? ''}',
-      texts: (type, size) => [
-        WrappedText('Votre plus vieux voyage',
-            style: type.cap, at: travel + .6, caps: true),
-        SizedBox(height: size.height * .025),
-        WrappedText('${oldest.title} · ${oldest.year}',
-            style: type.mid, at: travel + 1.6, maxLines: 2),
-        if (median != null) ...[
+    final byDecade = <int, List<ViewingEvent>>{};
+    for (final e in data.voyage) {
+      (byDecade[e.year! ~/ 10 * 10] ??= []).add(e);
+    }
+    final decades = byDecade.keys.toList()..sort();
+    final favourite = decades
+        .reduce((a, b) => byDecade[b]!.length > byDecade[a]!.length ? b : a);
+    const travel = AppWrapped.voyage - 5;
+    final pan = WrappedClock.at(context, .6,
+        length: travel - .6, curve: Curves.easeInOutCubic);
+    final arrive = WrappedClock.at(context, travel, length: 1.8);
+    return _Frame(builder: (context, size, type) {
+      final inset = size.width * AppWrapped.inset;
+      final colW = size.width * AppWrapped.decadeColumn;
+      final contentW = decades.length * colW;
+      final start = math.max(0.0, contentW - (size.width - inset * 2));
+      final offset = start * (1 - pan);
+      final posterW = colW * .62;
+      final posterH = posterW * 1.5;
+      final baseline = size.height * .74;
+      final room = baseline - size.height * .24 - posterH;
+      final columns = <Widget>[];
+      for (final (k, decade) in decades.indexed) {
+        final films =
+            byDecade[decade]!.take(AppWrapped.decadeMaxPosters).toList();
+        final step = films.length <= 1
+            ? 0.0
+            : math.min(posterH * .22, room / (films.length - 1));
+        final left = inset + k * colW - offset;
+        if (left > size.width || left + colW < 0) continue;
+        final mine = decade == favourite;
+        for (final (j, e) in films.indexed) {
+          columns.add(Positioned(
+            left: left + (colW - posterW) / 2,
+            top: baseline - posterH - j * step,
+            width: posterW,
+            height: posterH,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppSpacing.xxs),
+              child: inputs.poster(e) == null
+                  ? ColoredBox(color: inputs.tint(e))
+                  : KinosImage(image: inputs.poster(e), disableBlur: true),
+            ),
+          ));
+        }
+        columns.add(Positioned(
+          left: left,
+          width: colW,
+          top: baseline + AppSpacing.sm,
+          child: Column(children: [
+            Text('Années $decade'.toUpperCase(),
+                textAlign: TextAlign.center,
+                style: (mine
+                        ? type.cap.copyWith(color: AppColors.textPrimary)
+                        : type.cap)
+                    .copyWith(
+                        letterSpacing:
+                            type.cap.fontSize! * AppWrapped.capTracking * .5)),
+            Text(_films(byDecade[decade]!.length),
+                style: mine
+                    ? type.small.copyWith(color: AppColors.textPrimary)
+                    : type.small),
+          ]),
+        ));
+      }
+      return [
+        Opacity(
+          opacity: 1 - arrive,
+          child: Stack(fit: StackFit.expand, children: [
+            ...columns,
+            Positioned(
+              left: inset,
+              top: size.height * .1,
+              child: WrappedText('Vos films, décennie par décennie',
+                  style: type.cap, at: .3, caps: true),
+            ),
+          ]),
+        ),
+        Opacity(
+          opacity: arrive,
+          child: Stack(fit: StackFit.expand, children: [
+            KenBurns(
+                from: travel,
+                length: AppWrapped.voyage,
+                child: WrappedImage(inputs.backdrop(oldest))),
+            const WrappedScrim(),
+          ]),
+        ),
+        WrappedTextBlock(children: [
+          WrappedText('Votre plus vieux voyage',
+              style: type.cap, at: travel + .8, caps: true),
+          SizedBox(height: size.height * .025),
+          WrappedText('${oldest.title} · ${oldest.year}',
+              style: type.mid, at: travel + 1.8, maxLines: 2),
           SizedBox(height: size.height * .025),
           WrappedText(
-              'Votre film moyen est sorti en $median.'
-              '${median <= data.year - 25 ? ' Le présent peut attendre.' : ''}',
+              [
+                if (median != null)
+                  'Votre film moyen est sorti en $median.'
+                      '${median <= data.year - 25 ? ' Le présent peut attendre.' : ''}',
+                'Votre décennie : les années $favourite, '
+                    '${_films(byDecade[favourite]!.length)}.',
+              ].join(' '),
               style: type.small,
               at: travel + 3),
-        ],
-      ],
-    );
+        ]),
+      ];
+    });
   }
 }
 
@@ -1487,13 +1552,17 @@ class WrappedRecap extends StatelessWidget {
       final banner = best == null
           ? const ColoredBox(color: AppColors.heroFallback)
           : WrappedImage(inputs.backdrop(best.event));
+      // Un dégradé vers le noir du fond, posé sur l'image : pas de masque
+      // de calque, dont le bord laissait un liseré clair au rendu.
       final fade = LinearGradient(
         begin: portrait ? Alignment.topCenter : Alignment.centerLeft,
         end: portrait ? Alignment.bottomCenter : Alignment.centerRight,
-        // Totalement transparent avant le bord : le bord fractionnaire du
-        // calque ne laisse plus de liseré clair.
-        stops: const [0, .55, .96],
-        colors: const [Colors.white, Colors.white, Colors.transparent],
+        stops: const [0, .5, .92],
+        colors: [
+          AppColors.scrim.withValues(alpha: 0),
+          AppColors.scrim.withValues(alpha: 0),
+          AppColors.scrim,
+        ],
       );
       final pad = size.width * (portrait ? .07 : AppWrapped.inset * .7);
       return [
@@ -1502,11 +1571,10 @@ class WrappedRecap extends StatelessWidget {
           top: 0,
           right: portrait ? 0 : size.width * .38,
           bottom: portrait ? size.height * .48 : 0,
-          child: ShaderMask(
-            blendMode: BlendMode.dstIn,
-            shaderCallback: fade.createShader,
-            child: KenBurns(child: banner),
-          ),
+          child: Stack(fit: StackFit.expand, children: [
+            KenBurns(child: banner),
+            DecoratedBox(decoration: BoxDecoration(gradient: fade)),
+          ]),
         ),
         Positioned(
           left: pad,

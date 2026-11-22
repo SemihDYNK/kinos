@@ -75,10 +75,11 @@ class FilmFacts {
 }
 
 /// Le cache des faits par film TMDB, dans la table `Settings`, une portée
-/// par profil. Les faits bougent peu : relus après [maxAge].
+/// par profil (v2 : avec les images). Les faits bougent peu : relus après
+/// [maxAge].
 class FilmFactsStore {
   FilmFactsStore(this.db, String profileScope)
-      : scope = '$profileScope:film-facts:v1';
+      : scope = '$profileScope:film-facts:v2';
   final AppDatabase db;
   final String scope;
 

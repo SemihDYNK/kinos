@@ -349,6 +349,11 @@ abstract final class AppWrapped {
   static const wallDrift = .08;
   static const wallVeil = .62;
 
+  /// Le voyage : largeur d'une colonne de décennie (fraction de la
+  /// diapo), et le nombre d'affiches empilées au plus.
+  static const decadeColumn = .14;
+  static const decadeMaxPosters = 14;
+
   /// Portraits et avatars.
   static const portraitFraction = .42;
   static const avatarFraction = .1;
