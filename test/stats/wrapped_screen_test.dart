@@ -307,6 +307,7 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.text('FILM DE L\'ANNÉE'), findsOneWidget);
-    expect(find.text('2026'), findsOneWidget, reason: 'the year, bottom right');
+    expect(find.text('2026'), findsNWidgets(2),
+        reason: 'the year, bottom right, and the giant one behind');
   });
 }

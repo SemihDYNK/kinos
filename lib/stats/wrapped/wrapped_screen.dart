@@ -472,8 +472,14 @@ class _ExportPanelState extends ConsumerState<_ExportPanel> {
     try {
       final dir = await wrappedExportDirectory(widget.inputs.data.year);
       if (!mounted) return;
-      await exportWrapped(context, dir: dir, pages: pages, formats: _formats,
-          onProgress: (done, total) {
+      await exportWrapped(context,
+          dir: dir,
+          pages: pages,
+          formats: _formats,
+          warm: [
+            for (final a in widget.inputs.art.values)
+              if (a.poster case final poster?) poster.imageProvider,
+          ], onProgress: (done, total) {
         if (mounted) setState(() => _progress = (done, total));
       });
       if (mounted) setState(() => _done = dir);

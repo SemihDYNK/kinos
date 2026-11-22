@@ -163,8 +163,15 @@ Future<List<File>> exportWrapped(
   required Directory dir,
   required List<WrappedPage> pages,
   required Set<WrappedFormat> formats,
+  List<ImageProvider> warm = const [],
   void Function(int done, int total)? onProgress,
 }) async {
+  // Les images chargées d'avance : la première page n'est jamais capturée
+  // avant que ses affiches soient décodées.
+  for (final image in warm) {
+    if (!context.mounted) return const [];
+    await precacheImage(image, context, onError: (_, __) {});
+  }
   final files = <File>[];
   final total = pages.length * formats.length;
   var done = 0;
