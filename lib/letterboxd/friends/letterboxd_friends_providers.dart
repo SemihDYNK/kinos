@@ -18,6 +18,8 @@ import 'package:kinos/providers/dashboard/hero_items_provider.dart';
 import 'package:kinos/providers/database_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 
+import 'package:kinos/stats/viewing_backfill.dart' show viewingBackfillProvider;
+
 import 'letterboxd_diary.dart';
 import 'letterboxd_friends_client.dart';
 import 'letterboxd_friends_parser.dart';
@@ -400,6 +402,8 @@ class LetterboxdDiarySyncController extends StateNotifier<bool> {
               library: _JellyfinDiaryLibrary(ref),
               resolve: resolver?.details)
           .run(account.username, cancelled: cancelled);
+      // Les nouvelles séances du journal vont dans les statistiques.
+      await ref.read(viewingBackfillProvider).rebuild();
     } catch (_) {
       // Réessayé à la prochaine synchronisation.
     } finally {

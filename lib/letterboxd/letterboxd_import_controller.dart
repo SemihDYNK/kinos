@@ -9,6 +9,7 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/recommendations/providers/recommendation_providers.dart';
 import 'package:kinos/recommendations/seerr/discovery_client.dart';
 import 'package:kinos/util/kinos_config.dart';
+import 'package:kinos/stats/viewing_backfill.dart' show viewingBackfillProvider;
 import 'letterboxd_model.dart';
 import 'letterboxd_matching.dart';
 import 'letterboxd_parser.dart';
@@ -44,6 +45,9 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
   final Future<List<LetterboxdWork>> Function() loadLibrary;
   final bool Function() isCurrent;
   final DiscoveryClient? Function()? createClient;
+
+  /// Appelé après chaque enregistrement de l'import (journal de visionnage).
+  final void Function()? onSaved;
   DiscoveryClient? _client;
   int _generation = 0;
 
@@ -56,7 +60,8 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
       {required this.store,
       required this.loadLibrary,
       required this.isCurrent,
-      this.createClient})
+      this.createClient,
+      this.onSaved})
       : super(const LetterboxdImportState());
   bool _active(int generation) =>
       mounted && generation == _generation && isCurrent();
@@ -267,6 +272,7 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
           LetterboxdSnapshot(
               updatedAt: DateTime.now().toUtc(), records: preview.records),
           isCurrent: () => _active(generation));
+      onSaved?.call();
       if (_active(generation)) {
         state = LetterboxdImportState(
             saved: true,
@@ -328,7 +334,9 @@ final letterboxdImportProvider = StateNotifierProvider.autoDispose<
           sub.close();
         }
       },
-      createClient: () => letterboxdDiscoveryClient(credentials));
+      createClient: () => letterboxdDiscoveryClient(credentials),
+      // Les dates du journal Letterboxd alimentent les statistiques.
+      onSaved: () => ref.read(viewingBackfillProvider).rebuild());
 });
 
 /// Client Seerr pour résoudre les films hors bibliothèque, null sans

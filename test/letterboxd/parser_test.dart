@@ -121,4 +121,17 @@ void main() {
         () => parseLetterboxdExport(Uint8List(letterboxdMaxArchiveBytes + 1)),
         throwsFormatException);
   });
+
+  test('every diary date is kept, once, in order', () {
+    final films = parseLetterboxdExport(exportZip({
+      'watched.csv': 'Date,Name,Year,Letterboxd URI\n'
+          '2024-01-01,Dune,2021,https://boxd.it/d\n',
+      'diary.csv': 'Date,Name,Year,Letterboxd URI,Rating,Rewatch,Tags,Watched Date\n'
+          '2024-03-02,Dune,2021,https://boxd.it/e1,4,Yes,,2024-03-01\n'
+          '2021-09-16,Dune,2021,https://boxd.it/e2,4,,,2021-09-15\n'
+          '2021-09-16,Dune,2021,https://boxd.it/e3,4,,,2021-09-15\n',
+    }));
+    expect(films.single.viewings,
+        [DateTime(2021, 9, 15), DateTime(2024, 3, 1)]);
+  });
 }

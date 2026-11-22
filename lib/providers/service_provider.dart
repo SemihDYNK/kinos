@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:kinos/anilist/anilist_runtime.dart';
+import 'package:kinos/stats/viewing_recorder.dart' show viewingRecorderProvider;
 import 'dart:convert';
 import 'dart:developer';
 
@@ -792,6 +794,10 @@ class JellyService {
     if (ref.read(incognitoProvider)) {
       return Response(http.Response("", 200), null);
     }
+    // Journal de visionnage Kinos (statistiques) : début de la séance.
+    ref
+        .read(viewingRecorderProvider)
+        .started(body?.itemId, body?.positionTicks ?? 0);
     return _reportPlayback(
       eventType: PlaybackQueueEventType.start,
       itemId: body?.itemId,
@@ -812,6 +818,10 @@ class JellyService {
           itemId: body?.itemId,
           position: Duration(milliseconds: positionTicks ~/ 10000));
     }
+    // Journal de visionnage Kinos : la séance est notée à son arrêt.
+    unawaited(ref
+        .read(viewingRecorderProvider)
+        .stopped(body?.itemId, positionTicks ?? 0));
     return _reportPlayback(
       eventType: PlaybackQueueEventType.stop,
       itemId: body?.itemId,

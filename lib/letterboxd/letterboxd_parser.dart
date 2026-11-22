@@ -168,6 +168,7 @@ List<LetterboxdFilm> _parse(Uint8List bytes) {
           film.watchedAt = watched;
         }
         film.diaryEntries++;
+        if (watched != null) film.viewings.add(watched);
         if (map['Rewatch']?.toLowerCase() == 'yes') film.rewatch = true;
       }
     }
@@ -182,6 +183,7 @@ List<LetterboxdFilm> _parse(Uint8List bytes) {
           rating: f.rating,
           ratedAt: f.ratedAt,
           watchedAt: f.watchedAt,
+          viewings: (f.viewings.toSet().toList()..sort()),
           watches: f.diaryEntries > 1
               ? f.diaryEntries
               : f.rewatch
@@ -196,6 +198,7 @@ class _Film {
   double? rating;
   DateTime? ratedAt, watchedAt;
   int diaryEntries = 0;
+  final viewings = <DateTime>[];
   bool explicitRating = false, rewatch = false;
   _Film(this.uri, this.title, this.year);
 }

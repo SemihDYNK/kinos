@@ -95,7 +95,8 @@ LetterboxdSnapshot mergeLetterboxdDiary(LetterboxdSnapshot snapshot,
               year: entry.year,
               rating: entry.rating,
               ratedAt: entry.rating == null ? null : entry.watchedOn,
-              watchedAt: entry.watchedOn),
+              watchedAt: entry.watchedOn,
+              viewings: [entry.watchedOn]),
           work: work));
       continue;
     }
@@ -111,7 +112,8 @@ LetterboxdSnapshot mergeLetterboxdDiary(LetterboxdSnapshot snapshot,
             rating: entry.rating ?? film.rating,
             ratedAt: entry.rating == null ? film.ratedAt : entry.watchedOn,
             watchedAt: counted ? film.watchedAt : entry.watchedOn,
-            watches: counted ? film.watches : film.watches + 1),
+            watches: counted ? film.watches : film.watches + 1,
+            viewings: ({...film.viewings, entry.watchedOn}.toList()..sort())),
         work: record.work ?? work);
   }
   return LetterboxdSnapshot(updatedAt: now.toUtc(), records: records);

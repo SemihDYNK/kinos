@@ -8,6 +8,9 @@ class LetterboxdFilm {
   final DateTime? ratedAt;
   final DateTime? watchedAt;
   final int watches;
+
+  /// Chaque date du journal (une par visionnage), pour les statistiques.
+  final List<DateTime> viewings;
   const LetterboxdFilm(
       {required this.uri,
       required this.title,
@@ -15,7 +18,8 @@ class LetterboxdFilm {
       this.rating,
       this.ratedAt,
       this.watchedAt,
-      this.watches = 1});
+      this.watches = 1,
+      this.viewings = const []});
 
   double get weight {
     if (rating == null) return watches > 1 ? 2 : 1;
@@ -32,7 +36,9 @@ class LetterboxdFilm {
         'rating': rating,
         'ratedAt': ratedAt?.toIso8601String(),
         'watchedAt': watchedAt?.toIso8601String(),
-        'watches': watches
+        'watches': watches,
+        if (viewings.isNotEmpty)
+          'viewings': [for (final v in viewings) v.toIso8601String()],
       };
   factory LetterboxdFilm.fromJson(Map<String, dynamic> json) {
     final uri = letterboxdFilmUri(json['uri'] as String);
@@ -63,7 +69,12 @@ class LetterboxdFilm {
             : DateTime.parse(json['ratedAt'] as String),
         watchedAt: json['watchedAt'] == null
             ? null
-            : DateTime.parse(json['watchedAt'] as String));
+            : DateTime.parse(json['watchedAt'] as String),
+        viewings: [
+          for (final v in json['viewings'] as List? ?? const [])
+            if (v is String)
+              if (DateTime.tryParse(v) case final date?) date
+        ]);
   }
 }
 
