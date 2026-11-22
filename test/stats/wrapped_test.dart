@@ -9,6 +9,7 @@ import 'package:kinos/ratings/kinos_ratings.dart';
 import 'package:kinos/stats/viewing_log.dart';
 import 'package:kinos/stats/wrapped/film_facts.dart';
 import 'package:kinos/stats/wrapped/wikiquote.dart';
+import 'package:kinos/stats/wrapped/wrapped_audio.dart';
 import 'package:kinos/stats/wrapped/wrapped_data.dart';
 import 'package:kinos/stats/wrapped/wrapped_hook.dart';
 import 'package:kinos/stats/wrapped/wrapped_providers.dart';
@@ -213,5 +214,34 @@ void main() {
         'C\'est bien ce qui me fait peur.');
     expect(sameTitle('Casino Royale (2006 film)', 'Casino Royale'), isTrue);
     expect(sameTitle('James Bond', 'Casino Royale'), isFalse);
+  });
+
+  test('each slide plays the mood of its act', () {
+    expect([
+      for (final id in ['opening', 'time', 'rhythm']) wrappedActOf(id)
+    ], [
+      0,
+      0,
+      0
+    ]);
+    expect([
+      for (final id in ['genre', 'director', 'ratings', 'friends', 'you-love'])
+        wrappedActOf(id)
+    ], [
+      1,
+      1,
+      1,
+      1,
+      1
+    ]);
+    expect([
+      for (final id in ['voyage', 'film-of-year', 'recap']) wrappedActOf(id)
+    ], [
+      2,
+      2,
+      2
+    ]);
+    expect(wrappedMoodAsset(WrappedMood.tension),
+        'asset:///assets/sounds/wrapped_tension.ogg');
   });
 }

@@ -16,6 +16,7 @@ import 'package:kinos/stats/wrapped/wrapped_data.dart';
 import 'package:kinos/stats/wrapped/wrapped_media.dart';
 import 'package:kinos/stats/wrapped/wrapped_motion.dart';
 import 'package:kinos/stats/wrapped/wikiquote.dart';
+import 'package:kinos/stats/wrapped/wrapped_audio.dart';
 import 'package:kinos/stats/wrapped/wrapped_export.dart';
 import 'package:kinos/stats/wrapped/wrapped_providers.dart';
 import 'package:kinos/stats/wrapped/wrapped_quotes.dart';
@@ -108,6 +109,7 @@ void main() {
         wrappedDataProvider(year).overrideWith((ref) async => wrapped),
         wrappedArtProvider(year).overrideWith((ref) async => const {}),
         wrappedTintsProvider(year).overrideWith((ref) async => const {}),
+        wrappedSoundProvider.overrideWith((ref) => false),
         wrappedQuoteProvider.overrideWith((ref, key) async => key
                 .startsWith('director')
             ? const WrappedQuote('Je rêve pour gagner ma vie.', language: 'fr')
@@ -191,6 +193,7 @@ void main() {
         wrappedDataProvider(year).overrideWith((ref) async => wrapped),
         wrappedArtProvider(year).overrideWith((ref) async => const {}),
         wrappedTintsProvider(year).overrideWith((ref) async => const {}),
+        wrappedSoundProvider.overrideWith((ref) => false),
       ],
       child: MaterialApp(
           theme: buildAppTheme(), home: const YearWrappedScreen(year: year)),

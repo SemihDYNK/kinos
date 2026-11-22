@@ -11,6 +11,7 @@ import 'package:kinos/ratings/kinos_ratings.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/widgets/shared/frosted_surface.dart';
 
+import 'wrapped_audio.dart';
 import 'wrapped_export.dart';
 import 'wrapped_media.dart';
 import 'wrapped_motion.dart';
@@ -57,6 +58,9 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
   Timer? _hintTimer;
   final _progress = ValueNotifier<double>(0);
   final _focus = FocusNode(debugLabel: 'wrapped');
+
+  /// La musique : une ambiance par acte, le thème du film de l'année.
+  final _audio = WrappedAudio.create();
   bool _warmed = false;
 
   /// Toutes les affiches de l'année, chargées pendant l'ouverture : la
@@ -85,6 +89,7 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
 
   @override
   void dispose() {
+    unawaited(_audio?.dispose());
     _hintTimer?.cancel();
     _progress.dispose();
     _focus.dispose();
@@ -115,6 +120,12 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
       _current = slides[next.clamp(0, slides.length - 1)].id;
       _progress.value = 0;
     });
+  }
+
+  void _toggleSound() {
+    final on = !ref.read(wrappedSoundProvider);
+    setWrappedSound(ref, on);
+    _audio?.mute(!on);
   }
 
   void _openExport() => setState(() {
@@ -154,6 +165,8 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
       _go(slides, -1);
     } else if (key == LogicalKeyboardKey.space) {
       _toggleAuto(slides);
+    } else if (key == LogicalKeyboardKey.keyM) {
+      _toggleSound();
     } else if (key == LogicalKeyboardKey.escape) {
       context.router.maybePop();
     } else {
@@ -189,6 +202,24 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
         inputs == null ? const <WrappedSlide>[] : buildWrappedSlides(inputs);
     final index = slides.indexWhere((s) => s.id == _current);
     final current = slides.isEmpty ? null : slides[index < 0 ? 0 : index];
+
+    // La musique de la diapo : l'ambiance de son acte, ou le thème du film
+    // de l'année pour la clôture.
+    final sound = ref.watch(wrappedSoundProvider);
+    final best = data.valueOrNull?.filmOfYear?.event.jellyfinId;
+    final theme = best == null
+        ? null
+        : ref.watch(wrappedThemeSongProvider(best)).valueOrNull;
+    if (current != null && inputs != null) {
+      final closing = current.id == 'film-of-year' || current.id == 'recap';
+      final source = closing && theme != null
+          ? theme
+          : wrappedMoodAsset(inputs.data.moods[wrappedActOf(current.id)]);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _audio?.mute(!sound);
+        unawaited(_audio?.play(source));
+      });
+    }
     final motion = AppMotion.enabled(context);
 
     return Scaffold(
@@ -249,6 +280,8 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
                           progress: _progress),
                       _Controls(
                         visible: _hint && !_exporting,
+                        sound: sound,
+                        onSound: _toggleSound,
                         onExport: _openExport,
                         auto: _auto,
                         onAuto: () => _toggleAuto(slides),
@@ -373,8 +406,12 @@ class _Controls extends StatelessWidget {
       required this.auto,
       required this.onAuto,
       required this.onExport,
+      required this.sound,
+      required this.onSound,
       required this.onClose});
   final bool visible;
+  final bool sound;
+  final VoidCallback onSound;
   final VoidCallback onExport;
   final bool auto;
   final VoidCallback onAuto;
@@ -411,6 +448,8 @@ class _Controls extends StatelessWidget {
                     ? 'Arrêter la lecture automatique (Espace)'
                     : 'Lecture automatique (Espace)',
                 onAuto),
+            button(sound ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                sound ? 'Couper le son (M)' : 'Remettre le son (M)', onSound),
             button(Icons.ios_share_rounded, 'Exporter (E)', onExport),
             button(Icons.close_rounded, 'Fermer (Échap)', onClose),
           ]),
@@ -420,7 +459,7 @@ class _Controls extends StatelessWidget {
           bottom: AppSpacing.lg,
           child: IgnorePointer(
             child: Text(
-                '← →  naviguer   ·   Espace  lecture auto   ·   E  exporter   ·   Échap  quitter',
+                '← →  naviguer   ·   Espace  lecture auto   ·   M  son   ·   E  exporter   ·   Échap  quitter',
                 style: hint),
           ),
         ),
