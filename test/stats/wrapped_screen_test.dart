@@ -202,16 +202,16 @@ void main() {
     expect(series, isTrue);
   });
 
-  testWidgets('a split-flap year flips only the digit that changes',
+  testWidgets('a rolling year moves only the digit that changes',
       (tester) async {
     Widget board(String year) => MaterialApp(
         theme: buildAppTheme(),
         home: Center(
-            child: SplitFlapText(year, style: const TextStyle(fontSize: 40))));
+            child: RollingText(year, style: const TextStyle(fontSize: 40))));
     await tester.pumpWidget(board('1990'));
     await tester.pumpWidget(board('1980'));
     await tester.pump(const Duration(milliseconds: 200));
-    // En pleine bascule : l'ancien chiffre et le nouveau, chacun à moitié.
+    // En plein roulement : l'ancien chiffre sort, le nouveau entre.
     expect(find.text('9'), findsWidgets);
     expect(find.text('8'), findsWidgets);
     await tester.pumpAndSettle();
