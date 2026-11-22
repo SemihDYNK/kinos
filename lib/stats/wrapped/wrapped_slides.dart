@@ -1617,11 +1617,10 @@ class WrappedRecap extends StatelessWidget {
       final banner = best == null
           ? const ColoredBox(color: AppColors.heroFallback)
           : WrappedImage(inputs.backdrop(best.event));
-      // L'image occupe [reach] de la diapo ; le dégradé vers le noir, lui,
-      // couvre toute la diapo et atteint le noir plein avant le bord de
-      // l'image. Ce bord tombe donc sous du noir opaque : deux bords
-      // fractionnaires superposés (image et voile) laissaient filtrer un
-      // liseré clair.
+      // L'image reste visible sur [reach] de la diapo : le dégradé vers le
+      // noir couvre toute la diapo et atteint le noir plein bien avant le
+      // bord de l'image, décalée vers la gauche. Aucun bord d'image ne
+      // reste visible.
       final reach = portrait ? .52 : .62;
       final fade = LinearGradient(
         begin: portrait ? Alignment.topCenter : Alignment.centerLeft,
@@ -1635,19 +1634,24 @@ class WrappedRecap extends StatelessWidget {
       );
       final pad = size.width * (portrait ? .07 : AppWrapped.inset * .7);
       return [
-        Positioned(
-          left: 0,
-          top: 0,
-          right: portrait ? 0 : size.width * (1 - reach) * shift,
-          bottom: portrait ? size.height * (1 - reach) * shift : 0,
-          child: joined
-              ? ClipRect(
-                  child: Transform.scale(
+        // L'image garde la taille du plein cadre et glisse simplement vers
+        // la gauche (vers le haut en vertical) ; le dégradé noir couvre ce
+        // qui dépasse. Aucun recadrage pendant le mouvement.
+        Positioned.fill(
+          child: ClipRect(
+            child: Transform.translate(
+              offset: portrait
+                  ? Offset(0, -size.height * (1 - reach) * .5 * shift)
+                  : Offset(-size.width * (1 - reach) * .5 * shift, 0),
+              child: joined
+                  ? Transform.scale(
                       scale: startScale + (1 - startScale) * shift,
-                      child: banner))
-              : KenBurns(child: banner),
+                      child: banner)
+                  : KenBurns(child: banner),
+            ),
+          ),
         ),
-        if (joined && shift < 1) WrappedScrim(opacity: 1 - shift),
+        if (joined && shift < 1) WrappedScrim(opacity: 1 - shift * shift),
         Positioned.fill(
             child: IgnorePointer(
                 child: Opacity(
