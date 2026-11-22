@@ -66,7 +66,8 @@ class CatalogNavigationBar extends ConsumerWidget {
       if (route == DashboardRoute.name ||
           route == SeerrSearchRoute.name ||
           route == GenrePageRoute.name ||
-          route == UpcomingRoute.name)
+          route == UpcomingRoute.name ||
+          route == StatsRoute.name)
         child
       else if ({
         LibrarySearchRoute.name,
@@ -595,11 +596,8 @@ class _CatalogSearchResults extends ConsumerWidget {
                 logo: entity.kind != UpcomingFollowKind.person,
                 title: entity.name,
                 subtitle: entity.detail,
-                onActivate: () => onOpen((page) => page.router.push(
-                    EntityRoute(
-                        kind: entity.kind.name,
-                        id: entity.id,
-                        name: entity.name))),
+                onActivate: () => onOpen((page) => page.router.push(EntityRoute(
+                    kind: entity.kind.name, id: entity.id, name: entity.name))),
               ),
           ],
           if (outside.isNotEmpty) ...[

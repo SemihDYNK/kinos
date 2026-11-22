@@ -7,6 +7,7 @@ import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/letterboxd/letterboxd_import_dialog.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/providers/seerr_api_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/theme/palette_service_provider.dart';
 import 'package:kinos/ratings/kinos_rating_button.dart';
@@ -43,6 +44,25 @@ final _statsItemsProvider = FutureProvider.autoDispose
     for (final dto in response.body?.items ?? const <BaseItemDto>[])
       ItemBaseModel.fromBaseDto(dto, ref)
   ];
+});
+
+/// Les affiches TMDB (par Seerr) des mieux notés absents de la
+/// bibliothèque : « 1,2,3 » → id TMDB → URL.
+final _statsRequestPostersProvider = FutureProvider.autoDispose
+    .family<Map<int, String>, String>((ref, ids) async {
+  if (ids.isEmpty) return const {};
+  final api = ref.read(seerrApiProvider);
+  final posters = <int, String>{};
+  await Future.wait([
+    for (final id in ids.split(',').map(int.parse))
+      api.movieDetails(tmdbId: id).then((response) {
+        final path = response.body?.internalPosterPath;
+        if (path != null && path.isNotEmpty) {
+          posters[id] = 'https://image.tmdb.org/t/p/w500$path';
+        }
+      }).catchError((_) {}),
+  ]);
+  return posters;
 });
 
 /// La teinte du film à l'affiche, extraite de son image de fond.
@@ -341,6 +361,21 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     ];
 
     final byId = {for (final p in posters) p.id: p};
+    // Hors bibliothèque (vus au cinéma, ailleurs) : l'affiche TMDB par
+    // Seerr, et la fiche Seerr au clic.
+    final canRequest = ref.watch(
+        userProvider.select((u) => u?.seerrCredentials?.isConfigured ?? false));
+    final elsewhere = [
+      for (final t in topRated)
+        if (!byId.containsKey(t.event.jellyfinId) && t.event.tmdbId != null)
+          t.event.tmdbId!
+    ];
+    final requestPosters = canRequest
+        ? ref
+                .watch(_statsRequestPostersProvider(elsewhere.join(',')))
+                .valueOrNull ??
+            const <int, String>{}
+        : const <int, String>{};
     final tiles = [
       for (final t in topRated)
         if (byId[t.event.jellyfinId] case final item?)
@@ -352,6 +387,22 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             buildPoster: RecommendationTile.jellyfin(item: item).buildPoster,
             navigate: RecommendationTile.jellyfin(item: item).navigate,
           )
+        else if (canRequest && t.event.tmdbId != null)
+          (() {
+            final request = RecommendationTile.request(
+                tmdbId: t.event.tmdbId!,
+                title: t.event.title,
+                year: t.event.year,
+                posterUrl: requestPosters[t.event.tmdbId]);
+            return RecommendationTile(
+              identity: ('stats', 'tmdb', t.event.tmdbId),
+              previewImage: request.previewImage,
+              title: t.event.title,
+              subtitle: formatStars(t.rating),
+              buildPoster: request.buildPoster,
+              navigate: request.navigate,
+            );
+          })(),
     ];
 
     return Scaffold(
@@ -827,50 +878,60 @@ class _Banner extends StatelessWidget {
     final top = MediaQuery.paddingOf(context).top;
     if (image == null) {
       return Padding(
-        padding: padding.copyWith(top: top + AppSpacing.xxl * 2),
+        padding: padding.copyWith(
+            top: top + AppTopNavigation.contentInset + AppSpacing.lg),
         child: child,
       );
     }
     return SizedBox(
       height: AppStatsLayout.bannerHeight,
-      child: Stack(fit: StackFit.expand, children: [
-        ShaderMask(
-          blendMode: BlendMode.dstIn,
-          shaderCallback: (rect) => const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0, AppStatsLayout.bannerFadeStart, 1],
-            colors: [Colors.white, Colors.white, Colors.transparent],
-          ).createShader(rect),
+      child: ClipRect(
           child: Stack(fit: StackFit.expand, children: [
-            KinosImage(
-                key: ValueKey(image!.key),
-                image: image,
-                alignment: AppHeroLayout.imageAlignment,
-                disableBlur: true),
-            // Le voile de lecture, sous l'en-tête.
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  stops: const [0, .6],
-                  colors: [
-                    AppColors.scrim.withValues(alpha: .85),
-                    AppColors.scrim.withValues(alpha: 0),
-                  ],
+        // Le calque masqué dépasse sous le bandeau, coupé par le ClipRect :
+        // le bord fractionnaire du ShaderMask laisserait sinon une ligne
+        // sombre au défilement (cf. HomeHeroBackdrop).
+        Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: -AppHeroLayout.seamGuard,
+            child: ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (rect) => const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [0, AppStatsLayout.bannerFadeStart, 1],
+                colors: [Colors.white, Colors.white, Colors.transparent],
+              ).createShader(rect),
+              child: Stack(fit: StackFit.expand, children: [
+                KinosImage(
+                    key: ValueKey(image!.key),
+                    image: image,
+                    alignment: AppHeroLayout.imageAlignment,
+                    disableBlur: true),
+                // Le voile de lecture, sous l'en-tête.
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      stops: const [0, .6],
+                      colors: [
+                        AppColors.scrim.withValues(alpha: .85),
+                        AppColors.scrim.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ]),
-        ),
+              ]),
+            )),
         Positioned(
           left: padding.left,
           right: padding.right,
           bottom: AppSpacing.lg,
           child: child,
         ),
-      ]),
+      ])),
     );
   }
 }

@@ -180,7 +180,7 @@ ViewingStats computeStats(List<ViewingEvent> all,
         ..sort((a, b) => b.rating != a.rating
             ? b.rating.compareTo(a.rating)
             : b.event.at.compareTo(a.event.at)))
-      .take(6)
+      .take(16)
       .toList();
 
   // Les records.
