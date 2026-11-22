@@ -33,6 +33,7 @@ class ViewingStats {
     required this.buckets,
     required this.days,
     required this.genres,
+    this.genreFilms = const {},
     required this.directors,
     required this.actors,
     required this.ratings,
@@ -62,6 +63,10 @@ class ViewingStats {
   /// Secondes par jour (calendrier).
   final Map<DateTime, int> days;
   final List<Ranked> genres;
+
+  /// Pour chaque genre de [genres], le film de la bibliothèque qui
+  /// l'illustre : le mieux noté de la période, sinon le plus récent.
+  final Map<String, ViewingEvent> genreFilms;
   final List<Ranked> directors;
   final List<Ranked> actors;
 
@@ -183,6 +188,22 @@ ViewingStats computeStats(List<ViewingEvent> all,
       .take(16)
       .toList();
 
+  // L'image de chaque genre : le mieux noté de la période (dans la
+  // bibliothèque), sinon le plus récent.
+  int? ratingOf(ViewingEvent e) => rated[e.identity]?.rating;
+  final topGenres = _top(genres);
+  final genreFilms = <String, ViewingEvent>{};
+  for (final g in topGenres) {
+    ViewingEvent? best;
+    for (final e in movies) {
+      if (e.jellyfinId == null || !e.genres.contains(g.name)) continue;
+      final r = ratingOf(e) ?? -1,
+          br = best == null ? -2 : ratingOf(best) ?? -1;
+      if (r > br || (r == br && e.at.isAfter(best!.at))) best = e;
+    }
+    if (best != null) genreFilms[g.name] = best;
+  }
+
   // Les records.
   final perNight = <DateTime, List<ViewingEvent>>{};
   for (final e in episodes) {
@@ -227,7 +248,8 @@ ViewingStats computeStats(List<ViewingEvent> all,
     seconds: events.fold(0, (sum, e) => sum + e.seconds),
     buckets: buckets,
     days: days,
-    genres: _top(genres),
+    genres: topGenres,
+    genreFilms: genreFilms,
     directors: _top(directors, 5),
     actors: _top(actors, 5),
     ratings: distribution,

@@ -69,6 +69,10 @@ void main() {
     expect(stats.buckets.length, 12);
     expect(stats.busiestBucket, 7, reason: 'August');
     expect(stats.genres.first, (name: 'Science-fiction', count: 2));
+    expect(stats.genreFilms['Science-fiction']!.at, DateTime(2026, 8, 10),
+        reason: 'same rating: the latest viewing');
+    expect(stats.genreFilms.containsKey('Drame'), isFalse,
+        reason: 'only a Letterboxd film outside the library');
     expect(stats.directors.single, (name: 'Villeneuve', count: 2));
     expect(stats.ratings[8], 1);
     expect(stats.average, 4.5);
@@ -130,10 +134,13 @@ void main() {
     expect(find.text('Vos statistiques'), findsOneWidget);
     expect(find.textContaining('Activité', findRichText: true), findsWidgets);
     expect(find.text('films'), findsOneWidget);
+    expect(find.bySemanticsLabel('Genre Science-fiction, 2 films'),
+        findsOneWidget);
+    expect(find.text('Villeneuve'), findsOneWidget);
     // Un jour d'été, après le changement d'heure, a bien sa case.
     expect(
-        find.byWidgetPredicate((w) =>
-            w is Tooltip && (w.message ?? '').contains('10 août ·')),
+        find.byWidgetPredicate(
+            (w) => w is Tooltip && (w.message ?? '').contains('10 août ·')),
         findsOneWidget);
     await tester.tap(find.text('Depuis toujours'));
     await tester.pumpAndSettle();

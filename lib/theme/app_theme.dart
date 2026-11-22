@@ -317,9 +317,18 @@ abstract final class AppStatsLayout {
   /// sous le bandeau (sélecteurs de période et chiffres).
   static const tintTail = 260.0;
 
-  /// Barres des classements (genres, réalisateurs, acteurs).
-  static const rankBarHeight = 6.0;
-  static const rankNameWidth = 160.0;
+  /// Tuiles des genres : six par rangée, trois en fenêtre étroite.
+  static const genreColumns = 6;
+  static const genreNarrowColumns = 3;
+  static const genreNarrowWidth = 760.0;
+  static const genreTileAspectRatio = 16 / 10;
+
+  /// Portraits des réalisateurs et acteurs : cinq par rangée, le premier
+  /// plus grand, en 3:4.
+  static const peopleCount = 5;
+  static const personLeadScale = 1.4;
+  static const personMaxWidth = 132.0;
+  static const personAspectRatio = 3 / 4;
 
   /// Les deux colonnes des goûts sous cette largeur s'empilent.
   static const twoColumnsMinWidth = 760.0;

@@ -12,7 +12,10 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/theme/palette_service_provider.dart';
 import 'package:kinos/ratings/kinos_rating_button.dart';
 import 'package:kinos/ratings/kinos_ratings.dart';
+import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/dashboard/recommendation_tile.dart';
+import 'package:kinos/upcoming/entity/entity_search.dart';
+import 'package:kinos/upcoming/upcoming_models.dart';
 import 'package:kinos/screens/shared/user_icon.dart';
 import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/theme/app_theme.dart';
@@ -147,6 +150,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       for (final t in topRated)
         if (t.event.jellyfinId case final id?) id
     ];
+    for (final e in stats?.genreFilms.values ?? const <ViewingEvent>[]) {
+      if (!ids.contains(e.jellyfinId)) ids.add(e.jellyfinId!);
+    }
     // Le bandeau : le mieux noté de la période qui est dans la
     // bibliothèque, sinon le plus revu, sinon le plus long.
     final bannerEvent = [
@@ -159,6 +165,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     }
     final posters =
         ref.watch(_statsItemsProvider(ids.join(','))).valueOrNull ?? const [];
+    final byId = {for (final p in posters) p.id: p};
     final bannerItem =
         posters.where((p) => p.id == bannerEvent?.jellyfinId).firstOrNull;
     final bannerImage = bannerItem?.images?.backDrop?.firstOrNull;
@@ -174,6 +181,20 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                 .valueOrNull
                 ?.tint ??
             AppColors.heroFallback;
+    Widget twoColumns(List<Widget> left, List<Widget> right) =>
+        LayoutBuilder(builder: (context, constraints) {
+          Widget column(List<Widget> children) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: children);
+          if (constraints.maxWidth < AppStatsLayout.twoColumnsMinWidth) {
+            return column([...left, ...right]);
+          }
+          return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: column(left)),
+            const SizedBox(width: AppSpacing.xl),
+            Expanded(child: column(right)),
+          ]);
+        });
+
     final onImage = bannerImage != null;
     // L'en-tête : votre photo, votre nom, et le film à l'affiche.
     final header = Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -295,16 +316,28 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               detail: 'une case par jour, plus claire quand vous avez '
                   'regardé davantage',
               child: _Calendar(year: _period.year!, days: stats.days)),
-        LayoutBuilder(builder: (context, constraints) {
-          final left =
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (stats.genres.isNotEmpty)
-              section('Genres', child: _Ranking(stats.genres)),
+        if (stats.genres.isNotEmpty)
+          section('Genres',
+              detail: 'l\'image : votre mieux noté du genre',
+              child: _GenreTiles(genres: stats.genres, images: {
+                for (final g in stats.genres)
+                  if (byId[stats.genreFilms[g.name]?.jellyfinId]
+                      case final item?)
+                    g.name: item.images?.backDrop?.firstOrNull ??
+                        item.images?.primary,
+              })),
+        twoColumns(
+          [
             if (stats.directors.isNotEmpty)
-              section('Réalisateurs', child: _Ranking(stats.directors)),
-          ]);
-          final right =
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              section('Réalisateurs', child: _People(stats.directors)),
+          ],
+          [
+            if (stats.actors.isNotEmpty)
+              section('Acteurs', child: _People(stats.actors)),
+          ],
+        ),
+        twoColumns(
+          [
             if (stats.average != null)
               section('Vos notes',
                   detail:
@@ -328,21 +361,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         '',
                         '5'
                       ])),
-            if (stats.actors.isNotEmpty)
-              section('Acteurs', child: _Ranking(stats.actors)),
-          ]);
-          if (constraints.maxWidth < AppStatsLayout.twoColumnsMinWidth) {
-            return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [left, right]);
-          }
-          return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(child: left),
-            const SizedBox(width: AppSpacing.xl),
-            Expanded(child: right),
-          ]);
-        }),
-        section('Records', child: _Records(stats: stats, locale: locale)),
+          ],
+          [section('Records', child: _Records(stats: stats, locale: locale))],
+        ),
         section(
           'Votre Wrapped ${_period.year ?? DateTime.now().year}',
           detail: 'l\'année en quelques diapos, à partager en story · '
@@ -360,7 +381,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       ],
     ];
 
-    final byId = {for (final p in posters) p.id: p};
     // Hors bibliothèque (vus au cinéma, ailleurs) : l'affiche TMDB par
     // Seerr, et la fiche Seerr au clic.
     final canRequest = ref.watch(
@@ -692,48 +712,255 @@ class _Calendar extends StatelessWidget {
   }
 }
 
-class _Ranking extends StatelessWidget {
-  const _Ranking(this.items);
-  final List<Ranked> items;
+/// Survol ou focus : l'image s'avance dans son cadre, comme les tuiles de
+/// genre de l'accueil.
+class _ZoomingImage extends StatefulWidget {
+  const _ZoomingImage(
+      {required this.onActivate, required this.label, required this.builder});
+  final VoidCallback onActivate;
+  final String label;
+  final Widget Function(BuildContext context, double reveal) builder;
+
+  @override
+  State<_ZoomingImage> createState() => _ZoomingImageState();
+}
+
+class _ZoomingImageState extends State<_ZoomingImage> {
+  bool _hovered = false;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
-    final top = items.isEmpty ? 1 : items.first.count;
+    final motion = AppMotion.enabled(context);
+    final active = _hovered || _focused;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Semantics(
+          button: true,
+          label: widget.label,
+          excludeSemantics: true,
+          child: FocusRing(
+            onActivate: widget.onActivate,
+            pressMotion: true,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: motion && active ? 1 : 0),
+              duration: !motion
+                  ? Duration.zero
+                  : active
+                      ? AppDurations.posterHover
+                      : AppDurations.hover,
+              curve: AppMotion.posterReveal,
+              builder: (context, reveal, _) => widget.builder(context, reveal),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Les genres en tuiles : l'image de votre mieux noté du genre, son nom,
+/// le nombre de films et le rang. Ouvre la page du genre.
+class _GenreTiles extends StatelessWidget {
+  const _GenreTiles({required this.genres, required this.images});
+  final List<Ranked> genres;
+  final Map<String, ImageData?> images;
+
+  @override
+  Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Column(children: [
-      for (final item in items)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
-          child: Row(children: [
-            SizedBox(
-                width: AppStatsLayout.rankNameWidth,
-                child: Text(item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.bodyMedium
-                        ?.copyWith(color: AppColors.textPrimary))),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: item.count / top,
-                  child: Container(
-                      height: AppStatsLayout.rankBarHeight,
+    return LayoutBuilder(builder: (context, constraints) {
+      final columns = constraints.maxWidth < AppStatsLayout.genreNarrowWidth
+          ? AppStatsLayout.genreNarrowColumns
+          : AppStatsLayout.genreColumns;
+      final width =
+          (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
+      return Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
+        for (final (rank, genre) in genres.indexed)
+          SizedBox(
+            width: width,
+            child: AspectRatio(
+              aspectRatio: AppStatsLayout.genreTileAspectRatio,
+              child: _ZoomingImage(
+                label: 'Genre ${genre.name}, ${genre.count} films',
+                onActivate: () => context.router.push(GenrePageRoute(
+                    label: genre.name,
+                    names: [genre.name],
+                    image: images[genre.name])),
+                builder: (context, reveal) => ClipRRect(
+                  borderRadius: AppRadii.cardBorder,
+                  child: Stack(fit: StackFit.expand, children: [
+                    const ColoredBox(color: AppColors.surface),
+                    if (images[genre.name] case final image?)
+                      Transform.scale(
+                        scale: 1 + AppMotion.tileImageZoom * reveal,
+                        child: KinosImage(image: image, disableBlur: true),
+                      ),
+                    DecoratedBox(
                       decoration: BoxDecoration(
-                          color: AppColors.textPrimary.withValues(alpha: .75),
-                          borderRadius: BorderRadius.circular(
-                              AppStatsLayout.rankBarHeight / 2))),
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          stops: const [0, .6],
+                          colors: [
+                            AppColors.scrim.withValues(alpha: .85),
+                            AppColors.scrim.withValues(alpha: 0),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: AppSpacing.xs,
+                      right: AppSpacing.sm,
+                      child: Text('${rank + 1}',
+                          style: AppTypography.meta.copyWith(
+                              color: AppColors.textPrimary
+                                  .withValues(alpha: .75))),
+                    ),
+                    Positioned(
+                      left: AppSpacing.sm,
+                      right: AppSpacing.sm,
+                      bottom: AppSpacing.sm,
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(genre.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.titleMedium
+                                    ?.copyWith(color: AppColors.textPrimary)),
+                            Text(
+                                '${genre.count} ${genre.count > 1 ? 'films' : 'film'}',
+                                style: AppTypography.meta.copyWith(
+                                    color: AppColors.textPrimary
+                                        .withValues(alpha: .75))),
+                          ]),
+                    ),
+                  ]),
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Text('${item.count}',
-                style:
-                    text.bodySmall?.copyWith(color: AppColors.textSecondary)),
+          ),
+      ]);
+    });
+  }
+}
+
+/// Une personne retrouvée par son nom dans TMDB (par Seerr) : sa photo et
+/// sa page. `null` sans Seerr ou sans résultat.
+final _personProvider =
+    FutureProvider.autoDispose.family<EntityResult?, String>((ref, name) async {
+  final results = await ref
+      .watch(entitySearchProvider((query: name, language: 'fr')).future);
+  final people =
+      results.where((r) => r.kind == UpcomingFollowKind.person).toList();
+  return people
+          .where((p) => p.name.toLowerCase() == name.toLowerCase())
+          .firstOrNull ??
+      people.firstOrNull;
+});
+
+/// Réalisateurs ou acteurs en portraits, du premier (plus grand) au
+/// cinquième, avec le nombre de films.
+class _People extends StatelessWidget {
+  const _People(this.people);
+  final List<Ranked> people;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = people.take(AppStatsLayout.peopleCount).toList();
+    return LayoutBuilder(builder: (context, constraints) {
+      final units = AppStatsLayout.personLeadScale + shown.length - 1;
+      final width =
+          ((constraints.maxWidth - AppSpacing.sm * (shown.length - 1)) / units)
+              .clamp(0.0, AppStatsLayout.personMaxWidth);
+      return Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          crossAxisAlignment: WrapCrossAlignment.end,
+          children: [
+            for (final (rank, person) in shown.indexed)
+              _PersonCard(
+                  person: person,
+                  width: rank == 0
+                      ? width * AppStatsLayout.personLeadScale
+                      : width),
+          ]);
+    });
+  }
+}
+
+class _PersonCard extends ConsumerWidget {
+  const _PersonCard({required this.person, required this.width});
+  final Ranked person;
+  final double width;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final found = ref.watch(_personProvider(person.name)).valueOrNull;
+    final initials = person.name
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .take(2)
+        .map((w) => w[0].toUpperCase())
+        .join();
+    return SizedBox(
+      width: width,
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AspectRatio(
+              aspectRatio: AppStatsLayout.personAspectRatio,
+              child: _ZoomingImage(
+                label: '${person.name}, ${person.count} films',
+                onActivate: () => found == null
+                    ? context.router.push(
+                        LibrarySearchRoute(query: person.name, recursive: true))
+                    : context.router.push(EntityRoute(
+                        kind: found.kind.name, id: found.id, name: found.name)),
+                builder: (context, reveal) => ClipRRect(
+                  borderRadius: AppRadii.cardBorder,
+                  child: Stack(fit: StackFit.expand, children: [
+                    ColoredBox(
+                      color: AppColors.surface,
+                      child: Center(
+                          child: Text(initials,
+                              style: text.titleMedium
+                                  ?.copyWith(color: AppColors.textSecondary))),
+                    ),
+                    if (found?.image case final image?)
+                      Transform.scale(
+                        scale: 1 + AppMotion.tileImageZoom * reveal,
+                        child: KinosImage(
+                            image: ImageData(
+                                path: tmdbImage(image, size: 'w185'),
+                                key: 'stats:person:${found!.id}'),
+                            alignment: Alignment.topCenter,
+                            disableBlur: true),
+                      ),
+                  ]),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(person.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.bodyMedium?.copyWith(color: AppColors.textPrimary)),
+            Text('${person.count} ${person.count > 1 ? 'films' : 'film'}',
+                style: AppTypography.meta
+                    .copyWith(color: AppColors.textSecondary)),
           ]),
-        ),
-    ]);
+    );
   }
 }
 
