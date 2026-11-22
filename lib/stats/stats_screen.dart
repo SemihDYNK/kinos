@@ -8,10 +8,15 @@ import 'package:kinos/letterboxd/letterboxd_import_dialog.dart';
 import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
+import 'package:kinos/providers/theme/palette_service_provider.dart';
+import 'package:kinos/ratings/kinos_rating_button.dart';
 import 'package:kinos/ratings/kinos_ratings.dart';
 import 'package:kinos/screens/dashboard/recommendation_tile.dart';
 import 'package:kinos/screens/shared/user_icon.dart';
+import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/theme/palette_service.dart';
+import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
 
 import 'viewing_backfill.dart';
@@ -39,6 +44,12 @@ final _statsItemsProvider = FutureProvider.autoDispose
       ItemBaseModel.fromBaseDto(dto, ref)
   ];
 });
+
+/// La teinte du film à l'affiche, extraite de son image de fond.
+final _bannerPaletteProvider = FutureProvider.autoDispose
+    .family<HeroPalette, ({String id, ImageProvider image})>((ref, key) => ref
+        .read(paletteServiceProvider)
+        .forItem(itemId: key.id, image: key.image));
 
 /// « 412 h », « 35 min ».
 String formatHours(int seconds) {
@@ -111,27 +122,85 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           ]),
         );
 
+    final topRated = stats?.topRated ?? const [];
+    final ids = [
+      for (final t in topRated)
+        if (t.event.jellyfinId case final id?) id
+    ];
+    // Le bandeau : le mieux noté de la période qui est dans la
+    // bibliothèque, sinon le plus revu, sinon le plus long.
+    final bannerEvent = [
+      for (final t in topRated) t.event,
+      if (stats?.mostSeen case final seen?) seen.event,
+      if (stats?.longestFilm case final film?) film,
+    ].where((e) => e.jellyfinId != null).firstOrNull;
+    if (bannerEvent != null && !ids.contains(bannerEvent.jellyfinId)) {
+      ids.add(bannerEvent.jellyfinId!);
+    }
+    final posters =
+        ref.watch(_statsItemsProvider(ids.join(','))).valueOrNull ?? const [];
+    final bannerItem =
+        posters.where((p) => p.id == bannerEvent?.jellyfinId).firstOrNull;
+    final bannerImage = bannerItem?.images?.backDrop?.firstOrNull;
+    final bannerRating = [
+      for (final t in topRated)
+        if (t.event.jellyfinId == bannerItem?.id) t.rating
+    ].firstOrNull;
+    final tint = bannerItem == null || bannerImage == null
+        ? AppColors.heroFallback
+        : ref
+                .watch(_bannerPaletteProvider(
+                    (id: bannerItem.id, image: bannerImage.imageProvider)))
+                .valueOrNull
+                ?.tint ??
+            AppColors.heroFallback;
+    final onImage = bannerImage != null;
+    // L'en-tête : votre photo, votre nom, et le film à l'affiche.
+    final header = Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      ClipRRect(
+        borderRadius: AppRadii.cardBorder,
+        child: SizedBox.square(
+            dimension: AppStatsLayout.portraitSize,
+            child: UserIcon(user: user, cornerRadius: AppRadii.card)),
+      ),
+      const SizedBox(width: AppSpacing.md),
+      Expanded(
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Vos statistiques',
+                  style: text.bodySmall?.copyWith(
+                      color: onImage
+                          ? AppColors.textPrimary.withValues(alpha: .75)
+                          : AppColors.textSecondary)),
+              Text(user?.name ?? '',
+                  style: text.displaySmall
+                      ?.copyWith(color: AppColors.textPrimary)),
+            ]),
+      ),
+      if (bannerItem != null && bannerRating != null)
+        Flexible(
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                    _period.year == null
+                        ? 'Votre mieux noté'
+                        : 'Votre mieux noté de ${_period.year}',
+                    style: text.bodySmall?.copyWith(
+                        color: AppColors.textPrimary.withValues(alpha: .75))),
+                Text('${bannerItem.name} · ${formatStars(bannerRating)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleMedium
+                        ?.copyWith(color: AppColors.textPrimary)),
+              ]),
+        ),
+    ]);
+
     final body = <Widget>[
-      // L'en-tête : votre photo, votre nom, la période.
-      Row(children: [
-        ClipRRect(
-          borderRadius: AppRadii.cardBorder,
-          child: SizedBox.square(
-              dimension: AppStatsLayout.portraitSize,
-              child: UserIcon(user: user, cornerRadius: AppRadii.card)),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Vos statistiques',
-                style:
-                    text.bodySmall?.copyWith(color: AppColors.textSecondary)),
-            Text(user?.name ?? '', style: text.displaySmall),
-          ]),
-        ),
-      ]),
-      const SizedBox(height: AppSpacing.lg),
       Wrap(spacing: AppSpacing.xxs, runSpacing: AppSpacing.xxs, children: [
         for (final year in years)
           _Chip('$year',
@@ -172,31 +241,40 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         _Numbers(stats: stats),
         section('Activité',
             detail: _period.year == null
-                ? 'heures par année'
+                ? 'heures devant l\'écran, année par année'
                 : _period.month == null
-                    ? 'heures par mois'
-                    : 'heures par jour',
-            child: Column(children: [
-              _Bars(
-                  values: stats.buckets,
-                  height: AppStatsLayout.barsHeight,
-                  highlight: stats.busiestBucket,
-                  labels: [
-                    for (var i = 0; i < stats.buckets.length; i++)
-                      _period.year == null
-                          ? '${stats.years.last + i}'
-                          : _period.month == null
-                              ? DateFormat('MMMMM', locale)
-                                  .format(DateTime(2000, i + 1))
-                              : (i + 1) % 5 == 0 || i == 0
-                                  ? '${i + 1}'
-                                  : '',
-                  ]),
-              if (_period.year != null && _period.month == null) ...[
-                const SizedBox(height: AppSpacing.md),
-                _Calendar(year: _period.year!, days: stats.days),
-              ],
-            ])),
+                    ? 'heures devant l\'écran, mois par mois'
+                    : 'heures devant l\'écran, jour par jour',
+            child: _Bars(
+                values: stats.buckets,
+                height: AppStatsLayout.barsHeight,
+                highlight: stats.busiestBucket,
+                valueLabel: formatHours,
+                tooltip: (i) {
+                  final hours = formatHours(stats.buckets[i]);
+                  return _period.year == null
+                      ? '${stats.years.last + i} · $hours'
+                      : _period.month == null
+                          ? '${toBeginningOfSentenceCase(DateFormat('MMMM y', locale).format(DateTime(_period.year!, i + 1)))} · $hours'
+                          : '${DateFormat('EEEE d MMMM', locale).format(DateTime(_period.year!, _period.month!, i + 1))} · $hours';
+                },
+                labels: [
+                  for (var i = 0; i < stats.buckets.length; i++)
+                    _period.year == null
+                        ? '${stats.years.last + i}'
+                        : _period.month == null
+                            ? toBeginningOfSentenceCase(
+                                DateFormat('MMM', locale)
+                                    .format(DateTime(2000, i + 1)))
+                            : (i + 1) % 5 == 0 || i == 0
+                                ? '${i + 1}'
+                                : '',
+                ])),
+        if (_period.year != null && _period.month == null)
+          section('Jour par jour',
+              detail: 'une case par jour, plus claire quand vous avez '
+                  'regardé davantage',
+              child: _Calendar(year: _period.year!, days: stats.days)),
         LayoutBuilder(builder: (context, constraints) {
           final left =
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -214,6 +292,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   child: _Bars(
                       values: stats.ratings,
                       height: AppStatsLayout.ratingBarsHeight,
+                      valueLabel: (count) => '$count',
+                      tooltip: (i) =>
+                          '${formatStars(i + 1)} · ${stats.ratings[i]} '
+                          '${stats.ratings[i] > 1 ? 'films' : 'film'}',
                       labels: const [
                         '½',
                         '1',
@@ -258,13 +340,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       ],
     ];
 
-    final topRated = stats?.topRated ?? const [];
-    final ids = [
-      for (final t in topRated)
-        if (t.event.jellyfinId case final id?) id
-    ];
-    final posters =
-        ref.watch(_statsItemsProvider(ids.join(','))).valueOrNull ?? const [];
     final byId = {for (final p in posters) p.id: p};
     final tiles = [
       for (final t in topRated)
@@ -273,7 +348,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             identity: ('stats', item.id),
             previewImage: item.getPosters?.primary,
             title: item.name,
-            subtitle: '★' * (t.rating ~/ 2) + (t.rating.isOdd ? '½' : ''),
+            subtitle: formatStars(t.rating),
             buildPoster: RecommendationTile.jellyfin(item: item).buildPoster,
             navigate: RecommendationTile.jellyfin(item: item).navigate,
           )
@@ -282,12 +357,46 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(slivers: [
-        SliverPadding(
-          padding: padding.copyWith(top: AppSpacing.xxl),
-          sliver: SliverToBoxAdapter(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: body)),
+        SliverToBoxAdapter(
+          child: Stack(children: [
+            // La teinte du film à l'affiche, résorbée sous les chiffres.
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: AppStatsLayout.bannerHeight + AppStatsLayout.tintTail,
+              child: AnimatedContainer(
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : AppDurations.heroTint,
+                decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: const [
+                      0,
+                      AppStatsLayout.bannerHeight /
+                          (AppStatsLayout.bannerHeight +
+                              AppStatsLayout.tintTail),
+                      1
+                    ],
+                        colors: [
+                      tint,
+                      tint,
+                      AppColors.background
+                    ])),
+              ),
+            ),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _Banner(image: bannerImage, padding: padding, child: header),
+              Padding(
+                padding: padding.copyWith(top: AppSpacing.lg),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: body),
+              ),
+            ]),
+          ]),
         ),
         if (tiles.isNotEmpty) ...[
           SliverPadding(
@@ -337,17 +446,22 @@ class _Numbers extends StatelessWidget {
   }
 }
 
-/// Un histogramme simple : une barre par valeur, la plus haute à pleine
-/// hauteur, la mise en avant [highlight] plus claire.
+/// Un histogramme : une barre par valeur, la plus haute à pleine hauteur,
+/// sa valeur au-dessus ([values] lisibles via [valueLabel]) et le détail au
+/// survol ([tooltip]). La mise en avant [highlight] est plus claire.
 class _Bars extends StatelessWidget {
   const _Bars(
       {required this.values,
       required this.height,
       required this.labels,
+      this.valueLabel,
+      this.tooltip,
       this.highlight});
   final List<int> values;
   final double height;
   final List<String> labels;
+  final String Function(int value)? valueLabel;
+  final String Function(int index)? tooltip;
   final int? highlight;
 
   @override
@@ -356,22 +470,46 @@ class _Bars extends StatelessWidget {
     final meta = AppTypography.meta.copyWith(color: AppColors.textSecondary);
     return Column(children: [
       SizedBox(
-        height: height,
+        height:
+            height + (valueLabel == null ? 0 : AppStatsLayout.labelRowHeight),
         child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
           for (var i = 0; i < values.length; i++)
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppStatsLayout.dayGap),
-                child: FractionallySizedBox(
-                  heightFactor: top == 0 ? 0 : (values[i] / top).clamp(.02, 1),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                        color: AppColors.textPrimary
-                            .withValues(alpha: i == highlight ? 1 : .55),
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(AppSpacing.xxs))),
-                  ),
+              child: Tooltip(
+                message: tooltip?.call(i) ?? '',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppStatsLayout.dayGap),
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (valueLabel != null)
+                          SizedBox(
+                            height: AppStatsLayout.labelRowHeight,
+                            child: values[i] == 0
+                                ? null
+                                : Text(valueLabel!(values[i]),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.clip,
+                                    style: meta.copyWith(
+                                        color: i == highlight
+                                            ? AppColors.textPrimary
+                                            : AppColors.textSecondary)),
+                          ),
+                        SizedBox(
+                          height: top == 0
+                              ? 0
+                              : height * (values[i] / top).clamp(.02, 1),
+                          width: double.infinity,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                                color: AppColors.textPrimary.withValues(
+                                    alpha: i == highlight ? 1 : .55),
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(AppSpacing.xxs))),
+                          ),
+                        ),
+                      ]),
                 ),
               ),
             ),
@@ -391,63 +529,114 @@ class _Bars extends StatelessWidget {
   }
 }
 
-/// Le calendrier de l'année : une case par jour, en colonnes de semaines,
-/// plus claire quand on a regardé davantage.
+/// Le calendrier de l'année : une case par jour, en colonnes de semaines
+/// (lundi en haut), plus claire quand on a regardé davantage, les mois
+/// au-dessus et une légende en dessous.
 class _Calendar extends StatelessWidget {
   const _Calendar({required this.year, required this.days});
   final int year;
   final Map<DateTime, int> days;
 
+  /// Le jour [offset] après [from], en jours du calendrier : une Duration
+  /// de 24 h glisse d'une heure aux changements d'heure et ne retombe plus
+  /// sur minuit, la clé des jours.
+  static DateTime _day(DateTime from, int offset) =>
+      DateTime(from.year, from.month, from.day + offset);
+
+  static double _alpha(int seconds, int top) =>
+      seconds == 0 || top == 0 ? .06 : .2 + .75 * (seconds / top);
+
   @override
   Widget build(BuildContext context) {
     final first = DateTime(year);
-    final start = first.subtract(Duration(days: first.weekday - 1));
-    final weeks = (DateTime(year + 1).difference(start).inDays / 7).ceil();
+    final start = _day(first, -(first.weekday - 1));
+    final weeks =
+        (DateTime(year + 1).difference(start).inHours / 24 / 7).ceil();
     final top = days.values.fold(0, (a, b) => a > b ? a : b);
+    final meta = AppTypography.meta.copyWith(color: AppColors.textSecondary);
+    const gap = AppStatsLayout.dayGap;
     return LayoutBuilder(builder: (context, constraints) {
-      final size =
-          ((constraints.maxWidth - AppStatsLayout.dayGap * weeks) / weeks)
-              .clamp(2.0, AppStatsLayout.dayMaxSize);
-      return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var w = 0; w < weeks; w++)
-              Padding(
-                padding: const EdgeInsets.only(right: AppStatsLayout.dayGap),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  for (var d = 0; d < 7; d++)
-                    Builder(builder: (context) {
-                      final day = start.add(Duration(days: w * 7 + d));
-                      final seconds = days[day] ?? 0;
-                      final inYear = day.year == year;
-                      return Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: AppStatsLayout.dayGap),
-                        child: Tooltip(
-                          message: inYear && seconds > 0
-                              ? '${DateFormat('d MMMM', 'fr').format(day)} · ${formatHours(seconds)}'
-                              : '',
-                          child: SizedBox.square(
-                            dimension: size,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: !inYear
-                                    ? Colors.transparent
-                                    : AppColors.textPrimary.withValues(
-                                        alpha: seconds == 0 || top == 0
-                                            ? .06
-                                            : .2 + .75 * (seconds / top)),
-                                borderRadius: BorderRadius.circular(size / 5),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
+      final size = ((constraints.maxWidth - gap * (weeks - 1)) / weeks)
+          .clamp(2.0, AppStatsLayout.dayMaxSize);
+      final width = weeks * size + (weeks - 1) * gap;
+      Widget cell(double alpha) => SizedBox.square(
+            dimension: size,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.textPrimary.withValues(alpha: alpha),
+                borderRadius: BorderRadius.circular(size / 5),
+              ),
+            ),
+          );
+      return SizedBox(
+        width: width,
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Les mois, au-dessus de la semaine qui contient leur 1er.
+              SizedBox(
+                height: AppStatsLayout.labelRowHeight,
+                child: Stack(clipBehavior: Clip.none, children: [
+                  for (var m = 1; m <= 12; m++)
+                    Positioned(
+                      left: (DateTime(year, m).difference(start).inHours ~/
+                              24 ~/
+                              7) *
+                          (size + gap),
+                      child: Text(
+                          toBeginningOfSentenceCase(DateFormat('MMM', 'fr')
+                              .format(DateTime(year, m))),
+                          style: meta),
+                    ),
                 ]),
               ),
-          ]);
+              const SizedBox(height: AppSpacing.xxs),
+              Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var w = 0; w < weeks; w++)
+                      Padding(
+                        padding:
+                            EdgeInsets.only(right: w == weeks - 1 ? 0 : gap),
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          for (var d = 0; d < 7; d++)
+                            Builder(builder: (context) {
+                              final day = _day(start, w * 7 + d);
+                              final seconds = days[day] ?? 0;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: gap),
+                                child: day.year != year
+                                    ? SizedBox.square(dimension: size)
+                                    : Tooltip(
+                                        message:
+                                            '${DateFormat('EEEE d MMMM', 'fr').format(day)}'
+                                            '${seconds > 0 ? ' · ${formatHours(seconds)}' : ''}',
+                                        child: cell(_alpha(seconds, top)),
+                                      ),
+                              );
+                            }),
+                        ]),
+                      ),
+                  ]),
+              const SizedBox(height: AppSpacing.xs),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('Moins', style: meta),
+                  const SizedBox(width: AppSpacing.xs),
+                  for (final a in [.06, .2, .45, .7, .95]) ...[
+                    cell(a),
+                    const SizedBox(width: gap),
+                  ],
+                  const SizedBox(width: AppSpacing.xs - gap),
+                  Text('Plus', style: meta),
+                ]),
+              ),
+            ]),
+      );
     });
   }
 }
@@ -621,4 +810,67 @@ class _Chip extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// Le bandeau : l'image de fond du film à l'affiche, qui se dissout dans
+/// sa teinte (peinte derrière par la page), l'en-tête posé en bas. Sans
+/// image, l'en-tête seul sur la teinte de repli.
+class _Banner extends StatelessWidget {
+  const _Banner(
+      {required this.image, required this.padding, required this.child});
+  final ImageData? image;
+  final EdgeInsets padding;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    if (image == null) {
+      return Padding(
+        padding: padding.copyWith(top: top + AppSpacing.xxl * 2),
+        child: child,
+      );
+    }
+    return SizedBox(
+      height: AppStatsLayout.bannerHeight,
+      child: Stack(fit: StackFit.expand, children: [
+        ShaderMask(
+          blendMode: BlendMode.dstIn,
+          shaderCallback: (rect) => const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: [0, AppStatsLayout.bannerFadeStart, 1],
+            colors: [Colors.white, Colors.white, Colors.transparent],
+          ).createShader(rect),
+          child: Stack(fit: StackFit.expand, children: [
+            KinosImage(
+                key: ValueKey(image!.key),
+                image: image,
+                alignment: AppHeroLayout.imageAlignment,
+                disableBlur: true),
+            // Le voile de lecture, sous l'en-tête.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  stops: const [0, .6],
+                  colors: [
+                    AppColors.scrim.withValues(alpha: .85),
+                    AppColors.scrim.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ]),
+        ),
+        Positioned(
+          left: padding.left,
+          right: padding.right,
+          bottom: AppSpacing.lg,
+          child: child,
+        ),
+      ]),
+    );
+  }
 }

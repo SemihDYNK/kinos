@@ -156,8 +156,8 @@ abstract final class AppTopNavigation {
   static const capsuleHeight = 63.0;
 
   /// Rayon concentrique à la capsule : le sien moins l'espace qui les sépare.
-  static const tabBorder = BorderRadius.all(
-      Radius.circular(AppNavigation.radius - AppSpacing.xxs));
+  static const tabBorder =
+      BorderRadius.all(Radius.circular(AppNavigation.radius - AppSpacing.xxs));
   static const searchFieldWidth = 280.0;
 
   /// Hauteur commune du bouton loupe et du champ ouvert : celle des onglets.
@@ -299,9 +299,23 @@ abstract final class AppStatsLayout {
   static const barsHeight = 120.0;
   static const ratingBarsHeight = 80.0;
 
-  /// Calendrier : écart entre les cases (la taille suit la largeur).
-  static const dayGap = 2.0;
-  static const dayMaxSize = 14.0;
+  /// Calendrier : écart entre les cases (la taille suit la largeur, toute
+  /// la largeur disponible jusqu'à [dayMaxSize]).
+  static const dayGap = 3.0;
+  static const dayMaxSize = 24.0;
+
+  /// Rangée des mois au-dessus du calendrier, des valeurs au-dessus des
+  /// barres.
+  static const labelRowHeight = 18.0;
+
+  /// Bandeau du film à l'affiche (le mieux noté de la période), et la
+  /// fraction basse où l'image se dissout dans la teinte.
+  static const bannerHeight = 440.0;
+  static const bannerFadeStart = .45;
+
+  /// La teinte du bandeau se résorbe au fond de la page sur cette hauteur
+  /// sous le bandeau (sélecteurs de période et chiffres).
+  static const tintTail = 260.0;
 
   /// Barres des classements (genres, réalisateurs, acteurs).
   static const rankBarHeight = 6.0;
@@ -498,7 +512,8 @@ abstract final class AppMotion {
   // arrivent des bords et du fond pendant qu'elle recule ; la branche du
   // haut, arrivée ouverte autour du creux du K, prend son élan puis se
   // referme comme un clap, et la marque encaisse le choc.
-  static const startupIntroTrace = Interval(0, .50, curve: Cubic(.45, 0, .25, 1));
+  static const startupIntroTrace =
+      Interval(0, .50, curve: Cubic(.45, 0, .25, 1));
   static const startupIntroTraceFade = Interval(0, .12, curve: easeOut);
   static const startupIntroArrivals = [
     Interval(.14, .52, curve: easeOut),
@@ -513,7 +528,8 @@ abstract final class AppMotion {
   // Gros plan de départ (en multiple de la taille finale), et recul de la
   // caméra : lent au départ pour laisser voir le trait, posé avant l'élan.
   static const startupIntroCloseup = 6.0;
-  static const startupIntroCamera = Interval(.10, .68, curve: Cubic(.75, 0, .25, 1));
+  static const startupIntroCamera =
+      Interval(.10, .68, curve: Cubic(.75, 0, .25, 1));
   // Inclinaison de départ de la caméra, résorbée pendant le recul.
   static const startupIntroTilt = .35;
   // Images d'affilée sorties à temps avant de lancer l'ouverture.
@@ -522,7 +538,8 @@ abstract final class AppMotion {
   static const startupIntroClapOpen = -.32;
   static const startupIntroClapLift = -.07;
   static const startupIntroClapWindup = Interval(.62, .71, curve: easeOut);
-  static const startupIntroClapClose = Interval(.71, .78, curve: Cubic(.6, 0, 1, .6));
+  static const startupIntroClapClose =
+      Interval(.71, .78, curve: Cubic(.6, 0, 1, .6));
   // Instant du clap (fin de la fermeture), puis choc encaissé sans rebond.
   static const startupIntroClap = .78;
   static const startupIntroImpact = .02;
@@ -559,7 +576,8 @@ abstract final class AppMotion {
   static const startupTintFade = Duration(milliseconds: 400);
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie
   // traverser le K plutôt que surgir.
-  static const startupMarkFill = Interval(.28, .78, curve: Cubic(.45, 0, .25, 1));
+  static const startupMarkFill =
+      Interval(.28, .78, curve: Cubic(.45, 0, .25, 1));
   static const startupMarkCamera =
       Interval(.12, .87, curve: Cubic(.65, 0, .2, 1));
   static const startupMarkFade = Interval(.08, .40, curve: easeOut);
@@ -578,7 +596,8 @@ abstract final class AppMotion {
   // grand côté de l'écran), derrière un front adouci (part de sa longueur).
   // Sa pointe va à vitesse presque régulière : sur une courbe qui démarre
   // vite, elle traversait l'écran en quatre images.
-  static const startupIntroBeamReach = Interval(.02, .40, curve: Cubic(.4, 0, .4, 1));
+  static const startupIntroBeamReach =
+      Interval(.02, .40, curve: Cubic(.4, 0, .4, 1));
   static const startupIntroBeamFront = .45;
   // Lueur du cône de lumière (opacité maximale près du K), éteinte
   // pendant l'élargissement.
@@ -586,7 +605,8 @@ abstract final class AppMotion {
   static const startupIntroBeamGlowOut = Interval(.50, .85, curve: easeOut);
   // Le rayon traverse l'écran et tient un instant à l'angle de la bouche
   // du K avant de s'élargir : sinon on ne voit jamais le projecteur.
-  static const startupIntroBeamOpen = Interval(.48, 1, curve: Cubic(.6, 0, .3, 1));
+  static const startupIntroBeamOpen =
+      Interval(.48, 1, curve: Cubic(.6, 0, .3, 1));
   // Demi-angle final du faisceau : l'écran entier (il part de celui de la
   // bouche du K, cf. StartupIntroBeam.mouthAngle).
   static const startupIntroBeamTo = 3.1416;
@@ -1032,8 +1052,8 @@ ThemeData buildAppTheme({
     // Interrupteurs et cases monochromes : l'état se lit au contraste, jamais
     // à une couleur d'accent.
     switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith((states) =>
-          states.contains(WidgetState.disabled)
+      thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
               ? AppColors.textDisabled
               : states.contains(WidgetState.selected)
                   ? AppColors.background
@@ -1163,8 +1183,8 @@ class PressBounce extends StatefulWidget {
 
 class PressBounceState extends State<PressBounce>
     with SingleTickerProviderStateMixin {
-  late final _scale = AnimationController(
-      vsync: this, value: 1, lowerBound: 0, upperBound: 2);
+  late final _scale =
+      AnimationController(vsync: this, value: 1, lowerBound: 0, upperBound: 2);
   bool _triggering = false;
 
   @override

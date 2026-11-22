@@ -130,6 +130,11 @@ void main() {
     expect(find.text('Vos statistiques'), findsOneWidget);
     expect(find.textContaining('Activité', findRichText: true), findsWidgets);
     expect(find.text('films'), findsOneWidget);
+    // Un jour d'été, après le changement d'heure, a bien sa case.
+    expect(
+        find.byWidgetPredicate((w) =>
+            w is Tooltip && (w.message ?? '').contains('10 août ·')),
+        findsOneWidget);
     await tester.tap(find.text('Depuis toujours'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
