@@ -244,13 +244,12 @@ abstract final class AppDetailLayout {
   /// Amis affichés avant « +N ».
   static const friendsVisible = 7;
 
-  /// Carte de lecture d'une critique Letterboxd : largeur de lecture,
-  /// part de la hauteur de la fenêtre, taille du texte (éditoriale), photo.
-  static const reviewCardWidth = 760.0;
-  static const reviewCardHeightFraction = .8;
-  static const reviewTextSize = 19.0;
-  static const reviewTextHeight = 1.6;
-  static const reviewAvatarSize = 52.0;
+  /// Tuile d'une critique Letterboxd, née de la photo de l'ami : largeur,
+  /// hauteur maximale (part de la fenêtre), texte.
+  static const reviewTileWidth = 460.0;
+  static const reviewTileMaxHeightFraction = .6;
+  static const reviewTextSize = 15.0;
+  static const reviewTextHeight = 1.55;
 
   /// Marque d'une critique sous la note d'un ami.
   static const reviewMarkSize = 12.0;

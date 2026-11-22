@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import 'package:kinos/screens/shared/media/external_urls.dart' as links;
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/widgets/shared/frosted_surface.dart';
 
 import 'letterboxd_friends_parser.dart';
 import 'letterboxd_friends_providers.dart';
@@ -19,8 +20,9 @@ typedef ReviewEntry = ({
   bool mine
 });
 
-/// Ouvre la critique [index] de [entries] : la carte naît de [origin] (la
-/// cellule de l'ami, en coordonnées globales) et s'y range en se fermant.
+/// Ouvre la critique [index] de [entries] : la tuile naît de la photo de
+/// l'ami ([origin], sa cellule en coordonnées globales), s'ouvre en cercle
+/// depuis elle et s'y referme.
 Future<void> showLetterboxdReview(BuildContext context,
     {required List<ReviewEntry> entries,
     required int index,
@@ -30,10 +32,10 @@ Future<void> showLetterboxdReview(BuildContext context,
     opaque: false,
     barrierDismissible: true,
     barrierLabel: 'Fermer la critique',
-    barrierColor: AppColors.scrim.withValues(alpha: .6),
+    barrierColor: AppColors.scrim.withValues(alpha: .25),
     transitionDuration: motion ? AppDurations.heroSlide : Duration.zero,
     reverseTransitionDuration:
-        motion ? AppDurations.heroSlide * .8 : Duration.zero,
+        motion ? AppDurations.heroSlide * .7 : Duration.zero,
     pageBuilder: (context, animation, _) => _ReviewOverlay(
         animation: animation, origin: origin, entries: entries, index: index),
   ));
@@ -82,11 +84,20 @@ class _ReviewOverlayState extends State<_ReviewOverlay> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final width = (size.width - AppSpacing.xl * 2)
-        .clamp(0.0, AppDetailLayout.reviewCardWidth);
-    final height = size.height * AppDetailLayout.reviewCardHeightFraction;
-    final target = Rect.fromCenter(
-        center: size.center(Offset.zero), width: width, height: height);
+    // Le centre de la photo de l'ami, en haut de sa cellule.
+    final avatar = Offset(
+        widget.origin.center.dx,
+        widget.origin.top +
+            AppSpacing.xxs +
+            AppDetailLayout.friendAvatarSize / 2);
+    // Assez grand pour couvrir toute la tuile, où qu'elle soit posée.
+    final reach = [
+      Offset.zero,
+      Offset(size.width, 0),
+      Offset(0, size.height),
+      Offset(size.width, size.height),
+    ].map((c) => (c - avatar).distance).reduce((a, b) => a > b ? a : b);
+    final motion = AppMotion.enabled(context);
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _go(-1),
@@ -100,65 +111,104 @@ class _ReviewOverlayState extends State<_ReviewOverlay> {
           animation: _curve,
           builder: (context, child) {
             final t = _curve.value;
-            // La cellule grandit jusqu'à la carte (container transform) ;
-            // le contenu n'apparaît qu'une fois la forme presque posée.
-            final rect = Rect.lerp(widget.origin, target, t)!;
-            final radius = lerpDouble(AppRadii.control, AppRadii.sheet, t)!;
-            return Stack(children: [
-              Positioned.fromRect(
-                rect: rect,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(radius),
-                  child: ColoredBox(
-                    color: AppColors.surfaceHigh,
-                    child: Opacity(
-                      opacity: const Interval(.45, 1).transform(t),
-                      // Mise en page à la taille finale, réduite pendant le
-                      // trajet : le texte ne se recompose pas à chaque image.
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        alignment: Alignment.topCenter,
-                        child: SizedBox(
-                            width: target.width,
-                            height: target.height,
-                            child: child),
-                      ),
-                    ),
+            // La photo s'ouvre en cercle jusqu'à révéler toute la tuile.
+            return ClipPath(
+              clipper: _CircleReveal(avatar,
+                  lerpDouble(AppDetailLayout.friendAvatarSize / 2, reach, t)!),
+              child: Opacity(
+                  opacity: const Interval(0, .35).transform(t), child: child),
+            );
+          },
+          child: CustomSingleChildLayout(
+            delegate: _TileLayout(avatar: avatar),
+            child: FrostedSurface(
+              child: AnimatedSize(
+                duration: motion ? AppDurations.unroll : Duration.zero,
+                curve: AppMotion.easeOut,
+                alignment: Alignment.topLeft,
+                child: AnimatedSwitcher(
+                  duration: motion ? AppDurations.unroll : Duration.zero,
+                  switchInCurve: AppMotion.easeOut,
+                  layoutBuilder: (current, previous) => Stack(
+                      alignment: Alignment.topLeft,
+                      children: [...previous, if (current != null) current]),
+                  transitionBuilder: (child, animation) {
+                    final incoming = child.key == ValueKey(_index);
+                    final from = incoming
+                        ? _direction.toDouble()
+                        : -_direction.toDouble();
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                          position: Tween(
+                                  begin: Offset(from * .06, 0),
+                                  end: Offset.zero)
+                              .animate(animation),
+                          child: child),
+                    );
+                  },
+                  child: _ReviewPage(
+                    key: ValueKey(_index),
+                    entry: widget.entries[_index],
+                    position: '${_index + 1} / ${widget.entries.length}',
+                    onPrevious: _index > 0 ? () => _go(-1) : null,
+                    onNext: _index < widget.entries.length - 1
+                        ? () => _go(1)
+                        : null,
                   ),
                 ),
               ),
-            ]);
-          },
-          child: AnimatedSwitcher(
-            duration: AppMotion.enabled(context)
-                ? AppDurations.heroSlide
-                : Duration.zero,
-            switchInCurve: AppMotion.easeOut,
-            transitionBuilder: (child, animation) {
-              final incoming = child.key == ValueKey(_index);
-              final from =
-                  incoming ? _direction.toDouble() : -_direction.toDouble();
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                    position:
-                        Tween(begin: Offset(from * .08, 0), end: Offset.zero)
-                            .animate(animation),
-                    child: child),
-              );
-            },
-            child: _ReviewPage(
-              key: ValueKey(_index),
-              entry: widget.entries[_index],
-              position: '${_index + 1} / ${widget.entries.length}',
-              onPrevious: _index > 0 ? () => _go(-1) : null,
-              onNext: _index < widget.entries.length - 1 ? () => _go(1) : null,
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _CircleReveal extends CustomClipper<Path> {
+  const _CircleReveal(this.center, this.radius);
+  final Offset center;
+  final double radius;
+
+  @override
+  Path getClip(Size size) =>
+      Path()..addOval(Rect.fromCircle(center: center, radius: radius));
+
+  @override
+  bool shouldReclip(_CircleReveal old) =>
+      old.center != center || old.radius != radius;
+}
+
+/// Pose la tuile pour que sa photo couvre celle de l'ami, puis la garde
+/// dans la fenêtre.
+class _TileLayout extends SingleChildLayoutDelegate {
+  const _TileLayout({required this.avatar});
+  final Offset avatar;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final width = (constraints.maxWidth - AppSpacing.md * 2)
+        .clamp(0.0, AppDetailLayout.reviewTileWidth);
+    return BoxConstraints(
+        minWidth: width,
+        maxWidth: width,
+        maxHeight: constraints.maxHeight *
+            AppDetailLayout.reviewTileMaxHeightFraction);
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size child) {
+    const inset = AppSpacing.md + AppDetailLayout.friendAvatarSize / 2;
+    final x = (avatar.dx - inset)
+        .clamp(AppSpacing.md, size.width - child.width - AppSpacing.md);
+    final y = (avatar.dy - inset)
+        .clamp(AppSpacing.md, size.height - child.height - AppSpacing.md);
+    return Offset(x.toDouble(), y.toDouble());
+  }
+
+  @override
+  bool shouldRelayout(_TileLayout old) => old.avatar != avatar;
 }
 
 class _ReviewPage extends ConsumerStatefulWidget {
@@ -194,72 +244,83 @@ class _ReviewPageState extends ConsumerState<_ReviewPage> {
     final url =
         'https://letterboxd.com${review.path ?? '/${author.username}/film/${review.slug}/'}';
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          ClipOval(
-            child: SizedBox.square(
-              dimension: AppDetailLayout.reviewAvatarSize,
-              child: ColoredBox(
-                color: AppColors.surface,
-                child: author.avatarUrl == null
-                    ? Center(
-                        child: Text(author.name.characters.first.toUpperCase(),
-                            style: text.titleMedium))
-                    : Image.network(author.avatarUrl!, fit: BoxFit.cover),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(widget.entry.mine ? 'Votre critique' : author.name,
-                  style:
-                      text.titleLarge?.copyWith(color: AppColors.textPrimary)),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                  [
-                    if (review.rating != null) letterboxdStars(review.rating!),
-                    if (review.date != null)
-                      DateFormat('d MMMM y', locale).format(review.date!),
-                    if (review.likes > 0) '${review.likes} j\'aime',
-                  ].join('  ·  '),
-                  style: secondary),
-            ]),
-          ),
-          Text(widget.position, style: secondary),
-        ]),
-        const SizedBox(height: AppSpacing.lg),
-        Expanded(
-          child: body == null
-              ? _SpoilerVeil(onReveal: () => setState(() => _revealed = true))
-              : SingleChildScrollView(
-                  child: Text(body,
-                      style: text.bodyLarge?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontSize: AppDetailLayout.reviewTextSize,
-                          height: AppDetailLayout.reviewTextHeight)),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              // À la place exacte de la photo de l'ami.
+              ClipOval(
+                child: SizedBox.square(
+                  dimension: AppDetailLayout.friendAvatarSize,
+                  child: ColoredBox(
+                    color: AppColors.surface,
+                    child: author.avatarUrl == null
+                        ? Center(
+                            child: Text(
+                                author.name.characters.first.toUpperCase(),
+                                style: text.titleMedium))
+                        : Image.network(author.avatarUrl!, fit: BoxFit.cover),
+                  ),
                 ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Row(children: [
-          _CardButton(
-              icon: Icons.chevron_left_rounded,
-              label: 'Précédente',
-              onActivate: widget.onPrevious),
-          const SizedBox(width: AppSpacing.xs),
-          _CardButton(
-              icon: Icons.chevron_right_rounded,
-              label: 'Suivante',
-              onActivate: widget.onNext),
-          const Spacer(),
-          _CardButton(
-              icon: Icons.open_in_new_rounded,
-              label: 'Lire sur Letterboxd',
-              onActivate: () => links.launchUrl(context, url)),
-        ]),
-      ]),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.entry.mine ? 'Votre critique' : author.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.titleMedium
+                              ?.copyWith(color: AppColors.textPrimary)),
+                      Text(
+                          [
+                            if (review.rating != null)
+                              letterboxdStars(review.rating!),
+                            if (review.date != null)
+                              DateFormat('d MMM y', locale)
+                                  .format(review.date!),
+                            if (review.likes > 0) '${review.likes} j\'aime',
+                          ].join('  ·  '),
+                          style: secondary),
+                    ]),
+              ),
+              Text(widget.position, style: secondary),
+            ]),
+            const SizedBox(height: AppSpacing.sm),
+            Flexible(
+              child: body == null
+                  ? _SpoilerVeil(
+                      onReveal: () => setState(() => _revealed = true))
+                  : SingleChildScrollView(
+                      child: Text(body,
+                          style: text.bodyMedium?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontSize: AppDetailLayout.reviewTextSize,
+                              height: AppDetailLayout.reviewTextHeight)),
+                    ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(children: [
+              _CardButton(
+                  icon: Icons.chevron_left_rounded,
+                  tooltip: 'Critique précédente',
+                  onActivate: widget.onPrevious),
+              const SizedBox(width: AppSpacing.xxs),
+              _CardButton(
+                  icon: Icons.chevron_right_rounded,
+                  tooltip: 'Critique suivante',
+                  onActivate: widget.onNext),
+              const Spacer(),
+              _CardButton(
+                  icon: Icons.open_in_new_rounded,
+                  label: 'Letterboxd',
+                  tooltip: 'Lire sur Letterboxd',
+                  onActivate: () => links.launchUrl(context, url)),
+            ]),
+          ]),
     );
   }
 }
@@ -271,11 +332,12 @@ class _SpoilerVeil extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Text('Cette critique contient des spoilers.',
-            style: text.titleMedium?.copyWith(color: AppColors.textPrimary)),
-        const SizedBox(height: AppSpacing.md),
+            style: text.bodyMedium?.copyWith(color: AppColors.textPrimary)),
+        const SizedBox(height: AppSpacing.sm),
         _CardButton(
             icon: Icons.visibility_outlined,
             label: 'Afficher quand même',
@@ -289,11 +351,13 @@ class _SpoilerVeil extends StatelessWidget {
 class _CardButton extends StatelessWidget {
   const _CardButton(
       {required this.icon,
-      required this.label,
+      this.label,
+      this.tooltip,
       required this.onActivate,
       this.autofocus = false});
   final IconData icon;
-  final String label;
+  final String? label;
+  final String? tooltip;
   final VoidCallback? onActivate;
   final bool autofocus;
 
@@ -301,30 +365,34 @@ class _CardButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onActivate != null;
     final color = enabled ? AppColors.textPrimary : AppColors.textDisabled;
-    return FocusRing(
+    final button = FocusRing(
       autofocus: autofocus,
       borderRadius: AppRadii.controlBorder,
       onActivate: onActivate,
       child: DecoratedBox(
         decoration: BoxDecoration(
-            border: Border.all(
-                color: enabled ? AppColors.borderStrong : AppColors.border),
+            border:
+                Border.all(color: enabled ? AppGlass.border : AppColors.border),
             borderRadius: AppRadii.controlBorder),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+          padding: EdgeInsets.symmetric(
+              horizontal: label == null ? AppSpacing.xs : AppSpacing.sm,
+              vertical: AppSpacing.xxs),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon,
                 size: AppDetailLayout.friendStarSize * 1.5, color: color),
-            const SizedBox(width: AppSpacing.xxs),
-            Text(label,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelLarge
-                    ?.copyWith(color: color)),
+            if (label != null) ...[
+              const SizedBox(width: AppSpacing.xxs),
+              Text(label!,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(color: color)),
+            ],
           ]),
         ),
       ),
     );
+    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
   }
 }
