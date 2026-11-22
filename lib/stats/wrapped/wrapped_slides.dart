@@ -11,6 +11,7 @@ import 'package:kinos/letterboxd/friends/letterboxd_friends_store.dart'
 import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/ratings/kinos_rating_button.dart' show formatStars;
 import 'package:kinos/ratings/kinos_ratings.dart';
+import 'package:kinos/screens/shared/kinos_icon.dart' show KinosWordmark;
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/upcoming/upcoming_models.dart' show tmdbImage;
 import 'package:kinos/util/kinos_image.dart';
@@ -1543,9 +1544,11 @@ class _FilmOfYearSlide extends StatelessWidget {
   }
 }
 
-/// Ce qu'une page de synthèse montre : une bannière, un intitulé, un titre
-/// et sa ligne, quatre affiches et quatre chiffres. Le récap de l'année et
-/// ceux de chaque acte partagent cette forme.
+/// Ce qu'une page de synthèse montre. À l'écran (16:9) : une bannière, un
+/// intitulé, un titre et sa ligne, quatre affiches et quatre chiffres. En
+/// story (9:16), composée pour le vertical comme les bilans des services
+/// de musique : un fond uni de la teinte de la page, une grande affiche
+/// entière, un classement numéroté ou des barres, deux chiffres.
 class WrappedSummary {
   const WrappedSummary({
     required this.label,
@@ -1555,6 +1558,20 @@ class WrappedSummary {
     this.posters = const [],
     this.numbers = const [],
     this.continuesFilmOfYear = false,
+    this.tint,
+    this.hero,
+    this.bigHeadline = false,
+    this.listTitle,
+    this.list = const [],
+    this.listStart = 1,
+    this.months,
+    this.monthHighlight,
+    this.strip = const [],
+    this.stripLabel,
+    this.people = const [],
+    this.scaleTitle,
+    this.scale = const [],
+    this.storyNumbers,
   });
   final String label;
   final String headline;
@@ -1565,12 +1582,49 @@ class WrappedSummary {
 
   /// Le récap de l'année : il prolonge la diapo du film de l'année.
   final bool continuesFilmOfYear;
+
+  // ---- La story ----
+
+  /// La teinte du fond (celle du film vedette de la page).
+  final Color? tint;
+
+  /// Une grande affiche entière, au centre.
+  final ImageData? hero;
+
+  /// Le titre en très grand (un chiffre : « 44 heures »).
+  final bool bigHeadline;
+
+  /// Un classement numéroté, à partir de [listStart], avec ou sans petite
+  /// affiche.
+  final String? listTitle;
+  final List<({String text, ImageData? thumb})> list;
+  final int listStart;
+
+  /// Les heures de chaque mois, le plus chargé en évidence.
+  final List<int>? months;
+  final int? monthHighlight;
+
+  /// Une rangée de petites affiches et sa légende.
+  final List<ImageData> strip;
+  final String? stripLabel;
+
+  /// Réalisateur et acteur, en portraits ronds (nom, rôle).
+  final List<({String name, String role})> people;
+
+  /// Des barres horizontales (décennies).
+  final String? scaleTitle;
+  final List<({String label, int value})> scale;
+
+  /// Les deux chiffres du bas de la story (sinon les deux premiers).
+  final List<(String value, String label)>? storyNumbers;
 }
 
-List<ImageData> _postersOf(WrappedInputs w, Iterable<ViewingEvent> films) => [
+List<ImageData> _postersOf(WrappedInputs w, Iterable<ViewingEvent> films,
+        {int take = 4}) =>
+    [
       for (final e in films)
         if (w.poster(e) case final image?) image
-    ].take(4).toList();
+    ].take(take).toList();
 
 String _lastName(String name) => name.split(' ').last;
 
@@ -1595,6 +1649,14 @@ WrappedSummary yearSummary(WrappedInputs w) {
       ),
     ],
     continuesFilmOfYear: best != null,
+    tint: w.tint(best?.event),
+    hero: best == null ? null : w.poster(best.event),
+    listTitle: 'Vos mieux notés',
+    listStart: 2,
+    list: [
+      for (final r in w.data.runnersUp)
+        (text: r.event.title, thumb: w.poster(r.event))
+    ],
   );
 }
 
@@ -1608,6 +1670,11 @@ WrappedSummary timeSummary(WrappedInputs w) {
       if (peak != null && e.at.month - 1 == peak) e
   ]..sort((a, b) => (w.rating(b) ?? 0).compareTo(w.rating(a) ?? 0));
   final lead = peakFilms.firstOrNull ?? data.timeline.lastOrNull;
+  final month = peak == null
+      ? null
+      : toBeginningOfSentenceCase(
+          DateFormat('MMMM', _locale).format(DateTime(data.year, peak + 1)));
+  final streak = stats.streak;
   return WrappedSummary(
     label: 'Acte I · Le temps',
     headline: formatHours(stats.seconds).replaceFirst(' h', ' heures'),
@@ -1620,19 +1687,27 @@ WrappedSummary timeSummary(WrappedInputs w) {
         ('${stats.episodes}', 'épisodes')
       else
         ('${stats.elsewhere}', 'vus ailleurs'),
-      if (peak != null)
-        (
-          toBeginningOfSentenceCase(DateFormat('MMMM', _locale)
-              .format(DateTime(data.year, peak + 1))),
-          'mois le plus chargé'
-        ),
-      if (stats.streak case final streak?)
+      if (month != null) (month, 'mois le plus chargé'),
+      if (streak != null)
         ('${streak.days} jours', 'plus longue série')
       else if (stats.busiestDay case final day?)
         (
           DateFormat('d MMMM', _locale).format(day.day),
           'journée la plus chargée'
         ),
+    ],
+    tint: w.tint(lead),
+    bigHeadline: true,
+    months: data.stats.buckets,
+    monthHighlight: peak,
+    strip: _postersOf(w, peakFilms, take: 3),
+    stripLabel: month == null ? null : 'En ${month.toLowerCase()}',
+    storyNumbers: [
+      ('${stats.films}', 'films'),
+      if (streak != null)
+        ('${streak.days} jours', 'plus longue série')
+      else
+        (formatHours(stats.seconds), 'devant l\'écran'),
     ],
   );
 }
@@ -1651,6 +1726,11 @@ WrappedSummary tasteSummary(WrappedInputs w) {
       mode = i;
     }
   }
+  final notes = [
+    if (stats.average case final average?)
+      (NumberFormat('0.0', _locale).format(average), 'note moyenne'),
+    if (mode >= 0) (formatStars(mode + 1), 'note la plus donnée'),
+  ];
   return WrappedSummary(
     label: 'Acte II · Les goûts',
     headline: genre?.name ?? 'Vos goûts',
@@ -1661,10 +1741,18 @@ WrappedSummary tasteSummary(WrappedInputs w) {
       if (stats.directors.firstOrNull case final d?)
         (_lastName(d.name), 'réalisateur'),
       if (stats.actors.firstOrNull case final a?) (_lastName(a.name), 'acteur'),
-      if (stats.average case final average?)
-        (NumberFormat('0.0', _locale).format(average), 'note moyenne'),
-      if (mode >= 0) (formatStars(mode + 1), 'note la plus donnée'),
+      ...notes,
     ],
+    tint: w.tint(films.firstOrNull),
+    listTitle: 'Vos genres',
+    list: [for (final g in stats.genres.take(5)) (text: g.name, thumb: null)],
+    people: [
+      if (stats.directors.firstOrNull case final d?)
+        (name: d.name, role: 'réalisateur'),
+      if (stats.actors.firstOrNull case final a?)
+        (name: a.name, role: 'acteur'),
+    ],
+    storyNumbers: notes,
   );
 }
 
@@ -1683,6 +1771,8 @@ WrappedSummary filmsSummary(WrappedInputs w) {
     for (final d in (decades.keys.toList()..sort((a, b) => b.compareTo(a))))
       decades[d]!.first
   ];
+  final ranked = decades.entries.toList()
+    ..sort((a, b) => b.value.length.compareTo(a.value.length));
   return WrappedSummary(
     label: 'Acte III · Les films',
     headline: oldest == null
@@ -1697,7 +1787,291 @@ WrappedSummary filmsSummary(WrappedInputs w) {
       ('${stats.elsewhere}', 'vus ailleurs'),
       ('${stats.ratings.fold(0, (a, b) => a + b)}', 'films notés'),
     ],
+    tint: w.tint(oldest),
+    hero: oldest == null ? null : w.poster(oldest),
+    scaleTitle: 'Vos décennies',
+    scale: [
+      for (final e in ranked.take(4))
+        (label: 'Années ${e.key}', value: e.value.length)
+    ],
+    storyNumbers: [
+      ('${stats.elsewhere}', 'vus ailleurs'),
+      if (data.medianYear case final median?) ('$median', 'film moyen'),
+    ],
   );
+}
+
+/// La teinte d'une story : celle du film, assez claire pour porter du blanc
+/// et assez saturée pour avoir du caractère ; un gris neutre pour une
+/// image sans couleur.
+Color storyColor(Color tint) {
+  final hsl = HSLColor.fromColor(tint);
+  return hsl
+      .withLightness(hsl.lightness
+          .clamp(AppWrapped.storyLightMin, AppWrapped.storyLightMax))
+      .withSaturation(hsl.saturation < AppStatsLayout.dataMinTintSaturation
+          ? 0
+          : hsl.saturation.clamp(
+              AppWrapped.storySaturationMin, AppWrapped.storySaturationMax))
+      .toColor();
+}
+
+/// Une page de synthèse composée pour le vertical (story) : fond uni,
+/// intitulé, grande affiche ou grand chiffre, classement, barres ou
+/// portraits, deux chiffres, et le pied de page : le logo Kinos à gauche,
+/// l'année à droite.
+class _StoryPage extends ConsumerWidget {
+  const _StoryPage({required this.inputs, required this.content});
+  final WrappedInputs inputs;
+  final WrappedSummary content;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = content;
+    return LayoutBuilder(builder: (context, box) {
+      final size = box.biggest;
+      final type = WrappedType(size);
+      final pad = size.width * AppWrapped.storyPad;
+      final gap = size.height * .02;
+      final small = type.small;
+      final strong = small.copyWith(
+          color: AppColors.textPrimary, fontWeight: FontWeight.w600);
+      Widget poster(ImageData? image, double width) => ClipRRect(
+            borderRadius: BorderRadius.circular(width * .03),
+            child: SizedBox(
+              width: width,
+              height: width * 1.5,
+              child: image == null
+                  ? ColoredBox(color: AppColors.scrim.withValues(alpha: .3))
+                  : KinosImage(image: image, disableBlur: true),
+            ),
+          );
+      final numbers = (c.storyNumbers ?? c.numbers).take(2).toList();
+      final children = <Widget>[
+        Text(c.label.toUpperCase(),
+            style: type.cap.copyWith(
+                letterSpacing: type.cap.fontSize! * AppWrapped.capTracking)),
+        SizedBox(height: gap),
+        if (c.hero != null) ...[
+          Center(child: poster(c.hero, size.width * .5)),
+          SizedBox(height: gap),
+          Text(c.headline,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: type.mid),
+          if (c.sub case final sub?)
+            Text(sub, textAlign: TextAlign.center, style: strong),
+        ] else ...[
+          Text(c.headline,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: c.bigHeadline
+                  ? type.big.copyWith(fontSize: type.big.fontSize! * 1.3)
+                  : type.mid),
+          if (c.sub case final sub?) Text(sub, style: small),
+        ],
+        if (c.months case final months?) ...[
+          SizedBox(height: gap * 1.5),
+          SizedBox(
+            height: size.height * .14,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              for (final (i, v) in months.indexed)
+                Expanded(
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: size.width * .004),
+                    child: FractionallySizedBox(
+                      heightFactor: (v /
+                              math.max(
+                                  1, months.fold(0, (a, b) => a > b ? a : b)))
+                          .clamp(.04, 1.0),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.textPrimary.withValues(
+                              alpha: i == c.monthHighlight ? 1 : .35),
+                          borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(size.width * .006)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+          SizedBox(height: gap * .3),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('Janv.', style: type.cap),
+            Text('Déc.', style: type.cap),
+          ]),
+        ],
+        if (c.strip.isNotEmpty) ...[
+          SizedBox(height: gap * 1.5),
+          Row(children: [
+            for (final (i, image) in c.strip.indexed) ...[
+              if (i > 0) SizedBox(width: size.width * .025),
+              poster(image, (size.width - pad * 2 - size.width * .05) / 3),
+            ],
+          ]),
+          if (c.stripLabel case final label?) ...[
+            SizedBox(height: gap * .4),
+            Text(label, style: small),
+          ],
+        ],
+        if (c.list.isNotEmpty) ...[
+          SizedBox(height: gap * 1.5),
+          if (c.listTitle case final title?) Text(title, style: small),
+          SizedBox(height: gap * .4),
+          for (final (i, item) in c.list.indexed)
+            Padding(
+              padding: EdgeInsets.only(bottom: gap * .45),
+              child: Row(children: [
+                SizedBox(
+                  width: size.width * .07,
+                  child: Text('${c.listStart + i}',
+                      style: (i == 0 && c.hero == null && c.listStart == 1
+                              ? type.mid
+                              : strong)
+                          .copyWith(
+                              color:
+                                  AppColors.textPrimary.withValues(alpha: .6))),
+                ),
+                if (item.thumb != null) ...[
+                  poster(item.thumb, size.width * .07),
+                  SizedBox(width: size.width * .03),
+                ],
+                Expanded(
+                  child: Text(item.text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: i == 0 && c.hero == null && c.listStart == 1
+                          ? type.mid
+                          : strong),
+                ),
+              ]),
+            ),
+        ],
+        if (c.people.isNotEmpty) ...[
+          SizedBox(height: gap * 1.5),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            for (final person in c.people)
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipOval(
+                        child: SizedBox.square(
+                          dimension: size.width * .24,
+                          child: switch (ref
+                              .watch(statsPersonProvider(person.name))
+                              .valueOrNull
+                              ?.image) {
+                            final path? => KinosImage(
+                                image: ImageData(
+                                    path: tmdbImage(path, size: 'w185'),
+                                    key: 'story:person:$path'),
+                                alignment: Alignment.topCenter,
+                                disableBlur: true),
+                            _ => ColoredBox(
+                                color: AppColors.scrim.withValues(alpha: .3)),
+                          },
+                        ),
+                      ),
+                      SizedBox(height: gap * .5),
+                      Text(person.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: strong),
+                      Text(person.role, style: small),
+                    ]),
+              ),
+          ]),
+        ],
+        if (c.scale.isNotEmpty) ...[
+          SizedBox(height: gap * 1.5),
+          if (c.scaleTitle case final title?) Text(title, style: small),
+          SizedBox(height: gap * .4),
+          for (final (i, bar) in c.scale.indexed)
+            Padding(
+              padding: EdgeInsets.only(bottom: gap * .5),
+              child: Row(children: [
+                SizedBox(
+                    width: size.width * .3,
+                    child: Text(bar.label, style: strong)),
+                Expanded(
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: (bar.value / math.max(1, c.scale.first.value))
+                        .clamp(.05, 1.0),
+                    child: Container(
+                      height: size.height * .008,
+                      decoration: BoxDecoration(
+                        color: AppColors.textPrimary
+                            .withValues(alpha: i == 0 ? 1 : .5),
+                        borderRadius: BorderRadius.circular(size.height * .004),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: size.width * .03),
+                Text('${bar.value}', style: strong),
+              ]),
+            ),
+        ],
+      ];
+      return ColoredBox(
+        color: storyColor(c.tint ?? AppColors.heroFallback),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(pad, pad * 1.4, pad, pad),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: size.width - pad * 2,
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: children),
+                ),
+              ),
+            ),
+            SizedBox(height: gap),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              for (final n in numbers)
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(n.$2, style: small),
+                        Text(n.$1,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: type.mid),
+                      ]),
+                ),
+            ]),
+            SizedBox(height: gap * 1.6),
+            // Le pied de page, comme les bilans des services de musique : le
+            // logo à gauche, l'année à droite.
+            Row(children: [
+              KinosWordmark(width: size.width * AppWrapped.storyLogo),
+              const Spacer(),
+              Text('${inputs.data.year}',
+                  style: type.mid.copyWith(fontSize: type.mid.fontSize! * .8)),
+            ]),
+            if (inputs.userName case final name?)
+              Padding(
+                padding: EdgeInsets.only(top: gap * .3),
+                child: Text(name, style: small),
+              ),
+          ]),
+        ),
+      );
+    });
+  }
 }
 
 /// Une page de synthèse : la bannière à gauche (en haut en vertical), qui
@@ -1713,7 +2087,6 @@ class WrappedRecap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = inputs.data;
-    final stats = data.stats;
     final content = summary ?? yearSummary(inputs);
     final best = data.filmOfYear;
     // Arrivé du film de l'année : on reprend son image où elle en était,
@@ -1732,9 +2105,34 @@ class WrappedRecap extends StatelessWidget {
     final leave = joined ? 1 - WrappedClock.at(context, 0, length: .6) : 0.0;
     final startScale =
         1 + AppWrapped.kenBurns * 1.4 * (joined ? entry!.progress : 0);
+    return LayoutBuilder(builder: (context, box) {
+      // En vertical (story), une page composée pour le vertical.
+      if (box.maxHeight > box.maxWidth) {
+        return _StoryPage(inputs: inputs, content: content);
+      }
+      return _landscape(
+          context, content, best, joined, d, shift, leave, startScale);
+    });
+  }
+
+  Widget _landscape(
+      BuildContext context,
+      WrappedSummary content,
+      ({ViewingEvent event, int rating})? best,
+      bool joined,
+      double d,
+      double shift,
+      double leave,
+      double startScale) {
+    final data = inputs.data;
+    final stats = data.stats;
     return _Frame(builder: (context, size, type) {
       final portrait = size.height > size.width;
       final posters = content.posters;
+      final header = [
+        if (inputs.userName case final name?) name,
+        '${data.year}',
+      ].join(' · ');
       Widget number((String, String) n, double at) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -1791,6 +2189,17 @@ class WrappedRecap extends StatelessWidget {
                         : const SizedBox()),
               ]),
             ],
+            // Le pied de page : le logo à gauche, l'année à droite.
+            SizedBox(height: size.height * .05),
+            Opacity(
+              opacity: WrappedClock.at(context, 5.2 + d),
+              child: Row(children: [
+                KinosWordmark(width: size.width * AppWrapped.storyLogo * .5),
+                const Spacer(),
+                Text(header,
+                    style: type.small.copyWith(color: AppColors.textPrimary)),
+              ]),
+            ),
           ]);
       final banner = content.banner == null
           ? const ColoredBox(color: AppColors.heroFallback)
@@ -1811,10 +2220,6 @@ class WrappedRecap extends StatelessWidget {
         ],
       );
       final pad = size.width * (portrait ? .07 : AppWrapped.inset * .7);
-      final header = [
-        'Kinos · ${data.year}',
-        if (inputs.userName case final name?) name,
-      ].join(' · ');
       return [
         // L'image garde la taille du plein cadre et glisse simplement vers
         // la gauche (vers le haut en vertical) ; le dégradé noir couvre ce
@@ -1841,7 +2246,7 @@ class WrappedRecap extends StatelessWidget {
                     child: DecoratedBox(
                         decoration: BoxDecoration(gradient: fade))))),
         // Le texte du film de l'année, tel qu'on le quitte, qui s'efface.
-        if (joined && leave > 0)
+        if (joined && leave > 0 && best != null)
           Opacity(
             opacity: leave,
             child: WrappedTextBlock(children: [
@@ -1858,11 +2263,6 @@ class WrappedRecap extends StatelessWidget {
                   at: -99),
             ]),
           ),
-        Positioned(
-          left: pad,
-          top: pad,
-          child: WrappedText(header, style: type.cap, at: .4 + d, caps: true),
-        ),
         Positioned(
           left: portrait ? pad : size.width * .56,
           right: pad,

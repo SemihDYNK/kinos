@@ -373,6 +373,15 @@ abstract final class AppWrapped {
   /// Largeur du panneau d'export.
   static const exportWidth = 440.0;
 
+  /// La story : marges (fraction de la largeur), largeur du logo, et la
+  /// clarté et la saturation bornées de son fond.
+  static const storyPad = .075;
+  static const storyLogo = .2;
+  static const storyLightMin = .2;
+  static const storyLightMax = .3;
+  static const storySaturationMin = .3;
+  static const storySaturationMax = .55;
+
   /// Portraits et avatars.
   static const portraitFraction = .42;
   static const avatarFraction = .1;

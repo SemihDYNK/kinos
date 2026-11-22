@@ -148,7 +148,7 @@ void main() {
         'VOTRE PLUS VIEUX VOYAGE',
         'HORS DE CHEZ VOUS',
         'VOTRE FILM DE L\'ANNÉE',
-        'KINOS · 2026',
+        'Film de l\'année',
         '« Je rêve pour gagner ma vie. »',
         "“The name's Bond. James Bond.”",
         'JAMES BOND · CASINO ROYALE',
@@ -306,6 +306,7 @@ void main() {
     ));
     await tester.pump();
     expect(tester.takeException(), isNull);
-    expect(find.text('Film de l\'année'), findsOneWidget);
+    expect(find.text('FILM DE L\'ANNÉE'), findsOneWidget);
+    expect(find.text('2026'), findsOneWidget, reason: 'the year, bottom right');
   });
 }
