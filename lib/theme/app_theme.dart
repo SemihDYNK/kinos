@@ -460,6 +460,10 @@ abstract final class AppStatsLayout {
   static const personMaxWidth = 132.0;
   static const personAspectRatio = 3 / 4;
 
+  /// Cadrage des portraits : le tiers haut de la photo, où se trouve le
+  /// visage, plutôt que son bord supérieur.
+  static const portraitAlignment = Alignment(0, -.5);
+
   /// Les deux colonnes des goûts sous cette largeur s'empilent.
   static const twoColumnsMinWidth = 760.0;
 }

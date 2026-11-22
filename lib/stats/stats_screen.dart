@@ -917,6 +917,54 @@ final statsPersonProvider =
       people.firstOrNull;
 });
 
+/// Parmi les photos distantes d'une personne, la meilleure en portrait
+/// (plus haute que large) venue de TMDB : d'abord celles qui ont des votes,
+/// puis la mieux notée, puis la plus votée. Rend son chemin TMDB.
+String? bestTmdbPortrait(Iterable<RemoteImageInfo> images) {
+  const original = 'image.tmdb.org/t/p/original';
+  final portraits = [
+    for (final image in images)
+      if ((image.url ?? '').contains(original) &&
+          (image.height ?? 0) >= (image.width ?? 1))
+        image
+  ]..sort((a, b) {
+      final voted = ((b.voteCount ?? 0) > 0 ? 1 : 0)
+          .compareTo((a.voteCount ?? 0) > 0 ? 1 : 0);
+      if (voted != 0) return voted;
+      final rating = (b.communityRating ?? 0).compareTo(a.communityRating ?? 0);
+      return rating != 0
+          ? rating
+          : (b.voteCount ?? 0).compareTo(a.voteCount ?? 0);
+    });
+  final url = portraits.firstOrNull?.url;
+  return url?.substring(url.indexOf(original) + original.length);
+}
+
+/// Le portrait d'une personne, en chemin d'image TMDB : parmi les photos
+/// que Jellyfin connaît d'elle (TMDB), la mieux notée par les votants. La
+/// photo par défaut est parfois une photo de tournage ou de soirée, au
+/// visage décentré. Sinon, la photo de TMDB trouvée par Seerr.
+final statsPortraitProvider =
+    FutureProvider.autoDispose.family<String?, String>((ref, name) async {
+  try {
+    final api = ref.read(jellyApiProvider).api;
+    final id = (await api.personsNameGet(name: name)).body?.id;
+    if (id != null) {
+      final remote = await api.itemsItemIdRemoteImagesGet(
+          itemId: id,
+          type: ItemsItemIdRemoteImagesGetType.primary,
+          includeAllLanguages: true);
+      if (bestTmdbPortrait(remote.body?.images ?? const []) case final path?) {
+        ref.keepAlive();
+        return path;
+      }
+    }
+  } catch (_) {}
+  final found = await ref.watch(statsPersonProvider(name).future);
+  ref.keepAlive();
+  return found?.image;
+});
+
 /// Réalisateurs ou acteurs en portraits, du premier (plus grand) au
 /// cinquième, avec le nombre de films.
 class _People extends StatelessWidget {
@@ -956,6 +1004,7 @@ class _PersonCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     final found = ref.watch(statsPersonProvider(person.name)).valueOrNull;
+    final photo = ref.watch(statsPortraitProvider(person.name)).valueOrNull;
     final initials = person.name
         .split(' ')
         .where((w) => w.isNotEmpty)
@@ -987,14 +1036,14 @@ class _PersonCard extends ConsumerWidget {
                               style: text.titleMedium
                                   ?.copyWith(color: AppColors.textSecondary))),
                     ),
-                    if (found?.image case final image?)
+                    if (photo != null)
                       Transform.scale(
                         scale: 1 + AppMotion.tileImageZoom * reveal,
                         child: KinosImage(
                             image: ImageData(
-                                path: tmdbImage(image, size: 'w185'),
-                                key: 'stats:person:${found!.id}'),
-                            alignment: Alignment.topCenter,
+                                path: tmdbImage(photo, size: 'w185'),
+                                key: 'stats:person:$photo'),
+                            alignment: AppStatsLayout.portraitAlignment,
                             disableBlur: true),
                       ),
                   ]),

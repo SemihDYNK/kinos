@@ -9,7 +9,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:kinos/letterboxd/friends/letterboxd_friends_parser.dart';
 import 'package:kinos/letterboxd/letterboxd_providers.dart';
 import 'package:kinos/ratings/kinos_ratings.dart';
-import 'package:kinos/stats/stats_screen.dart' show statsPersonProvider;
+import 'package:kinos/stats/stats_screen.dart'
+    show statsPersonProvider, statsPortraitProvider;
 import 'package:kinos/stats/viewing_log.dart';
 import 'package:kinos/stats/wrapped/film_facts.dart';
 import 'package:kinos/stats/wrapped/wrapped_data.dart';
@@ -106,6 +107,7 @@ void main() {
       overrides: [
         letterboxdScopeProvider.overrideWith((ref) => null),
         kinosRatingStoreProvider.overrideWith((ref) => null),
+        statsPortraitProvider.overrideWith((ref, name) async => null),
         wrappedDataProvider(year).overrideWith((ref) async => wrapped),
         wrappedArtProvider(year).overrideWith((ref) async => const {}),
         wrappedTintsProvider(year).overrideWith((ref) async => const {}),
@@ -190,6 +192,7 @@ void main() {
       overrides: [
         letterboxdScopeProvider.overrideWith((ref) => null),
         kinosRatingStoreProvider.overrideWith((ref) => null),
+        statsPortraitProvider.overrideWith((ref, name) async => null),
         wrappedDataProvider(year).overrideWith((ref) async => wrapped),
         wrappedArtProvider(year).overrideWith((ref) async => const {}),
         wrappedTintsProvider(year).overrideWith((ref) async => const {}),
@@ -234,6 +237,7 @@ void main() {
       overrides: [
         letterboxdScopeProvider.overrideWith((ref) => null),
         kinosRatingStoreProvider.overrideWith((ref) => null),
+        statsPortraitProvider.overrideWith((ref, name) async => null),
         // Pas de réseau en test : ni Wikiquote, ni recherche de personnes.
         wrappedQuoteProvider.overrideWith((ref, key) async => null),
         statsPersonProvider.overrideWith((ref, name) async => null),

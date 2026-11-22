@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/letterboxd/letterboxd_providers.dart';
 import 'package:kinos/ratings/kinos_ratings.dart';
 import 'package:kinos/stats/stats_screen.dart';
@@ -108,6 +109,8 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         letterboxdScopeProvider.overrideWith((ref) => null),
+        statsPortraitProvider.overrideWith((ref, name) async => null),
+        statsPersonProvider.overrideWith((ref, name) async => null),
         viewingEventsProvider.overrideWith((ref) async => [
               for (final e in events)
                 ViewingEvent(
@@ -153,5 +156,25 @@ void main() {
     await tester.tap(find.text('Depuis toujours'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  });
+
+  test('the best rated TMDB portrait wins over the default photo', () {
+    RemoteImageInfo image(String file,
+            {double rating = 0, int votes = 0, int width = 500}) =>
+        RemoteImageInfo(
+            url: 'https://image.tmdb.org/t/p/original/$file',
+            width: width,
+            height: 750,
+            communityRating: rating,
+            voteCount: votes);
+    expect(
+        bestTmdbPortrait([
+          image('default.jpg'),
+          image('landscape.jpg', rating: 9, votes: 9, width: 1200),
+          image('liked.jpg', rating: 5.4, votes: 3),
+          image('best.jpg', rating: 5.6, votes: 2),
+        ]),
+        '/best.jpg');
+    expect(bestTmdbPortrait([]), isNull);
   });
 }

@@ -19,7 +19,7 @@ import 'package:kinos/upcoming/upcoming_models.dart' show tmdbImage;
 import 'package:kinos/util/kinos_image.dart';
 
 import '../stats_screen.dart'
-    show formatHours, statsDataColor, statsPersonProvider;
+    show formatHours, statsDataColor, statsPortraitProvider;
 import '../viewing_log.dart';
 import '../viewing_stats.dart' show Ranked;
 import 'wrapped_data.dart';
@@ -1125,7 +1125,7 @@ class _PersonSlide extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final person = ref.watch(statsPersonProvider(name)).valueOrNull;
+    final photo = ref.watch(statsPortraitProvider(name)).valueOrNull;
     final quote = ref.watch(wrappedQuoteProvider(quoteKey)).valueOrNull;
     final portrait = WrappedClock.at(context, 1, length: 2.4);
     final titles = [for (final e in films.take(2)) e.title];
@@ -1146,7 +1146,7 @@ class _PersonSlide extends ConsumerWidget {
                   ? CrossAxisAlignment.start
                   : CrossAxisAlignment.center,
               children: [
-                if (person?.image case final image?) ...[
+                if (photo != null) ...[
                   Opacity(
                     opacity: portrait,
                     child: ClipRRect(
@@ -1156,9 +1156,9 @@ class _PersonSlide extends ConsumerWidget {
                         width: h * 3 / 4,
                         child: KinosImage(
                             image: ImageData(
-                                path: tmdbImage(image, size: 'h632'),
-                                key: 'wrapped:person:${person!.id}'),
-                            alignment: Alignment.topCenter,
+                                path: tmdbImage(photo, size: 'h632'),
+                                key: 'wrapped:person:$photo'),
+                            alignment: AppStatsLayout.portraitAlignment,
                             disableBlur: true),
                       ),
                     ),
@@ -2183,12 +2183,12 @@ class _StoryPage extends ConsumerWidget {
               child: SizedBox.square(
                 dimension: 31 * u,
                 child: switch (
-                    ref.watch(statsPersonProvider(p.name)).valueOrNull?.image) {
+                    ref.watch(statsPortraitProvider(p.name)).valueOrNull) {
                   final path? => KinosImage(
                       image: ImageData(
                           path: tmdbImage(path, size: 'w342'),
                           key: 'story:person:$path'),
-                      alignment: Alignment.topCenter,
+                      alignment: AppStatsLayout.portraitAlignment,
                       disableBlur: true),
                   _ => ColoredBox(color: ink.withValues(alpha: .15)),
                 },
