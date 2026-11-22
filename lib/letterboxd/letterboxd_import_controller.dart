@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/models/seerr_credentials_model.dart';
+import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/database_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/recommendations/providers/recommendation_providers.dart';
@@ -48,6 +49,22 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
 
   /// Appelé après chaque enregistrement de l'import (journal de visionnage).
   final void Function()? onSaved;
+
+  /// Marque comme vus dans Jellyfin les films de la bibliothèque, à la date
+  /// de leur dernier visionnage Letterboxd ; rend le nombre marqué.
+  final Future<int> Function(List<(String jellyfinId, DateTime watchedAt)>)?
+      markPlayed;
+
+  /// Option de l'import : marquer aussi comme vus dans Jellyfin.
+  bool markPlayedInJellyfin = false;
+
+  /// Films de la bibliothèque avec une date de visionnage Letterboxd.
+  static List<(String, DateTime)> playable(List<LetterboxdRecord> records) => [
+        for (final r in records)
+          if ((r.work?.jellyfinId, r.film.watchedAt)
+              case (final String id, final DateTime at))
+            (id, at)
+      ];
   DiscoveryClient? _client;
   int _generation = 0;
 
@@ -61,7 +78,8 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
       required this.loadLibrary,
       required this.isCurrent,
       this.createClient,
-      this.onSaved})
+      this.onSaved,
+      this.markPlayed})
       : super(const LetterboxdImportState());
   bool _active(int generation) =>
       mounted && generation == _generation && isCurrent();
@@ -272,6 +290,13 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
           LetterboxdSnapshot(
               updatedAt: DateTime.now().toUtc(), records: preview.records),
           isCurrent: () => _active(generation));
+      if (markPlayedInJellyfin && markPlayed != null) {
+        try {
+          await markPlayed!(playable(preview.records));
+        } catch (_) {
+          // L'import est enregistré ; le marquage se refait à la main.
+        }
+      }
       onSaved?.call();
       if (_active(generation)) {
         state = LetterboxdImportState(
@@ -336,7 +361,28 @@ final letterboxdImportProvider = StateNotifierProvider.autoDispose<
       },
       createClient: () => letterboxdDiscoveryClient(credentials),
       // Les dates du journal Letterboxd alimentent les statistiques.
-      onSaved: () => ref.read(viewingBackfillProvider).rebuild());
+      onSaved: () => ref.read(viewingBackfillProvider).rebuild(),
+      markPlayed: (films) async {
+        // Seulement ce que Jellyfin ne compte pas encore comme vu.
+        final api = ref.read(jellyApiProvider);
+        final dates = {for (final (id, at) in films) id: at};
+        final ids = dates.keys.toList();
+        var marked = 0;
+        for (var i = 0; i < ids.length; i += 100) {
+          final page = await api.usersUserIdItemsGet(
+              ids: ids.sublist(i, (i + 100).clamp(0, ids.length)),
+              isPlayed: false,
+              enableImages: false);
+          for (final item in page.body?.items ?? const []) {
+            final at = dates[item.id];
+            if (at == null) continue;
+            await api.usersUserIdPlayedItemsItemIdPost(
+                itemId: item.id, datePlayed: at);
+            marked++;
+          }
+        }
+        return marked;
+      });
 });
 
 /// Client Seerr pour résoudre les films hors bibliothèque, null sans

@@ -29,6 +29,30 @@ class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
     _controller.attachView();
   }
 
+  /// Cocher demande confirmation : beaucoup de films changent d'état d'un
+  /// coup (on peut toujours les démarquer dans Jellyfin).
+  Future<void> _setMarkPlayed(bool value, int count) async {
+    if (value) {
+      final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => GlassAlertDialog(
+                  title: const Text('Marquer comme vus dans Jellyfin ?'),
+                  content: Text(count > 0
+                      ? '$count films de votre bibliothèque seront marqués vus, à la date de leur dernier visionnage sur Letterboxd. Ceux déjà vus ne changent pas.'
+                      : 'Les films de votre bibliothèque vus sur Letterboxd seront marqués vus, à la date de leur dernier visionnage. Ceux déjà vus ne changent pas.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text(context.localized.cancel)),
+                    FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Marquer')),
+                  ]));
+      if (confirmed != true) return;
+    }
+    if (mounted) setState(() => _controller.markPlayedInJellyfin = value);
+  }
+
   @override
   void dispose() {
     _controller.detachView();
@@ -96,6 +120,24 @@ class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
                           state.error == 'network' ||
                           (records != null && matched < records.length))
                         Text(l.letterboxdNetworkWarning),
+                      // Option : les films de la bibliothèque vus sur
+                      // Letterboxd deviennent vus dans Jellyfin (à la date
+                      // de leur dernier visionnage), après confirmation.
+                      CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: controller.markPlayedInJellyfin,
+                          onChanged: state.saved
+                              ? null
+                              : (value) => _setMarkPlayed(value ?? false,
+                                  LetterboxdImportController.playable(
+                                          state.records)
+                                      .length),
+                          title: const Text(
+                              'Marquer aussi comme vus dans Jellyfin'),
+                          subtitle: Text(state.ready
+                              ? '${LetterboxdImportController.playable(state.records).length} films de votre bibliothèque, à la date de leur dernier visionnage'
+                              : 'Les films de votre bibliothèque, à la date de leur dernier visionnage')),
                       if (busy) ...[
                         Text(picking
                             ? l.letterboxdRead

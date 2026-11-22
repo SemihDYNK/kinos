@@ -53,6 +53,37 @@ void main() {
     expect(c.state.total, 1);
     expect((await store.read()).records.length, 1);
   });
+  test('optionally marks library films played at their last viewing', () async {
+    final marked = <(String, DateTime)>[];
+    final c = LetterboxdImportController(
+        store: store,
+        loadLibrary: () async => [
+              const LetterboxdWork(
+                  title: 'A', year: 2000, jellyfinId: 'j1', traits: [])
+            ],
+        isCurrent: () => true,
+        markPlayed: (films) async {
+          marked.addAll(films);
+          return films.length;
+        });
+    addTearDown(c.dispose);
+    c.attachView();
+    await c.prepare(exportZip({
+      'diary.csv':
+          'Date,Name,Year,Letterboxd URI,Rating,Rewatch,Tags,Watched Date\n'
+              '2026-01-02,A,2000,https://boxd.it/a,4,,,2026-01-01\n'
+    }));
+    await c.commit();
+    expect(marked, isEmpty, reason: 'off by default');
+    c.markPlayedInJellyfin = true;
+    await c.prepare(exportZip({
+      'diary.csv':
+          'Date,Name,Year,Letterboxd URI,Rating,Rewatch,Tags,Watched Date\n'
+              '2026-01-02,A,2000,https://boxd.it/a,4,,,2026-01-01\n'
+    }));
+    await c.commit();
+    expect(marked, [('j1', DateTime(2026, 1, 1))]);
+  });
   test('cancelled library request cannot install a late preview or save',
       () async {
     final request = Completer<List<LetterboxdWork>>();
