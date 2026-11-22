@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -260,4 +263,89 @@ class WrappedTextBlock extends StatelessWidget {
               ),
             ),
           ));
+}
+
+/// Le grain de pellicule : une texture de bruit générée une fois, répétée
+/// sur toute la diapo et décalée à chaque image (24 fois par seconde),
+/// fondue en incrustation. [opacity] règle sa présence.
+class WrappedGrain extends StatefulWidget {
+  const WrappedGrain({required this.opacity, super.key});
+  final double opacity;
+
+  @override
+  State<WrappedGrain> createState() => _WrappedGrainState();
+}
+
+class _WrappedGrainState extends State<WrappedGrain> {
+  static const _size = 128;
+  static ui.Image? _noise;
+  static Future<ui.Image>? _loading;
+
+  static Future<ui.Image> _load() {
+    final random = math.Random(7);
+    final pixels = Uint8List(_size * _size * 4);
+    for (var i = 0; i < pixels.length; i += 4) {
+      final v = random.nextInt(256);
+      pixels[i] = v;
+      pixels[i + 1] = v;
+      pixels[i + 2] = v;
+      pixels[i + 3] = 255;
+    }
+    final done = Completer<ui.Image>();
+    ui.decodeImageFromPixels(
+        pixels, _size, _size, ui.PixelFormat.rgba8888, done.complete);
+    return done.future;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (_noise == null) {
+      (_loading ??= _load()).then((image) {
+        _noise = image;
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final noise = _noise;
+    if (noise == null || widget.opacity <= 0) return const SizedBox.shrink();
+    final frame = WrappedClock.motionOf(context)
+        ? (WrappedClock.seconds(context) * 24).floor()
+        : 0;
+    return IgnorePointer(
+      child: CustomPaint(
+          size: Size.infinite,
+          painter: _GrainPainter(noise, widget.opacity, frame)),
+    );
+  }
+}
+
+class _GrainPainter extends CustomPainter {
+  _GrainPainter(this.noise, this.opacity, this.frame);
+  final ui.Image noise;
+  final double opacity;
+  final int frame;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final random = math.Random(frame);
+    final shift = Matrix4.identity()
+      ..translateByDouble(
+          random.nextDouble() * 128, random.nextDouble() * 128, 0, 1)
+      ..scaleByDouble(1.6, 1.6, 1, 1);
+    canvas.drawRect(
+        Offset.zero & size,
+        Paint()
+          ..shader = ImageShader(
+              noise, TileMode.repeated, TileMode.repeated, shift.storage)
+          ..color = Color.fromRGBO(255, 255, 255, opacity)
+          ..blendMode = BlendMode.overlay);
+  }
+
+  @override
+  bool shouldRepaint(_GrainPainter old) =>
+      old.frame != frame || old.opacity != opacity || old.noise != noise;
 }

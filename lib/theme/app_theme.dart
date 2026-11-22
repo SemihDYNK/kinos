@@ -349,10 +349,14 @@ abstract final class AppWrapped {
   static const wallDrift = .08;
   static const wallVeil = .62;
 
-  /// Le voyage : nombre de pages arrachées au plus, et la profondeur de
-  /// leur rotation.
-  static const voyagePages = 24;
-  static const pagePerspective = .0012;
+  /// Le voyage : durée de chaque époque (secondes, bridée pour que toutes
+  /// tiennent dans [epochSpan]), son fondu d'entrée, le temps posé sur la
+  /// dernière, et le grain de pellicule au plus ancien.
+  static const epochStep = 1.7;
+  static const epochSpan = 12.0;
+  static const epochFade = 1.4;
+  static const epochHold = 1.8;
+  static const grainMax = .14;
 
   /// Portraits et avatars.
   static const portraitFraction = .42;
@@ -372,7 +376,7 @@ abstract final class AppWrapped {
   static const ratings = 12.0;
   static const friends = 10.0;
   static const hotTake = 9.0;
-  static const voyage = 13.0;
+  static const voyage = 16.0;
   static const elsewhere = 8.0;
   static const filmOfYear = 11.0;
   static const recap = 14.0;

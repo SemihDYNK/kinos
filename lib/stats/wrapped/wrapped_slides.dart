@@ -790,25 +790,24 @@ class _TimeSlide extends StatelessWidget {
   }
 }
 
-/// Une version allégée d'une image de fond (960 px) : les pages du voyage
-/// défilent trop vite pour des images pleine définition.
-ImageData _light(ImageData image) {
-  if (!image.path.contains('maxWidth=') && !image.path.contains('/w1280/')) {
-    return image;
-  }
-  return ImageData(
-      path: image.path
-          .replaceFirst(RegExp(r'maxWidth=\d+'), 'maxWidth=960')
-          .replaceFirst(RegExp(r'maxHeight=\d+'), 'maxHeight=960')
-          .replaceFirst('/w1280/', '/w780/'),
-      hash: image.hash,
-      key: '${image.key}:light');
+/// Une matrice de saturation : 1 garde les couleurs, 0 donne du noir et
+/// blanc.
+ColorFilter _saturation(double s) {
+  const r = .2126, g = .7152, b = .0722;
+  final i = 1 - s;
+  return ColorFilter.matrix([
+    r * i + s, g * i, b * i, 0, 0, //
+    r * i, g * i + s, b * i, 0, 0, //
+    r * i, g * i, b * i + s, 0, 0, //
+    0, 0, 0, 1, 0,
+  ]);
 }
 
-/// Le voyage dans le temps, comme un générique de pages arrachées : les
-/// images de vos films, des plus récents aux plus anciens, s'envolent
-/// une à une de plus en plus vite, puis ralentissent ; la dernière révèle
-/// le plus vieux film, qui reste en plein cadre.
+/// Le voyage dans le temps, en fondus enchaînés : une image par décennie
+/// (votre film le mieux noté de chaque époque), des années récentes aux
+/// plus anciennes. À mesure qu'on recule, l'image perd ses couleurs et
+/// gagne du grain ; on se pose sur le plus vieux film, sans repasser par
+/// le noir.
 class _VoyageSlide extends StatefulWidget {
   const _VoyageSlide({required this.inputs});
   final WrappedInputs inputs;
@@ -818,17 +817,29 @@ class _VoyageSlide extends StatefulWidget {
 }
 
 class _VoyageSlideState extends State<_VoyageSlide> {
-  late final List<(ViewingEvent, ImageData)> _pages = () {
-    final films = [
-      for (final e in widget.inputs.data.voyage)
-        if (widget.inputs.backdrop(e) case final image?) (e, _light(image))
-    ];
-    const most = AppWrapped.voyagePages;
-    if (films.length <= most) return films;
-    // Un échantillon régulier, du plus récent au plus ancien (gardé).
+  /// Une époque : la décennie, ses films, et le film qui l'illustre.
+  late final List<({int decade, int count, ViewingEvent film})> _epochs = () {
+    final inputs = widget.inputs;
+    final byDecade = <int, List<ViewingEvent>>{};
+    for (final e in inputs.data.voyage) {
+      (byDecade[e.year! ~/ 10 * 10] ??= []).add(e);
+    }
+    final oldest = inputs.data.voyage.last;
+    final decades = byDecade.keys.toList()..sort((a, b) => b.compareTo(a));
     return [
-      for (var k = 0; k < most; k++)
-        films[(k * (films.length - 1) / (most - 1)).round()]
+      for (final d in decades)
+        (
+          decade: d,
+          count: byDecade[d]!.length,
+          // La dernière époque se termine sur le plus vieux film.
+          film: d == decades.last
+              ? oldest
+              : ([...byDecade[d]!.where((e) => inputs.backdrop(e) != null)]
+                        ..sort((a, b) => (inputs.rating(b) ?? 0)
+                            .compareTo(inputs.rating(a) ?? 0)))
+                      .firstOrNull ??
+                  byDecade[d]!.first,
+        )
     ];
   }();
   bool _warmed = false;
@@ -838,13 +849,10 @@ class _VoyageSlideState extends State<_VoyageSlide> {
     super.didChangeDependencies();
     if (_warmed) return;
     _warmed = true;
-    for (final (_, image) in _pages) {
-      precacheImage(image.imageProvider, context, onError: (_, __) {});
-    }
-    // L'arrivée, elle, est en pleine définition.
-    if (widget.inputs.backdrop(widget.inputs.data.voyage.last)
-        case final image?) {
-      precacheImage(image.imageProvider, context, onError: (_, __) {});
+    for (final epoch in _epochs) {
+      if (widget.inputs.backdrop(epoch.film) case final image?) {
+        precacheImage(image.imageProvider, context, onError: (_, __) {});
+      }
     }
   }
 
@@ -852,107 +860,100 @@ class _VoyageSlideState extends State<_VoyageSlide> {
   Widget build(BuildContext context) {
     final inputs = widget.inputs;
     final data = inputs.data;
+    final epochs = _epochs;
     final oldest = data.voyage.last;
     final median = data.medianYear;
-    final decades = <int, int>{};
-    for (final e in data.voyage) {
-      decades[e.year! ~/ 10 * 10] = (decades[e.year! ~/ 10 * 10] ?? 0) + 1;
-    }
-    final favourite =
-        decades.entries.reduce((a, b) => b.value > a.value ? b : a);
-    const travel = AppWrapped.voyage - 5;
+    final favourite = epochs.reduce((a, b) => b.count > a.count ? b : a);
+    final n = epochs.length;
     const start = .4;
+    final step = n <= 1
+        ? 0.0
+        : math.min(AppWrapped.epochStep, AppWrapped.epochSpan / (n - 1));
+    final travel = start + (n - 1) * step + AppWrapped.epochHold;
     final motion = WrappedClock.motionOf(context);
     final t = WrappedClock.seconds(context);
-    final pages = _pages;
-    final last = pages.length - 1;
-    // Accélère puis ralentit : la dernière page part lentement.
-    final current = !motion || last <= 0
-        ? last.toDouble()
-        : _easeInOut((t - start) / (travel - start)) * last;
-    final i = current.floor().clamp(0, math.max(0, last)).toInt();
-    final f = pages.isEmpty ? 0.0 : (current - i).clamp(0.0, 1.0);
+    final current = !motion || step == 0
+        ? n - 1
+        : ((t - start) / step).floor().clamp(0, n - 1);
     final arrived = WrappedClock.at(context, travel, length: 1.6);
-    final hideYear = WrappedClock.at(context, travel - .4, length: .8);
+    // De la couleur pleine (la plus récente) au noir et blanc (la plus
+    // ancienne), selon le rang de l'époque.
+    double saturationOf(int i) => n <= 1 ? 1 : 1 - i / (n - 1);
 
     return _Frame(builder: (context, size, type) {
-      Widget page(ImageData image) => SizedBox.expand(
-          child: KinosImage(
-              key: ValueKey(image.key),
-              image: image,
-              alignment: AppHeroLayout.imageAlignment,
-              disableBlur: true));
-      final e = Curves.easeInCubic.transform(f);
-      return [
-        if (pages.isEmpty)
-          const ColoredBox(color: AppColors.heroFallback)
-        else ...[
-          // La page suivante, déjà là, qui se rapproche à mesure que la
-          // page du dessus s'en va.
-          if (i < last)
-            Transform.scale(
-                scale: 1.04 - .04 * f, child: page(pages[i + 1].$2)),
-          if (i >= last)
-            KenBurns(
-                from: travel,
-                length: AppWrapped.voyage,
-                child: WrappedImage(inputs.backdrop(oldest)))
-          else
-            Transform(
-              alignment: Alignment.centerLeft,
-              transform: Matrix4.identity()
-                ..setEntry(3, 2, AppWrapped.pagePerspective)
-                ..translateByDouble(
-                    -size.width * .18 * e, -size.height * .06 * e, 0, 1)
-                ..rotateY(-1.45 * e)
-                ..rotateZ(-.07 * e),
-              child: Stack(fit: StackFit.expand, children: [
-                page(pages[i].$2),
-                ColoredBox(color: AppColors.scrim.withValues(alpha: .55 * e)),
-              ]),
-            ),
-        ],
-        WrappedScrim(opacity: arrived, veil: AppWrapped.veil),
-        // L'année de la page du dessus, qui remonte le temps.
-        if (pages.isNotEmpty)
-          Positioned(
-            left: size.width * AppWrapped.inset,
-            bottom: size.height * .1,
-            child: Opacity(
-              opacity:
-                  (1 - hideYear) * WrappedClock.at(context, .2, length: .6),
-              child: Text('${pages[f > .5 && i < last ? i + 1 : i].$1.year}',
-                  style: type.big.copyWith(
-                      fontSize: type.big.fontSize! * 1.6,
-                      color: AppColors.textPrimary.withValues(alpha: .85))),
-            ),
+      final layers = <Widget>[];
+      for (var i = 0; i < n; i++) {
+        final at = start + i * step;
+        final fadeIn = i == 0
+            ? WrappedClock.at(context, 0, length: 1)
+            : WrappedClock.at(context, at, length: AppWrapped.epochFade);
+        // Une époque n'est plus peinte une fois recouverte par la suivante.
+        final covered = i < n - 1 &&
+            WrappedClock.at(context, at + step, length: AppWrapped.epochFade) >=
+                1;
+        if (fadeIn <= 0 || covered) continue;
+        layers.add(Opacity(
+          opacity: fadeIn,
+          child: ColorFiltered(
+            colorFilter: _saturation(saturationOf(i)),
+            child: KenBurns(
+                from: at,
+                length: i == n - 1 ? AppWrapped.voyage : step * 2.5,
+                child: WrappedImage(inputs.backdrop(epochs[i].film))),
           ),
-        Positioned(
-          left: size.width * AppWrapped.inset,
-          top: size.height * .1,
-          child: Opacity(
-            opacity: 1 - hideYear,
-            child: WrappedText('Remonter le temps',
-                style: type.cap, at: .2, caps: true),
+        ));
+      }
+      final epoch = epochs[current];
+      final label = 1 - arrived;
+      return [
+        ...layers,
+        WrappedGrain(
+            opacity: AppWrapped.grainMax *
+                (n <= 1 ? 1 : (current / (n - 1)).clamp(0.0, 1.0))),
+        ColoredBox(
+            color: AppColors.scrim.withValues(alpha: .35 * (1 - arrived))),
+        WrappedScrim(opacity: arrived),
+        // L'époque en cours, au centre.
+        Opacity(
+          opacity: label,
+          child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              WrappedText('Remonter le temps',
+                  style: type.cap, at: .2, caps: true),
+              SizedBox(height: size.height * .025),
+              AnimatedSwitcher(
+                duration:
+                    motion ? const Duration(milliseconds: 900) : Duration.zero,
+                child: Column(
+                    key: ValueKey(epoch.decade),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Années ${epoch.decade}', style: type.mid),
+                      SizedBox(height: size.height * .012),
+                      Text('${_films(epoch.count)} · ${epoch.film.title}',
+                          style: type.small),
+                    ]),
+              ),
+            ]),
           ),
         ),
         WrappedTextBlock(children: [
           WrappedText('Votre plus vieux voyage',
-              style: type.cap, at: travel + .8, caps: true),
+              style: type.cap, at: travel + .6, caps: true),
           SizedBox(height: size.height * .025),
           WrappedText('${oldest.title} · ${oldest.year}',
-              style: type.mid, at: travel + 1.8, maxLines: 2),
+              style: type.mid, at: travel + 1.6, maxLines: 2),
           SizedBox(height: size.height * .025),
           WrappedText(
               [
                 if (median != null)
                   'Votre film moyen est sorti en $median.'
                       '${median <= data.year - 25 ? ' Le présent peut attendre.' : ''}',
-                'Votre décennie : les années ${favourite.key}, '
-                    '${_films(favourite.value)}.',
+                'Votre décennie : les années ${favourite.decade}, '
+                    '${_films(favourite.count)}.',
               ].join(' '),
               style: type.small,
-              at: travel + 3),
+              at: travel + 2.8),
         ]),
       ];
     });
