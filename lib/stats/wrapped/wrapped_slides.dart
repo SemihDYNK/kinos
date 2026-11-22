@@ -790,105 +790,151 @@ class _TimeSlide extends StatelessWidget {
   }
 }
 
-/// Le voyage dans le temps : vos films en colonnes par décennie de
-/// sortie. La caméra part des années récentes et glisse lentement vers le
-/// passé ; arrivée au bout, l'image du plus vieux film emplit l'écran.
-class _VoyageSlide extends StatelessWidget {
+/// Une version allégée d'une image de fond (960 px) : les pages du voyage
+/// défilent trop vite pour des images pleine définition.
+ImageData _light(ImageData image) {
+  if (!image.path.contains('maxWidth=') && !image.path.contains('/w1280/')) {
+    return image;
+  }
+  return ImageData(
+      path: image.path
+          .replaceFirst(RegExp(r'maxWidth=\d+'), 'maxWidth=960')
+          .replaceFirst(RegExp(r'maxHeight=\d+'), 'maxHeight=960')
+          .replaceFirst('/w1280/', '/w780/'),
+      hash: image.hash,
+      key: '${image.key}:light');
+}
+
+/// Le voyage dans le temps, comme un générique de pages arrachées : les
+/// images de vos films, des plus récents aux plus anciens, s'envolent
+/// une à une de plus en plus vite, puis ralentissent ; la dernière révèle
+/// le plus vieux film, qui reste en plein cadre.
+class _VoyageSlide extends StatefulWidget {
   const _VoyageSlide({required this.inputs});
   final WrappedInputs inputs;
 
   @override
+  State<_VoyageSlide> createState() => _VoyageSlideState();
+}
+
+class _VoyageSlideState extends State<_VoyageSlide> {
+  late final List<(ViewingEvent, ImageData)> _pages = () {
+    final films = [
+      for (final e in widget.inputs.data.voyage)
+        if (widget.inputs.backdrop(e) case final image?) (e, _light(image))
+    ];
+    const most = AppWrapped.voyagePages;
+    if (films.length <= most) return films;
+    // Un échantillon régulier, du plus récent au plus ancien (gardé).
+    return [
+      for (var k = 0; k < most; k++)
+        films[(k * (films.length - 1) / (most - 1)).round()]
+    ];
+  }();
+  bool _warmed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_warmed) return;
+    _warmed = true;
+    for (final (_, image) in _pages) {
+      precacheImage(image.imageProvider, context, onError: (_, __) {});
+    }
+    // L'arrivée, elle, est en pleine définition.
+    if (widget.inputs.backdrop(widget.inputs.data.voyage.last)
+        case final image?) {
+      precacheImage(image.imageProvider, context, onError: (_, __) {});
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final inputs = widget.inputs;
     final data = inputs.data;
     final oldest = data.voyage.last;
     final median = data.medianYear;
-    final byDecade = <int, List<ViewingEvent>>{};
+    final decades = <int, int>{};
     for (final e in data.voyage) {
-      (byDecade[e.year! ~/ 10 * 10] ??= []).add(e);
+      decades[e.year! ~/ 10 * 10] = (decades[e.year! ~/ 10 * 10] ?? 0) + 1;
     }
-    final decades = byDecade.keys.toList()..sort();
-    final favourite = decades
-        .reduce((a, b) => byDecade[b]!.length > byDecade[a]!.length ? b : a);
+    final favourite =
+        decades.entries.reduce((a, b) => b.value > a.value ? b : a);
     const travel = AppWrapped.voyage - 5;
-    final pan = WrappedClock.at(context, .6,
-        length: travel - .6, curve: Curves.easeInOutCubic);
-    final arrive = WrappedClock.at(context, travel, length: 1.8);
+    const start = .4;
+    final motion = WrappedClock.motionOf(context);
+    final t = WrappedClock.seconds(context);
+    final pages = _pages;
+    final last = pages.length - 1;
+    // Accélère puis ralentit : la dernière page part lentement.
+    final current = !motion || last <= 0
+        ? last.toDouble()
+        : _easeInOut((t - start) / (travel - start)) * last;
+    final i = current.floor().clamp(0, math.max(0, last)).toInt();
+    final f = pages.isEmpty ? 0.0 : (current - i).clamp(0.0, 1.0);
+    final arrived = WrappedClock.at(context, travel, length: 1.6);
+    final hideYear = WrappedClock.at(context, travel - .4, length: .8);
+
     return _Frame(builder: (context, size, type) {
-      final inset = size.width * AppWrapped.inset;
-      final colW = size.width * AppWrapped.decadeColumn;
-      final contentW = decades.length * colW;
-      final start = math.max(0.0, contentW - (size.width - inset * 2));
-      final offset = start * (1 - pan);
-      final posterW = colW * .62;
-      final posterH = posterW * 1.5;
-      final baseline = size.height * .74;
-      final room = baseline - size.height * .24 - posterH;
-      final columns = <Widget>[];
-      for (final (k, decade) in decades.indexed) {
-        final films =
-            byDecade[decade]!.take(AppWrapped.decadeMaxPosters).toList();
-        final step = films.length <= 1
-            ? 0.0
-            : math.min(posterH * .22, room / (films.length - 1));
-        final left = inset + k * colW - offset;
-        if (left > size.width || left + colW < 0) continue;
-        final mine = decade == favourite;
-        for (final (j, e) in films.indexed) {
-          columns.add(Positioned(
-            left: left + (colW - posterW) / 2,
-            top: baseline - posterH - j * step,
-            width: posterW,
-            height: posterH,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppSpacing.xxs),
-              child: inputs.poster(e) == null
-                  ? ColoredBox(color: inputs.tint(e))
-                  : KinosImage(image: inputs.poster(e), disableBlur: true),
-            ),
-          ));
-        }
-        columns.add(Positioned(
-          left: left,
-          width: colW,
-          top: baseline + AppSpacing.sm,
-          child: Column(children: [
-            Text('Années $decade'.toUpperCase(),
-                textAlign: TextAlign.center,
-                style: (mine
-                        ? type.cap.copyWith(color: AppColors.textPrimary)
-                        : type.cap)
-                    .copyWith(
-                        letterSpacing:
-                            type.cap.fontSize! * AppWrapped.capTracking * .5)),
-            Text(_films(byDecade[decade]!.length),
-                style: mine
-                    ? type.small.copyWith(color: AppColors.textPrimary)
-                    : type.small),
-          ]),
-        ));
-      }
+      Widget page(ImageData image) => SizedBox.expand(
+          child: KinosImage(
+              key: ValueKey(image.key),
+              image: image,
+              alignment: AppHeroLayout.imageAlignment,
+              disableBlur: true));
+      final e = Curves.easeInCubic.transform(f);
       return [
-        Opacity(
-          opacity: 1 - arrive,
-          child: Stack(fit: StackFit.expand, children: [
-            ...columns,
-            Positioned(
-              left: inset,
-              top: size.height * .1,
-              child: WrappedText('Vos films, décennie par décennie',
-                  style: type.cap, at: .3, caps: true),
-            ),
-          ]),
-        ),
-        Opacity(
-          opacity: arrive,
-          child: Stack(fit: StackFit.expand, children: [
+        if (pages.isEmpty)
+          const ColoredBox(color: AppColors.heroFallback)
+        else ...[
+          // La page suivante, déjà là, qui se rapproche à mesure que la
+          // page du dessus s'en va.
+          if (i < last)
+            Transform.scale(
+                scale: 1.04 - .04 * f, child: page(pages[i + 1].$2)),
+          if (i >= last)
             KenBurns(
                 from: travel,
                 length: AppWrapped.voyage,
-                child: WrappedImage(inputs.backdrop(oldest))),
-            const WrappedScrim(),
-          ]),
+                child: WrappedImage(inputs.backdrop(oldest)))
+          else
+            Transform(
+              alignment: Alignment.centerLeft,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, AppWrapped.pagePerspective)
+                ..translateByDouble(
+                    -size.width * .18 * e, -size.height * .06 * e, 0, 1)
+                ..rotateY(-1.45 * e)
+                ..rotateZ(-.07 * e),
+              child: Stack(fit: StackFit.expand, children: [
+                page(pages[i].$2),
+                ColoredBox(color: AppColors.scrim.withValues(alpha: .55 * e)),
+              ]),
+            ),
+        ],
+        WrappedScrim(opacity: arrived, veil: AppWrapped.veil),
+        // L'année de la page du dessus, qui remonte le temps.
+        if (pages.isNotEmpty)
+          Positioned(
+            left: size.width * AppWrapped.inset,
+            bottom: size.height * .1,
+            child: Opacity(
+              opacity:
+                  (1 - hideYear) * WrappedClock.at(context, .2, length: .6),
+              child: Text('${pages[f > .5 && i < last ? i + 1 : i].$1.year}',
+                  style: type.big.copyWith(
+                      fontSize: type.big.fontSize! * 1.6,
+                      color: AppColors.textPrimary.withValues(alpha: .85))),
+            ),
+          ),
+        Positioned(
+          left: size.width * AppWrapped.inset,
+          top: size.height * .1,
+          child: Opacity(
+            opacity: 1 - hideYear,
+            child: WrappedText('Remonter le temps',
+                style: type.cap, at: .2, caps: true),
+          ),
         ),
         WrappedTextBlock(children: [
           WrappedText('Votre plus vieux voyage',
@@ -902,8 +948,8 @@ class _VoyageSlide extends StatelessWidget {
                 if (median != null)
                   'Votre film moyen est sorti en $median.'
                       '${median <= data.year - 25 ? ' Le présent peut attendre.' : ''}',
-                'Votre décennie : les années $favourite, '
-                    '${_films(byDecade[favourite]!.length)}.',
+                'Votre décennie : les années ${favourite.key}, '
+                    '${_films(favourite.value)}.',
               ].join(' '),
               style: type.small,
               at: travel + 3),
@@ -1552,12 +1598,16 @@ class WrappedRecap extends StatelessWidget {
       final banner = best == null
           ? const ColoredBox(color: AppColors.heroFallback)
           : WrappedImage(inputs.backdrop(best.event));
-      // Un dégradé vers le noir du fond, posé sur l'image : pas de masque
-      // de calque, dont le bord laissait un liseré clair au rendu.
+      // L'image occupe [reach] de la diapo ; le dégradé vers le noir, lui,
+      // couvre toute la diapo et atteint le noir plein avant le bord de
+      // l'image. Ce bord tombe donc sous du noir opaque : deux bords
+      // fractionnaires superposés (image et voile) laissaient filtrer un
+      // liseré clair.
+      final reach = portrait ? .52 : .62;
       final fade = LinearGradient(
         begin: portrait ? Alignment.topCenter : Alignment.centerLeft,
         end: portrait ? Alignment.bottomCenter : Alignment.centerRight,
-        stops: const [0, .5, .92],
+        stops: [0, reach * .5, reach * .92],
         colors: [
           AppColors.scrim.withValues(alpha: 0),
           AppColors.scrim.withValues(alpha: 0),
@@ -1569,13 +1619,14 @@ class WrappedRecap extends StatelessWidget {
         Positioned(
           left: 0,
           top: 0,
-          right: portrait ? 0 : size.width * .38,
-          bottom: portrait ? size.height * .48 : 0,
-          child: Stack(fit: StackFit.expand, children: [
-            KenBurns(child: banner),
-            DecoratedBox(decoration: BoxDecoration(gradient: fade)),
-          ]),
+          right: portrait ? 0 : size.width * (1 - reach),
+          bottom: portrait ? size.height * (1 - reach) : 0,
+          child: KenBurns(child: banner),
         ),
+        Positioned.fill(
+            child: IgnorePointer(
+                child:
+                    DecoratedBox(decoration: BoxDecoration(gradient: fade)))),
         Positioned(
           left: pad,
           top: pad,
