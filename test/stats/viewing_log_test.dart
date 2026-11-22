@@ -55,8 +55,16 @@ void main() {
       // Sans date de journal : pas dans la frise.
       const LetterboxdRecord(
           LetterboxdFilm(uri: 'https://letterboxd.com/film/x/', title: 'X')),
+      // Import d'avant les dates du journal : la dernière séance seulement.
+      LetterboxdRecord(LetterboxdFilm(
+          uri: 'https://letterboxd.com/film/y/',
+          title: 'Y',
+          watchedAt: DateTime(2026, 7, 8))),
     ]));
-    expect(events.length, 2);
+    expect(events.length, 3);
+    expect(events.last.identity, 'letterboxd:y');
+    expect(events.last.at, DateTime(2026, 7, 8));
+    events.removeLast();
     expect(events.first.identity, 'tmdb:movie:438631');
     expect(events.first.rewatch, isFalse);
     expect(events.last.rewatch, isTrue);

@@ -53,7 +53,11 @@ List<ViewingEvent> letterboxdViewings(LetterboxdSnapshot snapshot,
             ? 'jellyfin:${work!.jellyfinId}'
             : 'letterboxd:${slug.isEmpty ? film.uri : slug.last}';
     final runtime = item?.overview.runTime?.inSeconds;
-    for (final (index, date) in film.viewings.indexed) {
+    // Un import antérieur aux dates du journal n'a que la dernière séance.
+    final dates = film.viewings.isNotEmpty
+        ? film.viewings
+        : [if (film.watchedAt case final at?) at];
+    for (final (index, date) in dates.indexed) {
       events.add(ViewingEvent(
         identity: identity,
         kind: 'movie',

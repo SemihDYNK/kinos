@@ -61,6 +61,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   StatsPeriod _period = StatsPeriod(year: DateTime.now().year);
   bool _rebuilding = false;
 
+  /// Le journal vide à l'ouverture est relu une fois : un import ou un
+  /// historique Jellyfin d'avant la page ne l'a jamais rempli.
+  bool _autoRebuilt = false;
+
   Future<void> _rebuild() async {
     setState(() => _rebuilding = true);
     await ref.read(viewingBackfillProvider).rebuild();
@@ -77,6 +81,13 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final locale = Localizations.localeOf(context).toString();
     final padding = AdaptiveLayout.adaptivePadding(context,
         horizontalPadding: AppSpacing.screenPadding);
+    if (events != null && events.isEmpty && !_autoRebuilt) {
+      _autoRebuilt = true;
+      _rebuilding = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _rebuild();
+      });
+    }
     final stats =
         events == null ? null : computeStats(events, ratings, _period);
     final years = {...?stats?.years, DateTime.now().year}.toList()
@@ -146,7 +157,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     () => _period = StatsPeriod(year: _period.year, month: m))),
         ]),
       ],
-      if (stats == null)
+      if (stats == null || (stats.isEmpty && _rebuilding))
         const Padding(
           padding: EdgeInsets.only(top: AppSpacing.xxl),
           child: Center(child: CircularProgressIndicator()),
