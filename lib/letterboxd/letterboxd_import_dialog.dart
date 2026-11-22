@@ -125,6 +125,8 @@ class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
                       // de leur dernier visionnage), après confirmation.
                       CheckboxListTile(
                           contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
                           controlAffinity: ListTileControlAffinity.leading,
                           value: controller.markPlayedInJellyfin,
                           onChanged: state.saved
@@ -133,11 +135,10 @@ class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
                                   LetterboxdImportController.playable(
                                           state.records)
                                       .length),
-                          title: const Text(
-                              'Marquer aussi comme vus dans Jellyfin'),
-                          subtitle: Text(state.ready
-                              ? '${LetterboxdImportController.playable(state.records).length} films de votre bibliothèque, à la date de leur dernier visionnage'
-                              : 'Les films de votre bibliothèque, à la date de leur dernier visionnage')),
+                          title: Text(state.ready
+                              ? 'Marquer aussi comme vus dans Jellyfin '
+                                  '(${LetterboxdImportController.playable(state.records).length} films)'
+                              : 'Marquer aussi comme vus dans Jellyfin')),
                       if (busy) ...[
                         Text(picking
                             ? l.letterboxdRead
