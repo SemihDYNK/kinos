@@ -349,3 +349,130 @@ class _GrainPainter extends CustomPainter {
   bool shouldRepaint(_GrainPainter old) =>
       old.frame != frame || old.opacity != opacity || old.noise != noise;
 }
+
+/// Un afficheur à palettes, comme les horloges et les tableaux de gare :
+/// chaque caractère est une palette, et seule celle dont le caractère
+/// change bascule — la moitié haute de l'ancien se rabat, puis la moitié
+/// basse du nouveau se pose. Jamais deux textes mêlés.
+class SplitFlapText extends StatelessWidget {
+  const SplitFlapText(this.text, {required this.style, super.key});
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final digits = style.copyWith(
+        fontFeatures: const [FontFeature.tabularFigures()], height: 1.1);
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      for (final (i, char) in text.characters.indexed) ...[
+        if (i > 0) SizedBox(width: (style.fontSize ?? 14) * .08),
+        _Flap(key: ValueKey(i), char: char, style: digits),
+      ],
+    ]);
+  }
+}
+
+class _Flap extends StatefulWidget {
+  const _Flap({required this.char, required this.style, super.key});
+  final String char;
+  final TextStyle style;
+
+  @override
+  State<_Flap> createState() => _FlapState();
+}
+
+class _FlapState extends State<_Flap> with SingleTickerProviderStateMixin {
+  late final _flip =
+      AnimationController(vsync: this, duration: AppWrapped.flapDuration)
+        ..value = 1;
+  late String _from = widget.char;
+
+  @override
+  void didUpdateWidget(_Flap old) {
+    super.didUpdateWidget(old);
+    if (old.char != widget.char) {
+      _from = old.char;
+      if (AppMotion.enabled(context)) {
+        _flip.forward(from: 0);
+      } else {
+        _flip.value = 1;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _flip.dispose();
+    super.dispose();
+  }
+
+  Widget _half(String char, {required bool top}) => ClipRect(
+        child: Align(
+          alignment: top ? Alignment.topCenter : Alignment.bottomCenter,
+          heightFactor: .5,
+          child: _tile(char),
+        ),
+      );
+
+  Widget _tile(String char) {
+    final size = widget.style.fontSize ?? 14;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.scrim.withValues(alpha: AppWrapped.flapTile),
+        borderRadius: BorderRadius.circular(size * .08),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: size * .12),
+        child: Text(char, style: widget.style),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _flip,
+        builder: (context, _) {
+          final t = Curves.easeInOut.transform(_flip.value);
+          final to = widget.char;
+          final firstHalf = t < .5;
+          final angle =
+              firstHalf ? t * 2 * math.pi / 2 : (1 - t) * 2 * math.pi / 2;
+          return Stack(children: [
+            // Le fond : le haut du nouveau, le bas de l'ancien.
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              _half(to, top: true),
+              _half(t >= 1 ? to : _from, top: false),
+            ]),
+            if (t < 1)
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                // Le haut de l'ancien se rabat vers le milieu…
+                Transform(
+                  alignment: Alignment.bottomCenter,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, .004)
+                    ..rotateX(firstHalf ? -angle : 0),
+                  child: Opacity(
+                      opacity: firstHalf ? 1 : 0,
+                      child: _half(_from, top: true)),
+                ),
+                // …puis le bas du nouveau s'y pose.
+                Transform(
+                  alignment: Alignment.topCenter,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, .004)
+                    ..rotateX(firstHalf ? 0 : angle),
+                  child: Opacity(
+                      opacity: firstHalf ? 0 : 1, child: _half(to, top: false)),
+                ),
+              ]),
+            // La ligne de pli, au milieu de la palette.
+            Positioned.fill(
+              child: Center(
+                child: Container(
+                    height: 1, color: AppColors.scrim.withValues(alpha: .6)),
+              ),
+            ),
+          ]);
+        },
+      );
+}

@@ -921,18 +921,21 @@ class _VoyageSlideState extends State<_VoyageSlide> {
               WrappedText('Remonter le temps',
                   style: type.cap, at: .2, caps: true),
               SizedBox(height: size.height * .025),
+              // L'année bascule chiffre par chiffre, comme une horloge à
+              // palettes ; la ligne du dessous s'efface avant que la
+              // suivante n'arrive, sans jamais les mêler.
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Text('Années ', style: type.mid),
+                SplitFlapText('${epoch.decade}', style: type.mid),
+              ]),
+              SizedBox(height: size.height * .02),
               AnimatedSwitcher(
                 duration:
-                    motion ? const Duration(milliseconds: 900) : Duration.zero,
-                child: Column(
-                    key: ValueKey(epoch.decade),
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Années ${epoch.decade}', style: type.mid),
-                      SizedBox(height: size.height * .012),
-                      Text('${_films(epoch.count)} · ${epoch.film.title}',
-                          style: type.small),
-                    ]),
+                    motion ? const Duration(milliseconds: 700) : Duration.zero,
+                switchInCurve: const Interval(.5, 1),
+                switchOutCurve: const Interval(.5, 1),
+                child: Text('${_films(epoch.count)} · ${epoch.film.title}',
+                    key: ValueKey(epoch.decade), style: type.small),
               ),
             ]),
           ),

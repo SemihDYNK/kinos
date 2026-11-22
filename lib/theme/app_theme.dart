@@ -358,6 +358,11 @@ abstract final class AppWrapped {
   static const epochHold = 1.8;
   static const grainMax = .14;
 
+  /// L'afficheur à palettes de l'année : durée d'une bascule, et le fond
+  /// de chaque palette.
+  static const flapDuration = Duration(milliseconds: 520);
+  static const flapTile = .55;
+
   /// Portraits et avatars.
   static const portraitFraction = .42;
   static const avatarFraction = .1;

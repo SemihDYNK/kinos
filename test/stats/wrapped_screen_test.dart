@@ -202,6 +202,24 @@ void main() {
     expect(series, isTrue);
   });
 
+  testWidgets('a split-flap year flips only the digit that changes',
+      (tester) async {
+    Widget board(String year) => MaterialApp(
+        theme: buildAppTheme(),
+        home: Center(
+            child: SplitFlapText(year, style: const TextStyle(fontSize: 40))));
+    await tester.pumpWidget(board('1990'));
+    await tester.pumpWidget(board('1980'));
+    await tester.pump(const Duration(milliseconds: 200));
+    // En pleine bascule : l'ancien chiffre et le nouveau, chacun à moitié.
+    expect(find.text('9'), findsWidgets);
+    expect(find.text('8'), findsWidgets);
+    await tester.pumpAndSettle();
+    expect(find.text('9'), findsWidgets, reason: 'the 9 of 19… stays');
+    expect(find.text('8'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the recap holds in a 9:16 story', (tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1;
