@@ -291,6 +291,80 @@ abstract final class AppDetailLayout {
 }
 
 /// Page Statistiques.
+/// Le Wrapped : un générique lent, calé sur la durée de chaque diapo.
+abstract final class AppWrapped {
+  /// Fondu entre deux diapos.
+  static const fade = Duration(milliseconds: 1400);
+
+  /// Entrée d'un texte (secondes), et le resserrement de ses lettres
+  /// (fraction de la taille de police au départ).
+  static const reveal = 1.8;
+  static const tracking = 2.6;
+  static const trackingFrom = .06;
+
+  /// Espacement des petites capitales (fraction de la taille).
+  static const capTracking = .35;
+
+  /// Avancée lente de l'image sur toute la diapo.
+  static const kenBurns = .06;
+
+  /// Durée de chaque image quand plusieurs films se relaient (secondes).
+  static const backdropCycle = 3.2;
+
+  /// Voile sous le texte : uniforme, et dégradé depuis le côté du texte.
+  static const veil = .5;
+  static const scrim = .85;
+  static const scrimReach = .8;
+
+  /// Marges et tailles de texte, en fraction de la diapo.
+  static const inset = .09;
+  static const bigFraction = .13;
+  static const midFraction = .055;
+  static const smallFraction = .022;
+  static const capFraction = .016;
+  static const minCap = 11.0;
+  static const minSmall = 13.0;
+
+  /// La frise : hauteur des affiches (fraction de la diapo), écart, vitesse
+  /// au-delà de laquelle l'image du film central s'efface (films par
+  /// seconde), et sa place une fois rangée.
+  static const frisePoster = .30;
+  static const friseGap = 10.0;
+  static const friseClearSpeed = 3.0;
+  static const friseSettleScale = .5;
+  static const friseSettleOffset = .34;
+  static const friseSettleOpacity = .55;
+
+  /// Le mur d'affiches de l'ouverture : colonnes, inclinaison, dérive.
+  static const wallColumns = 14;
+  static const wallTilt = -.14;
+  static const wallDrift = .08;
+  static const wallVeil = .62;
+
+  /// Portraits et avatars.
+  static const portraitFraction = .42;
+  static const avatarFraction = .07;
+
+  /// Indication des raccourcis, effacée après ce délai sans mouvement.
+  static const hintDelay = Duration(seconds: 3);
+  static const progressHeight = 2.0;
+
+  /// Durée de chaque diapo (secondes).
+  static const opening = 10.0;
+  static const act = 5.0;
+  static const time = 15.0;
+  static const rhythm = 9.0;
+  static const genre = 9.0;
+  static const person = 10.0;
+  static const ratings = 12.0;
+  static const friends = 10.0;
+  static const hotTake = 9.0;
+  static const voyage = 13.0;
+  static const elsewhere = 8.0;
+  static const filmOfYear = 11.0;
+  static const recap = 14.0;
+}
+
 abstract final class AppStatsLayout {
   /// Portrait carré de l'en-tête.
   static const portraitSize = 64.0;

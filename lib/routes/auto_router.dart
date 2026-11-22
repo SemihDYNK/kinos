@@ -61,6 +61,11 @@ class AutoRouter extends RootStackRouter {
       ],
     ),
     AutoRoute(page: LockRoute.page, path: '/locked'),
+    // Le Wrapped, en plein écran : sans barre latérale ni capsule.
+    CustomRoute(
+        page: YearWrappedRoute.page,
+        path: '/wrapped/:year',
+        customRouteBuilder: mediaPageRoute),
   ];
 }
 

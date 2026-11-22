@@ -86,6 +86,7 @@ class WrappedData {
     required this.friendsAgree,
     required this.moods,
     required this.hook,
+    this.facts = const {},
   });
 
   final int year;
@@ -120,6 +121,10 @@ class WrappedData {
   /// Les ambiances des trois actes : le temps, les goûts, les films.
   final List<WrappedMood> moods;
   final WrappedHook? hook;
+
+  /// Les faits du public par film TMDB (images des films hors
+  /// bibliothèque).
+  final Map<int, FilmFacts> facts;
 
   bool get isEmpty => stats.isEmpty;
 }
@@ -309,5 +314,6 @@ WrappedData computeWrapped(
       moodOfGenres(top.firstOrNull?.event.genres ?? const []),
     ],
     hook: hook,
+    facts: facts,
   );
 }

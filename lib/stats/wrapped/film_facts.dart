@@ -15,17 +15,30 @@ final _log = Logger('Wrapped');
 /// Ce que le public sait d'un film (TMDB, par Seerr) : sa note sur 10, le
 /// nombre de votes, la langue originale et l'année de sortie.
 class FilmFacts {
-  const FilmFacts({this.publicRating, this.votes, this.language, this.year});
+  const FilmFacts(
+      {this.publicRating,
+      this.votes,
+      this.language,
+      this.year,
+      this.poster,
+      this.backdrop});
   final double? publicRating;
   final int? votes;
   final String? language;
   final int? year;
+
+  /// Chemins TMDB de l'affiche et de l'image de fond : les images des films
+  /// vus hors de la bibliothèque.
+  final String? poster;
+  final String? backdrop;
 
   Map<String, Object?> toJson() => {
         if (publicRating != null) 'r': publicRating,
         if (votes != null) 'v': votes,
         if (language != null) 'l': language,
         if (year != null) 'y': year,
+        if (poster != null) 'p': poster,
+        if (backdrop != null) 'b': backdrop,
       };
 
   static FilmFacts fromJson(Map json) => FilmFacts(
@@ -33,6 +46,8 @@ class FilmFacts {
         votes: json['v'] as int?,
         language: json['l'] as String?,
         year: json['y'] as int?,
+        poster: json['p'] as String?,
+        backdrop: json['b'] as String?,
       );
 
   /// Depuis la fiche film brute de Seerr (`movie/<id>`). Une note sans
@@ -49,6 +64,11 @@ class FilmFacts {
           : null,
       year: release is String && release.length >= 4
           ? int.tryParse(release.substring(0, 4))
+          : null,
+      poster:
+          json['posterPath'] is String ? json['posterPath'] as String : null,
+      backdrop: json['backdropPath'] is String
+          ? json['backdropPath'] as String
           : null,
     );
   }

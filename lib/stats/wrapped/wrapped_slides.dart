@@ -1,0 +1,1250 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import 'package:kinos/letterboxd/friends/letterboxd_friends_store.dart'
+    show FriendRating;
+import 'package:kinos/models/items/images_models.dart';
+import 'package:kinos/ratings/kinos_rating_button.dart' show formatStars;
+import 'package:kinos/ratings/kinos_ratings.dart';
+import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/upcoming/upcoming_models.dart' show tmdbImage;
+import 'package:kinos/util/kinos_image.dart';
+
+import '../stats_screen.dart'
+    show formatHours, statsDataColor, statsPersonProvider;
+import '../viewing_log.dart';
+import 'wrapped_data.dart';
+import 'wrapped_media.dart';
+import 'wrapped_motion.dart';
+
+/// Une diapo : son identifiant (stable d'un calcul à l'autre), sa durée en
+/// secondes et son contenu, posé dans une [WrappedClock].
+class WrappedSlide {
+  const WrappedSlide(
+      {required this.id, required this.seconds, required this.builder});
+  final String id;
+  final double seconds;
+  final WidgetBuilder builder;
+}
+
+/// Ce que les diapos lisent : les données, les images et les teintes.
+class WrappedInputs {
+  const WrappedInputs(
+      {required this.data,
+      required this.art,
+      required this.tints,
+      required this.ratings});
+  final WrappedData data;
+  final Map<String, WrappedArt> art;
+  final Map<String, Color> tints;
+  final Map<String, KinosRating> ratings;
+
+  ImageData? backdrop(ViewingEvent e) => art[e.identity]?.backdrop;
+  ImageData? poster(ViewingEvent e) => art[e.identity]?.poster;
+  Color tint(ViewingEvent? e) =>
+      (e == null ? null : tints[e.identity]) ?? AppColors.heroFallback;
+
+  int? rating(ViewingEvent e) => (ratings[e.identity] ??
+          (e.jellyfinId == null ? null : ratings['jellyfin:${e.jellyfinId}']))
+      ?.value;
+}
+
+const _locale = 'fr';
+const _numberWords = {
+  1: 'un',
+  2: 'deux',
+  3: 'trois',
+  4: 'quatre',
+  5: 'cinq',
+  6: 'six',
+  7: 'sept',
+  8: 'huit',
+  9: 'neuf',
+  10: 'dix',
+};
+
+/// « 1½ », « 4 » : une note sur 10 en étoiles chiffrées.
+String _starsNumber(int value) =>
+    value.isOdd ? '${value ~/ 2}½' : '${value ~/ 2}';
+
+/// « 4,1 » : une note du public sur 10, ramenée sur 5.
+String _publicNumber(double value) =>
+    NumberFormat('0.0', _locale).format(value / 2);
+
+String _films(int n) => '$n ${n > 1 ? 'films' : 'film'}';
+
+/// « soit six jours et demi », vide sous une journée.
+String _daysPhrase(int seconds) {
+  final days = seconds / 86400;
+  if (days < 1) return '';
+  final whole = days.floor();
+  final word = _numberWords[whole] ?? '$whole';
+  final half = days - whole >= .5 ? ' et demi' : '';
+  return ', soit $word ${whole > 1 ? 'jours' : 'jour'}$half';
+}
+
+String _list(List<String> names) => names.length <= 1
+    ? names.join()
+    : '${names.sublist(0, names.length - 1).join(', ')} et ${names.last}';
+
+/// Les diapos de l'année, dans l'ordre des trois actes. Une diapo sans
+/// matière n'existe pas.
+List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
+  final data = w.data;
+  final stats = data.stats;
+  final films = {for (final e in data.timeline) e.identity: e}.values.toList();
+  final peakFilm = stats.busiestBucket == null
+      ? null
+      : data.timeline
+          .where((e) => e.at.month - 1 == stats.busiestBucket)
+          .firstOrNull;
+  final genreTop = [...data.genreFilms]
+    ..sort((a, b) => (w.rating(b) ?? 0).compareTo(w.rating(a) ?? 0));
+  final filmOfYear = data.filmOfYear?.event;
+
+  return [
+    WrappedSlide(
+        id: 'opening',
+        seconds: AppWrapped.opening,
+        builder: (_) => _Opening(inputs: w, films: films)),
+    WrappedSlide(
+        id: 'act1',
+        seconds: AppWrapped.act,
+        builder: (_) => _ActCard(
+            number: 'Acte I',
+            title: 'Le temps',
+            color: w.tint(peakFilm ?? films.firstOrNull),
+            focus: const Alignment(-.6, -.4))),
+    if (data.timeline.isNotEmpty)
+      WrappedSlide(
+          id: 'time',
+          seconds: AppWrapped.time,
+          builder: (_) => _TimeSlide(inputs: w)),
+    if (stats.streak != null || stats.busiestDay != null)
+      WrappedSlide(
+          id: 'rhythm',
+          seconds: AppWrapped.rhythm,
+          builder: (_) => _RhythmSlide(inputs: w)),
+    WrappedSlide(
+        id: 'act2',
+        seconds: AppWrapped.act,
+        builder: (_) => _ActCard(
+            number: 'Acte II',
+            title: 'Les goûts',
+            color: w.tint(genreTop.firstOrNull),
+            focus: const Alignment(.5, -.3))),
+    if (stats.genres.isNotEmpty)
+      WrappedSlide(
+          id: 'genre',
+          seconds: AppWrapped.genre,
+          builder: (_) => _GenreSlide(inputs: w, films: genreTop)),
+    if (stats.directors.firstOrNull case final director?)
+      WrappedSlide(
+          id: 'director',
+          seconds: AppWrapped.person,
+          builder: (_) => _PersonSlide(
+              inputs: w,
+              label: 'Votre réalisateur',
+              name: director.name,
+              films: data.directorFilms)),
+    if (stats.actors.firstOrNull case final actor?)
+      WrappedSlide(
+          id: 'actor',
+          seconds: AppWrapped.person,
+          builder: (_) => _PersonSlide(
+              inputs: w,
+              label: 'Votre acteur',
+              name: actor.name,
+              films: data.actorFilms)),
+    if (stats.average != null)
+      WrappedSlide(
+          id: 'ratings',
+          seconds: AppWrapped.ratings,
+          builder: (_) => _RatingsSlide(inputs: w, films: films)),
+    if (data.friendsDisagree ?? data.friendsAgree case final take?)
+      WrappedSlide(
+          id: 'friends',
+          seconds: AppWrapped.friends,
+          builder: (_) => _FriendsSlide(
+              inputs: w, take: take, disagree: data.friendsDisagree != null)),
+    if (data.publicLoves case final take?)
+      WrappedSlide(
+          id: 'public-loves',
+          seconds: AppWrapped.hotTake,
+          builder: (_) => _HotTakeSlide(inputs: w, take: take, youLove: false)),
+    if (data.youLove case final take?)
+      WrappedSlide(
+          id: 'you-love',
+          seconds: AppWrapped.hotTake,
+          builder: (_) => _HotTakeSlide(inputs: w, take: take, youLove: true)),
+    if (data.publicAgreement case final gap?)
+      WrappedSlide(
+          id: 'agreement',
+          seconds: AppWrapped.hotTake,
+          builder: (_) => _AgreementSlide(inputs: w, gap: gap)),
+    WrappedSlide(
+        id: 'act3',
+        seconds: AppWrapped.act,
+        builder: (_) => _ActCard(
+            number: 'Acte III',
+            title: 'Les films',
+            color: w.tint(filmOfYear),
+            focus: const Alignment(0, .4))),
+    if (data.voyage.length >= 2)
+      WrappedSlide(
+          id: 'voyage',
+          seconds: AppWrapped.voyage,
+          builder: (_) => _VoyageSlide(inputs: w)),
+    if (stats.elsewhere > 0)
+      WrappedSlide(
+          id: 'elsewhere',
+          seconds: AppWrapped.elsewhere,
+          builder: (_) => _ElsewhereSlide(inputs: w, films: films)),
+    if (data.filmOfYear case final best?)
+      WrappedSlide(
+          id: 'film-of-year',
+          seconds: AppWrapped.filmOfYear,
+          builder: (_) => _FilmOfYearSlide(
+              inputs: w, film: best.event, rating: best.rating)),
+    WrappedSlide(
+        id: 'recap',
+        seconds: AppWrapped.recap,
+        builder: (_) => WrappedRecap(inputs: w)),
+  ];
+}
+
+/// Une diapo pleine : son fond, son voile et son texte, avec les tailles de
+/// texte de sa hauteur.
+class _Frame extends StatelessWidget {
+  const _Frame({required this.builder});
+  final List<Widget> Function(BuildContext context, Size size, WrappedType type)
+      builder;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+        final size = c.biggest;
+        return ColoredBox(
+          color: AppColors.scrim,
+          child: Stack(
+              fit: StackFit.expand,
+              children: builder(context, size, WrappedType(size))),
+        );
+      });
+}
+
+// ---------------------------------------------------------------------------
+// Ouverture et cartons d'acte
+// ---------------------------------------------------------------------------
+
+/// Un mur d'affiches incliné qui dérive lentement ; [lit] garde certaines
+/// affiches éclairées quand [dim] monte.
+class _PosterWall extends StatelessWidget {
+  const _PosterWall(
+      {required this.inputs, required this.films, this.lit, this.dim = 0});
+  final WrappedInputs inputs;
+  final List<ViewingEvent> films;
+  final Set<String>? lit;
+  final double dim;
+
+  @override
+  Widget build(BuildContext context) {
+    final posters = [
+      for (final e in films)
+        if (inputs.poster(e) != null) (e, inputs.poster(e)!)
+    ];
+    if (posters.isEmpty) return const SizedBox();
+    final drift = WrappedClock.at(context, 0,
+        length: AppWrapped.opening * 3, curve: Curves.linear);
+    return LayoutBuilder(builder: (context, c) {
+      final width = c.maxWidth * 1.7;
+      final posterW = width / AppWrapped.wallColumns;
+      final rows = (c.maxHeight * 1.9 / (posterW * 1.5)).ceil();
+      var k = 0;
+      return ClipRect(
+        child: OverflowBox(
+          maxWidth: width,
+          maxHeight: c.maxHeight * 1.9,
+          child: Transform.translate(
+            offset: Offset(-c.maxWidth * AppWrapped.wallDrift * drift,
+                -c.maxHeight * AppWrapped.wallDrift * drift),
+            child: Transform.rotate(
+              angle: AppWrapped.wallTilt,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (var r = 0; r < rows; r++)
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    for (var col = 0; col < AppWrapped.wallColumns; col++)
+                      Builder(builder: (context) {
+                        final (event, image) =
+                            posters[(k++ * 7) % posters.length];
+                        final on = lit == null || lit!.contains(event.identity);
+                        return Padding(
+                          padding: const EdgeInsets.all(AppSpacing.xxs),
+                          child: SizedBox(
+                            width: posterW - AppSpacing.xxs * 2,
+                            height: (posterW - AppSpacing.xxs * 2) * 1.5,
+                            child: Opacity(
+                              opacity: on ? 1 : 1 - dim * .8,
+                              child: ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(AppSpacing.xxs),
+                                child:
+                                    KinosImage(image: image, disableBlur: true),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                  ]),
+              ]),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+
+class _Opening extends StatelessWidget {
+  const _Opening({required this.inputs, required this.films});
+  final WrappedInputs inputs;
+  final List<ViewingEvent> films;
+
+  @override
+  Widget build(BuildContext context) => _Frame(
+      builder: (context, size, type) => [
+            _PosterWall(inputs: inputs, films: films),
+            ColoredBox(
+                color: AppColors.scrim.withValues(alpha: AppWrapped.wallVeil)),
+            const WrappedScrim(veil: .3),
+            WrappedTextBlock(children: [
+              WrappedText('Kinos présente',
+                  style: type.cap, at: .4, caps: true),
+              SizedBox(height: size.height * .03),
+              WrappedText('Votre année ${inputs.data.year}',
+                  style: type.big, at: 1.6),
+              if (inputs.data.hook case final hook?) ...[
+                SizedBox(height: size.height * .035),
+                WrappedText('« ${hook.text} »',
+                    style: type.small.copyWith(
+                        color: AppColors.textPrimary,
+                        fontStyle: FontStyle.italic,
+                        fontSize: type.small.fontSize! * 1.25),
+                    at: 3.6),
+              ],
+            ]),
+          ]);
+}
+
+/// Le carton d'un acte : son numéro et son titre, sur un dégradé léger de
+/// la couleur de ce qui suit, qui recule doucement.
+class _ActCard extends StatelessWidget {
+  const _ActCard(
+      {required this.number,
+      required this.title,
+      required this.color,
+      required this.focus});
+  final String number;
+  final String title;
+  final Color color;
+  final Alignment focus;
+
+  @override
+  Widget build(BuildContext context) {
+    final settle = WrappedClock.at(context, 0, length: 6);
+    return _Frame(
+        builder: (context, size, type) => [
+              Transform.scale(
+                scale: 1.15 - .15 * settle,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: focus,
+                      radius: 1.1,
+                      colors: [
+                        statsDataColor(color).withValues(alpha: .4),
+                        statsDataColor(color).withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  WrappedText(number, style: type.cap, at: .6, caps: true),
+                  SizedBox(height: size.height * .025),
+                  WrappedText(title, style: type.mid, at: 1.6),
+                ]),
+              ),
+            ]);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// La frise (le temps, le voyage à rebours)
+// ---------------------------------------------------------------------------
+
+double _easeInOut(double x) => Curves.easeInOutCubic.transform(x.clamp(0, 1));
+
+/// Une frise d'affiches qui défile selon [path] (indice fractionnaire du
+/// film au centre, pour un avancement de 0 à 1 sur [travel] secondes). Le
+/// fond suit la vitesse : la couleur des films qui passent quand elle va
+/// vite, l'image du film central quand elle ralentit. À l'arrêt, la frise
+/// se range (ou s'efface) et le voile de lecture arrive sous [texts].
+class _Frise extends StatelessWidget {
+  const _Frise({
+    required this.inputs,
+    required this.items,
+    required this.travel,
+    required this.path,
+    required this.label,
+    required this.texts,
+    this.fadeOut = false,
+    this.overlay,
+  });
+  final WrappedInputs inputs;
+  final List<ViewingEvent> items;
+  final double travel;
+  final double Function(double x) path;
+  final String Function(ViewingEvent e) label;
+  final List<Widget> Function(WrappedType type, Size size) texts;
+  final bool fadeOut;
+  final Widget? Function(double x, WrappedType type, Size size)? overlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = WrappedClock.motionOf(context);
+    final t = WrappedClock.seconds(context);
+    final x = motion ? (t / travel).clamp(0.0, 1.0) : 1.0;
+    final last = (items.length - 1).toDouble();
+    final i = path(x).clamp(0.0, last);
+    const eps = .004;
+    final speed = motion && x < 1
+        ? ((path((x + eps).clamp(0, 1)) - path((x - eps).clamp(0, 1))) /
+                (2 * eps) /
+                travel)
+            .abs()
+        : 0.0;
+    final settle = motion ? WrappedClock.at(context, travel, length: 1.6) : 1.0;
+    final c = i.round().clamp(0, items.length - 1);
+    final clear =
+        x >= 1 ? 1.0 : (1 - speed / AppWrapped.friseClearSpeed).clamp(0.0, 1.0);
+
+    Color tintAt(double at) {
+      final a = at.floor().clamp(0, items.length - 1);
+      final b = at.ceil().clamp(0, items.length - 1);
+      return Color.lerp(inputs.tint(items[a]), inputs.tint(items[b]),
+          at - at.floorToDouble())!;
+    }
+
+    return _Frame(builder: (context, size, type) {
+      final posterH = size.height * AppWrapped.frisePoster;
+      final posterW = posterH * 2 / 3;
+      final step = posterW + AppWrapped.friseGap;
+      final reach = (size.width / step / 2).ceil() + 2;
+      final extra = overlay?.call(x, type, size);
+      return [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [
+              tintAt((i - 4).clamp(0, last)),
+              tintAt(i),
+              tintAt((i + 4).clamp(0, last)),
+            ]),
+          ),
+        ),
+        Opacity(
+          opacity: clear,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 700),
+            child: KenBurns(
+                key: ValueKey(c),
+                child: WrappedImage(inputs.backdrop(items[c]))),
+          ),
+        ),
+        ColoredBox(color: AppColors.scrim.withValues(alpha: .35)),
+        WrappedScrim(opacity: settle),
+        Opacity(
+          opacity: fadeOut
+              ? 1 - settle
+              : 1 - settle * (1 - AppWrapped.friseSettleOpacity),
+          child: Transform.translate(
+            offset: Offset(
+                0,
+                fadeOut
+                    ? 0
+                    : settle * size.height * AppWrapped.friseSettleOffset),
+            child: Transform.scale(
+              scale:
+                  fadeOut ? 1 : 1 - settle * (1 - AppWrapped.friseSettleScale),
+              child: Stack(children: [
+                for (var k = math.max(0, c - reach);
+                    k <= math.min(items.length - 1, c + reach);
+                    k++)
+                  Positioned(
+                    left: size.width / 2 - posterW / 2 + (k - i) * step,
+                    top: size.height / 2 - posterH / 2,
+                    width: posterW,
+                    height: posterH,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppSpacing.xxs),
+                      child: inputs.poster(items[k]) == null
+                          ? ColoredBox(color: inputs.tint(items[k]))
+                          : KinosImage(
+                              image: inputs.poster(items[k]),
+                              disableBlur: true),
+                    ),
+                  ),
+              ]),
+            ),
+          ),
+        ),
+        Positioned(
+          top: size.height * .09,
+          left: 0,
+          right: 0,
+          child: Opacity(
+            opacity: 1 - settle,
+            child: Text(label(items[c]).toUpperCase(),
+                textAlign: TextAlign.center,
+                style: type.cap.copyWith(
+                    color: AppColors.textPrimary,
+                    letterSpacing:
+                        type.cap.fontSize! * AppWrapped.capTracking)),
+          ),
+        ),
+        if (extra != null) extra,
+        WrappedTextBlock(children: texts(type, size)),
+      ];
+    });
+  }
+}
+
+class _TimeSlide extends StatelessWidget {
+  const _TimeSlide({required this.inputs});
+  final WrappedInputs inputs;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = inputs.data;
+    final items = data.timeline;
+    final last = (items.length - 1).toDouble();
+    final peak = data.stats.busiestBucket;
+    final peakStart =
+        peak == null ? -1 : items.indexWhere((e) => e.at.month - 1 == peak);
+    final peakCount =
+        peak == null ? 0 : items.where((e) => e.at.month - 1 == peak).length;
+    const travel = AppWrapped.time - 4;
+    // Accélère jusqu'au mois le plus chargé, s'y attarde, puis repart et
+    // freine jusqu'au dernier film de l'année.
+    double path(double x) {
+      if (peakStart <= 0 || peakCount < 2 || last < 6) {
+        return _easeInOut(x) * last;
+      }
+      final dwell = math.min(3.0, peakCount - 1.0);
+      if (x < .5) return _easeInOut(x / .5) * peakStart;
+      if (x < .64) return peakStart + (x - .5) / .14 * dwell;
+      return peakStart +
+          dwell +
+          _easeInOut((x - .64) / .36) * (last - peakStart - dwell);
+    }
+
+    final month = peak == null
+        ? ''
+        : toBeginningOfSentenceCase(
+            DateFormat('MMMM', _locale).format(DateTime(data.year, peak + 1)));
+    return _Frise(
+      inputs: inputs,
+      items: items,
+      travel: travel,
+      path: path,
+      label: (e) => DateFormat('d MMMM', _locale).format(e.at),
+      overlay: peak == null || peakCount < 2
+          ? null
+          : (x, type, size) {
+              final on = ((x - .5) / .03).clamp(0.0, 1.0) *
+                  ((.66 - x) / .03).clamp(0.0, 1.0);
+              if (on == 0) return null;
+              return Positioned(
+                left: size.width * AppWrapped.inset,
+                bottom: size.height * .12,
+                child: Opacity(
+                  opacity: on,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                        color: AppColors.scrim.withValues(alpha: .55),
+                        borderRadius: AppRadii.cardBorder),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                      child: Text(
+                          '$month a compté pour ${formatHours(data.stats.buckets[peak])}.',
+                          style: type.small
+                              .copyWith(color: AppColors.textPrimary)),
+                    ),
+                  ),
+                ),
+              );
+            },
+      texts: (type, size) => [
+        WrappedText('Vous avez passé',
+            style: type.cap, at: travel + .6, caps: true),
+        SizedBox(height: size.height * .025),
+        WrappedText(
+            formatHours(data.stats.seconds).replaceFirst(' h', ' heures'),
+            style: type.big,
+            at: travel + 1.6),
+        SizedBox(height: size.height * .025),
+        WrappedText(
+            'devant l\'écran en ${data.year}${_daysPhrase(data.stats.seconds)}.',
+            style: type.small,
+            at: travel + 3),
+      ],
+    );
+  }
+}
+
+class _VoyageSlide extends StatelessWidget {
+  const _VoyageSlide({required this.inputs});
+  final WrappedInputs inputs;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = inputs.data;
+    final items = data.voyage;
+    final last = (items.length - 1).toDouble();
+    const travel = AppWrapped.voyage - 4;
+    final oldest = items.last;
+    final median = data.medianYear;
+    return _Frise(
+      inputs: inputs,
+      items: items,
+      travel: travel,
+      fadeOut: true,
+      // Vite dans les années récentes, puis de plus en plus lent à mesure
+      // qu'on remonte les décennies.
+      path: (x) =>
+          (x < .4
+              ? Curves.easeInCubic.transform(x / .4) * .4
+              : .4 + Curves.easeOutCubic.transform((x - .4) / .6) * .6) *
+          last,
+      label: (e) => '${e.year ?? ''}',
+      texts: (type, size) => [
+        WrappedText('Votre plus vieux voyage',
+            style: type.cap, at: travel + .6, caps: true),
+        SizedBox(height: size.height * .025),
+        WrappedText('${oldest.title} · ${oldest.year}',
+            style: type.mid, at: travel + 1.6, maxLines: 2),
+        if (median != null) ...[
+          SizedBox(height: size.height * .025),
+          WrappedText(
+              'Votre film moyen est sorti en $median.'
+              '${median <= data.year - 25 ? ' Le présent peut attendre.' : ''}',
+              style: type.small,
+              at: travel + 3),
+        ],
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Le rythme, les goûts
+// ---------------------------------------------------------------------------
+
+class _RhythmSlide extends StatelessWidget {
+  const _RhythmSlide({required this.inputs});
+  final WrappedInputs inputs;
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = inputs.data.stats;
+    final streak = stats.streak;
+    final busy = stats.busiestDay;
+    String day(DateTime d) => DateFormat('d MMMM', _locale).format(d);
+    final from = streak?.start;
+    final to = streak == null
+        ? null
+        : DateTime(from!.year, from.month, from.day + streak.days - 1);
+    final images = [
+      for (final e in inputs.data.timeline)
+        if (streak == null
+            ? busy != null && DateUtils.isSameDay(e.at, busy.day)
+            : !e.at.isBefore(from!) &&
+                e.at.isBefore(DateTime(to!.year, to.month, to.day + 1)))
+          if (inputs.backdrop(e) case final image?) image
+    ];
+    return _Frame(
+        builder: (context, size, type) => [
+              CyclingBackdrops(images),
+              const WrappedScrim(),
+              WrappedTextBlock(children: [
+                if (streak != null) ...[
+                  WrappedText('Votre plus longue série',
+                      style: type.cap, at: .4, caps: true),
+                  SizedBox(height: size.height * .025),
+                  WrappedText('${streak.days} jours', style: type.big, at: 1.4),
+                  SizedBox(height: size.height * .02),
+                  WrappedText('d\'affilée, du ${day(from!)} au ${day(to!)}.',
+                      style: type.small, at: 2.8),
+                ],
+                if (busy != null) ...[
+                  SizedBox(height: size.height * .04),
+                  WrappedText(
+                      'Votre journée la plus chargée : ${day(busy.day)}, '
+                      '${_films(busy.titles).replaceAll('film', 'titre')}, '
+                      '${formatHours(busy.seconds)}.',
+                      style: streak == null ? type.mid : type.small,
+                      at: streak == null ? 1.4 : 4.4),
+                ],
+              ]),
+            ]);
+  }
+}
+
+class _GenreSlide extends StatelessWidget {
+  const _GenreSlide({required this.inputs, required this.films});
+  final WrappedInputs inputs;
+  final List<ViewingEvent> films;
+
+  @override
+  Widget build(BuildContext context) {
+    final genres = inputs.data.stats.genres;
+    final top = genres.first;
+    final others = [for (final g in genres.skip(1).take(4)) g.name];
+    return _Frame(
+        builder: (context, size, type) => [
+              CyclingBackdrops([
+                for (final e in films.take(6))
+                  if (inputs.backdrop(e) case final image?) image
+              ]),
+              const WrappedScrim(),
+              WrappedTextBlock(children: [
+                WrappedText('Votre genre', style: type.cap, at: .4, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText(top.name, style: type.big, at: 1.4),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    '${_films(top.count)}'
+                    '${others.isEmpty ? '' : ' · puis ${_list(others)}'}.',
+                    style: type.small,
+                    at: 3),
+              ]),
+            ]);
+  }
+}
+
+/// Le réalisateur ou l'acteur de l'année : son portrait net devant ses
+/// films qui se relaient.
+class _PersonSlide extends ConsumerWidget {
+  const _PersonSlide(
+      {required this.inputs,
+      required this.label,
+      required this.name,
+      required this.films});
+  final WrappedInputs inputs;
+  final String label;
+  final String name;
+  final List<ViewingEvent> films;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final person = ref.watch(statsPersonProvider(name)).valueOrNull;
+    final portrait = WrappedClock.at(context, 1, length: 2.4);
+    final titles = [for (final e in films.take(2)) e.title];
+    return _Frame(builder: (context, size, type) {
+      final h = size.height * AppWrapped.portraitFraction;
+      return [
+        CyclingBackdrops([
+          for (final e in films.take(6))
+            if (inputs.backdrop(e) case final image?) image
+        ]),
+        const WrappedScrim(),
+        Padding(
+          padding:
+              EdgeInsets.symmetric(horizontal: size.width * AppWrapped.inset),
+          child: Row(children: [
+            if (person?.image case final image?) ...[
+              Opacity(
+                opacity: portrait,
+                child: ClipRRect(
+                  borderRadius: AppRadii.cardBorder,
+                  child: SizedBox(
+                    height: h,
+                    width: h * 3 / 4,
+                    child: KinosImage(
+                        image: ImageData(
+                            path: tmdbImage(image, size: 'h632'),
+                            key: 'wrapped:person:${person!.id}'),
+                        alignment: Alignment.topCenter,
+                        disableBlur: true),
+                  ),
+                ),
+              ),
+              SizedBox(width: size.width * .05),
+            ],
+            Expanded(
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    WrappedText(label, style: type.cap, at: 1.8, caps: true),
+                    SizedBox(height: size.height * .02),
+                    WrappedText(name, style: type.mid, at: 2.8, maxLines: 2),
+                    SizedBox(height: size.height * .02),
+                    WrappedText(
+                        '${_films(films.length)} cette année'
+                        '${titles.isEmpty ? '' : ', dont ${_list(titles)}'}.',
+                        style: type.small,
+                        at: 4),
+                  ]),
+            ),
+          ]),
+        ),
+      ];
+    });
+  }
+}
+
+/// Vos notes en piles d'affiches : chaque colonne, de ½ à 5 étoiles, se
+/// remplit film après film ; seule la plus haute note reste éclairée.
+class _RatingsSlide extends StatelessWidget {
+  const _RatingsSlide({required this.inputs, required this.films});
+  final WrappedInputs inputs;
+  final List<ViewingEvent> films;
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = List.generate(10, (_) => <ViewingEvent>[]);
+    for (final e in films) {
+      if (inputs.rating(e) case final r?) columns[r - 1].add(e);
+    }
+    final total = columns.fold(0, (a, c) => a + c.length);
+    final step = total == 0 ? 0.0 : math.min(.09, 5.5 / total);
+    final litAt = .6 + total * step + .6;
+    final lit = WrappedClock.at(context, litAt, length: 1.4);
+    final top = columns.lastIndexWhere((c) => c.isNotEmpty);
+    final average = inputs.data.stats.average;
+    const labels = ['½', '1', '', '2', '', '3', '', '4', '', '5'];
+    return _Frame(builder: (context, size, type) {
+      final left = size.width * AppWrapped.inset;
+      final areaTop = size.height * .32;
+      final areaBottom = size.height * .14;
+      final areaH = size.height - areaTop - areaBottom;
+      final colW = (size.width - left * 2) / 10;
+      final posterW = colW * .84;
+      final posterH = posterW * 1.5;
+      var k = 0;
+      final stacks = <Widget>[];
+      for (var col = 0; col < 10; col++) {
+        final n = columns[col].length;
+        final offset =
+            n <= 1 ? 0.0 : math.min(posterH * .18, (areaH - posterH) / (n - 1));
+        for (var j = 0; j < n; j++) {
+          final p = WrappedClock.at(context, .6 + k++ * step, length: .9);
+          stacks.add(Positioned(
+            left: left + col * colW + (colW - posterW) / 2,
+            top: size.height - areaBottom - posterH - j * offset - (1 - p) * 12,
+            width: posterW,
+            height: posterH,
+            child: Opacity(
+              opacity: p,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.xxs),
+                child: inputs.poster(columns[col][j]) == null
+                    ? ColoredBox(color: inputs.tint(columns[col][j]))
+                    : KinosImage(
+                        image: inputs.poster(columns[col][j]),
+                        disableBlur: true),
+              ),
+            ),
+          ));
+        }
+        if (col != top) {
+          stacks.add(Positioned(
+            left: left + col * colW,
+            top: areaTop - posterH,
+            width: colW,
+            height: areaH + posterH,
+            child: IgnorePointer(
+                child: ColoredBox(
+                    color: AppColors.background.withValues(alpha: .65 * lit))),
+          ));
+        }
+        stacks.add(Positioned(
+          left: left + col * colW,
+          top: size.height - areaBottom + AppSpacing.xs,
+          width: colW,
+          child:
+              Text(labels[col], textAlign: TextAlign.center, style: type.cap),
+        ));
+      }
+      return [
+        ...stacks,
+        Positioned(
+          left: left,
+          top: size.height * .1,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            WrappedText('Vos notes', style: type.cap, at: .3, caps: true),
+            SizedBox(height: size.height * .02),
+            if (average != null)
+              WrappedText(
+                  'Moyenne ${NumberFormat('0.0', _locale).format(average)}',
+                  style: type.mid,
+                  at: litAt),
+          ]),
+        ),
+      ];
+    });
+  }
+}
+
+/// Le film où vos amis Letterboxd ne sont pas d'accord avec vous, ou le
+/// seul qui vous a tous mis d'accord.
+class _FriendsSlide extends StatelessWidget {
+  const _FriendsSlide(
+      {required this.inputs, required this.take, required this.disagree});
+  final WrappedInputs inputs;
+  final FriendTake take;
+  final bool disagree;
+
+  @override
+  Widget build(BuildContext context) {
+    final friends = [...take.ratings]..sort((a, b) => b.rating - a.rating);
+    final shown = friends.take(8).toList();
+    final average = _publicNumber(take.friends);
+    return _Frame(builder: (context, size, type) {
+      final avatar = size.height * AppWrapped.avatarFraction;
+      Widget person(String name, String? url, int rating, double at,
+          {bool me = false}) {
+        final p = WrappedClock.at(context, at, length: 1.2);
+        return Opacity(
+          opacity: p,
+          child: Padding(
+            padding: EdgeInsets.only(
+                right: AppSpacing.md, left: me ? AppSpacing.lg : 0),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              ClipOval(
+                child: SizedBox.square(
+                  dimension: avatar,
+                  child: url == null
+                      ? ColoredBox(
+                          color: AppColors.surface,
+                          child: Center(
+                              child: Text(name.isEmpty ? '' : name[0],
+                                  style: type.small)))
+                      : KinosImage(
+                          image: ImageData(path: url, key: 'avatar:$url'),
+                          disableBlur: true),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(me ? 'Vous' : name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: type.cap),
+              Text(formatStars(rating),
+                  style: type.small.copyWith(color: AppColors.textPrimary)),
+            ]),
+          ),
+        );
+      }
+
+      return [
+        KenBurns(child: WrappedImage(inputs.backdrop(take.film))),
+        const WrappedScrim(),
+        WrappedTextBlock(widthFraction: .82, children: [
+          WrappedText(
+              disagree
+                  ? 'Vos amis ne sont pas d\'accord'
+                  : 'Pour une fois, d\'accord',
+              style: type.cap,
+              at: .4,
+              caps: true),
+          SizedBox(height: size.height * .02),
+          WrappedText(take.film.title, style: type.mid, at: 1.4, maxLines: 2),
+          SizedBox(height: size.height * .04),
+          Wrap(runSpacing: AppSpacing.sm, children: [
+            for (final (n, FriendRating f) in shown.indexed)
+              person(
+                  f.friend.name, f.friend.avatarUrl, f.rating, 2.6 + n * .35),
+            person('', null, take.mine, 2.6 + shown.length * .35 + .6,
+                me: true),
+          ]),
+          SizedBox(height: size.height * .03),
+          WrappedText(
+              disagree
+                  ? 'Ils lui donnent $average en moyenne. Vous, ${_starsNumber(take.mine)}.'
+                  : '${take.ratings.length} amis, et vous, autour de $average.',
+              style: type.small,
+              at: 2.6 + shown.length * .35 + 1.6),
+        ]),
+      ];
+    });
+  }
+}
+
+class _HotTakeSlide extends StatelessWidget {
+  const _HotTakeSlide(
+      {required this.inputs, required this.take, required this.youLove});
+  final WrappedInputs inputs;
+  final HotTake take;
+  final bool youLove;
+
+  @override
+  Widget build(BuildContext context) {
+    final public = _publicNumber(take.public);
+    final mine = _starsNumber(take.mine);
+    return _Frame(
+        builder: (context, size, type) => [
+              KenBurns(child: WrappedImage(inputs.backdrop(take.film))),
+              const WrappedScrim(),
+              WrappedTextBlock(children: [
+                WrappedText(
+                    youLove
+                        ? 'Votre coup de cœur incompris'
+                        : 'À contre-courant',
+                    style: type.cap,
+                    at: .4,
+                    caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    youLove
+                        ? 'Vous lui donnez $mine.\nLe public, $public.'
+                        : 'Le public lui donne $public.\nVous, $mine.',
+                    style: type.mid,
+                    at: 1.6),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    '${take.film.title} · l\'écart le plus grand de votre année.',
+                    style: type.small,
+                    at: 3.2),
+              ]),
+            ]);
+  }
+}
+
+class _AgreementSlide extends StatelessWidget {
+  const _AgreementSlide({required this.inputs, required this.gap});
+  final WrappedInputs inputs;
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) {
+    final films = [
+      for (final r in inputs.data.stats.topRated)
+        if (inputs.backdrop(r.event) case final image?) image
+    ];
+    final stars = NumberFormat('0.#', _locale).format(gap);
+    return _Frame(
+        builder: (context, size, type) => [
+              CyclingBackdrops(films),
+              const WrappedScrim(),
+              WrappedTextBlock(children: [
+                WrappedText('Vous et le public',
+                    style: type.cap, at: .4, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    'D\'accord à $stars ${gap >= 2 ? 'étoiles' : 'étoile'} près.',
+                    style: type.mid,
+                    at: 1.6),
+                SizedBox(height: size.height * .025),
+                WrappedText('Votre goût rejoint celui du plus grand nombre.',
+                    style: type.small, at: 3.2),
+              ]),
+            ]);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Les films
+// ---------------------------------------------------------------------------
+
+class _ElsewhereSlide extends StatelessWidget {
+  const _ElsewhereSlide({required this.inputs, required this.films});
+  final WrappedInputs inputs;
+  final List<ViewingEvent> films;
+
+  @override
+  Widget build(BuildContext context) {
+    final lit = {
+      for (final e in films)
+        if (e.jellyfinId == null &&
+            e.sources.length == 1 &&
+            e.sources.contains(ViewingSource.letterboxd))
+          e.identity
+    };
+    final dim = WrappedClock.at(context, 1.5, length: 2);
+    final count = inputs.data.stats.elsewhere;
+    return _Frame(
+        builder: (context, size, type) => [
+              _PosterWall(inputs: inputs, films: films, lit: lit, dim: dim),
+              const WrappedScrim(veil: .35),
+              WrappedTextBlock(children: [
+                WrappedText('Hors de chez vous',
+                    style: type.cap, at: .4, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText(_films(count), style: type.big, at: 1.6),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    'vus ailleurs : en salle, chez des amis, en voyage.',
+                    style: type.small,
+                    at: 3),
+              ]),
+            ]);
+  }
+}
+
+class _FilmOfYearSlide extends StatelessWidget {
+  const _FilmOfYearSlide(
+      {required this.inputs, required this.film, required this.rating});
+  final WrappedInputs inputs;
+  final ViewingEvent film;
+  final int rating;
+
+  @override
+  Widget build(BuildContext context) {
+    final rated = inputs.data.stats.ratings.fold(0, (a, b) => a + b);
+    return _Frame(
+        builder: (context, size, type) => [
+              KenBurns(
+                  amount: AppWrapped.kenBurns * 1.4,
+                  child: WrappedImage(inputs.backdrop(film))),
+              const WrappedScrim(),
+              WrappedTextBlock(children: [
+                WrappedText('Votre film de l\'année',
+                    style: type.cap, at: .6, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText(film.title, style: type.big, at: 1.8, maxLines: 2),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    '${formatStars(rating)} · parmi ${_films(rated)} notés cette année.',
+                    style: type.small,
+                    at: 3.4),
+              ]),
+            ]);
+  }
+}
+
+/// Le récap : le film de l'année en bannière, quatre affiches et quatre
+/// chiffres. Conçu d'abord en vertical (story), décliné en paysage.
+class WrappedRecap extends StatelessWidget {
+  const WrappedRecap({required this.inputs, super.key});
+  final WrappedInputs inputs;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = inputs.data;
+    final stats = data.stats;
+    final best = data.filmOfYear;
+    return _Frame(builder: (context, size, type) {
+      final portrait = size.height > size.width;
+      final posters = [
+        for (final r in data.runnersUp)
+          if (inputs.poster(r.event) case final image?) image
+      ];
+      Widget number(String value, String label, double at) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                WrappedText(value, style: type.mid, at: at, maxLines: 1),
+                WrappedText(label, style: type.small, at: at + .2),
+              ]);
+      final details = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (best != null) ...[
+              WrappedText('Film de l\'année', style: type.small, at: 1),
+              WrappedText(best.event.title,
+                  style: type.mid.copyWith(
+                      fontSize: type.mid.fontSize! * (portrait ? 1.2 : 1)),
+                  at: 1.4,
+                  maxLines: 2),
+              WrappedText(formatStars(best.rating),
+                  style: type.small.copyWith(color: AppColors.textPrimary),
+                  at: 1.8),
+            ],
+            SizedBox(height: size.height * .03),
+            Row(children: [
+              for (final (n, image) in posters.indexed) ...[
+                if (n > 0) const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Opacity(
+                    opacity: WrappedClock.at(context, 2.4 + n * .3),
+                    child: AspectRatio(
+                      aspectRatio: 2 / 3,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(AppSpacing.xxs),
+                        child: KinosImage(image: image, disableBlur: true),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              for (var n = posters.length; n < 4; n++) ...[
+                const SizedBox(width: AppSpacing.xs),
+                const Expanded(child: SizedBox()),
+              ],
+            ]),
+            SizedBox(height: size.height * .035),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: number('${stats.films}', 'films', 4)),
+              Expanded(
+                  child: number(
+                      formatHours(stats.seconds), 'devant l\'écran', 4.3)),
+            ]),
+            SizedBox(height: size.height * .025),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                  child: number(stats.genres.firstOrNull?.name ?? '—',
+                      'genre de l\'année', 4.6)),
+              Expanded(
+                  child: number(
+                      stats.directors.firstOrNull?.name.split(' ').last ?? '—',
+                      'réalisateur de l\'année',
+                      4.9)),
+            ]),
+          ]);
+      final banner = best == null
+          ? const ColoredBox(color: AppColors.heroFallback)
+          : WrappedImage(inputs.backdrop(best.event));
+      final fade = LinearGradient(
+        begin: portrait ? Alignment.topCenter : Alignment.centerLeft,
+        end: portrait ? Alignment.bottomCenter : Alignment.centerRight,
+        stops: const [0, .55, 1],
+        colors: const [Colors.white, Colors.white, Colors.transparent],
+      );
+      final pad = size.width * (portrait ? .07 : AppWrapped.inset * .7);
+      return [
+        Positioned(
+          left: 0,
+          top: 0,
+          right: portrait ? 0 : size.width * .38,
+          bottom: portrait ? size.height * .48 : 0,
+          child: ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: fade.createShader,
+            child: KenBurns(child: banner),
+          ),
+        ),
+        Positioned(
+          left: pad,
+          top: pad,
+          child: WrappedText('Kinos · ${data.year}',
+              style: type.cap, at: .4, caps: true),
+        ),
+        Positioned(
+          left: portrait ? pad : size.width * .56,
+          right: pad,
+          bottom: pad,
+          top: portrait ? size.height * .4 : pad * 2,
+          child: Align(alignment: Alignment.bottomLeft, child: details),
+        ),
+      ];
+    });
+  }
+}

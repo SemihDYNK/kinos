@@ -73,6 +73,7 @@ import 'package:kinos/screens/dashboard/genre_page_screen.dart' as _i54;
 import 'package:kinos/upcoming/upcoming_screen.dart' as _i55;
 import 'package:kinos/upcoming/entity/entity_screen.dart' as _i56;
 import 'package:kinos/stats/stats_screen.dart' as _i57;
+import 'package:kinos/stats/wrapped/wrapped_screen.dart' as _i58;
 
 /// generated route for
 /// [_i1.AboutSettingsPage]
@@ -1543,4 +1544,45 @@ class SyncedRoute extends _i37.PageRouteInfo<void> {
       return const _i36.SyncedScreen();
     },
   );
+}
+
+/// generated route for
+/// [_i58.YearWrappedScreen]
+class YearWrappedRoute extends _i37.PageRouteInfo<YearWrappedRouteArgs> {
+  YearWrappedRoute({
+    required int year,
+    _i39.Key? key,
+    List<_i37.PageRouteInfo>? children,
+  }) : super(
+          YearWrappedRoute.name,
+          args: YearWrappedRouteArgs(year: year, key: key),
+          rawPathParams: {'year': year},
+          initialChildren: children,
+        );
+
+  static const String name = 'YearWrappedRoute';
+
+  static _i37.PageInfo page = _i37.PageInfo(
+    name,
+    builder: (data) {
+      final pathParams = data.inheritedPathParams;
+      final args = data.argsAs<YearWrappedRouteArgs>(
+        orElse: () => YearWrappedRouteArgs(year: pathParams.getInt('year')),
+      );
+      return _i58.YearWrappedScreen(year: args.year, key: args.key);
+    },
+  );
+}
+
+class YearWrappedRouteArgs {
+  const YearWrappedRouteArgs({required this.year, this.key});
+
+  final int year;
+
+  final _i39.Key? key;
+
+  @override
+  String toString() {
+    return 'YearWrappedRouteArgs{year: $year, key: $key}';
+  }
 }

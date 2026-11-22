@@ -28,6 +28,7 @@ import 'viewing_backfill.dart';
 import 'viewing_log.dart';
 import 'viewing_recorder.dart';
 import 'viewing_stats.dart';
+import 'wrapped/wrapped_screen.dart' show wrappedAvailable;
 
 /// Toutes les séances du journal du profil actif.
 final viewingEventsProvider =
@@ -218,6 +219,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
     final onImage = bannerImage != null;
     final dataColor = statsDataColor(tint);
+    final wrappedYear = _period.year ?? DateTime.now().year;
     // L'en-tête : votre photo, votre nom, et le film à l'affiche.
     final header = Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
       ClipRRect(
@@ -400,8 +402,17 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     }))
           ],
         ),
-        section('Votre Wrapped ${_period.year ?? DateTime.now().year}',
-            detail: 'disponible en décembre', child: const SizedBox.shrink()),
+        section('Votre Wrapped $wrappedYear',
+            detail:
+                wrappedAvailable(wrappedYear) ? null : 'disponible en décembre',
+            child: wrappedAvailable(wrappedYear)
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: _Chip('Voir votre année $wrappedYear',
+                        selected: true,
+                        onTap: () => context.router.root
+                            .push(YearWrappedRoute(year: wrappedYear))))
+                : const SizedBox.shrink()),
       ],
     ];
 
@@ -894,7 +905,7 @@ class _GenreTiles extends StatelessWidget {
 
 /// Une personne retrouvée par son nom dans TMDB (par Seerr) : sa photo et
 /// sa page. `null` sans Seerr ou sans résultat.
-final _personProvider =
+final statsPersonProvider =
     FutureProvider.autoDispose.family<EntityResult?, String>((ref, name) async {
   final results = await ref
       .watch(entitySearchProvider((query: name, language: 'fr')).future);
@@ -944,7 +955,7 @@ class _PersonCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
-    final found = ref.watch(_personProvider(person.name)).valueOrNull;
+    final found = ref.watch(statsPersonProvider(person.name)).valueOrNull;
     final initials = person.name
         .split(' ')
         .where((w) => w.isNotEmpty)
