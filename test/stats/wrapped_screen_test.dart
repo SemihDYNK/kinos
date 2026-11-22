@@ -11,7 +11,9 @@ import 'package:kinos/stats/wrapped/film_facts.dart';
 import 'package:kinos/stats/wrapped/wrapped_data.dart';
 import 'package:kinos/stats/wrapped/wrapped_media.dart';
 import 'package:kinos/stats/wrapped/wrapped_motion.dart';
+import 'package:kinos/stats/wrapped/wikiquote.dart';
 import 'package:kinos/stats/wrapped/wrapped_providers.dart';
+import 'package:kinos/stats/wrapped/wrapped_quotes.dart';
 import 'package:kinos/stats/wrapped/wrapped_screen.dart';
 import 'package:kinos/stats/wrapped/wrapped_slides.dart';
 import 'package:kinos/theme/app_theme.dart';
@@ -101,6 +103,11 @@ void main() {
         wrappedDataProvider(year).overrideWith((ref) async => wrapped),
         wrappedArtProvider(year).overrideWith((ref) async => const {}),
         wrappedTintsProvider(year).overrideWith((ref) async => const {}),
+        wrappedQuoteProvider.overrideWith((ref, key) async => key
+                .startsWith('director')
+            ? const WrappedQuote('Je rêve pour gagner ma vie.', language: 'fr')
+            : const WrappedQuote("The name's Bond. James Bond.",
+                language: 'en', film: 'Casino Royale', role: 'James Bond')),
       ],
       child: MaterialApp(
           theme: buildAppTheme(), home: const YearWrappedScreen(year: year)),
@@ -137,6 +144,9 @@ void main() {
         'HORS DE CHEZ VOUS',
         'VOTRE FILM DE L\'ANNÉE',
         'KINOS · 2026',
+        '« Je rêve pour gagner ma vie. »',
+        "“The name's Bond. James Bond.”",
+        'JAMES BOND · CASINO ROYALE',
       ]) {
         if (find.text(label).evaluate().isNotEmpty) seen.add(label);
       }
@@ -144,7 +154,7 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     }
     expect(tester.takeException(), isNull);
-    expect(seen.length, 12, reason: 'seen: $seen');
+    expect(seen.length, 15, reason: 'seen: $seen');
   });
 
   test('the timeline speed never jumps nor goes backwards', () {

@@ -8,6 +8,7 @@ import 'package:kinos/models/syncing/database_item.dart';
 import 'package:kinos/ratings/kinos_ratings.dart';
 import 'package:kinos/stats/viewing_log.dart';
 import 'package:kinos/stats/wrapped/film_facts.dart';
+import 'package:kinos/stats/wrapped/wikiquote.dart';
 import 'package:kinos/stats/wrapped/wrapped_data.dart';
 import 'package:kinos/stats/wrapped/wrapped_hook.dart';
 import 'package:kinos/stats/wrapped/wrapped_providers.dart';
@@ -169,5 +170,48 @@ void main() {
       'tmdb:movie:2': 'two',
       'letterboxd:obscure': 'obscure',
     });
+  });
+  test('Wikiquote: a person\'s quote, a character\'s line', () {
+    const person = '''
+== Quotes ==
+* Oh, torture.
+* There is no such thing as science fiction, there is only science eventuality.
+** Interview, 1999.
+== Quotes about Spielberg ==
+* Spielberg has been ridiculed for shooting his actors from below against impossibly skies.
+''';
+    expect(personQuote(person),
+        'There is no such thing as science fiction, there is only science eventuality.');
+    const french = '''
+{{Citation
+|citation=A. Ferenczi : Qu'est-ce que cela vous inspire ? Une longue réponse d'entretien qui ne compte pas.
+|langue=en
+}}
+{{Citation
+|citation=Je rêve pour gagner ma vie, et c'est le plus beau métier du monde.
+|langue=en
+}}
+''';
+    expect(personQuote(french),
+        'Je rêve pour gagner ma vie, et c\'est le plus beau métier du monde.');
+    const film = """
+==James Bond==
+* [''To Vesper''] You represent the Treasury.
+* Ow.
+==Dialogue==
+:'''Vesper''': And you are?
+:'''Bond''': The name's Bond. James Bond.
+""";
+    expect(bestLine(characterLines(film, 'James Bond'), 'James Bond'),
+        'The name\'s Bond. James Bond.');
+    const raiders = '''
+{{citation|citation=<poem>{{Personnage|Le guide}} : Il n'y a rien à craindre, ici !
+{{Personnage|Indiana Jones}} : C'est bien ce qui me fait peur.</poem>}}
+{{citation|citation=<poem>{{Personnage|Indiana Jones}} : JE DÉTESTE LES SERPENTS, JOCK !</poem>}}
+''';
+    expect(bestLine(characterLines(raiders, 'Indiana Jones'), 'Indiana Jones'),
+        'C\'est bien ce qui me fait peur.');
+    expect(sameTitle('Casino Royale (2006 film)', 'Casino Royale'), isTrue);
+    expect(sameTitle('James Bond', 'Casino Royale'), isFalse);
   });
 }

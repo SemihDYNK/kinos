@@ -21,6 +21,7 @@ import '../viewing_log.dart';
 import 'wrapped_data.dart';
 import 'wrapped_media.dart';
 import 'wrapped_motion.dart';
+import 'wrapped_quotes.dart';
 
 /// Une diapo : son identifiant (stable d'un calcul à l'autre), sa durée en
 /// secondes et son contenu, posé dans une [WrappedClock].
@@ -75,6 +76,9 @@ String _starsNumber(int value) =>
 /// « 4,1 » : une note du public sur 10, ramenée sur 5.
 String _publicNumber(double value) =>
     NumberFormat('0.0', _locale).format(value / 2);
+
+/// « 1 étoile », « 3½ étoiles », « 4,1 étoiles ».
+String _starsWord(double stars) => stars >= 2 ? 'étoiles' : 'étoile';
 
 String _films(int n) => '$n ${n > 1 ? 'films' : 'film'}';
 
@@ -216,7 +220,8 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
               label: 'Votre réalisateur',
               name: director.name,
               films: data.directorFilms,
-              images: directorImages)),
+              images: directorImages,
+              quoteKey: 'director|${director.name}')),
     if (stats.actors.firstOrNull case final actor?)
       WrappedSlide(
           id: 'actor',
@@ -226,7 +231,11 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
               label: 'Votre acteur',
               name: actor.name,
               films: data.actorFilms,
-              images: actorImages)),
+              images: actorImages,
+              quoteKey: 'actor|${actor.name}|${[
+                for (final e in data.actorFilms)
+                  if (e.jellyfinId case final id?) id
+              ].take(3).join(',')}')),
     if (stats.average != null)
       WrappedSlide(
           id: 'ratings',
@@ -972,16 +981,22 @@ class _PersonSlide extends ConsumerWidget {
       required this.label,
       required this.name,
       required this.films,
-      required this.images});
+      required this.images,
+      required this.quoteKey});
   final WrappedInputs inputs;
   final String label;
   final String name;
   final List<ViewingEvent> films;
   final List<ImageData> images;
 
+  /// La citation (réalisateur) ou la réplique (acteur), cherchée sur
+  /// Wikiquote : cf. [wrappedQuoteProvider].
+  final String quoteKey;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final person = ref.watch(statsPersonProvider(name)).valueOrNull;
+    final quote = ref.watch(wrappedQuoteProvider(quoteKey)).valueOrNull;
     final portrait = WrappedClock.at(context, 1, length: 2.4);
     final titles = [for (final e in films.take(2)) e.title];
     return _Frame(builder: (context, size, type) {
@@ -1026,6 +1041,26 @@ class _PersonSlide extends ConsumerWidget {
                         '${titles.isEmpty ? '' : ', dont ${_list(titles)}'}.',
                         style: type.small,
                         at: 4),
+                    if (quote != null) ...[
+                      SizedBox(height: size.height * .045),
+                      WrappedText(
+                          quote.language == 'fr'
+                              ? '« ${quote.text} »'
+                              : '“${quote.text}”',
+                          style: type.small.copyWith(
+                              color: AppColors.textPrimary,
+                              fontStyle: FontStyle.italic,
+                              fontSize: type.small.fontSize! * 1.3),
+                          at: 5.4),
+                      if (quote.role != null) ...[
+                        SizedBox(height: size.height * .012),
+                        WrappedText(
+                            '${quote.role}${quote.film == null ? '' : ' · ${quote.film}'}',
+                            style: type.cap,
+                            at: 6.4,
+                            caps: true),
+                      ],
+                    ],
                   ]),
             ),
           ]),
@@ -1237,8 +1272,9 @@ class _HotTakeSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final public = _publicNumber(take.public);
-    final mine = _starsNumber(take.mine);
+    final public =
+        '${_publicNumber(take.public)} ${_starsWord(take.public / 2)}';
+    final mine = '${_starsNumber(take.mine)} ${_starsWord(take.mine / 2)}';
     return _Frame(
         builder: (context, size, type) => [
               KenBurns(child: WrappedImage(inputs.backdrop(take.film))),
