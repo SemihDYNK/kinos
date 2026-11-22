@@ -161,9 +161,7 @@ class LetterboxdFriendsStore {
 
   Future<void> saveReviews(String username, FriendReviews reviews) =>
       _put('$_reviewsPrefix$username', {
-        'r': {
-          for (final e in reviews.reviews.entries) e.key: e.value.toJson()
-        },
+        'r': {for (final e in reviews.reviews.entries) e.key: e.value.toJson()},
         if (reviews.fullAt != null) 'f': reviews.fullAt!.millisecondsSinceEpoch,
       });
 
@@ -219,6 +217,23 @@ class LetterboxdFriendsStore {
         't': DateTime.now().millisecondsSinceEpoch,
         if (slug != null) 's': slug
       });
+
+  /// Tous les slugs déjà résolus : identifiant TMDB → slug Letterboxd.
+  Future<Map<int, String>> slugs() async {
+    final slugs = <int, String>{};
+    for (final row in await db.getSettingsForScope(scope).get()) {
+      if (!row.key.startsWith('slug:')) continue;
+      final id = int.tryParse(row.key.substring('slug:'.length));
+      if (id == null) continue;
+      try {
+        final json = jsonDecode(row.value);
+        if (json is Map && json['s'] is String) slugs[id] = json['s'] as String;
+      } on FormatException {
+        continue;
+      }
+    }
+    return slugs;
+  }
 
   /// Index slug → notes des amis suivis, pour un affichage instantané.
   Future<Map<String, List<FriendRating>>> index() async {
