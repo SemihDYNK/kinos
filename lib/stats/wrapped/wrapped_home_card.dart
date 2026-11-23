@@ -90,102 +90,184 @@ class WrappedHomeCard extends ConsumerWidget {
     return SliverPadding(
       padding: contentPadding.copyWith(top: AppSpacing.lg, bottom: 0),
       sliver: SliverToBoxAdapter(
-        child: SizedBox(
-          height: AppWrapped.homeCardHeight,
-          child: FocusRing(
-            onActivate: open,
-            pressMotion: true,
-            child: ClipRRect(
-              borderRadius: AppRadii.cardBorder,
-              child: Stack(fit: StackFit.expand, children: [
-                ColoredBox(color: ground),
-                if (art?.backdrop case final image?)
-                  KinosImage(
-                      image: image,
-                      alignment: AppHeroLayout.imageAlignment,
-                      disableBlur: true),
-                // La couleur du film, pleine à gauche sous le texte, qui
-                // laisse voir l'image à droite.
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      stops: const [0, .45, .85],
-                      colors: [
-                        ground,
-                        ground.withValues(alpha: .85),
-                        ground.withValues(alpha: .15),
-                      ],
+        child: _Hover(
+          builder: (hovered) => SizedBox(
+            height: AppWrapped.homeCardHeight,
+            child: FocusRing(
+              onActivate: open,
+              pressMotion: true,
+              child: ClipRRect(
+                borderRadius: AppRadii.cardBorder,
+                child: Stack(fit: StackFit.expand, children: [
+                  ColoredBox(color: ground),
+                  if (art?.backdrop case final image?)
+                    KinosImage(
+                        image: image,
+                        alignment: AppHeroLayout.imageAlignment,
+                        disableBlur: true),
+                  // La couleur du film, pleine à gauche sous le texte, qui
+                  // laisse voir l'image à droite.
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        stops: const [0, .45, .85],
+                        colors: [
+                          ground,
+                          ground.withValues(alpha: .85),
+                          ground.withValues(alpha: .15),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                // L'année en filigrane, centrée en hauteur : la boîte du
-                // texte garde sous les chiffres la place d'un jambage qu'ils
-                // n'ont pas, d'où le léger décalage vers le bas.
-                Positioned.fill(
-                  right: AppSpacing.lg,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Transform.translate(
-                      offset: const Offset(0,
-                          AppWrapped.homeCardWatermark * AppWrapped.digitDrop),
-                      child: Text('$year',
-                          style: cond.copyWith(
+                  // L'année en filigrane, les chiffres eux-mêmes centrés en
+                  // hauteur (pas leur boîte de texte).
+                  Positioned.fill(
+                    right: AppSpacing.lg,
+                    child: CustomPaint(
+                      painter: _CenteredDigits(
+                          '$year',
+                          cond.copyWith(
                               fontSize: AppWrapped.homeCardWatermark,
                               height: 1,
                               color: ink.withValues(alpha: .12))),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
-                  child: Row(children: [
-                    Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('VOTRE WRAPPED EST ARRIVÉ',
-                                style: AppTypography.overline.copyWith(
-                                    color: ink.withValues(alpha: .75),
-                                    letterSpacing: 4)),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text('VOTRE ANNÉE $year',
-                                style: cond.copyWith(
-                                    fontSize: AppWrapped.homeCardTitle)),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                                '${stats.films} films · ${formatHours(stats.seconds)}'
-                                '${best == null ? '' : ' · ${best.title}'}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: text.bodyMedium?.copyWith(
-                                    color: ink.withValues(alpha: .8))),
-                          ]),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+                    child: Row(children: [
+                      Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('VOTRE WRAPPED EST ARRIVÉ',
+                                  style: AppTypography.overline.copyWith(
+                                      color: ink.withValues(alpha: .75),
+                                      letterSpacing: 4)),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text('VOTRE ANNÉE $year',
+                                  style: cond.copyWith(
+                                      fontSize: AppWrapped.homeCardTitle)),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                  '${stats.films} films · ${formatHours(stats.seconds)}'
+                                  '${best == null ? '' : ' · ${best.title}'}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.bodyMedium?.copyWith(
+                                      color: ink.withValues(alpha: .8))),
+                            ]),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      FilledButton.icon(
+                        onPressed: open,
+                        style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.textPrimary,
+                            foregroundColor: AppColors.background),
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: const Text('Voir mon année'),
+                      ),
+                      // La place de la croix, pour que le bouton ne passe
+                      // jamais dessous.
+                      const SizedBox(width: AppSpacing.xxl),
+                    ]),
+                  ),
+                  // La croix, en haut à droite : invisible au repos, elle
+                  // apparaît au survol de la carte ou quand elle a le focus.
+                  Positioned(
+                    top: AppSpacing.xs,
+                    right: AppSpacing.xs,
+                    child: _HoverReveal(
+                      hovered: hovered,
+                      child: IconButton(
+                        tooltip: 'Masquer',
+                        onPressed: () => _hideWrappedCard(ref, year),
+                        icon: Icon(Icons.close_rounded,
+                            color: ink.withValues(alpha: .75)),
+                      ),
                     ),
-                    const SizedBox(width: AppSpacing.lg),
-                    FilledButton.icon(
-                      onPressed: open,
-                      style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.textPrimary,
-                          foregroundColor: AppColors.background),
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Voir mon année'),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    IconButton(
-                      tooltip: 'Masquer',
-                      onPressed: () => _hideWrappedCard(ref, year),
-                      icon: Icon(Icons.close_rounded,
-                          color: ink.withValues(alpha: .75)),
-                    ),
-                  ]),
-                ),
-              ]),
+                  ),
+                ]),
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Survol de la carte.
+class _Hover extends StatefulWidget {
+  const _Hover({required this.builder});
+  final Widget Function(bool hovered) builder;
+
+  @override
+  State<_Hover> createState() => _HoverState();
+}
+
+class _HoverState extends State<_Hover> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: widget.builder(_hovered),
+      );
+}
+
+/// Visible au survol ([hovered]) ou quand [child] a le focus : la croix
+/// reste atteignable au clavier.
+class _HoverReveal extends StatefulWidget {
+  const _HoverReveal({required this.hovered, required this.child});
+  final bool hovered;
+  final Widget child;
+
+  @override
+  State<_HoverReveal> createState() => _HoverRevealState();
+}
+
+class _HoverRevealState extends State<_HoverReveal> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (focused) => setState(() => _focused = focused),
+        child: AnimatedOpacity(
+          opacity: widget.hovered || _focused ? 1 : 0,
+          duration: AppDurations.hover,
+          child: widget.child,
+        ),
+      );
+}
+
+/// Un nombre centré en hauteur sur ses chiffres, aligné à droite : la
+/// boîte d'un texte réserve, au-dessus et au-dessous, une place que des
+/// chiffres n'occupent pas.
+class _CenteredDigits extends CustomPainter {
+  _CenteredDigits(this.text, this.style);
+  final String text;
+  final TextStyle style;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: TextDirection.ltr)
+      ..layout();
+    final baseline =
+        painter.computeLineMetrics().firstOrNull?.baseline ?? painter.height;
+    final digitsCenter =
+        baseline - (style.fontSize ?? 14) * AppWrapped.digitHeight / 2;
+    painter.paint(canvas,
+        Offset(size.width - painter.width, size.height / 2 - digitsCenter));
+  }
+
+  @override
+  bool shouldRepaint(_CenteredDigits old) =>
+      old.text != text || old.style != style;
 }
