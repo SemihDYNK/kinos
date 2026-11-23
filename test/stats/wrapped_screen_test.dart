@@ -317,4 +317,52 @@ void main() {
     expect(find.text('2026'), findsNWidgets(2),
         reason: 'the year, bottom right, and the giant one behind');
   });
+
+  testWidgets('the recaps hold as 16:9 stories', (tester) async {
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final w = WrappedInputs(
+        data: data(), art: const {}, tints: const {}, ratings: ratings);
+    for (final summary in [
+      null,
+      timeSummary(w),
+      tasteSummary(w),
+      filmsSummary(w)
+    ]) {
+      await tester.pumpWidget(ProviderScope(
+        key: UniqueKey(),
+        overrides: [
+          statsPortraitProvider.overrideWith((ref, name) async => null),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: WrappedStoryLayout(
+            child: WrappedClock(
+              duration: 1,
+              motion: false,
+              progress: const AlwaysStoppedAnimation(1),
+              child: WrappedRecap(inputs: w, summary: summary),
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull, reason: '${summary?.kind}');
+    }
+    expect(
+        wrappedExportCount([
+          WrappedPage(file: 'a', seconds: 1, builder: (_) => const SizedBox()),
+          WrappedPage(
+              file: 'b',
+              seconds: 1,
+              summary: true,
+              builder: (_) => const SizedBox()),
+        ], {
+          WrappedFormat.screen,
+          WrappedFormat.screenStory
+        }),
+        3,
+        reason: 'the story-style screen format keeps only the recaps');
+  });
 }

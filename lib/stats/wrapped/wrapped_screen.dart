@@ -502,9 +502,9 @@ class _ExportPanelState extends ConsumerState<_ExportPanel> {
 
   Future<void> _export() async {
     final pages = _pages();
-    if (pages.isEmpty || _formats.isEmpty) return;
+    if (wrappedExportCount(pages, _formats) == 0) return;
     setState(() {
-      _progress = (0, pages.length * _formats.length);
+      _progress = (0, wrappedExportCount(pages, _formats));
       _done = null;
       _error = null;
     });
@@ -533,7 +533,7 @@ class _ExportPanelState extends ConsumerState<_ExportPanel> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final busy = _progress != null;
-    final count = _pages().length * _formats.length;
+    final count = wrappedExportCount(_pages(), _formats);
     Widget check(String label, bool value, ValueChanged<bool> onChanged,
             {bool autofocus = false}) =>
         CheckboxListTile(
@@ -577,11 +577,17 @@ class _ExportPanelState extends ConsumerState<_ExportPanel> {
                             ? _formats.add(WrappedFormat.story)
                             : _formats.remove(WrappedFormat.story)),
                     check(
-                        'Écran (16:9)',
+                        'Écran (16:9), comme les diapos',
                         _formats.contains(WrappedFormat.screen),
                         (v) => v
                             ? _formats.add(WrappedFormat.screen)
                             : _formats.remove(WrappedFormat.screen)),
+                    check(
+                        'Écran (16:9), comme les stories (récaps seulement)',
+                        _formats.contains(WrappedFormat.screenStory),
+                        (v) => v
+                            ? _formats.add(WrappedFormat.screenStory)
+                            : _formats.remove(WrappedFormat.screenStory)),
                     const SizedBox(height: AppSpacing.sm),
                     check('Afficher mon nom', _name, (v) => _name = v),
                     const SizedBox(height: AppSpacing.md),

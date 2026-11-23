@@ -154,6 +154,7 @@ int wrappedActOf(String slideId) => switch (slideId) {
       'act2' ||
       'genre' ||
       'series' ||
+      'marathon' ||
       'director' ||
       'actor' ||
       'ratings' ||

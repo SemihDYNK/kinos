@@ -66,6 +66,52 @@ typedef FriendTake = ({
   List<FriendRating> ratings,
 });
 
+/// Un marathon : des épisodes d'une même série enchaînés sans pause de plus
+/// d'une journée et demie.
+typedef WrappedMarathon = ({
+  String series,
+  int episodes,
+  DateTime start,
+  DateTime end,
+  int seconds,
+});
+
+/// Les épisodes en marathon : le plus long enchaînement d'une même série
+/// (au moins quatre épisodes, aucun écart de plus de
+/// 36 h entre deux), le plus d'épisodes d'abord, puis le plus court.
+WrappedMarathon? wrappedMarathon(
+    List<({String name, List<ViewingEvent> episodes})> series) {
+  WrappedMarathon? best;
+  for (final s in series) {
+    final episodes = [...s.episodes]..sort((a, b) => a.at.compareTo(b.at));
+    var start = 0;
+    for (var i = 1; i <= episodes.length; i++) {
+      if (i < episodes.length &&
+          episodes[i].at.difference(episodes[i - 1].at).inHours <= 36) {
+        continue;
+      }
+      final run = episodes.sublist(start, i);
+      start = i;
+      if (run.length < 4) continue;
+      final candidate = (
+        series: s.name,
+        episodes: run.length,
+        start: run.first.at,
+        end: run.last.at,
+        seconds: run.fold(0, (sum, e) => sum + e.seconds),
+      );
+      if (best == null ||
+          candidate.episodes > best.episodes ||
+          (candidate.episodes == best.episodes &&
+              candidate.end.difference(candidate.start) <
+                  best.end.difference(best.start))) {
+        best = candidate;
+      }
+    }
+  }
+  return best;
+}
+
 /// Ce qu'il faut à toutes les diapos du Wrapped d'une année.
 class WrappedData {
   const WrappedData({
@@ -88,6 +134,7 @@ class WrappedData {
     required this.hook,
     this.facts = const {},
     this.series = const [],
+    this.marathon,
   });
 
   final int year;
@@ -126,6 +173,9 @@ class WrappedData {
   /// Les séries de l'année, de la plus regardée à la moins : leurs
   /// épisodes vus.
   final List<({String name, List<ViewingEvent> episodes})> series;
+
+  /// Le plus long marathon de l'année, s'il y en a un.
+  final WrappedMarathon? marathon;
 
   /// Les faits du public par film TMDB (images des films hors
   /// bibliothèque).
@@ -304,6 +354,7 @@ WrappedData computeWrapped(
   final top = stats.topRated;
   return WrappedData(
     series: series.take(5).toList(),
+    marathon: wrappedMarathon(series),
     year: year,
     stats: stats,
     timeline: timeline,

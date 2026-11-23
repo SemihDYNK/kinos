@@ -218,6 +218,42 @@ void main() {
     expect(sameTitle('James Bond', 'Casino Royale'), isFalse);
   });
 
+  test('a marathon: one series, back to back', () {
+    ViewingEvent episode(String series, DateTime at) => ViewingEvent(
+        identity: 'ep:$series:$at',
+        kind: 'episode',
+        title: 'Épisode',
+        seriesTitle: series,
+        at: at,
+        runtimeSeconds: 2400,
+        completed: true,
+        sources: const {ViewingSource.kinos});
+    final series = [
+      (
+        name: 'A',
+        episodes: [
+          for (var h = 0; h < 5; h++)
+            episode('A', DateTime(2026, 3, 3, 20 + h)),
+          episode('A', DateTime(2026, 6, 1)),
+        ]
+      ),
+      (
+        name: 'B',
+        episodes: [
+          for (var d = 0; d < 4; d++) episode('B', DateTime(2026, 4, 1 + d)),
+        ]
+      ),
+    ];
+    final m = wrappedMarathon(series)!;
+    expect((m.series, m.episodes), ('A', 5));
+    expect(m.seconds, 5 * 2400);
+    expect(
+        wrappedMarathon([
+          (name: 'C', episodes: [episode('C', DateTime(2026, 1, 1))])
+        ]),
+        isNull);
+  });
+
   test('each slide plays the mood of its act', () {
     expect([
       for (final id in ['opening', 'time', 'rhythm']) wrappedActOf(id)

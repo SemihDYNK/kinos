@@ -11,22 +11,56 @@ import 'package:kinos/theme/app_theme.dart';
 
 import 'wrapped_motion.dart';
 
-/// Un format d'export : la story (9:16) ou l'écran (16:9), en pixels.
+/// Un format d'export, en pixels : la story (9:16), l'écran (16:9) tel
+/// que la diapo, ou l'écran (16:9) composé comme les stories.
 enum WrappedFormat {
   story(Size(1080, 1920), 'story'),
-  screen(Size(1920, 1080), 'ecran');
+  screen(Size(1920, 1080), 'ecran'),
+  screenStory(Size(1920, 1080), 'ecran-story', storyLayout: true);
 
-  const WrappedFormat(this.size, this.suffix);
+  const WrappedFormat(this.size, this.suffix, {this.storyLayout = false});
   final Size size;
   final String suffix;
+
+  /// Les pages de synthèse composées comme les stories, même en paysage.
+  /// Les diapos n'ont pas de mise en page story : ce format ne garde que
+  /// les synthèses.
+  final bool storyLayout;
+
+  bool includes(WrappedPage page) => !storyLayout || page.summary;
+}
+
+/// Le nombre d'images que donnent [pages] dans [formats].
+int wrappedExportCount(List<WrappedPage> pages, Set<WrappedFormat> formats) => [
+      for (final page in pages)
+        for (final format in formats)
+          if (format.includes(page)) 1
+    ].length;
+
+/// Demande aux pages de synthèse la mise en page des stories, même en
+/// paysage.
+class WrappedStoryLayout extends InheritedWidget {
+  const WrappedStoryLayout({required super.child, super.key});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<WrappedStoryLayout>() != null;
+
+  @override
+  bool updateShouldNotify(WrappedStoryLayout oldWidget) => false;
 }
 
 /// Une page à exporter : son nom de fichier (sans extension ni format) et
 /// son contenu, posé dans son état final.
 class WrappedPage {
   const WrappedPage(
-      {required this.file, required this.seconds, required this.builder});
+      {required this.file,
+      required this.seconds,
+      required this.builder,
+      this.summary = false});
   final String file;
+
+  /// Une page de synthèse (récap de l'année ou d'un acte).
+  final bool summary;
   final double seconds;
   final WidgetBuilder builder;
 }
@@ -146,15 +180,18 @@ Future<ui.Image> renderOffscreen(
 
 /// Une page posée dans son état final : horloge arrêtée à la fin, sans
 /// mouvement.
-Widget wrappedStill(WrappedPage page) => ColoredBox(
-      color: AppColors.scrim,
-      child: WrappedClock(
-        duration: page.seconds,
-        motion: false,
-        progress: const AlwaysStoppedAnimation(1),
-        child: Builder(builder: page.builder),
-      ),
-    );
+Widget wrappedStill(WrappedPage page, {bool story = false}) {
+  final still = ColoredBox(
+    color: AppColors.scrim,
+    child: WrappedClock(
+      duration: page.seconds,
+      motion: false,
+      progress: const AlwaysStoppedAnimation(1),
+      child: Builder(builder: page.builder),
+    ),
+  );
+  return story ? WrappedStoryLayout(child: still) : still;
+}
 
 /// Exporte [pages] dans [formats] vers [dir] : un PNG par page et par
 /// format. [onProgress] reçoit (faites, total).
@@ -173,13 +210,14 @@ Future<List<File>> exportWrapped(
     await precacheImage(image, context, onError: (_, __) {});
   }
   final files = <File>[];
-  final total = pages.length * formats.length;
+  final total = wrappedExportCount(pages, formats);
   var done = 0;
   for (final page in pages) {
     for (final format in WrappedFormat.values.where(formats.contains)) {
+      if (!format.includes(page)) continue;
       if (!context.mounted) return files;
-      final image =
-          await renderOffscreen(context, wrappedStill(page), format.size);
+      final image = await renderOffscreen(
+          context, wrappedStill(page, story: format.storyLayout), format.size);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
       if (bytes == null) continue;

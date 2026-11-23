@@ -23,7 +23,7 @@ import '../stats_screen.dart'
 import '../viewing_log.dart';
 import '../viewing_stats.dart' show Ranked;
 import 'wrapped_data.dart';
-import 'wrapped_export.dart' show WrappedPage;
+import 'wrapped_export.dart' show WrappedPage, WrappedStoryLayout;
 import 'wrapped_media.dart';
 import 'wrapped_motion.dart';
 import 'wrapped_quotes.dart';
@@ -223,6 +223,11 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
           id: 'series',
           seconds: AppWrapped.genre,
           builder: (_) => _SeriesSlide(inputs: w)),
+    if (data.marathon case final marathon?)
+      WrappedSlide(
+          id: 'marathon',
+          seconds: AppWrapped.genre,
+          builder: (_) => _MarathonSlide(inputs: w, marathon: marathon)),
     if (stats.directors.firstOrNull case final director?)
       WrappedSlide(
           id: 'director',
@@ -300,6 +305,11 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
           id: 'elsewhere',
           seconds: AppWrapped.elsewhere,
           builder: (_) => _ElsewhereSlide(inputs: w, films: films)),
+    if (data.series.firstOrNull case final show?)
+      WrappedSlide(
+          id: 'series-of-year',
+          seconds: AppWrapped.genre,
+          builder: (_) => _SeriesOfYearSlide(inputs: w, series: show)),
     if (data.filmOfYear case final best?)
       WrappedSlide(
           id: 'film-of-year',
@@ -1063,13 +1073,16 @@ class _SeriesSlide extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = inputs.data;
     final stats = data.stats;
-    final top = data.series.first;
     final night = stats.longestNight;
     final count = stats.series;
     return _Frame(
         builder: (context, size, type) => [
+              // La première série a sa propre diapo à l'acte III : ici, les
+              // suivantes (ou elle seule, faute d'autres).
               CyclingBackdrops([
-                for (final s in data.series)
+                for (final s in data.series.length > 1
+                    ? data.series.skip(1)
+                    : data.series)
                   if (inputs.art['series:${s.name}']?.backdrop
                       case final image?)
                     image
@@ -1084,9 +1097,7 @@ class _SeriesSlide extends StatelessWidget {
                     at: 1.4),
                 SizedBox(height: size.height * .025),
                 WrappedText(
-                    '$count ${count > 1 ? 'séries' : 'série'}, ${top.name} en tête '
-                    'avec ${top.episodes.length} '
-                    '${top.episodes.length > 1 ? 'épisodes' : 'épisode'}.',
+                    '$count ${count > 1 ? 'séries' : 'série'} suivies cette année.',
                     style: type.small,
                     at: 3),
                 if (night != null) ...[
@@ -1098,6 +1109,99 @@ class _SeriesSlide extends StatelessWidget {
                       style: type.small,
                       at: 4.2),
                 ],
+              ]),
+            ]);
+  }
+}
+
+/// Le plus long marathon : une série enchaînée épisode après épisode.
+class _MarathonSlide extends StatelessWidget {
+  const _MarathonSlide({required this.inputs, required this.marathon});
+  final WrappedInputs inputs;
+  final WrappedMarathon marathon;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = marathon;
+    final days = DateUtils.dateOnly(m.end)
+            .difference(DateUtils.dateOnly(m.start))
+            .inDays +
+        1;
+    final day = DateFormat('d MMMM', _locale);
+    final when = days == 1
+        ? 'le ${day.format(m.start)}'
+        : m.start.month == m.end.month
+            ? 'du ${m.start.day} au ${day.format(m.end)}'
+            : 'du ${day.format(m.start)} au ${day.format(m.end)}';
+    final image = inputs.art['series:${m.series}']?.backdrop ??
+        inputs.data.series
+            .map((s) => inputs.art['series:${s.name}']?.backdrop)
+            .nonNulls
+            .firstOrNull;
+    return _Frame(
+        builder: (context, size, type) => [
+              KenBurns(child: WrappedImage(image)),
+              const WrappedScrim(),
+              WrappedTextBlock(children: [
+                WrappedText('Votre marathon',
+                    style: type.cap, at: .4, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText('${m.episodes} épisodes', style: type.big, at: 1.4),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    '${m.series}, ${days == 1 ? 'd\'une traite' : 'en $days jours'}, '
+                    '$when.',
+                    style: type.small,
+                    at: 3),
+                if (m.seconds > 0) ...[
+                  SizedBox(height: size.height * .015),
+                  WrappedText('${formatHours(m.seconds)} sans décrocher.',
+                      style: type.small, at: 4.2),
+                ],
+              ]),
+            ]);
+  }
+}
+
+/// La série de l'année : la plus regardée, en grand.
+class _SeriesOfYearSlide extends StatelessWidget {
+  const _SeriesOfYearSlide({required this.inputs, required this.series});
+  final WrappedInputs inputs;
+  final ({String name, List<ViewingEvent> episodes}) series;
+
+  @override
+  Widget build(BuildContext context) {
+    final episodes = [...series.episodes]..sort((a, b) => a.at.compareTo(b.at));
+    final seconds = episodes.fold(0, (sum, e) => sum + e.seconds);
+    final month = DateFormat('MMMM', _locale);
+    final first = episodes.first.at;
+    final last = episodes.last.at;
+    final seasons = {for (final e in episodes) e.season}.nonNulls.length;
+    final span = first.month == last.month
+        ? 'en ${month.format(first)}'
+        : 'de ${month.format(first)} à ${month.format(last)}';
+    return _Frame(
+        builder: (context, size, type) => [
+              KenBurns(
+                  amount: AppWrapped.kenBurns * 1.4,
+                  child: WrappedImage(
+                      inputs.art['series:${series.name}']?.backdrop)),
+              const WrappedScrim(),
+              WrappedTextBlock(children: [
+                WrappedText('Votre série de l\'année',
+                    style: type.cap, at: .6, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText(series.name, style: type.big, at: 1.8, maxLines: 2),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    [
+                      '${episodes.length} ${episodes.length > 1 ? 'épisodes' : 'épisode'}',
+                      if (seasons > 1) '$seasons saisons',
+                      if (seconds > 0) formatHours(seconds),
+                      span,
+                    ].join(' · '),
+                    style: type.small,
+                    at: 3.4),
               ]),
             ]);
   }
@@ -1851,8 +1955,15 @@ Map<WrappedSummaryKind, ViewingEvent?> _storyLeads(WrappedInputs w) {
 /// qui déborde, le contenu centré, des chiffres séparés de filets, et le
 /// pied de page à la même place sur chaque page (le K à gauche, l'année à
 /// droite).
-/// Le haut d'une story et ses chiffres du bas.
-typedef _Story = (Widget, List<(String, String)>);
+/// Le contenu d'une page de synthèse : sa pièce maîtresse ([hero]), le
+/// reste ([rest], posé [gap] plus bas en vertical, à droite en paysage) et
+/// ses chiffres du bas.
+typedef _Story = ({
+  Widget hero,
+  Widget? rest,
+  double gap,
+  List<(String, String)> numbers,
+});
 
 class _StoryPage extends ConsumerWidget {
   const _StoryPage({required this.inputs, required this.kind});
@@ -1880,7 +1991,10 @@ class _StoryPage extends ConsumerWidget {
 
     return LayoutBuilder(builder: (context, box) {
       final size = box.biggest;
-      final u = size.width / 100;
+      // En paysage (16:9), la même page en deux colonnes ; l'unité suit la
+      // hauteur, pour garder les proportions de la story.
+      final landscape = size.width > size.height;
+      final u = (landscape ? size.height : size.width) / 100;
       final cond = AppTypography.heroEditorial
           .copyWith(color: ink, height: .9, letterSpacing: 0);
       final cap = AppTypography.overline.copyWith(
@@ -1909,39 +2023,41 @@ class _StoryPage extends ConsumerWidget {
       // tiers), les filets posés à part sans rien décaler.
       Widget numbers(List<(String, String)> items) => SizedBox(
             height: 15 * u,
-            child: Stack(children: [
-              Row(children: [
-                for (final (value, label) in items)
-                  Expanded(
-                    child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          FittedBox(
-                              fit: BoxFit.scaleDown,
-                              // La police condensée n'a pas d'étoile.
-                              child: Text(value.toUpperCase(),
-                                  maxLines: 1,
-                                  style: value.contains('★')
-                                      ? body.copyWith(
-                                          color: ink, fontSize: 6.5 * u)
-                                      : cond.copyWith(fontSize: 9 * u))),
-                          SizedBox(height: .8 * u),
-                          Text(label,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: body.copyWith(fontSize: 2.8 * u)),
-                        ]),
-                  ),
-              ]),
-              for (var i = 1; i < items.length; i++)
-                Positioned(
-                  left: (size.width - 15 * u) * i / items.length,
-                  top: 2 * u,
-                  bottom: 2 * u,
-                  child: Container(width: 1, color: line),
-                ),
-            ]),
+            child: LayoutBuilder(
+                builder: (context, box) => Stack(children: [
+                      Row(children: [
+                        for (final (value, label) in items)
+                          Expanded(
+                            child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      // La police condensée n'a pas d'étoile.
+                                      child: Text(value.toUpperCase(),
+                                          maxLines: 1,
+                                          style: value.contains('★')
+                                              ? body.copyWith(
+                                                  color: ink, fontSize: 6.5 * u)
+                                              : cond.copyWith(
+                                                  fontSize: 9 * u))),
+                                  SizedBox(height: .8 * u),
+                                  Text(label,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: body.copyWith(fontSize: 2.8 * u)),
+                                ]),
+                          ),
+                      ]),
+                      for (var i = 1; i < items.length; i++)
+                        Positioned(
+                          left: box.maxWidth * i / items.length,
+                          top: 2 * u,
+                          bottom: 2 * u,
+                          child: Container(width: 1, color: line),
+                        ),
+                    ])),
           );
 
       final content = switch (kind) {
@@ -1992,33 +2108,80 @@ class _StoryPage extends ConsumerWidget {
                         color: ink.withValues(alpha: .1))),
               ),
             const WrappedGrain(opacity: AppWrapped.storyGrain),
-            // Le contenu, qui se réduit plutôt que de déborder s'il manque
-            // de place…
-            Positioned(
-              left: 7.5 * u,
-              right: 7.5 * u,
-              top: 9 * u,
-              bottom: 40 * u,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.topCenter,
-                child: SizedBox(width: 85 * u, child: content.$1),
+            if (landscape) ...[
+              // En paysage : la pièce maîtresse à gauche…
+              Positioned(
+                left: 7.5 * u,
+                width: 72 * u,
+                top: 7 * u,
+                bottom: 19 * u,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: SizedBox(width: 85 * u, child: content.hero),
+                ),
               ),
-            ),
-            // …et les chiffres, à la même place sur chaque page, juste
-            // au-dessus du pied de page.
-            Positioned(
-              left: 7.5 * u,
-              right: 7.5 * u,
-              bottom: 21 * u,
-              height: 15 * u,
-              child: numbers(content.$2),
-            ),
+              Positioned(
+                left: 86 * u,
+                top: 10 * u,
+                bottom: 22 * u,
+                child: Container(width: 1, color: line),
+              ),
+              // …le reste et les chiffres à droite.
+              Positioned(
+                left: 93 * u,
+                right: 7.5 * u,
+                top: 7 * u,
+                bottom: 19 * u,
+                child: Column(children: [
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SizedBox(
+                          width: 85 * u,
+                          child: content.rest ?? const SizedBox()),
+                    ),
+                  ),
+                  SizedBox(height: 3 * u),
+                  numbers(content.numbers),
+                ]),
+              ),
+            ] else ...[
+              // Le contenu, qui se réduit plutôt que de déborder s'il
+              // manque de place…
+              Positioned(
+                left: 7.5 * u,
+                right: 7.5 * u,
+                top: 9 * u,
+                bottom: 40 * u,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                      width: 85 * u,
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        content.hero,
+                        if (content.rest case final rest?) ...[
+                          SizedBox(height: content.gap),
+                          rest,
+                        ],
+                      ])),
+                ),
+              ),
+              // …et les chiffres, à la même place sur chaque page, juste
+              // au-dessus du pied de page.
+              Positioned(
+                left: 7.5 * u,
+                right: 7.5 * u,
+                bottom: 21 * u,
+                height: 15 * u,
+                child: numbers(content.numbers),
+              ),
+            ],
             // Le pied de page, toujours à la même place.
             Positioned(
               left: 7.5 * u,
               right: 7.5 * u,
-              bottom: 7 * u,
+              bottom: (landscape ? 4 : 7) * u,
               height: 11 * u,
               child: DecoratedBox(
                 decoration:
@@ -2057,7 +2220,7 @@ class _StoryPage extends ConsumerWidget {
     final stats = data.stats;
     final best = data.filmOfYear;
     return (
-      Column(mainAxisSize: MainAxisSize.min, children: [
+      hero: Column(mainAxisSize: MainAxisSize.min, children: [
         cap('Film de l\'année'),
         SizedBox(height: 5 * u),
         poster(best == null ? null : inputs.poster(best.event), 50 * u),
@@ -2071,28 +2234,28 @@ class _StoryPage extends ConsumerWidget {
                   fontSize: 3.6 * u,
                   letterSpacing: 3.6 * u * .3)),
         ],
-        SizedBox(height: 5 * u),
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          for (final (i, r) in data.runnersUp.take(4).indexed) ...[
-            if (i > 0) SizedBox(width: 2.4 * u),
-            Expanded(
-              child: Column(children: [
-                Text('${i + 2}',
-                    style: body.copyWith(fontSize: 3.4 * u, color: soft)),
-                SizedBox(height: 1 * u),
-                poster(inputs.poster(r.event), (85 - 7.2) * u / 4),
-                SizedBox(height: 1.2 * u),
-                Text(r.event.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: body.copyWith(fontSize: 2.6 * u)),
-              ]),
-            ),
-          ],
-        ]),
       ]),
-      [
+      gap: 5 * u,
+      rest: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final (i, r) in data.runnersUp.take(4).indexed) ...[
+          if (i > 0) SizedBox(width: 2.4 * u),
+          Expanded(
+            child: Column(children: [
+              Text('${i + 2}',
+                  style: body.copyWith(fontSize: 3.4 * u, color: soft)),
+              SizedBox(height: 1 * u),
+              poster(inputs.poster(r.event), (85 - 7.2) * u / 4),
+              SizedBox(height: 1.2 * u),
+              Text(r.event.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: body.copyWith(fontSize: 2.6 * u)),
+            ]),
+          ),
+        ],
+      ]),
+      numbers: [
         ('${stats.films}', 'films'),
         (formatHours(stats.seconds), 'à l\'écran'),
         if (stats.genres.firstOrNull case final g?) (g.name, 'genre'),
@@ -2110,10 +2273,18 @@ class _StoryPage extends ConsumerWidget {
     final data = inputs.data;
     final stats = data.stats;
     final peak = stats.busiestBucket;
-    final peakPosters = _postersOf(inputs, _peakFilms(inputs));
+    // Les affiches du mois le plus chargé : ses films, puis ses séries
+    // (un mois de séries n'a parfois aucun film).
+    final peakPosters = [
+      ..._postersOf(inputs, _peakFilms(inputs)),
+      for (final show in data.series)
+        if (peak != null && show.episodes.any((e) => e.at.month - 1 == peak))
+          if (inputs.art['series:${show.name}']?.poster case final image?)
+            image,
+    ].take(4).toList();
     final hours = formatHours(stats.seconds).split(' ');
     return (
-      Column(mainAxisSize: MainAxisSize.min, children: [
+      hero: Column(mainAxisSize: MainAxisSize.min, children: [
         cap('Acte I · Le temps'),
         SizedBox(height: 5 * u),
         SizedBox.square(
@@ -2138,19 +2309,21 @@ class _StoryPage extends ConsumerWidget {
         SizedBox(height: 3 * u),
         Text('devant l\'écran en ${data.year}${_daysPhrase(stats.seconds)}',
             textAlign: TextAlign.center, style: body),
-        if (peak != null && peakPosters.isNotEmpty) ...[
-          SizedBox(height: 7 * u),
-          cap('En ${DateFormat('MMMM', _locale).format(DateTime(data.year, peak + 1))}'),
-          SizedBox(height: 3 * u),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            for (final (i, image) in peakPosters.indexed) ...[
-              if (i > 0) SizedBox(width: 2.4 * u),
-              poster(image, (85 - 7.2) * u / 4),
-            ],
-          ]),
-        ],
       ]),
-      [
+      gap: 7 * u,
+      rest: peak == null || peakPosters.isEmpty
+          ? null
+          : Column(mainAxisSize: MainAxisSize.min, children: [
+              cap('En ${DateFormat('MMMM', _locale).format(DateTime(data.year, peak + 1))}'),
+              SizedBox(height: 3 * u),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                for (final (i, image) in peakPosters.indexed) ...[
+                  if (i > 0) SizedBox(width: 2.4 * u),
+                  poster(image, (85 - 7.2) * u / 4),
+                ],
+              ]),
+            ]),
+      numbers: [
         if (peak != null)
           (
             DateFormat('MMMM', _locale).format(DateTime(data.year, peak + 1)),
@@ -2202,7 +2375,7 @@ class _StoryPage extends ConsumerWidget {
           ]);
     const labels = ['½', '1', '', '2', '', '3', '', '4', '', '5'];
     return (
-      Column(mainAxisSize: MainAxisSize.min, children: [
+      hero: Column(mainAxisSize: MainAxisSize.min, children: [
         cap('Acte II · Les goûts'),
         SizedBox(height: 6 * u),
         cond(genres.firstOrNull?.name ?? '', 22 * u),
@@ -2215,7 +2388,9 @@ class _StoryPage extends ConsumerWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             style: body),
-        SizedBox(height: 7 * u),
+      ]),
+      gap: 7 * u,
+      rest: Column(mainAxisSize: MainAxisSize.min, children: [
         Row(children: [
           Expanded(child: person(stats.directors.firstOrNull, 'réalisateur')),
           Expanded(child: person(stats.actors.firstOrNull, 'acteur')),
@@ -2253,7 +2428,7 @@ class _StoryPage extends ConsumerWidget {
           ),
         ],
       ]),
-      [
+      numbers: [
         if (stats.average case final average?)
           (NumberFormat('0.0', _locale).format(average), 'note moyenne'),
         if (mode >= 0) (formatStars(mode + 1), 'la plus donnée'),
@@ -2273,7 +2448,7 @@ class _StoryPage extends ConsumerWidget {
     final decades = _decades(data).take(3).toList();
     final most = decades.isEmpty ? 1 : decades.first.count;
     return (
-      Column(mainAxisSize: MainAxisSize.min, children: [
+      hero: Column(mainAxisSize: MainAxisSize.min, children: [
         cap('Acte III · Les films'),
         SizedBox(height: 5 * u),
         poster(oldest == null ? null : inputs.poster(oldest), 46 * u),
@@ -2281,7 +2456,9 @@ class _StoryPage extends ConsumerWidget {
         cond(oldest?.title ?? '', 12 * u, maxLines: 2),
         SizedBox(height: 1 * u),
         cap('${oldest?.year ?? ''} · votre plus vieux voyage'),
-        SizedBox(height: 5 * u),
+      ]),
+      gap: 5 * u,
+      rest: Column(mainAxisSize: MainAxisSize.min, children: [
         for (final (i, d) in decades.indexed)
           Padding(
             padding: EdgeInsets.only(bottom: 2.6 * u),
@@ -2311,7 +2488,7 @@ class _StoryPage extends ConsumerWidget {
             ]),
           ),
       ]),
-      [
+      numbers: [
         ('${data.stats.elsewhere}', 'vus ailleurs'),
         if (data.medianYear case final median?) ('$median', 'film moyen'),
       ]
@@ -2352,7 +2529,7 @@ class WrappedRecap extends StatelessWidget {
         1 + AppWrapped.kenBurns * 1.4 * (joined ? entry!.progress : 0);
     return LayoutBuilder(builder: (context, box) {
       // En vertical (story), une page composée pour le vertical.
-      if (box.maxHeight > box.maxWidth) {
+      if (box.maxHeight > box.maxWidth || WrappedStoryLayout.of(context)) {
         return _StoryPage(inputs: inputs, kind: content.kind);
       }
       return _landscape(
@@ -2515,11 +2692,15 @@ class WrappedRecap extends StatelessWidget {
           top: portrait ? size.height * .4 : pad * 2,
           // Un titre sur deux lignes peut manquer de place en story : le
           // bloc rétrécit plutôt que de déborder.
+          // Réduit, il reste calé à droite : l'espace libre passe côté
+          // image, jamais au bord de l'écran.
           child: Align(
-              alignment: Alignment.bottomLeft,
+              alignment:
+                  portrait ? Alignment.bottomLeft : Alignment.bottomRight,
               child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  alignment: Alignment.bottomLeft,
+                  alignment:
+                      portrait ? Alignment.bottomLeft : Alignment.bottomRight,
                   child: SizedBox(
                       width: portrait
                           ? size.width - pad * 2
@@ -2545,19 +2726,23 @@ List<WrappedPage> wrappedExportPages(
         WrappedPage(
             file: '00-recap',
             seconds: AppWrapped.recap,
+            summary: true,
             builder: (_) => WrappedRecap(inputs: w)),
       if (acts) ...[
         WrappedPage(
             file: '01-acte-1-le-temps',
             seconds: AppWrapped.recap,
+            summary: true,
             builder: (_) => WrappedRecap(inputs: w, summary: timeSummary(w))),
         WrappedPage(
             file: '02-acte-2-les-gouts',
             seconds: AppWrapped.recap,
+            summary: true,
             builder: (_) => WrappedRecap(inputs: w, summary: tasteSummary(w))),
         WrappedPage(
             file: '03-acte-3-les-films',
             seconds: AppWrapped.recap,
+            summary: true,
             builder: (_) => WrappedRecap(inputs: w, summary: filmsSummary(w))),
       ],
       if (allSlides)
