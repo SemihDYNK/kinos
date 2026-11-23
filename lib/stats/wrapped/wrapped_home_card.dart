@@ -17,7 +17,7 @@ import '../viewing_stats.dart';
 import 'wrapped_screen.dart' show wrappedAvailable;
 import 'wrapped_slides.dart' show storyColor, storyInk;
 
-/// La carte masquée pour [year] (refermée, ou le Wrapped déjà ouvert).
+/// La carte masquée pour [year] (par sa croix).
 String _hiddenKey(int year) => 'wrappedHomeHidden:$year';
 
 final _wrappedCardHiddenProvider = StateProvider.family<bool, int>((ref,
@@ -49,7 +49,7 @@ final _wrappedCardArtProvider = FutureProvider.autoDispose
 /// L'annonce du Wrapped sur l'accueil, en décembre : une carte large entre
 /// « Continuer à regarder » et les rangées suivantes, sur l'image de fond
 /// du film de l'année fondue dans sa couleur, « 2026 » en filigrane. Elle
-/// ouvre le Wrapped (et se retire alors), ou se masque d'un clic.
+/// ouvre le Wrapped, et reste là tout décembre sauf si on la masque.
 class WrappedHomeCard extends ConsumerWidget {
   const WrappedHomeCard({required this.contentPadding, this.today, super.key});
   final EdgeInsets contentPadding;
@@ -62,9 +62,11 @@ class WrappedHomeCard extends ConsumerWidget {
     final now = today ?? DateTime.now();
     final year = now.year;
     // En décembre seulement (ou à tout moment avec KINOS_WRAPPED_ANYTIME).
-    final season =
-        now.month == 12 || wrappedAvailable(year, now: DateTime(year, 1, 1));
-    final visible = season && !ref.watch(_wrappedCardHiddenProvider(year));
+    // Hors saison, le mode de test (KINOS_WRAPPED_ANYTIME) l'affiche
+    // toujours, même masquée.
+    final testing = wrappedAvailable(year, now: DateTime(year, 1, 1));
+    final visible = testing ||
+        (now.month == 12 && !ref.watch(_wrappedCardHiddenProvider(year)));
     final events =
         visible ? ref.watch(viewingEventsProvider).valueOrNull : null;
     if (events == null) return const SliverToBoxAdapter();
@@ -82,10 +84,8 @@ class WrappedHomeCard extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final cond = AppTypography.heroEditorial.copyWith(color: ink, height: .9);
 
-    void open() {
-      _hideWrappedCard(ref, year);
-      context.router.root.push(YearWrappedRoute(year: year));
-    }
+    // L'ouvrir ne la retire pas : on peut revoir son année tout le mois.
+    void open() => context.router.root.push(YearWrappedRoute(year: year));
 
     return SliverPadding(
       padding: contentPadding.copyWith(top: AppSpacing.lg, bottom: 0),
