@@ -28,6 +28,7 @@ import 'viewing_backfill.dart';
 import 'viewing_log.dart';
 import 'viewing_recorder.dart';
 import 'viewing_stats.dart';
+import 'wrapped/wrapped_media.dart' show wrappedTintsProvider;
 import 'wrapped/wrapped_screen.dart' show wrappedAvailable;
 
 /// Toutes les séances du journal du profil actif.
@@ -38,18 +39,34 @@ final viewingEventsProvider =
   return store.all();
 });
 
-/// Les fiches Jellyfin des mieux notés, pour leurs affiches.
+/// Les fiches Jellyfin de tous les films du journal (affiches, images de
+/// fond), demandées une fois à l'ouverture de la page par paquets de
+/// cent : changer d'année ne déclenche plus aucune requête.
 final _statsItemsProvider = FutureProvider.autoDispose
-    .family<List<ItemBaseModel>, String>((ref, ids) async {
-  if (ids.isEmpty) return const [];
-  final response = await ref
-      .read(jellyApiProvider)
-      .usersUserIdItemsGet(ids: ids.split(','), enableUserData: true);
-  return [
-    for (final dto in response.body?.items ?? const <BaseItemDto>[])
-      ItemBaseModel.fromBaseDto(dto, ref)
-  ];
+    .family<List<ItemBaseModel>, String>((ref, key) async {
+  if (key.isEmpty) return const [];
+  final ids = key.split(',');
+  final api = ref.read(jellyApiProvider);
+  final items = <ItemBaseModel>[];
+  for (var i = 0; i < ids.length; i += 100) {
+    final response = await api.usersUserIdItemsGet(
+        ids: ids.sublist(i, (i + 100).clamp(0, ids.length)),
+        enableUserData: true);
+    for (final dto in response.body?.items ?? const <BaseItemDto>[]) {
+      items.add(ItemBaseModel.fromBaseDto(dto, ref));
+    }
+  }
+  ref.keepAlive();
+  return items;
 });
+
+/// Le film à l'affiche d'une période : le mieux noté qui est dans la
+/// bibliothèque, sinon le plus revu, sinon le plus long.
+ViewingEvent? _bannerOf(ViewingStats stats) => [
+      for (final t in stats.topRated) t.event,
+      if (stats.mostSeen case final seen?) seen.event,
+      if (stats.longestFilm case final film?) film,
+    ].where((e) => e.jellyfinId != null).firstOrNull;
 
 /// Les affiches TMDB (par Seerr) des mieux notés absents de la
 /// bibliothèque : « 1,2,3 » → id TMDB → URL.
@@ -116,6 +133,51 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   /// historique Jellyfin d'avant la page ne l'a jamais rempli.
   bool _autoRebuilt = false;
 
+  /// La dernière teinte connue du film à l'affiche.
+  Color? _tint;
+  bool _warmed = false;
+
+  /// Une fois les fiches arrivées : les images de fond et les teintes des
+  /// films à l'affiche de chaque année (et de « Depuis toujours ») sont
+  /// préparées d'avance. Changer d'année n'attend plus rien.
+  void _warm(List<ViewingEvent> events, Map<String, KinosRating> ratings,
+      Map<String, ItemBaseModel> byId) {
+    if (_warmed) return;
+    _warmed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final years = {for (final e in events) e.at.year};
+      for (final period in [
+        for (final y in years) StatsPeriod(year: y),
+        const StatsPeriod(),
+      ]) {
+        if (!mounted) return;
+        final banner = _bannerOf(computeStats(events, ratings, period));
+        final image = byId[banner?.jellyfinId]?.images?.backDrop?.firstOrNull;
+        if (banner == null || image == null) continue;
+        await precacheImage(image.imageProvider, context, onError: (_, __) {});
+        if (!mounted) return;
+        // Calculée une fois, la teinte reste en cache pour la suite.
+        await ref
+            .read(paletteServiceProvider)
+            .forItem(itemId: banner.jellyfinId!, image: image.imageProvider);
+      }
+      // Puis le Wrapped de l'année, s'il est ouvert : données, images et
+      // teintes sont prêtes avant qu'on clique sur « Voir votre année ».
+      final year = DateTime.now().year;
+      if (mounted && wrappedAvailable(year)) {
+        _wrapped = ref.listenManual(wrappedTintsProvider(year), (_, __) {});
+      }
+    });
+  }
+
+  ProviderSubscription<Object?>? _wrapped;
+
+  @override
+  void dispose() {
+    _wrapped?.close();
+    super.dispose();
+  }
+
   Future<void> _rebuild() async {
     setState(() => _rebuilding = true);
     await ref.read(viewingBackfillProvider).rebuild();
@@ -163,31 +225,19 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         );
 
     final topRated = stats?.topRated ?? const [];
-    final ids = [
-      for (final t in topRated)
-        if (t.event.jellyfinId case final id?) id
-    ];
-    for (final e in [
-      ...?stats?.genreFilms.values,
-      if (stats?.longestFilm case final film?) film,
-      if (stats?.mostSeen case final seen?) seen.event,
-      if (stats?.oldestFilm case final film?) film,
-    ].where((e) => e.jellyfinId != null)) {
-      if (!ids.contains(e.jellyfinId)) ids.add(e.jellyfinId!);
-    }
-    // Le bandeau : le mieux noté de la période qui est dans la
-    // bibliothèque, sinon le plus revu, sinon le plus long.
-    final bannerEvent = [
-      for (final t in topRated) t.event,
-      if (stats?.mostSeen case final seen?) seen.event,
-      if (stats?.longestFilm case final film?) film,
-    ].where((e) => e.jellyfinId != null).firstOrNull;
-    if (bannerEvent != null && !ids.contains(bannerEvent.jellyfinId)) {
-      ids.add(bannerEvent.jellyfinId!);
-    }
+    final bannerEvent = stats == null ? null : _bannerOf(stats);
+    final allIds = events == null
+        ? ''
+        : ({
+            for (final e in events)
+              if (e.isMovie && e.jellyfinId != null) e.jellyfinId!
+          }.toList()
+              ..sort())
+            .join(',');
     final posters =
-        ref.watch(_statsItemsProvider(ids.join(','))).valueOrNull ?? const [];
+        ref.watch(_statsItemsProvider(allIds)).valueOrNull ?? const [];
     final byId = {for (final p in posters) p.id: p};
+    if (posters.isNotEmpty && events != null) _warm(events, ratings, byId);
     final bannerItem =
         posters.where((p) => p.id == bannerEvent?.jellyfinId).firstOrNull;
     final bannerImage = bannerItem?.images?.backDrop?.firstOrNull;
@@ -195,14 +245,18 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       for (final t in topRated)
         if (t.event.jellyfinId == bannerItem?.id) t.rating
     ].firstOrNull;
-    final tint = bannerItem == null || bannerImage == null
-        ? AppColors.heroFallback
+    final palette = bannerItem == null || bannerImage == null
+        ? null
         : ref
-                .watch(_bannerPaletteProvider(
-                    (id: bannerItem.id, image: bannerImage.imageProvider)))
-                .valueOrNull
-                ?.tint ??
-            AppColors.heroFallback;
+            .watch(_bannerPaletteProvider(
+                (id: bannerItem.id, image: bannerImage.imageProvider)))
+            .valueOrNull;
+    // La teinte précédente tient le temps que la nouvelle arrive : jamais
+    // de passage par le gris entre deux années.
+    if (palette != null) _tint = palette.tint;
+    final tint = bannerImage == null
+        ? AppColors.heroFallback
+        : palette?.tint ?? _tint ?? AppColors.heroFallback;
     Widget twoColumns(List<Widget> left, List<Widget> right) =>
         LayoutBuilder(builder: (context, constraints) {
           Widget column(List<Widget> children) => Column(
@@ -1316,11 +1370,15 @@ class _Banner extends StatelessWidget {
                 colors: [Colors.white, Colors.white, Colors.transparent],
               ).createShader(rect),
               child: Stack(fit: StackFit.expand, children: [
-                KinosImage(
-                    key: ValueKey(image!.key),
-                    image: image,
-                    alignment: AppHeroLayout.imageAlignment,
-                    disableBlur: true),
+                // D'une année à l'autre, une image se fond dans la suivante.
+                AnimatedSwitcher(
+                  duration: AppDurations.heroTint,
+                  child: KinosImage(
+                      key: ValueKey(image!.key),
+                      image: image,
+                      alignment: AppHeroLayout.imageAlignment,
+                      disableBlur: true),
+                ),
                 // Le voile de lecture, sous l'en-tête.
                 DecoratedBox(
                   decoration: BoxDecoration(
