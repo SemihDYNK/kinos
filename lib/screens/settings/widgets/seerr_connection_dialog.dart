@@ -22,9 +22,18 @@ import 'package:kinos/util/localization_helper.dart';
 
 final _stackTracePattern = RegExp(r'\n#\d');
 String _sanitizeErrorMessage(Object error) {
-  final str = error.toString();
+  var str = error.toString();
   final match = _stackTracePattern.firstMatch(str);
-  return match != null ? str.substring(0, match.start).trim() : str;
+  if (match != null) str = str.substring(0, match.start).trim();
+  // Une page HTML à la place d'une réponse de l'API : l'adresse ne mène
+  // pas à Seerr. Inutile d'afficher la page.
+  final html = RegExp(r'<!doctype|<html', caseSensitive: false).firstMatch(str);
+  if (html != null) {
+    str = '${str.substring(0, html.start).trim()}\n'
+        'Le serveur a répondu par une page web : vérifiez que l\'adresse est '
+        'celle de Seerr, sans chemin après le domaine.';
+  }
+  return str;
 }
 
 Future<void> showSeerrConnectionDialog(BuildContext context) {
@@ -185,7 +194,8 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
       return false;
     }
 
-    final result = await probeAndNormalizeUrl(rawUrl, probeSeerrUrl);
+    final probed = await probeAndNormalizeUrl(rawUrl, probeSeerrUrl);
+    final result = (url: await seerrRootUrl(probed.url), probed: probed.probed);
 
     if (!mounted) return false;
 

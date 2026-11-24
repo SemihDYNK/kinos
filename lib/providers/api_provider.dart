@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
@@ -176,6 +177,32 @@ Future<String?> _probeUrl(String baseUrl, String endpoint) async {
 
 /// Probes a Seerr server URL by hitting /api/v1/status.
 Future<String?> probeSeerrUrl(String baseUrl) => _probeUrl(baseUrl, '/api/v1/status');
+
+/// La racine d'un serveur Seerr : une adresse copiée depuis une page de
+/// Seerr (`…/users`, `…/movie/123`) n'est pas celle de l'API. Si [url] a un
+/// chemin et n'expose pas `/api/v1/status`, mais que l'origine le fait,
+/// l'origine est retenue ; sinon [url] reste telle quelle.
+Future<String> seerrRootUrl(String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null || !uri.hasScheme || uri.path.isEmpty || uri.path == '/') {
+    return url;
+  }
+  Future<bool> isSeerr(String base) async {
+    try {
+      final response = await http
+          .get(Uri.parse('${base.endsWith('/') ? base.substring(0, base.length - 1) : base}/api/v1/status'))
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode != 200) return false;
+      final body = jsonDecode(response.body);
+      return body is Map && body.containsKey('version');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  if (await isSeerr(url)) return url;
+  return await isSeerr(uri.origin) ? uri.origin : url;
+}
 
 /// Probes a Jellyfin server URL by hitting /System/Info/Public.
 Future<String?> probeJellyfinUrl(String baseUrl) => _probeUrl(baseUrl, '/System/Info/Public');
