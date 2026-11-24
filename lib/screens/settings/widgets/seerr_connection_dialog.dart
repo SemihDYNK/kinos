@@ -238,12 +238,22 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
   }
 
   Future<void> _loginLocal() async {
+    // Lus avant tout : Seerr refuse un champ vide par une erreur 500 peu
+    // parlante.
+    final email = localEmailController.text.trim();
+    final password = localPasswordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => error = email.isEmpty
+          ? 'Saisissez l\'e-mail du compte Seerr.'
+          : 'Saisissez le mot de passe du compte Seerr.');
+      return;
+    }
     if (!await _beginProcessing()) return;
 
     try {
       final cookie = await ref.read(seerrApiProvider).authenticateLocal(
-            email: localEmailController.text.trim(),
-            password: localPasswordController.text,
+            email: email,
+            password: password,
             headers: customHeaders.isEmpty ? null : customHeaders,
           );
       ref.read(userProvider.notifier).setSeerrSessionCookie(cookie);
@@ -277,6 +287,10 @@ class _SeerrConnectionDialogState extends ConsumerState<SeerrConnectionDialog> {
               '(pas son nom) et son mot de passe Seerr ; un compte créé sans '
               'mot de passe doit en recevoir un dans Seerr (Utilisateurs → '
               'le compte → Mot de passe).',
+        SeerrLocalAuthFailure(status: 500, :final message?)
+            when message.contains('provide both') =>
+          'Seerr n\'a reçu qu\'un champ sur deux (e-mail ou mot de passe '
+              'vide à l\'arrivée). Ressaisissez-les puis réessayez.',
         SeerrLocalAuthFailure(status: 500, :final message?)
             when message.contains('disabled') =>
           'La connexion par mot de passe est désactivée dans Seerr.',
