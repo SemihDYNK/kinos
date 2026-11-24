@@ -1,3 +1,4 @@
+import 'package:kinos/update/update_dialog.dart';
 import 'package:kinos/letterboxd/home/letterboxd_home_sections.dart';
 import 'package:kinos/screens/dashboard/genre_browse_section.dart';
 import 'package:kinos/widgets/shared/page_motion.dart';
@@ -87,6 +88,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Une nouvelle version publiée : proposée une fois, depuis l'accueil.
+    listenForUpdates(ref, () => this.context);
     final scope = ref.watch(catalogScopeProvider);
     final index = scope == allCatalog
         ? 0

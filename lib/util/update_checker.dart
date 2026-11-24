@@ -12,12 +12,16 @@ class ReleaseInfo {
   final bool isNewerThanCurrent;
   final Map<String, String> downloads;
 
+  /// Les empreintes SHA-256 des archives (`SHA256SUMS.txt`), si publiées.
+  final String? checksumsUrl;
+
   ReleaseInfo({
     required this.version,
     required this.changelog,
     required this.url,
     required this.isNewerThanCurrent,
     required this.downloads,
+    this.checksumsUrl,
   });
 
   String? downloadUrlFor(String platform) => downloads[platform];
@@ -91,13 +95,16 @@ class UpdateChecker {
       final assets = json['assets'] as List<dynamic>? ?? [];
 
       final Map<String, String> downloads = {};
+      String? checksumsUrl;
       for (final asset in assets) {
         // Les archives publiées sont en minuscules
         // (kinos-windows-x64-portable.zip, kinos-macos-universal.zip).
         final name = (asset['name'] as String? ?? '').toLowerCase();
         final downloadUrl = asset['browser_download_url'] as String? ?? '';
 
-        if (name.contains('android') && name.endsWith('.apk')) {
+        if (name == 'sha256sums.txt') {
+          checksumsUrl = downloadUrl;
+        } else if (name.contains('android') && name.endsWith('.apk')) {
           downloads['android'] = downloadUrl;
         } else if (name.contains('ios') && name.endsWith('.ipa')) {
           downloads['ios'] = downloadUrl;
@@ -128,6 +135,7 @@ class UpdateChecker {
         url: htmlUrl,
         isNewerThanCurrent: isNewer,
         downloads: downloads,
+        checksumsUrl: checksumsUrl,
       );
     }).toList();
   }

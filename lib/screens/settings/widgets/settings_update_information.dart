@@ -11,6 +11,8 @@ import 'package:kinos/util/list_padding.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/update_checker.dart';
 import 'package:kinos/theme/app_theme.dart';
+import 'package:kinos/update/kinos_updater.dart';
+import 'package:kinos/update/update_dialog.dart';
 
 class SettingsUpdateInformation extends ConsumerStatefulWidget {
   const SettingsUpdateInformation({super.key});
@@ -106,6 +108,11 @@ class UpdateInformation extends StatelessWidget {
           data: releaseInfo.changelog,
           shrinkWrap: true,
         ),
+        if (releaseInfo.isNewerThanCurrent && kinosCanSelfUpdate)
+          FilledButton(
+            onPressed: () => showUpdateDialog(context, releaseInfo),
+            child: const Text('Mettre à jour et redémarrer'),
+          ),
         ...releaseInfo.preferredDownloads.entries.map(
           (entry) {
             return FilledButton(
