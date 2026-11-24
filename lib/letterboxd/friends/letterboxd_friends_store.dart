@@ -110,6 +110,8 @@ class LetterboxdFriendsStore {
   Future<void> savePause(DateTime until) =>
       _put('pause', until.millisecondsSinceEpoch);
 
+  Future<void> clearPause() => db.deleteSetting('pause', scope: scope);
+
   /// Délie le compte et efface tout ce qui en venait.
   Future<void> clear() => db.transaction(() async {
         for (final row in await db.getSettingsForScope(scope).get()) {

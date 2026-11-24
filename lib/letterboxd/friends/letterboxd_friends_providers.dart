@@ -275,15 +275,15 @@ class LetterboxdFriendsSyncController
     // Le journal d'abord : une seule requête, indépendante des amis.
     unawaited(
         ref.read(letterboxdDiarySyncProvider.notifier).sync(force: force));
-    // Letterboxd a demandé une pause : rien ne part avant sa fin.
-    final paused = ref.read(letterboxdFriendsClientProvider).pausedUntil ??
-        await store.pausedUntil();
+    // Letterboxd a demandé une pause : rien ne part avant sa fin, sauf
+    // un nouvel essai demandé à la main ([force]). Un nouveau refus remet
+    // la pause aussitôt.
+    final client = ref.read(letterboxdFriendsClientProvider);
+    final paused = client.pausedUntil ?? await store.pausedUntil();
     if (paused != null) {
-      if (force && mounted) {
-        state =
-            LetterboxdFriendsSyncState(error: 'paused', pausedUntil: paused);
-      }
-      return;
+      if (!force) return;
+      client.resume();
+      await store.clearPause();
     }
     final last = account.syncedAt;
     if (!force &&

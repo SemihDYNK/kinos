@@ -78,6 +78,10 @@ class LetterboxdFriendsClient {
   bool _draining = false;
   DateTime? _last;
 
+  /// Lève la pause : un nouvel essai demandé par l'utilisateur. Un nouveau
+  /// refus la remet aussitôt.
+  void resume() => _pausedUntil = null;
+
   void close() => _client.close();
 
   /// Une requête après l'autre, avec au moins [spacing] entre deux départs.
