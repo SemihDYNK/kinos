@@ -14,11 +14,15 @@ class SeerrUser extends _$SeerrUser {
   }
 
   Future<void> _fetchUser() async {
-    final api = ref.read(seerrApiProvider);
-    final response = await api.me();
-    if (response.isSuccessful && response.body is SeerrUserModel) {
-      state = response.body as SeerrUserModel;
-    }
+    // Sans serveur Seerr configuré (ou injoignable), pas d'utilisateur :
+    // l'échec reste silencieux au lieu de remonter en exception non gérée.
+    try {
+      final api = ref.read(seerrApiProvider);
+      final response = await api.me();
+      if (response.isSuccessful && response.body is SeerrUserModel) {
+        state = response.body as SeerrUserModel;
+      }
+    } catch (_) {}
   }
 
   Future<SeerrUserModel?> refreshUser() async {
