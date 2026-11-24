@@ -73,11 +73,15 @@ class OutlinedTextField extends ConsumerStatefulWidget {
 }
 
 class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
-  late final bool _ownsController = widget.controller == null;
-  late final TextEditingController controller =
-      widget.controller ?? TextEditingController();
-  late final bool _ownsTextFocus = widget.focusNode == null;
-  late final FocusNode _textFocus = widget.focusNode ?? FocusNode();
+  // Le contrôleur et le focus suivent le widget : un même champ réutilisé
+  // avec un autre contrôleur (un onglet qui en remplace un autre) lit et
+  // écrit dans le bon, jamais dans le premier reçu.
+  TextEditingController? _ownController;
+  TextEditingController get controller =>
+      widget.controller ?? (_ownController ??= TextEditingController());
+  FocusNode? _ownTextFocus;
+  FocusNode get _textFocus =>
+      widget.focusNode ?? (_ownTextFocus ??= FocusNode());
   late final FocusNode _wrapperFocus = FocusNode()
     ..addListener(() {
       setState(() {
@@ -96,12 +100,8 @@ class _OutlinedTextFieldState extends ConsumerState<OutlinedTextField> {
 
   @override
   void dispose() {
-    if (_ownsTextFocus) {
-      _textFocus.dispose();
-    }
-    if (_ownsController) {
-      controller.dispose();
-    }
+    _ownTextFocus?.dispose();
+    _ownController?.dispose();
     _wrapperFocus.dispose();
     super.dispose();
   }
