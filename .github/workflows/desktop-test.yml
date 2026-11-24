@@ -259,6 +259,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Les notes de version, écrites à la main dans docs/releases/<tag>.md.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: docs/releases
       - uses: actions/download-artifact@v4
         with:
           name: kinos-windows-x64-portable
@@ -277,9 +281,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Les notes écrites pour la version (affichées aussi par la mise à
+          # jour intégrée) ; à défaut, celles générées par GitHub.
+          notes="docs/releases/$GITHUB_REF_NAME.md"
+          if [ -f "$notes" ]; then
+            set -- --notes-file "$notes"
+          else
+            echo "::warning::$notes manquant : notes générées par GitHub"
+            set -- --generate-notes
+          fi
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --title "Kinos $GITHUB_REF_NAME" \
-            --generate-notes \
+            "$@" \
             release/kinos-windows-x64-portable.zip \
             release/kinos-macos-universal.zip \
             release/SHA256SUMS.txt

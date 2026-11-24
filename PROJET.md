@@ -96,6 +96,24 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
+## v0.17.1 (24 novembre)
+
+- **Mise à jour intégrée** (`lib/update/`) : sous Windows et macOS, la
+  nouvelle version est proposée une fois par lancement depuis l'accueil
+  (ignorable par version), et dans Réglages → À propos. Téléchargement,
+  vérification contre `SHA256SUMS.txt`, extraction (`ditto` sur macOS),
+  puis un script remplace l'app en place et la relance.
+- **Notes de version** : écrites à la main dans `docs/releases/<tag>.md`,
+  publiées par la CI et affichées par la mise à jour intégrée.
+- **Seerr** : connexion locale réparée (les champs d'un onglet gardaient les
+  contrôleurs de l'onglet précédent, corrigé dans `OutlinedTextField`) ;
+  adresse ramenée à la racine du serveur ; pas de HTML brut dans les
+  erreurs ; plus d'exception au démarrage sans serveur.
+- **macOS** : droit `files.user-selected.read-write`, exigé par
+  `file_picker` même hors bac à sable (import ZIP, dossier de
+  téléchargement) ; vérifié par la CI.
+- **Letterboxd** : « Synchroniser » lève la pause et retente une fois.
+
 ## v0.17.0 (24 novembre)
 
 - **Journal de visionnage** (`lib/stats/`) : table Drift locale, alimentée

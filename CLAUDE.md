@@ -7,6 +7,9 @@ Ryoku (Arch + Hyprland) / AMD RDNA2. Depuis v0.12.0 (6 novembre 2026), les
 versions publiées sur GitHub sont pour Windows (x64 portable) et macOS
 (universel, signature ad hoc) — `.github/workflows/desktop-test.yml`, sur
 tag `v*`. L'AppImage Linux est construite par la CI mais pas publiée.
+Chaque version a ses notes, courtes, en français, dans
+`docs/releases/<tag>.md` (Nouveau / Corrigé) : la CI les publie et la mise
+à jour intégrée de Kinos les affiche.
 
 ## Règles de fork
 
@@ -140,6 +143,8 @@ détail dans `PROJET.md`.
 v0.17.0 (24 novembre) ajoute le journal de visionnage, la note Kinos, la
 page Statistiques, le Wrapped (diapos, musique, export PNG, carte de
 décembre) et les critiques Letterboxd des amis — détail dans `PROJET.md`.
+v0.17.1 (24 novembre) ajoute la mise à jour intégrée (Windows, macOS) et
+répare la connexion Seerr locale et le Finder sous macOS.
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 
