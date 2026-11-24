@@ -96,6 +96,38 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
+## v0.17.0 (24 novembre)
+
+- **Journal de visionnage** (`lib/stats/`) : table Drift locale, alimentée
+  par les lectures Kinos, l'historique Letterboxd (export, journal RSS) et
+  la dernière lecture Jellyfin en repli, doublons fusionnés. L'import
+  Letterboxd peut aussi marquer les films de la bibliothèque comme vus
+  dans Jellyfin.
+- **Note Kinos** : cinq étoiles par demi-étoile sur les fiches de films et
+  de séries, dans un menu déroulant comme le choix des sous-titres.
+- **Statistiques**, derrière la photo de profil : par année ou depuis
+  toujours ; bandeau teinté par le film à l'affiche, activité et
+  calendrier, genres en tuiles, réalisateurs et acteurs en portraits
+  (meilleur portrait TMDB), records. Changement d'année sans attente :
+  fiches chargées une fois, images et teintes préparées d'avance, fondu
+  entre les bannières.
+- **Wrapped** (`lib/stats/wrapped/`), dès le 1er décembre et pour chaque
+  année passée : plein écran, trois actes (le temps, les goûts, les films),
+  navigation manuelle (Espace pour la lecture automatique). Frise de
+  l'année, rythme, genre, séries, marathon, réalisateur et acteur avec une
+  citation Wikiquote, notes, amis Letterboxd, avis à contre-courant,
+  voyage dans les décennies, série et film de l'année, récap. Musique par
+  acte (Kevin MacLeod, CC BY 4.0, cf. `NOTICE`) et thème Jellyfin du film
+  de l'année. Export PNG (E) : récap de l'année, un par acte, toutes les
+  diapos ; story 9:16, écran 16:9 comme les diapos ou comme les stories.
+- **Accueil** : en décembre, une carte « Votre année » sous « Continuer à
+  regarder », masquable par sa croix.
+- **Letterboxd** : critiques écrites des amis, lues dans une carte dépolie
+  née de leur photo ; pause de 24 h sur la vérification anti-robots de
+  Cloudflare, gardée d'un lancement à l'autre ; import en arrière-plan.
+- **Fluidité** : les grilles ne se reconstruisent plus à chaque image du
+  défilement.
+
 ## v0.16.0 (18 novembre)
 
 - **Prochainement** (`lib/upcoming/`) : page masquée par défaut, activée
@@ -653,25 +685,9 @@ Ouverts côté code, dans un ordre de priorité suggéré :
   si souhaité.
 - **Tests sur la synchronisation/téléchargement offline** (Bugs connus
   5) — avant toute modification non triviale de cette zone.
-- **Statistiques et Wrapped** — conçu le 22 novembre 2026, aucun code ;
-  démarrage sur signal de l'utilisateur. Ordre : (1) journal de visionnage
-  local (table Drift + migration) : chaque lecture Kinos (date, durée
-  regardée, terminée), plus l'historique Letterboxd (export, journal RSS)
-  et la dernière lecture Jellyfin en repli, doublons fusionnés ; (2)
-  import Letterboxd qui alimente ce journal, avec en option « marquer aussi
-  comme vus dans Jellyfin » à la date du dernier visionnage, après
-  confirmation ; (3) note Kinos en cinq étoiles par demi-étoile, comme
-  Letterboxd, locale, initialisée depuis Letterboxd, éditable au clavier sur
-  la fiche, utilisée par les recommandations ; (4) page Statistiques,
-  ouverte depuis la photo de profil de la barre latérale (le changement de
-  profil passe dans les paramètres, comme sur Letterboxd) : par année,
-  mois, depuis toujours ; chiffres en grand, activité par mois et
-  calendrier, genres, réalisateurs, acteurs, studios, décennies, notes,
-  records ; (5) Wrapped dès le 1er décembre et pour chaque année passée :
-  plein écran, une diapo à la fois, clavier ; chaque diapo aussi en
-  portrait 9:16 (1080 × 1920) pour les stories, export PNG (une diapo ou
-  toutes) dans Images, partage sur Mac, diapos masquables avant export ;
-  vidéo MP4 plus tard.
+- **Statistiques et Wrapped** — livrés en v0.17.0 (24 novembre 2026).
+  Reste : vidéo MP4 du Wrapped, partage sur Mac, diapos masquables avant
+  export ; textes du Wrapped en français seulement.
 - **Letterboxd vérifie les robots** (21 novembre 2026) — Cloudflare répond
   `403` avec `cf-mitigated: challenge` dès la 3ᵉ requête d'une
   synchronisation (`<pseudo>/following/page/3/`) : une vérification
