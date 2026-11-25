@@ -66,7 +66,45 @@ abstract final class StartupAurora {
   /// Peint l'aurore sur [rect] : le fond, puis chaque tache, avec
   /// [intensity] de 0 (fond seul) à 1. [blendMode] permet de la poser dans
   /// un calque sans en changer la transparence (srcATop).
+  ///
+  /// Les taches sont floues par nature : elles sont peintes dans une petite
+  /// image ([_resolution] pixels de long), agrandie à l'écran. Peintes en
+  /// pleine taille, ces dégradés plein écran suffisaient à faire ramer
+  /// certaines cartes graphiques (Windows : 50 à 110 ms par image).
   static void paint(Canvas canvas, Rect rect,
+      {required List<Color> colors,
+      required double intensity,
+      BlendMode blendMode = BlendMode.srcOver}) {
+    if (rect.isEmpty) return;
+    final scale = math.min(1.0, _resolution / rect.longestSide);
+    final width = math.max(1, (rect.width * scale).ceil());
+    final height = math.max(1, (rect.height * scale).ceil());
+    final recorder = ui.PictureRecorder();
+    _paintFull(Canvas(recorder),
+        Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+        colors: colors, intensity: intensity);
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width, height);
+    picture.dispose();
+    canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+        rect,
+        Paint()
+          ..blendMode = blendMode
+          ..filterQuality = FilterQuality.medium);
+    image.dispose();
+  }
+
+  /// Côté le plus long de l'image de l'aurore.
+  static const _resolution = 256.0;
+
+  @visibleForTesting
+  static void debugPaintFull(Canvas canvas, Rect rect,
+          {required List<Color> colors, required double intensity}) =>
+      _paintFull(canvas, rect, colors: colors, intensity: intensity);
+
+  static void _paintFull(Canvas canvas, Rect rect,
       {required List<Color> colors,
       required double intensity,
       BlendMode blendMode = BlendMode.srcOver}) {
