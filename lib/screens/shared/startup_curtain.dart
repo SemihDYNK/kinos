@@ -212,6 +212,10 @@ class _StartupCurtainState extends State<StartupCurtain>
   /// [StartupCurtain.settleMax], en gardant le mot posé.
   Ticker? _settle;
 
+  /// L'accueil se peint trop lentement pour animer l'ouverture par-dessus
+  /// (cf. [_settleThen]).
+  bool _struggling = false;
+
   void _settleThen(VoidCallback start) {
     final max = StartupCurtain.settleMax;
     if (!mounted) return;
@@ -221,6 +225,7 @@ class _StartupCurtainState extends State<StartupCurtain>
     }
     Duration? last;
     var calm = 0;
+    var frames = 0;
     _settle?.dispose();
     _settle = createTicker((elapsed) {
       if (last != null) {
@@ -228,8 +233,15 @@ class _StartupCurtainState extends State<StartupCurtain>
             elapsed - last! <= AppDurations.startupSettleFrame ? calm + 1 : 0;
       }
       last = elapsed;
+      frames++;
       if (calm >= AppMotion.startupSettleFrames || elapsed >= max) {
         _settle?.stop();
+        // Jamais calme, et des images en moyenne trop espacées : la carte
+        // graphique ne suit pas l'accueil. Chaque image de l'ouverture le
+        // repeindrait en entier : elle saute au lieu de ramer.
+        _struggling = calm < AppMotion.startupSettleFrames &&
+            elapsed > Duration.zero &&
+            elapsed ~/ frames > AppDurations.startupStrugglingFrame;
         start();
       }
     })
@@ -242,7 +254,11 @@ class _StartupCurtainState extends State<StartupCurtain>
       setState(() {});
       widget.onOpening?.call();
     }
-    if (!_motionEnabled) {
+    if (!_motionEnabled || (_exiting && _struggling)) {
+      if (_struggling) {
+        startupFrameLogger
+            .warning('Démarrage : rendu trop lent, ouverture sans animation.');
+      }
       _controller.value = 1;
     } else {
       if (!await _play()) return;

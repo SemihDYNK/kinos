@@ -595,6 +595,10 @@ abstract final class AppDurations {
   // d'affilée), au plus [startupSettleMax].
   static const startupSettleFrame = Duration(milliseconds: 20);
   static const startupSettleMax = Duration(milliseconds: 700);
+
+  /// Au-delà de cet écart moyen entre deux images pendant l'attente du
+  /// calme (moins de 15 images/s), l'ouverture ne s'anime pas.
+  static const startupStrugglingFrame = Duration(milliseconds: 66);
   // Premier lancement de la session : allumage, assemblage en profondeur,
   // clap, puis le mot (cf. AppMotion.startupIntro*).
   static const startupIntro = Duration(milliseconds: 2850);
