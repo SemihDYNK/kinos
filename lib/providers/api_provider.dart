@@ -116,7 +116,13 @@ class JellyRequest implements Interceptor {
                 headers,
               ),
             )).timeout(_requestTimeout);
-        unawaited(connectivityNotifier.checkConnectivity(immediate: true));
+        // Une réponse prouve que le serveur répond : la sonde ne sert qu'à
+        // sortir du mode hors ligne. Relancée après chaque requête, une
+        // seule sonde lente (serveur distant chargé) faisait passer l'app
+        // hors ligne alors que tout fonctionnait.
+        if (ref.read(connectivityStatusProvider) == ConnectionState.offline) {
+          unawaited(connectivityNotifier.checkConnectivity(immediate: true));
+        }
         return response;
       } catch (e) {
         // Seules les lectures sont rejouées : un POST (rapport de lecture,
@@ -326,7 +332,9 @@ class JellyResponse implements Interceptor {
       log('x- ${response.base.statusCode} - ${response.base.reasonPhrase} - ${response.error} - ${response.base.request?.method} ${response.base.request?.url.toString()}');
     }
     if (response.statusCode == 404) {
-      chopperLogger.severe('404 NOT FOUND');
+      // Le chemin seul : la requête peut porter un jeton.
+      final request = response.base.request;
+      chopperLogger.severe('404 NOT FOUND : ${request?.method} ${request?.url.path}');
     }
 
     return response;

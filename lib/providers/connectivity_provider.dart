@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -83,6 +86,13 @@ class ConnectivityStatus extends _$ConnectivityStatus {
   void _handleHardwareChange(List<ConnectivityResult> results, {bool immediate = false}) {
     final hardwareState = _parseHardwareState(results);
 
+    // Sur ordinateur, le système se déclare parfois sans réseau alors que le
+    // serveur répond (Windows juge l'accès à Internet, pas au réseau
+    // local) : c'est la sonde qui tranche.
+    if (hardwareState == ConnectionState.offline && _isDesktop) {
+      _queueProbe(ConnectionState.ethernet, immediate: immediate);
+      return;
+    }
     if (hardwareState == ConnectionState.offline) {
       _debounceTimer?.cancel();
       _probeId++;
@@ -171,6 +181,9 @@ class ConnectivityStatus extends _$ConnectivityStatus {
     _probeCompleter = null;
   }
 
+  static bool get _isDesktop =>
+      !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
+
   ConnectionState _parseHardwareState(List<ConnectivityResult> results) {
     if (results.contains(ConnectivityResult.vpn)) return ConnectionState.vpn;
     if (results.contains(ConnectivityResult.ethernet)) return ConnectionState.ethernet;
@@ -186,7 +199,8 @@ Future<PublicSystemInfo?> fetchSystemInfoDynamic(String baseUrl) async {
     final uri = buildServerUriFromBase(baseUrl, pathSegments: const ['System', 'Info', 'Public']);
     if (uri == null) return null;
 
-    final response = await http.get(uri).timeout(const Duration(seconds: 2));
+    // Assez long pour un serveur distant occupé à servir l'accueil.
+    final response = await http.get(uri).timeout(const Duration(seconds: 6));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return PublicSystemInfo.fromJson(jsonDecode(response.body));
