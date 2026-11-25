@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -94,28 +95,108 @@ WrappedArt _artOf(
   );
 }
 
-/// La teinte dominante de chaque film d'une année (son image de fond),
-/// extraite une fois puis gardée en cache par le service des palettes.
-final wrappedTintsProvider = FutureProvider.autoDispose
-    .family<Map<String, Color>, int>((ref, year) async {
-  final art = await ref.watch(wrappedArtProvider(year).future);
+/// La teinte dominante de chaque film d'une année, publiée au fil de
+/// l'extraction : les titres des grandes diapos d'abord (film et série de
+/// l'année, dauphins), puis le reste. Les teintes déjà en cache arrivent
+/// tout de suite ; sur une connexion lente, le Wrapped n'attend pas les
+/// centaines d'images de l'année pour se colorer.
+final wrappedTintsProvider =
+    StreamProvider.autoDispose.family<Map<String, Color>, int>((ref, year) {
+  final dataFuture = ref.watch(wrappedDataProvider(year).future);
+  final artFuture = ref.watch(wrappedArtProvider(year).future);
   final service = ref.read(paletteServiceProvider);
-  final tints = <String, Color>{};
-  final queue = art.entries
-      .where((e) => (e.value.backdrop ?? e.value.poster) != null)
-      .toList();
-  // Quatre à la fois : le décodage des images reste discret.
-  Future<void> worker() async {
-    while (queue.isNotEmpty) {
-      final e = queue.removeLast();
-      final image = (e.value.backdrop ?? e.value.poster)!;
-      final palette =
-          await service.forItem(itemId: e.key, image: image.imageProvider);
-      if (!palette.isFallback) tints[e.key] = palette.tint;
+  final controller = StreamController<Map<String, Color>>();
+  var disposed = false;
+  ref.onDispose(() {
+    disposed = true;
+    controller.close();
+  });
+
+  Future<void> run() async {
+    final data = await dataFuture;
+    final art = await artFuture;
+    final queue = wrappedTintOrder(data, art);
+    final tints = <String, Color>{};
+    var published = 0;
+    final clock = Stopwatch()..start();
+    void publish() {
+      if (disposed || tints.length == published) return;
+      published = tints.length;
+      clock.reset();
+      controller.add(Map.unmodifiable(tints));
     }
+
+    // Quatre à la fois : le décodage des images reste discret.
+    Future<void> worker() async {
+      while (queue.isNotEmpty && !disposed) {
+        final key = queue.removeAt(0);
+        final source = art[key]!.backdrop ?? art[key]!.poster!;
+        final palette = await service.forItem(
+            itemId: key, image: paletteSource(source).imageProvider);
+        if (!palette.isFallback) tints[key] = palette.tint;
+        if (clock.elapsedMilliseconds > 400) publish();
+      }
+    }
+
+    await Future.wait([for (var i = 0; i < 4; i++) worker()]);
+    publish();
+    if (!disposed) ref.keepAlive();
   }
 
-  await Future.wait([for (var i = 0; i < 4; i++) worker()]);
-  ref.keepAlive();
-  return tints;
+  run().catchError((Object error, StackTrace stack) {
+    if (!disposed) controller.addError(error, stack);
+  });
+  return controller.stream;
 });
+
+/// L'ordre d'extraction des teintes : celles que les grandes diapos
+/// montrent en premier.
+List<String> wrappedTintOrder(WrappedData data, Map<String, WrappedArt> art) {
+  final first = [
+    if (data.filmOfYear case final best?) best.event.identity,
+    for (final r in data.runnersUp) r.event.identity,
+    for (final s in data.series) 'series:${s.name}',
+  ];
+  final order = <String>{
+    ...first,
+    for (final e in data.timeline.reversed) e.identity,
+    ...art.keys,
+  };
+  return [
+    for (final key in order)
+      if (art[key] case final a? when (a.backdrop ?? a.poster) != null) key
+  ];
+}
+
+/// Une version légère de [image] pour en extraire la teinte : l'analyse
+/// la réduit de toute façon à 100×150, inutile de télécharger l'image
+/// pleine taille.
+ImageData paletteSource(ImageData image) {
+  final uri = Uri.tryParse(image.path);
+  if (uri == null || !uri.hasScheme) return image;
+  Uri? light;
+  if (uri.host == 'image.tmdb.org') {
+    final segments = [
+      for (final s in uri.pathSegments)
+        RegExp(r'^(w\d+|original)$').hasMatch(s) ? 'w300' : s
+    ];
+    light = uri.replace(pathSegments: segments);
+  } else {
+    final query = Map.of(uri.queryParameters);
+    var changed = false;
+    for (final (key, size) in const [
+      ('fillWidth', '320'),
+      ('fillHeight', '180'),
+      ('maxWidth', '300'),
+      ('maxHeight', '300'),
+    ]) {
+      if (query.containsKey(key)) {
+        query[key] = size;
+        changed = true;
+      }
+    }
+    if (changed) light = uri.replace(queryParameters: query);
+  }
+  if (light == null) return image;
+  return ImageData(path: light.toString(), key: '${image.key}:palette');
+}

@@ -110,7 +110,8 @@ void main() {
         statsPortraitProvider.overrideWith((ref, name) async => null),
         wrappedDataProvider(year).overrideWith((ref) async => wrapped),
         wrappedArtProvider(year).overrideWith((ref) async => const {}),
-        wrappedTintsProvider(year).overrideWith((ref) async => const {}),
+        wrappedTintsProvider(year)
+            .overrideWith((ref) => Stream.value(const {})),
         wrappedSoundProvider.overrideWith((ref) => false),
         wrappedQuoteProvider.overrideWith((ref, key) async => key
                 .startsWith('director')
@@ -195,7 +196,8 @@ void main() {
         statsPortraitProvider.overrideWith((ref, name) async => null),
         wrappedDataProvider(year).overrideWith((ref) async => wrapped),
         wrappedArtProvider(year).overrideWith((ref) async => const {}),
-        wrappedTintsProvider(year).overrideWith((ref) async => const {}),
+        wrappedTintsProvider(year)
+            .overrideWith((ref) => Stream.value(const {})),
         wrappedSoundProvider.overrideWith((ref) => false),
       ],
       child: MaterialApp(

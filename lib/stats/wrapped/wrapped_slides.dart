@@ -289,7 +289,7 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
         seconds: AppWrapped.act,
         builder: (_) => _ActCard(
             number: 'Acte III',
-            title: 'Les films',
+            title: 'Le palmarès',
             colors: [
               if (filmOfYear != null) w.tint(filmOfYear),
               for (final r in data.runnersUp.take(2)) w.tint(r.event),
@@ -1821,7 +1821,7 @@ WrappedSummary filmsSummary(WrappedInputs w) {
   }
   return WrappedSummary(
     kind: WrappedSummaryKind.films,
-    label: 'Acte III · Les films',
+    label: 'Acte III · Le palmarès',
     headline: oldest == null
         ? '${stats.films} films'
         : '${oldest.title} · ${oldest.year}',
@@ -2449,7 +2449,7 @@ class _StoryPage extends ConsumerWidget {
     final most = decades.isEmpty ? 1 : decades.first.count;
     return (
       hero: Column(mainAxisSize: MainAxisSize.min, children: [
-        cap('Acte III · Les films'),
+        cap('Acte III · Le palmarès'),
         SizedBox(height: 5 * u),
         poster(oldest == null ? null : inputs.poster(oldest), 46 * u),
         SizedBox(height: 4 * u),
