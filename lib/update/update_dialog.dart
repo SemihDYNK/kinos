@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markdown_widget/widget/markdown.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:kinos/providers/shared_provider.dart';
 import 'package:kinos/providers/update_provider.dart';
@@ -15,11 +16,19 @@ import 'kinos_updater.dart';
 /// La version que l'utilisateur a choisi d'ignorer.
 const _skippedKey = 'kinosSkippedUpdate';
 
+/// La version en cours d'installation : au relancement, Kinos vérifie
+/// qu'il tourne bien dessus.
+const _pendingKey = 'kinosPendingUpdate';
+
 /// Propose une fois par lancement la dernière version, sauf si elle a été
 /// ignorée. Appelé depuis l'accueil : jamais pendant une lecture. Seulement
 /// là où des versions sont publiées (Windows, macOS).
 void listenForUpdates(WidgetRef ref, BuildContext Function() context) {
   if (!kinosCanSelfUpdate) return;
+  if (!_pendingChecked) {
+    _pendingChecked = true;
+    _checkPending(ref, context);
+  }
   final release =
       ref.watch(updateProvider.select((value) => value.latestRelease));
   if (release == null || _offered) return;
@@ -33,6 +42,35 @@ void listenForUpdates(WidgetRef ref, BuildContext Function() context) {
 }
 
 bool _offered = false;
+bool _pendingChecked = false;
+
+/// Une mise à jour lancée au dernier démarrage n'a pas pris (Kinos tourne
+/// encore sur l'ancienne version) : on le dit, avec le journal du script.
+Future<void> _checkPending(
+    WidgetRef ref, BuildContext Function() context) async {
+  final prefs = ref.read(sharedPreferencesProvider);
+  final pending = prefs.getString(_pendingKey);
+  if (pending == null) return;
+  await prefs.remove(_pendingKey);
+  final current = (await PackageInfo.fromPlatform()).version;
+  if (current == pending) return;
+  final shown = context();
+  if (!shown.mounted) return;
+  await showDialog<void>(
+      context: shown,
+      builder: (dialogContext) => AlertDialog(
+            title: Text('La mise à jour vers Kinos $pending n\'a pas abouti'),
+            content: SelectableText(
+                'Kinos est toujours en version $current. Le détail est dans '
+                'le journal :\n$updateLogPath'),
+            actions: [
+              TextButton(
+                  autofocus: true,
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Fermer')),
+            ],
+          ));
+}
 
 Future<void> showUpdateDialog(BuildContext context, ReleaseInfo release) =>
     showDialog<void>(
@@ -65,6 +103,8 @@ class _UpdateDialogState extends ConsumerState<UpdateDialog> {
       _progress = 0;
       _error = null;
     });
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(_pendingKey, widget.release.version);
     try {
       await KinosUpdater().install(widget.release,
           onProgress: (stage, progress) {
@@ -76,6 +116,7 @@ class _UpdateDialogState extends ConsumerState<UpdateDialog> {
         }
       });
     } catch (error) {
+      await prefs.remove(_pendingKey);
       if (mounted) {
         setState(() {
           _stage = null;

@@ -90,44 +90,73 @@ Directory? findWindowsBundle(Directory root, String exeName) {
   return null;
 }
 
+/// Le journal du dernier remplacement : chaque étape des scripts y est
+/// notée, pour comprendre une mise à jour qui n'a pas pris.
+String get updateLogPath =>
+    p.join(Directory.systemTemp.path, 'kinos-update.log');
+
 /// Le script qui, une fois Kinos fermé, remplace l'app macOS et la relance.
-/// Arguments : PID, app installée, nouvelle app. En cas d'échec, l'ancienne
-/// app est remise en place.
+/// Arguments : PID, app installée, nouvelle app, journal. Un Kinos qui ne
+/// se termine pas au bout de 20 s est arrêté ; en cas d'échec, l'ancienne
+/// app est remise en place. Kinos est relancé dans tous les cas.
 const macUpdateScript = r'''#!/bin/sh
-PID="$1"; APP="$2"; NEW="$3"
-while kill -0 "$PID" 2>/dev/null; do sleep 0.2; done
+PID="$1"; APP="$2"; NEW="$3"; LOG="$4"
+exec >>"$LOG" 2>&1
+echo "$(date) Remplacement de $APP par $NEW"
+i=0
+while kill -0 "$PID" 2>/dev/null; do
+  sleep 0.2
+  i=$((i+1))
+  if [ "$i" -eq 100 ]; then
+    echo "Kinos ($PID) ne se termine pas : arrêt forcé"
+    kill -9 "$PID"
+  fi
+done
+echo "Kinos fermé"
 OLD="$APP.kinos-old"
 rm -rf "$OLD"
 if mv "$APP" "$OLD"; then
   if mv "$NEW" "$APP"; then
     rm -rf "$OLD"
+    echo "Nouvelle version en place"
   else
+    echo "Échec : la nouvelle app n'a pas pu être déplacée, ancienne remise"
     mv "$OLD" "$APP"
   fi
+else
+  echo "Échec : l'app installée n'a pas pu être déplacée"
 fi
-xattr -dr com.apple.quarantine "$APP" 2>/dev/null
-open "$APP"
+xattr -dr com.apple.quarantine "$APP"
+open "$APP" && echo "Kinos relancé"
 ''';
 
 /// Le script qui, une fois Kinos fermé, copie la nouvelle version par-dessus
-/// l'ancienne et la relance. Les fichiers encore verrouillés quelques
-/// instants après la fermeture sont réessayés.
+/// l'ancienne et la relance. Un Kinos qui ne se termine pas au bout de
+/// 20 s est arrêté ; robocopy réessaie les fichiers encore verrouillés.
+/// Kinos est relancé dans tous les cas.
 const windowsUpdateScript = r'''param(
   [int]$ProcessId,
   [string]$Source,
   [string]$Target,
-  [string]$Exe
+  [string]$Exe,
+  [string]$Log
 )
-try { Wait-Process -Id $ProcessId -Timeout 60 -ErrorAction SilentlyContinue } catch {}
-for ($i = 0; $i -lt 20; $i++) {
-  try {
-    Copy-Item -Path (Join-Path $Source '*') -Destination $Target -Recurse -Force -ErrorAction Stop
-    break
-  } catch {
-    Start-Sleep -Milliseconds 500
-  }
+function Note([string]$Message) {
+  Add-Content -LiteralPath $Log -Value ("{0} {1}" -f (Get-Date -Format o), $Message)
 }
-Start-Process -FilePath (Join-Path $Target $Exe)
+Note "Remplacement de $Target par $Source"
+try { Wait-Process -Id $ProcessId -Timeout 20 -ErrorAction Stop } catch {}
+if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) {
+  Note "Kinos ($ProcessId) ne se termine pas : arret force"
+  Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Seconds 1
+}
+Note "Kinos ferme"
+& robocopy.exe $Source $Target /E /R:20 /W:1 /NP /NFL /NDL /NJH /NJS | Out-Null
+$code = $LASTEXITCODE
+if ($code -ge 8) { Note "Echec de la copie (robocopy $code)" } else { Note "Nouvelle version en place (robocopy $code)" }
+Start-Process -FilePath (Join-Path $Target $Exe) -WorkingDirectory $Target
+Note "Kinos relance"
 ''';
 
 /// Télécharge la version [release] pour ce système, vérifie son empreinte,
@@ -218,6 +247,10 @@ class KinosUpdater {
 
     // 4. Le script de remplacement, puis la fermeture de Kinos.
     onProgress?.call(UpdateStage.installing, null);
+    final log = File(updateLogPath);
+    await log.writeAsString(
+        '${DateTime.now().toIso8601String()} Kinos ${release.version} '
+        'extrait dans ${extracted.path}\n');
     if (Platform.isMacOS) {
       final app = findAppBundle(extracted);
       if (app == null) {
@@ -225,7 +258,8 @@ class KinosUpdater {
       }
       final script = File(p.join(work.path, 'update.sh'));
       await script.writeAsString(macUpdateScript);
-      await Process.start('/bin/sh', [script.path, '$pid', installed, app.path],
+      await Process.start(
+          '/bin/sh', [script.path, '$pid', installed, app.path, log.path],
           mode: ProcessStartMode.detached);
     } else {
       final exeName = p.basename(executable);
@@ -253,10 +287,27 @@ class KinosUpdater {
             installed,
             '-Exe',
             exeName,
+            '-Log',
+            log.path,
           ],
           mode: ProcessStartMode.detached);
     }
+    // Le script note son départ : sans lui, Kinos se fermait pour rien.
+    if (!await _started(log)) {
+      throw UpdateFailure('Le script de mise à jour n\'a pas démarré '
+          '(journal : ${log.path}).');
+    }
     exit(0);
+  }
+
+  /// Le script a écrit sa première ligne dans [log] (au plus 10 s).
+  static Future<bool> _started(File log) async {
+    for (var i = 0; i < 50; i++) {
+      final text = await log.readAsString().catchError((_) => '');
+      if (text.contains('Remplacement')) return true;
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    return false;
   }
 
   /// Kinos doit pouvoir écrire là où il est installé ; sinon, la mise à
