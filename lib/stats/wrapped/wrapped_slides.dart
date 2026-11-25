@@ -2003,12 +2003,23 @@ class _StoryPage extends ConsumerWidget {
           .copyWith(color: soft, fontSize: 3.1 * u, height: 1.3);
       Widget capText(String text) =>
           Text(text.toUpperCase(), textAlign: TextAlign.center, style: cap);
-      Widget condText(String text, double fontSize, {int maxLines = 1}) =>
-          Text(text.toUpperCase(),
-              textAlign: TextAlign.center,
-              maxLines: maxLines,
-              overflow: TextOverflow.ellipsis,
-              style: cond.copyWith(fontSize: fontSize));
+      // Sur une ligne, un mot trop long (« Adventure ») rétrécit pour tenir
+      // en entier plutôt que d'être coupé.
+      Widget condText(String text, double fontSize,
+              {int maxLines = 1}) =>
+          maxLines == 1
+              ? FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(text.toUpperCase(),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: cond.copyWith(fontSize: fontSize)))
+              : Text(text.toUpperCase(),
+                  textAlign: TextAlign.center,
+                  maxLines: maxLines,
+                  overflow: TextOverflow.ellipsis,
+                  style: cond.copyWith(fontSize: fontSize));
       Widget poster(ImageData? image, double width) => ClipRRect(
             borderRadius: BorderRadius.circular(1.4 * u),
             child: SizedBox(
