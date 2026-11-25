@@ -145,6 +145,8 @@ page Statistiques, le Wrapped (diapos, musique, export PNG, carte de
 décembre) et les critiques Letterboxd des amis — détail dans `PROJET.md`.
 v0.17.1 (24 novembre) ajoute la mise à jour intégrée (Windows, macOS) et
 répare la connexion Seerr locale et le Finder sous macOS.
+v0.17.2 (25 novembre) corrige le faux hors-ligne, l'ouverture sur PC lent et
+les teintes du Wrapped sur connexion lente.
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 

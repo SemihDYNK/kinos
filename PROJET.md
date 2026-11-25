@@ -96,6 +96,19 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
+## v0.17.2 (25 novembre)
+
+- **Connectivité** (`connectivity_provider.dart`, `api_provider.dart`) : une
+  réponse réussie ne relance plus la sonde (sauf hors ligne) ; sonde à 6 s
+  au lieu de 2 ; sur ordinateur, un « pas de réseau » du système est vérifié
+  auprès du serveur. Les 404 journalisent méthode et chemin.
+- **Démarrage** : si l'attente du calme expire avec des images à plus de
+  66 ms en moyenne, l'ouverture saute le faisceau (constaté sous Windows :
+  raster 110–165 ms par image).
+- **Wrapped** : teintes publiées au fil de l'extraction (prioritaires
+  d'abord) et extraites d'images réduites ; acte III « Le palmarès » ;
+  titres d'une ligne réduits pour tenir.
+
 ## v0.17.1 (24 novembre)
 
 - **Mise à jour intégrée** (`lib/update/`) : sous Windows et macOS, la
