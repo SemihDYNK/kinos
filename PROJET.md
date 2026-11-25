@@ -96,6 +96,18 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
+## v0.17.3 (25 novembre)
+
+- **Mise à jour intégrée** : sous Windows, le téléchargement allait à 100 %,
+  Kinos se fermait et rien ne se passait. Kinos ne quitte plus qu'une fois
+  le script démarré ; chaque étape est notée dans `kinos-update.log`
+  (dossier temporaire) ; un Kinos qui ne se termine pas est arrêté au bout
+  de 20 s ; copie par robocopy ; relance dans tous les cas ; une mise à jour
+  qui n'a pas pris est signalée au lancement suivant. Scripts testés pour de
+  vrai (macOS en local et en CI, Windows en CI).
+- **Intro** : l'aurore est peinte dans une image de 256 px puis agrandie
+  (le clap seul ramait sous Windows).
+
 ## v0.17.2 (25 novembre)
 
 - **Connectivité** (`connectivity_provider.dart`, `api_provider.dart`) : une

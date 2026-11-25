@@ -147,6 +147,7 @@ v0.17.1 (24 novembre) ajoute la mise à jour intégrée (Windows, macOS) et
 répare la connexion Seerr locale et le Finder sous macOS.
 v0.17.2 (25 novembre) corrige le faux hors-ligne, l'ouverture sur PC lent et
 les teintes du Wrapped sur connexion lente.
+v0.17.3 (25 novembre) fiabilise la mise à jour intégrée et allège l'intro.
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 
