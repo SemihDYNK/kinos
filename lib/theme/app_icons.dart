@@ -24,7 +24,8 @@ abstract final class AppIcons {
   static const previous = CupertinoIcons.backward_end;
   static const next = CupertinoIcons.forward_end;
   static const chapterPrevious = CupertinoIcons.backward;
-  static const chapterNext = CupertinoIcons.forward;
+  /// Pas de « forward » en contour : le suivant est le précédent en miroir.
+  static const chapterNext = CupertinoIcons.backward;
   static const rewind10 = CupertinoIcons.gobackward_10;
   static const forward10 = CupertinoIcons.goforward_10;
   static const subtitles = CupertinoIcons.captions_bubble;

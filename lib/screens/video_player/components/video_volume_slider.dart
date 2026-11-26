@@ -166,21 +166,21 @@ class _VideoVolumeSliderState extends ConsumerState<VideoVolumeSlider> {
                       // Pouce — visible seulement au survol/glissement/
                       // focus (`isVisible`), même traitement que la
                       // barre de progression.
+                      // Le pouce reste dans la piste : son bord, pas son
+                      // centre, s'arrête aux extrémités (à 100, il
+                      // débordait sur le chiffre).
                       Positioned(
-                        left: (_trackWidth * volume / 100)
-                            .clamp(0, _trackWidth),
-                        child: Transform.translate(
-                          offset: const Offset(-AppSpacing.xxs / 2, 0),
-                          child: AnimatedOpacity(
-                            duration: AppDurations.hover,
-                            opacity: isVisible ? 1 : 0,
-                            child: Container(
-                              height: AppSpacing.sm,
-                              width: AppSpacing.sm,
-                              decoration: const BoxDecoration(
-                                color: AppColors.textPrimary,
-                                shape: BoxShape.circle,
-                              ),
+                        left: ((_trackWidth - AppSpacing.sm) * volume / 100)
+                            .clamp(0, _trackWidth - AppSpacing.sm),
+                        child: AnimatedOpacity(
+                          duration: AppDurations.hover,
+                          opacity: isVisible ? 1 : 0,
+                          child: Container(
+                            height: AppSpacing.sm,
+                            width: AppSpacing.sm,
+                            decoration: const BoxDecoration(
+                              color: AppColors.textPrimary,
+                              shape: BoxShape.circle,
                             ),
                           ),
                         ),

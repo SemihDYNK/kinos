@@ -807,12 +807,20 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
   }
 }
 
+/// Chargements annulés par l'utilisateur. `op.isCanceled` ne suffit pas :
+/// une fois le modèle de lecture prêt, l'opération est terminée et
+/// `cancel()` n'a plus d'effet, alors que le lecteur charge encore le film.
+final _userCancelled = Expando<bool>('userCancelled');
+
+bool _cancelled(CancelableOperation? op) => op != null && (op.isCanceled || _userCancelled[op] == true);
+
 Future<void> _showLoadingIndicator(BuildContext context, ItemBaseModel? item, CancelableOperation op) {
   final navigator = Navigator.of(context, rootNavigator: true);
   return showPlaybackLoadingScreen(
     context,
     item: item,
     onCancel: () {
+      _userCancelled[op] = true;
       try {
         op.cancel();
       } catch (_) {}
@@ -846,7 +854,7 @@ Future<void> _playVideo(
     return;
   }
 
-  if (cancelOperation?.isCanceled ?? false) return;
+  if (_cancelled(cancelOperation)) return;
 
   final actualStartPosition = startPosition ?? await current.startDuration() ?? Duration.zero;
 
@@ -855,6 +863,13 @@ Future<void> _playVideo(
         actualStartPosition,
       );
   context = live();
+
+  // Annulé pendant que le lecteur chargeait : le film démarrait quand même,
+  // son audio derrière l'accueil.
+  if (_cancelled(cancelOperation)) {
+    await ref.read(videoPlayerProvider).stop();
+    return;
+  }
 
   if (!loadedCorrectly) {
     if (context.mounted) {
@@ -868,13 +883,13 @@ Future<void> _playVideo(
     return;
   }
 
-  if (cancelOperation?.isCanceled ?? false) return;
+  if (_cancelled(cancelOperation)) return;
 
   try {
     Navigator.of(context, rootNavigator: true).pop();
   } catch (_) {}
 
-  if (cancelOperation?.isCanceled ?? false) return;
+  if (_cancelled(cancelOperation)) return;
 
   await ref.read(videoPlayerProvider.notifier).openPlayer(context);
   context = live();
@@ -883,7 +898,7 @@ Future<void> _playVideo(
   }
 
   if (context.mounted) {
-    if (cancelOperation?.isCanceled ?? false) return;
+    if (_cancelled(cancelOperation)) return;
     await context.refreshData();
   }
 

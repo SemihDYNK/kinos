@@ -648,23 +648,11 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              // Trois zones : le son à gauche, le transport au centre de
-              // l'écran, les options à droite. Les côtés rétrécissent
+              // Le transport à gauche, là où l'œil revient ; les options,
+              // le son et la fenêtre à droite. Les options rétrécissent
               // (FittedBox) avant que le transport ne bouge.
               Row(
                 children: [
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: VideoVolumeSlider(
-                          onChanged: () => resetTimer(),
-                        ),
-                      ),
-                    ),
-                  ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     spacing: AppSpacing.xxs,
@@ -686,6 +674,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                       ),
                       _desktopChapterButton(next: true),
                       _desktopEpisodeButton(previous: false),
+                      _desktopStopButton(),
                     ],
                   ),
                   Expanded(
@@ -730,8 +719,10 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                               controller: _qualityPopover,
                               optionsBuilder: _qualityOptions,
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            _desktopStopButton(),
+                            const SizedBox(width: AppSpacing.md),
+                            VideoVolumeSlider(
+                              onChanged: () => resetTimer(),
+                            ),
                             FocusRing(
                               borderRadius: AppRadii.controlBorder,
                               onActivate: () =>
@@ -802,6 +793,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
       final settings = ref.read(videoPlayerSettingsProvider.notifier);
       return _desktopSeekButton(
         icon: next ? AppIcons.chapterNext : AppIcons.chapterPrevious,
+        mirrored: next,
         tooltip: next
             ? _tooltipFor(
                 context.localized.nextChapter, VideoHotKeys.nextChapter)
@@ -879,6 +871,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
     required IconData icon,
     required String tooltip,
     required VoidCallback onPressed,
+    bool mirrored = false,
   }) {
     return FocusRing(
       borderRadius: AppRadii.controlBorder,
@@ -889,7 +882,9 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
           child: IconButton(
             iconSize: AppPlayerStyle.iconSize,
             onPressed: onPressed,
-            icon: Icon(icon),
+            icon: mirrored
+                ? Transform.flip(flipX: true, child: Icon(icon))
+                : Icon(icon),
           ),
         ),
       ),
