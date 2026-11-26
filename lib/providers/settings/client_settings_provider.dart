@@ -109,7 +109,12 @@ class ClientSettingsNotifier extends StateNotifier<ClientSettingsModel> {
   void setShortcuts(MapEntry<GlobalHotKeys, KeyCombination> newEntry) =>
       state = state.copyWith(shortcuts: state.shortcuts.setOrRemove(newEntry, state.defaultShortCuts));
 
-  Future<void> closeDirectory() => DirectoryBookmark().closeDirectory(syncPathKey);
+  // Les signets de dossier n'existent que sur macOS : ailleurs, le canal
+  // n'a pas de réponse et levait une exception à chaque fermeture.
+  Future<void> closeDirectory() async {
+    if (kIsWeb || !Platform.isMacOS) return;
+    await DirectoryBookmark().closeDirectory(syncPathKey);
+  }
 
   void setExpandedTVLayout(bool value) => state = state.copyWith(useTVExpandedLayout: value);
 
