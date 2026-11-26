@@ -19,9 +19,18 @@ import 'package:kinos/models/playback/playback_model.dart';
 /// sur un flux transcodé, il lancerait un second transcodage sur le
 /// serveur.
 class SeekPreviewEngine {
-  SeekPreviewEngine._(this._player);
+  SeekPreviewEngine._(this._player) {
+    _live.add(this);
+  }
 
   final mpv.Player _player;
+
+  /// Les aperçus ouverts : à fermer avant la fenêtre, sans quoi leur mpv,
+  /// détruit avec le moteur Flutter, fait planter Kinos (SIGSEGV).
+  static final _live = <SeekPreviewEngine>{};
+
+  static Future<void> disposeAll() =>
+      Future.wait([for (final engine in _live.toList()) engine.dispose()]);
 
   /// Largeur des vignettes.
   static const width = 320;
@@ -142,7 +151,9 @@ class SeekPreviewEngine {
   }
 
   Future<void> dispose() async {
+    if (_disposed) return;
     _disposed = true;
+    _live.remove(this);
     final last = frame.value;
     // Le notificateur n'est pas libéré : la vignette affichée peut encore
     // l'écouter le temps d'une image ; il part avec le moteur.

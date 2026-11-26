@@ -13,6 +13,7 @@ import 'package:kinos/logic/application_menu.dart';
 import 'package:kinos/providers/arguments_provider.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/video_player_provider.dart';
+import 'package:kinos/screens/video_player/components/seek_preview.dart';
 import 'package:kinos/src/application_menu.g.dart';
 import 'package:kinos/util/macos_window_helpers.dart';
 import 'package:kinos/util/window_helper.dart';
@@ -38,6 +39,9 @@ class _DesktopAppWrapperState extends BaseAppWrapperState<DesktopAppWrapper> wit
 
     await WindowManager.instance.ensureInitialized();
     windowManager.addListener(this);
+    // La fermeture passe par [onWindowClose], qui libère les lecteurs avant
+    // de détruire la fenêtre.
+    await windowManager.setPreventClose(true);
 
     final packageInfo = await PackageInfo.fromPlatform();
     final clientSettings = ref.read(clientSettingsProvider);
@@ -57,10 +61,14 @@ class _DesktopAppWrapperState extends BaseAppWrapperState<DesktopAppWrapper> wit
   }
 
   @override
-  void onWindowClose() {
+  Future<void> onWindowClose() async {
     ref.read(videoPlayerProvider).stop();
     ref.read(clientSettingsProvider.notifier).closeDirectory();
+    // Les aperçus de la barre du lecteur (un mpv chacun) d'abord : détruits
+    // avec le moteur Flutter, ils faisaient planter Kinos à la fermeture.
+    await SeekPreviewEngine.disposeAll().timeout(const Duration(seconds: 2), onTimeout: () => const []);
     super.onWindowClose();
+    await windowManager.destroy();
   }
 
   @override
