@@ -46,8 +46,9 @@ void main() {
     expect(text, contains('Nouvelle version en place'));
   }, skip: Platform.isWindows, timeout: const Timeout(Duration(seconds: 60)));
 
-  test('the Windows script copies the app, stops a lingering Kinos, relaunches',
-      () async {
+  test(
+      'the Windows script starts detached like in Kinos, copies the app, '
+      'stops a lingering Kinos, relaunches', () async {
     final root = await Directory.systemTemp.createTemp('kinos-script-');
     addTearDown(() => root.delete(recursive: true));
     final target = Directory(p.join(root.path, 'Kinos'))..createSync();
@@ -62,38 +63,35 @@ void main() {
         .writeAsStringSync('@echo off\r\necho ok > "$marker"\r\n');
     final script = File(p.join(root.path, 'update.ps1'))
       ..writeAsStringSync(windowsUpdateScript);
-    final log = File(p.join(root.path, 'update.log'))..writeAsStringSync('');
+    final log = File(p.join(root.path, 'update.log'))
+      ..writeAsStringSync('Kinos extrait\n');
     // Un Kinos qui ne se termine pas de lui-même.
     final lingering = await Process.start('ping', ['-n', '120', '127.0.0.1']);
 
-    final result = await Process.run('powershell.exe', [
-      '-NoProfile',
-      '-ExecutionPolicy',
-      'Bypass',
-      '-File',
-      script.path,
-      '-ProcessId',
-      '${lingering.pid}',
-      '-Source',
-      source.path,
-      '-Target',
-      target.path,
-      '-Exe',
-      'relaunch.cmd',
-      '-Log',
-      log.path,
-    ]);
+    final started = await startWindowsUpdater(
+      script: script.path,
+      processId: lingering.pid,
+      source: source.path,
+      target: target.path,
+      exe: 'relaunch.cmd',
+      log: log,
+      lock: p.join(root.path, 'update.lock'),
+    );
+    // ignore: avoid_print
+    print('Journal du lancement :\n${log.readAsStringSync()}');
+    expect(started, isTrue);
 
-    expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
-    expect(
-        File(p.join(target.path, 'data', 'app.so')).readAsStringSync(), 'new');
-    for (var i = 0; i < 50 && !File(marker).existsSync(); i++) {
+    for (var i = 0; i < 300 && !File(marker).existsSync(); i++) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
+    // ignore: avoid_print
+    print('Journal final :\n${log.readAsStringSync()}');
+    expect(
+        File(p.join(target.path, 'data', 'app.so')).readAsStringSync(), 'new');
     expect(File(marker).existsSync(), isTrue);
     final text = log.readAsStringSync();
-    expect(text, contains('Remplacement'));
     expect(text, contains('arret force'));
     expect(text, contains('Nouvelle version en place'));
-  }, skip: !Platform.isWindows, timeout: const Timeout(Duration(seconds: 90)));
+    expect(RegExp('Remplacement').allMatches(text).length, 1);
+  }, skip: !Platform.isWindows, timeout: const Timeout(Duration(seconds: 120)));
 }

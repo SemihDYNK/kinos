@@ -139,12 +139,16 @@ const windowsUpdateScript = r'''param(
   [string]$Source,
   [string]$Target,
   [string]$Exe,
-  [string]$Log
+  [string]$Log,
+  [string]$Lock,
+  [string]$Via
 )
 function Note([string]$Message) {
   Add-Content -LiteralPath $Log -Value ("{0} {1}" -f (Get-Date -Format o), $Message)
 }
-Note "Remplacement de $Target par $Source"
+# Un seul remplacement, meme si deux lancements ont fini par demarrer.
+try { New-Item -ItemType File -Path $Lock -ErrorAction Stop | Out-Null } catch { exit }
+Note "Remplacement de $Target par $Source (via $Via)"
 try { Wait-Process -Id $ProcessId -Timeout 20 -ErrorAction Stop } catch {}
 if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) {
   Note "Kinos ($ProcessId) ne se termine pas : arret force"
@@ -158,6 +162,98 @@ if ($code -ge 8) { Note "Echec de la copie (robocopy $code)" } else { Note "Nouv
 Start-Process -FilePath (Join-Path $Target $Exe) -WorkingDirectory $Target
 Note "Kinos relance"
 ''';
+
+/// Le script a écrit sa première ligne dans [log] (au plus [timeout]).
+Future<bool> scriptStarted(File log,
+    {Duration timeout = const Duration(seconds: 10)}) async {
+  final until = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(until)) {
+    final text = await log.readAsString().catchError((_) => '');
+    if (text.contains('Remplacement')) return true;
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  }
+  return false;
+}
+
+/// Lance le script Windows détaché de Kinos, qui doit lui survivre, et
+/// attend qu'il ait démarré. PowerShell lancé sans console (le mode détaché
+/// de Dart) peut mourir aussitôt : plusieurs façons sont essayées, de celle
+/// qui lui donne sa propre console à la plus directe. Le verrou du script
+/// garantit un seul remplacement.
+Future<bool> startWindowsUpdater({
+  required String script,
+  required int processId,
+  required String source,
+  required String target,
+  required String exe,
+  required File log,
+  required String lock,
+}) async {
+  List<String> args(String via) => [
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-WindowStyle',
+        'Hidden',
+        '-File',
+        script,
+        '-ProcessId',
+        '$processId',
+        '-Source',
+        source,
+        '-Target',
+        target,
+        '-Exe',
+        exe,
+        '-Log',
+        log.path,
+        '-Lock',
+        lock,
+        '-Via',
+        via,
+      ];
+  final launchers = <(String, Future<Process> Function())>[
+    (
+      'start',
+      () => Process.start(
+          'cmd.exe',
+          [
+            '/c',
+            'start',
+            'Kinos update',
+            '/min',
+            'powershell.exe',
+            ...args('start')
+          ],
+          mode: ProcessStartMode.detached)
+    ),
+    (
+      'shell',
+      () => Process.start('powershell.exe', args('shell'),
+          mode: ProcessStartMode.detached, runInShell: true)
+    ),
+    (
+      'direct',
+      () => Process.start('powershell.exe', args('direct'),
+          mode: ProcessStartMode.detached)
+    ),
+  ];
+  for (final (via, launch) in launchers) {
+    try {
+      await launch();
+    } catch (error) {
+      await log.writeAsString('Lancement $via impossible : $error\n',
+          mode: FileMode.append);
+      continue;
+    }
+    if (await scriptStarted(log, timeout: const Duration(seconds: 6))) {
+      return true;
+    }
+    await log.writeAsString('Lancement $via : le script n\'a pas demarre\n',
+        mode: FileMode.append);
+  }
+  return false;
+}
 
 /// Télécharge la version [release] pour ce système, vérifie son empreinte,
 /// la prépare, puis ferme Kinos : un petit script remplace l'app et la
@@ -269,28 +365,18 @@ class KinosUpdater {
       }
       final script = File(p.join(work.path, 'update.ps1'));
       await script.writeAsString(windowsUpdateScript);
-      await Process.start(
-          'powershell.exe',
-          [
-            '-NoProfile',
-            '-ExecutionPolicy',
-            'Bypass',
-            '-WindowStyle',
-            'Hidden',
-            '-File',
-            script.path,
-            '-ProcessId',
-            '$pid',
-            '-Source',
-            bundle.path,
-            '-Target',
-            installed,
-            '-Exe',
-            exeName,
-            '-Log',
-            log.path,
-          ],
-          mode: ProcessStartMode.detached);
+      if (!await startWindowsUpdater(
+          script: script.path,
+          processId: pid,
+          source: bundle.path,
+          target: installed,
+          exe: exeName,
+          log: log,
+          lock: p.join(work.path, 'update.lock'))) {
+        throw UpdateFailure('Le script de mise à jour n\'a pas démarré '
+            '(journal : ${log.path}).');
+      }
+      exit(0);
     }
     // Le script note son départ : sans lui, Kinos se fermait pour rien.
     if (!await _started(log)) {
@@ -301,14 +387,7 @@ class KinosUpdater {
   }
 
   /// Le script a écrit sa première ligne dans [log] (au plus 10 s).
-  static Future<bool> _started(File log) async {
-    for (var i = 0; i < 50; i++) {
-      final text = await log.readAsString().catchError((_) => '');
-      if (text.contains('Remplacement')) return true;
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
-    return false;
-  }
+  static Future<bool> _started(File log) => scriptStarted(log);
 
   /// Kinos doit pouvoir écrire là où il est installé ; sinon, la mise à
   /// jour reste manuelle.
