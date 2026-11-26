@@ -240,7 +240,10 @@ class VideoPlayerNotifier extends StateNotifier<MediaControlsWrapper> {
 
     if (media != null) {
       ref.read(playBackModel.notifier).update((state) => newPlaybackModel);
-      await state.loadVideo(model, effectiveStartPosition, true);
+      // Ouvert en pause : les pistes (sous-titres externes compris) se
+      // règlent avant le premier son ; lancé tout de suite, le film jouait
+      // derrière l'écran de chargement. La lecture part plus bas.
+      await state.loadVideo(model, effectiveStartPosition, false);
       await state.setVolume(ref.read(videoPlayerSettingsProvider).volume);
 
       await state.setAudioTrack(null, model);
