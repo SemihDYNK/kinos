@@ -40,6 +40,17 @@ class LetterboxdMatcher {
   List<LetterboxdWork> choices(LetterboxdFilm film) => film.year == null
       ? []
       : _byTitle[(_titleKey(film.title), film.year)]?.values.toList() ?? [];
+
+  /// Même titre, année exacte ou voisine (cf. [closeLetterboxdMatch]).
+  List<LetterboxdWork> nearby(LetterboxdFilm film) {
+    final year = film.year;
+    if (year == null) return [];
+    final key = _titleKey(film.title);
+    return {
+      for (final y in [year, year - 1, year + 1])
+        ...?_byTitle[(key, y)],
+    }.values.toList();
+  }
 }
 
 LetterboxdWork? exactLetterboxdMatch(
@@ -48,13 +59,49 @@ LetterboxdWork? exactLetterboxdMatch(
   return matches.length == 1 ? matches.single : null;
 }
 
+/// Le titre exact, sinon le seul de même titre à un an près : Letterboxd et
+/// TMDB datent souvent un film l'un de sa sortie en festival, l'autre de sa
+/// sortie en salle.
+LetterboxdWork? closeLetterboxdMatch(
+    LetterboxdFilm film, List<LetterboxdWork> works) {
+  final exact = exactLetterboxdMatch(film, works);
+  final year = film.year;
+  if (exact != null || year == null) return exact;
+  final key = _titleKey(film.title);
+  final near = {
+    for (final work in works)
+      if (work.year != null &&
+          (work.year! - year).abs() == 1 &&
+          [work.title, ...work.aliases].any((t) => _titleKey(t) == key))
+        work.identity: work
+  }.values.toList();
+  return near.length == 1 ? near.single : null;
+}
+
+/// Les titres de [library] dont le nom contient [query] (sans accents ni
+/// ponctuation), pour l'identification à la main.
+List<LetterboxdWork> searchLetterboxdLibrary(
+    List<LetterboxdWork> library, String query,
+    {int limit = 8}) {
+  final key = _titleKey(query);
+  if (key.isEmpty) return [];
+  return {
+    for (final work in library)
+      if ([work.title, ...work.aliases].any((t) => _titleKey(t).contains(key)))
+        work.identity: work
+  }.values.take(limit).toList();
+}
+
 class LetterboxdResolver {
   final DiscoveryClient client;
   LetterboxdResolver(this.client);
-  Future<List<LetterboxdWork>> search(LetterboxdFilm film) async {
+  Future<List<LetterboxdWork>> search(LetterboxdFilm film) =>
+      searchTitle(film.title);
+
+  Future<List<LetterboxdWork>> searchTitle(String title) async {
     // Seerr validates an encoded title after the HTTP query has been decoded.
     final json = await client.get('search',
-        query: {'query': Uri.encodeComponent(film.title), 'page': '1'},
+        query: {'query': Uri.encodeComponent(title), 'page': '1'},
         language: 'en');
     final results = <LetterboxdWork>[];
     for (final item in objects(json['results'])) {

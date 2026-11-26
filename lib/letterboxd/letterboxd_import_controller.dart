@@ -158,8 +158,8 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
       for (var i = 0; i < films.length; i++) {
         if (!_active(generation)) return;
         final film = films[i];
-        var choices = matcher.choices(film);
-        LetterboxdWork? work = exactLetterboxdMatch(film, choices);
+        var choices = matcher.nearby(film);
+        LetterboxdWork? work = closeLetterboxdMatch(film, choices);
         final saved = cached[film.uri];
         if (work == null &&
             saved?.film.title == film.title &&
@@ -175,12 +175,14 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
             choices = {
               for (final c in [...choices, ...external]) c.identity: c
             }.values.toList();
-            final match = exactLetterboxdMatch(film, choices);
+            final match = closeLetterboxdMatch(film, choices);
             if (match != null) {
               work = match.traits.isNotEmpty
                   ? match
                   : await resolver.details(match.tmdbId!);
-              if (work.year != film.year) {
+              if (work.year != null &&
+                  film.year != null &&
+                  (work.year! - film.year!).abs() > 1) {
                 work = null;
               }
               if (work != null) {
@@ -277,6 +279,71 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
       client?.close();
       if (identical(_client, client)) _client = null;
     }
+  }
+
+  /// Recherche libre pour identifier un titre à la main : la bibliothèque
+  /// d'abord, puis TMDB (par Seerr, s'il est configuré).
+  Future<List<LetterboxdWork>> searchWorks(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return const [];
+    final found = <String, LetterboxdWork>{};
+    try {
+      for (final work in searchLetterboxdLibrary(await loadLibrary(), q)) {
+        found[work.identity] = work;
+      }
+    } catch (_) {}
+    final client = createClient?.call();
+    if (client != null) {
+      try {
+        for (final work in await LetterboxdResolver(client).searchTitle(q)) {
+          found.putIfAbsent(work.identity, () => work);
+        }
+      } finally {
+        client.close();
+      }
+    }
+    return found.values.toList();
+  }
+
+  /// Identifie à la main le film [uri] : [work], ou aucun (« ne pas
+  /// utiliser »). Dans l'aperçu d'un import, la correction s'y applique ;
+  /// sinon, elle s'enregistre aussitôt dans l'import sauvegardé. Rend
+  /// `false` si TMDB n'a pas pu détailler le film.
+  Future<bool> identify(String uri, LetterboxdWork? work) async {
+    if (state.busy || !isCurrent()) return false;
+    var chosen = work;
+    if (chosen != null && chosen.traits.isEmpty && chosen.tmdbId != null) {
+      final client = createClient?.call();
+      if (client == null) return false;
+      try {
+        chosen = await LetterboxdResolver(client).details(chosen.tmdbId!);
+      } catch (_) {
+        return false;
+      } finally {
+        client.close();
+      }
+    }
+    LetterboxdRecord update(LetterboxdRecord record) =>
+        record.film.uri != uri
+            ? record
+            : LetterboxdRecord(record.film, work: chosen, choices: [
+                if (chosen != null) chosen,
+                ...record.choices.where((c) => c.identity != chosen?.identity)
+              ]);
+    if (state.ready) {
+      state = LetterboxdImportState(
+          ready: true,
+          records: [for (final r in state.records) update(r)],
+          networkWarning: state.networkWarning);
+      return true;
+    }
+    final saved = await store.read();
+    if (!isCurrent()) return false;
+    await store.save(LetterboxdSnapshot(
+        updatedAt: DateTime.now().toUtc(),
+        records: [for (final r in saved.records) update(r)]));
+    onSaved?.call();
+    return true;
   }
 
   Future<void> commit() async {

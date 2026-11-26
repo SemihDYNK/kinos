@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/widgets/shared/frosted_surface.dart';
+import 'letterboxd_identify_dialog.dart';
 import 'letterboxd_import_controller.dart';
+import 'letterboxd_model.dart';
 import 'letterboxd_providers.dart';
 
 Future<void> showLetterboxdImportDialog(BuildContext context) =>
@@ -20,6 +22,20 @@ class LetterboxdImportDialog extends ConsumerStatefulWidget {
 
 class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
   bool picking = false;
+
+  /// La liste ne montre que les titres non reconnus.
+  bool _unmatchedOnly = false;
+
+  Future<void> _identify(LetterboxdRecord record) async {
+    final choice = await showLetterboxdIdentifyDialog(context,
+        record: record, search: _controller.searchWorks);
+    if (choice == null || !mounted) return;
+    final ok = await _controller.identify(record.film.uri, choice.work);
+    if (!ok && mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+          content: Text('Impossible de récupérer ce film sur TMDB.')));
+    }
+  }
   late final LetterboxdImportController _controller =
       ref.read(letterboxdImportProvider.notifier);
 
@@ -107,11 +123,28 @@ class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
                       const SizedBox(height: AppSpacing.md),
                       Text(l.letterboxdExplanation),
                       const SizedBox(height: AppSpacing.md),
-                      Align(
-                          alignment: Alignment.centerLeft,
-                          child: OutlinedButton(
-                              onPressed: busy ? null : pick,
-                              child: Text(l.letterboxdChoose))),
+                      // Le filtre des non reconnus partage la ligne du
+                      // bouton : la fenêtre garde sa hauteur pour la liste.
+                      Row(children: [
+                        OutlinedButton(
+                            onPressed: busy ? null : pick,
+                            child: Text(l.letterboxdChoose)),
+                        const SizedBox(width: AppSpacing.sm),
+                        if (records != null && matched < records.length)
+                          Expanded(
+                              child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                      onPressed: () => setState(() =>
+                                          _unmatchedOnly = !_unmatchedOnly),
+                                      icon: Icon(_unmatchedOnly
+                                          ? Icons.check_box
+                                          : Icons.check_box_outline_blank),
+                                      label: Text(
+                                          'Non reconnus seulement (${records.length - matched})',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis)))),
+                      ]),
                       if (state.saved) Text(l.letterboxdSaved),
                       if (snapshot.hasError || state.error == 'storage')
                         Text(l.letterboxdStorageError),
@@ -155,11 +188,18 @@ class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
                         Text(l.letterboxdSummary(
                             records.length, matched, records.length - matched)),
                         Flexible(
-                            child: ListView.builder(
+                            child: Builder(builder: (context) {
+                          final shown = _unmatchedOnly
+                              ? [
+                                  for (final r in records)
+                                    if (r.work?.traits.isNotEmpty != true) r
+                                ]
+                              : records;
+                          return ListView.builder(
                                 shrinkWrap: true,
-                                itemCount: records.length,
+                                itemCount: shown.length,
                                 itemBuilder: (context, index) {
-                                  final record = records[index];
+                                  final record = shown[index];
                                   return ListTile(
                                       contentPadding: EdgeInsets.zero,
                                       title: Text(
@@ -168,28 +208,19 @@ class _ImportDialogState extends ConsumerState<LetterboxdImportDialog> {
                                           overflow: TextOverflow.ellipsis),
                                       subtitle: Text(
                                           '${record.film.rating == null ? '' : '★ ${record.film.rating} · '}${record.work?.traits.isNotEmpty == true ? record.work!.title : l.letterboxdUnmatched}'),
-                                      trailing: state.ready &&
-                                              record.choices.isNotEmpty
-                                          ? GlassPopupMenuButton<String>(
-                                              enabled: !busy,
-                                              tooltip: l.letterboxdMatch,
-                                              onSelected: (id) =>
-                                                  controller.choose(index, id),
-                                              itemBuilder: (_) => [
-                                                    PopupMenuItem(
-                                                        value: '',
-                                                        child: Text(l
-                                                            .letterboxdNotUsed)),
-                                                    for (final choice
-                                                        in record.choices)
-                                                      PopupMenuItem(
-                                                          value:
-                                                              choice.identity,
-                                                          child: Text(
-                                                              '${choice.title} (${choice.year ?? '—'})')),
-                                                  ])
-                                          : null);
-                                })),
+                                      // Identifier à la main, pendant
+                                      // l'aperçu comme après l'import.
+                                      trailing: TextButton(
+                                          onPressed: busy
+                                              ? null
+                                              : () => _identify(record),
+                                          child: Text(record.work?.traits
+                                                      .isNotEmpty ==
+                                                  true
+                                              ? 'Changer'
+                                              : 'Identifier')));
+                                });
+                        })),
                       ],
                       const SizedBox(height: AppSpacing.md),
                       Wrap(

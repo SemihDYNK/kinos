@@ -617,6 +617,9 @@ abstract final class AppDurations {
   static const favouriteRemoval = Duration(milliseconds: 180);
   static const popover = Duration(milliseconds: 180);
 
+  /// Pause de frappe avant de lancer une recherche.
+  static const searchDebounce = Duration(milliseconds: 400);
+
   /// Entrée d'un menu contextuel : rapide, il doit être là sous le doigt.
   static const menuIn = Duration(milliseconds: 140);
   static const unroll = Duration(milliseconds: 260);
