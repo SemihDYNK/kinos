@@ -616,6 +616,9 @@ abstract final class AppDurations {
   static const navigationSelection = Duration(milliseconds: 240);
   static const favouriteRemoval = Duration(milliseconds: 180);
   static const popover = Duration(milliseconds: 180);
+
+  /// Entrée d'un menu contextuel : rapide, il doit être là sous le doigt.
+  static const menuIn = Duration(milliseconds: 140);
   static const unroll = Duration(milliseconds: 260);
   static const focusRing = Duration(milliseconds: 100);
   // Clic sur une tuile : enfoncement, d'où part la transition de page.
@@ -813,6 +816,9 @@ abstract final class AppMotion {
   // retourneraient par-dessus la hampe en K à l'envers.
   static const startupIntroMarkOut = Interval(.62, .76, curve: easeOut);
   static const easeOut = Cubic(.23, 1, .32, 1);
+
+  /// Taille de départ d'un menu contextuel qui s'ouvre.
+  static const menuInScale = .94;
   static const heroTitleReveal = Interval(0, .75, curve: easeOut);
   static const heroSynopsisReveal = Interval(.16, 1, curve: easeOut);
   static const pageTravelFraction = .015;

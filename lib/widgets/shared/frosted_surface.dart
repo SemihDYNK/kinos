@@ -151,12 +151,16 @@ class GlassSimpleDialog extends m.SimpleDialog {
       _dialog(context, super.build(context) as m.Dialog);
 }
 
-List<m.PopupMenuEntry<T>> _entries<T>(List<m.PopupMenuEntry<T>> items) =>
-    items.isEmpty ? items : [_GlassMenuEntry<T>(items)];
+List<m.PopupMenuEntry<T>> _entries<T>(List<m.PopupMenuEntry<T>> items,
+        {m.Offset? anchor}) =>
+    items.isEmpty ? items : [_GlassMenuEntry<T>(items, anchor: anchor)];
 
 class _GlassMenuEntry<T> extends m.PopupMenuEntry<T> {
-  const _GlassMenuEntry(this.items);
+  const _GlassMenuEntry(this.items, {this.anchor});
   final List<m.PopupMenuEntry<T>> items;
+
+  /// Le point d'où le menu s'ouvre (le clic) : il en sort.
+  final m.Offset? anchor;
   @override
   double get height => items.fold(0, (total, item) => total + item.height);
   @override
@@ -165,18 +169,70 @@ class _GlassMenuEntry<T> extends m.PopupMenuEntry<T> {
   m.State<_GlassMenuEntry<T>> createState() => _GlassMenuEntryState<T>();
 }
 
-class _GlassMenuEntryState<T> extends m.State<_GlassMenuEntry<T>> {
+/// Le menu apparaît d'un coup, depuis son point d'ancrage : un léger
+/// agrandissement et un fondu, au lieu du déroulé ligne à ligne de
+/// Material.
+class _GlassMenuEntryState<T> extends m.State<_GlassMenuEntry<T>>
+    with m.SingleTickerProviderStateMixin {
+  late final _controller =
+      m.AnimationController(vsync: this, duration: AppDurations.menuIn);
+  late final _curve =
+      m.CurvedAnimation(parent: _controller, curve: AppMotion.easeOut);
+  m.Alignment _origin = m.Alignment.topLeft;
+
   @override
-  m.Widget build(m.BuildContext context) => FrostedSurface(
-      child: m.Padding(
-          padding: const m.EdgeInsets.all(AppSpacing.xs),
-          child: m.Column(
-              mainAxisSize: m.MainAxisSize.min,
-              crossAxisAlignment: m.CrossAxisAlignment.stretch,
-              children: widget.items
-                  .map((item) => m.ClipRRect(
-                      borderRadius: AppRadii.controlBorder, child: item))
-                  .toList())));
+  void initState() {
+    super.initState();
+    // Première image invisible : le menu est posé, on sait alors de quel
+    // coin il sort (il peut s'ouvrir vers le haut ou la gauche près d'un
+    // bord).
+    m.WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = context.findRenderObject() as m.RenderBox?;
+      final anchor = widget.anchor;
+      if (box != null && box.hasSize && anchor != null) {
+        final rect = box.localToGlobal(m.Offset.zero) & box.size;
+        _origin = m.Alignment(
+            ((anchor.dx - rect.left) / rect.width * 2 - 1).clamp(-1.0, 1.0),
+            ((anchor.dy - rect.top) / rect.height * 2 - 1).clamp(-1.0, 1.0));
+      }
+      if (AppMotion.enabled(context)) {
+        _controller.forward();
+      } else {
+        _controller.value = 1;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  m.Widget build(m.BuildContext context) => m.AnimatedBuilder(
+        animation: _curve,
+        builder: (context, child) => m.Opacity(
+          opacity: _curve.value,
+          child: m.Transform.scale(
+            scale: AppMotion.menuInScale +
+                (1 - AppMotion.menuInScale) * _curve.value,
+            alignment: _origin,
+            child: child,
+          ),
+        ),
+        child: FrostedSurface(
+            child: m.Padding(
+                padding: const m.EdgeInsets.all(AppSpacing.xs),
+                child: m.Column(
+                    mainAxisSize: m.MainAxisSize.min,
+                    crossAxisAlignment: m.CrossAxisAlignment.stretch,
+                    children: widget.items
+                        .map((item) => m.ClipRRect(
+                            borderRadius: AppRadii.controlBorder, child: item))
+                        .toList()))),
+      );
 }
 
 Future<T?> showGlassMenu<T>({
@@ -202,7 +258,10 @@ Future<T?> showGlassMenu<T>({
         context: context,
         position: position,
         positionBuilder: positionBuilder,
-        items: _entries(items),
+        items: _entries(items,
+            anchor: position == null
+                ? null
+                : m.Offset(position.left, position.top)),
         elevation: 0,
         color: m.Colors.transparent,
         surfaceTintColor: m.Colors.transparent,
@@ -215,10 +274,12 @@ Future<T?> showGlassMenu<T>({
         constraints: constraints,
         clipBehavior: clipBehavior,
         routeSettings: routeSettings,
+        // L'entrée est portée par le menu lui-même (cf.
+        // [_GlassMenuEntryState]) ; la route ne fait que le fondu de sortie.
         popUpAnimationStyle: AppMotion.enabled(context)
             ? popUpAnimationStyle ??
                 const m.AnimationStyle(
-                    duration: AppDurations.popover,
+                    duration: Duration.zero,
                     reverseDuration: AppDurations.hover,
                     curve: AppMotion.easeOut,
                     reverseCurve: AppMotion.easeOut)
@@ -260,7 +321,7 @@ class GlassPopupMenuButton<T> extends m.PopupMenuButton<T> {
   }) : super(
             popUpAnimationStyle: popUpAnimationStyle ??
                 const m.AnimationStyle(
-                    duration: AppDurations.popover,
+                    duration: Duration.zero,
                     reverseDuration: AppDurations.hover,
                     curve: AppMotion.easeOut,
                     reverseCurve: AppMotion.easeOut),
