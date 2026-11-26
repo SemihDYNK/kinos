@@ -96,6 +96,22 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
+## v0.18.0 (26 novembre)
+
+- **Menu contextuel** (`lib/screens/shared/media/item_context_menu.dart`) :
+  clic droit ou touche Menu / Maj+F10 sur les tuiles de l'accueil ; en-tête
+  du titre, seule l'action « vu / non vu » utile, « Supprimer » à part en
+  rouge. Les menus en verre s'ouvrent en 140 ms depuis le point d'appel.
+- **Lecteur** : temps de part et d'autre de la barre, transport à gauche,
+  options et volume à droite ; chapitre précédent / suivant ; boutons
+  d'épisode absents sur un film. Film ouvert en pause jusqu'au réglage des
+  pistes ; annulation du chargement mémorisée (elle arrête le lecteur).
+- **Aperçu au survol** (`seek_preview.dart`) : sans trickplay, un mpv caché
+  et muet ouvre le même fichier (lecture directe ou hors ligne seulement) et
+  tire des vignettes de 320 px. Fermés avant la fenêtre (SIGSEGV sinon).
+- **Écran de chargement** (`playback_loading_screen.dart`) : plein cadre,
+  image qui avance, logo ou titre, trait de progression, Échap.
+
 ## v0.17.3 (25 novembre)
 
 - **Mise à jour intégrée** : sous Windows, le téléchargement allait à 100 %,
