@@ -96,6 +96,15 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
+## v0.18.2 (27 novembre)
+
+- **Letterboxd** : identification manuelle (`letterboxd_identify_dialog.dart`)
+  pendant l'aperçu et sur l'import enregistré (bibliothèque puis TMDB par
+  Seerr) ; rapprochement tolérant à un an près s'il n'y a qu'un candidat ;
+  filtre des non reconnus.
+- **F11** : raccourci global « Plein écran » (`GlobalHotKeys.fullScreen`,
+  carte d'énumération ajoutée à la main dans le `.g.dart`).
+
 ## v0.18.1 (27 novembre)
 
 - **Mise à jour intégrée (Windows)** : PowerShell lancé détaché (sans
