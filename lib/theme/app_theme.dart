@@ -193,6 +193,39 @@ abstract final class AppPlayerStyle {
   static const segmentPartialOpacity = .75;
   static const surface = Color(0xD91C1C1C);
   static const controlSurface = Color(0xA6141414);
+
+  /// Icônes de la barre du lecteur, et lecture/pause, seule plus grande.
+  static const iconSize = 30.0;
+  static const playIconSize = 52.0;
+}
+
+/// L'écran de chargement d'un film ou d'un épisode.
+abstract final class AppPlaybackLoading {
+  /// Entrée de l'image, puis du titre et de sa ligne, décalés.
+  static const entrance = Duration(milliseconds: 900);
+
+  /// Avancée lente de l'image, d'un bout à l'autre du chargement.
+  static const drift = Duration(seconds: 14);
+  static const driftScale = 1.07;
+
+  /// Balayage du trait de progression.
+  static const sweep = Duration(milliseconds: 1500);
+  static const lineWidth = 280.0;
+  static const lineHeight = 2.0;
+  static const segment = 72.0;
+
+  /// Montée du titre à l'entrée.
+  static const rise = 24.0;
+
+  /// Hauteur maximale du logo du film.
+  static const logoHeight = 132.0;
+  static const titleSize = 96.0;
+
+  /// Part de l'écran laissée au texte.
+  static const textWidth = .6;
+
+  /// Voile sous le texte (cf. « Texte sur image »).
+  static const scrim = .85;
 }
 
 abstract final class AppHeroLayout {
@@ -523,6 +556,12 @@ abstract final class AppManagementLayout {
   static const requestStatusWidth = 260.0;
   static const requestWideWidth = 1000.0;
   static const statusDotSize = 8.0;
+}
+
+/// Largeur des menus contextuels : assez pour un titre, jamais une colonne.
+abstract final class AppMenu {
+  static const minWidth = 240.0;
+  static const maxWidth = 320.0;
 }
 
 abstract final class AppPageLayout {

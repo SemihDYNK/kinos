@@ -581,7 +581,12 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              MouseRegion(
+              Row(
+                children: [
+                  _timeLabel(mediaPlayback.position.readAbleDuration),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: MouseRegion(
                 onEnter: (_) => setState(() => _progressHovering = true),
                 onExit: (_) => setState(() => _progressHovering = false),
                 child: Listener(
@@ -636,146 +641,176 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.xxs),
-              // `spaceBetween` + deux `Flexible`, jamais un `Spacer` au
-              // milieu : mesuré (RenderBox) — avec un `Spacer` (flex:1,
-              // fit tight) à côté de deux `Flexible` (flex:1, fit
-              // loose), le Spacer occupe TOUJOURS son tiers de largeur
-              // complet, mais les `Flexible` rétrécissent à leur texte
-              // sans que cet espace inutilisé soit redistribué : le
-              // texte de droite finissait à mi-largeur (~54 % mesuré),
-              // jamais au bord — exactement le "-50:33 vers 36 %"
-              // rapporté. `spaceBetween` calcule l'espace restant une
-              // fois les DEUX textes posés à leur taille réelle et le
-              // place entièrement entre eux — aucun `Spacer` requis.
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Text(
-                      mediaPlayback.position.readAbleDuration,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
                   ),
-                  Flexible(
-                    child: Text(
-                      '-${(mediaPlayback.duration - mediaPlayback.position).readAbleDuration}',
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                      textAlign: TextAlign.right,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  _timeLabel(
+                      '-${(mediaPlayback.duration - mediaPlayback.position).readAbleDuration}'),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
+              // Trois zones : le son à gauche, le transport au centre de
+              // l'écran, les options à droite. Les côtés rétrécissent
+              // (FittedBox) avant que le transport ne bouge.
               Row(
                 children: [
                   Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: AppSpacing.xxs,
-                      children: [
-                        previousButton(iconSize: 32),
-                        _desktopSeekButton(
-                          icon: AppIcons.rewind10,
-                          tooltip: _tooltipFor(
-                              'Reculer de 10 s', VideoHotKeys.seekBack),
-                          onPressed: () => seekBack(ref, seconds: 10),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: VideoVolumeSlider(
+                          onChanged: () => resetTimer(),
                         ),
-                        _desktopPlayPauseButton(playing),
-                        _desktopSeekButton(
-                          icon: AppIcons.forward10,
-                          tooltip: _tooltipFor(
-                              'Avancer de 10 s', VideoHotKeys.seekForward),
-                          onPressed: () => seekForward(ref, seconds: 10),
-                        ),
-                        nextVideoButton(iconSize: 32),
-                        _desktopStopButton(),
-                        const SizedBox(width: AppSpacing.md),
-                        _desktopPopoverButton(
-                          icon: AppIcons.subtitles,
-                          tooltip: _tooltipFor(
-                              'Sous-titres', VideoHotKeys.toggleSubtitles),
-                          controller: _subtitlesPopover,
-                          optionsBuilder: _subtitleOptions,
-                        ),
-                        _desktopPopoverButton(
-                          icon: AppIcons.audio,
-                          tooltip:
-                              _tooltipFor('Audio', VideoHotKeys.openAudioPanel),
-                          controller: _audioPopover,
-                          optionsBuilder: _audioOptions,
-                        ),
-                        _desktopPopoverButton(
-                          icon: AppIcons.crop,
-                          tooltip: 'Image',
-                          controller: _imagePopover,
-                          optionsBuilder: _imageOptions,
-                        ),
-                        _desktopPopoverButton(
-                          icon: AppIcons.speed,
-                          tooltip: 'Vitesse',
-                          controller: _speedPopover,
-                          optionsBuilder: _speedOptions,
-                        ),
-                        _desktopPopoverButton(
-                          icon: AppIcons.quality,
-                          tooltip: 'Qualité',
-                          controller: _qualityPopover,
-                          optionsBuilder: _qualityOptions,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
-                    spacing: AppSpacing.xs,
+                    spacing: AppSpacing.xxs,
                     children: [
-                      // `SliderTheme` retiré : `VideoVolumeSlider` ne
-                      // s'appuie plus sur `KinosSlider`/l'ambiant Material
-                      // pour son rendu (piste `SegmentedTrack`, hauteur
-                      // gérée en interne, cf. video_volume_slider.dart) —
-                      // ce wrapper n'avait plus aucun effet.
-                      VideoVolumeSlider(
-                        onChanged: () => resetTimer(),
+                      _desktopEpisodeButton(previous: true),
+                      _desktopChapterButton(next: false),
+                      _desktopSeekButton(
+                        icon: AppIcons.rewind10,
+                        tooltip:
+                            _tooltipFor('Reculer de 10 s', VideoHotKeys.seekBack),
+                        onPressed: () => seekBack(ref, seconds: 10),
                       ),
-                      FocusRing(
-                        borderRadius: AppRadii.controlBorder,
-                        onActivate: () =>
-                            fullScreenHelper.toggleFullScreen(ref),
-                        child: ExcludeFocus(
-                          child: Tooltip(
-                            message: _tooltipFor(context.localized.fullScreen,
-                                VideoHotKeys.fullScreen),
-                            // `FullScreenButton` est partagé avec d'autres
-                            // barres (`full_screen_wrapper.dart`, hors
-                            // périmètre) — sa taille d'icône par défaut
-                            // n'est pas modifiée là-bas, seulement
-                            // localement ici pour rejoindre les icônes
-                            // secondaires du transport (32).
-                            child: const IconTheme(
-                              data: IconThemeData(size: 32),
-                              child: FullScreenButton(),
+                      _desktopPlayPauseButton(playing),
+                      _desktopSeekButton(
+                        icon: AppIcons.forward10,
+                        tooltip: _tooltipFor(
+                            'Avancer de 10 s', VideoHotKeys.seekForward),
+                        onPressed: () => seekForward(ref, seconds: 10),
+                      ),
+                      _desktopChapterButton(next: true),
+                      _desktopEpisodeButton(previous: false),
+                    ],
+                  ),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: AppSpacing.xxs,
+                          children: [
+                            _desktopPopoverButton(
+                              icon: AppIcons.subtitles,
+                              tooltip: _tooltipFor(
+                                  'Sous-titres', VideoHotKeys.toggleSubtitles),
+                              controller: _subtitlesPopover,
+                              optionsBuilder: _subtitleOptions,
                             ),
-                          ),
+                            _desktopPopoverButton(
+                              icon: AppIcons.audio,
+                              tooltip: _tooltipFor(
+                                  'Audio', VideoHotKeys.openAudioPanel),
+                              controller: _audioPopover,
+                              optionsBuilder: _audioOptions,
+                            ),
+                            _desktopPopoverButton(
+                              icon: AppIcons.crop,
+                              tooltip: 'Image',
+                              controller: _imagePopover,
+                              optionsBuilder: _imageOptions,
+                            ),
+                            _desktopPopoverButton(
+                              icon: AppIcons.speed,
+                              tooltip: 'Vitesse',
+                              controller: _speedPopover,
+                              optionsBuilder: _speedOptions,
+                            ),
+                            _desktopPopoverButton(
+                              icon: AppIcons.quality,
+                              tooltip: 'Qualité',
+                              controller: _qualityPopover,
+                              optionsBuilder: _qualityOptions,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            _desktopStopButton(),
+                            FocusRing(
+                              borderRadius: AppRadii.controlBorder,
+                              onActivate: () =>
+                                  fullScreenHelper.toggleFullScreen(ref),
+                              child: ExcludeFocus(
+                                child: Tooltip(
+                                  message: _tooltipFor(
+                                      context.localized.fullScreen,
+                                      VideoHotKeys.fullScreen),
+                                  child: const IconTheme(
+                                    data: IconThemeData(
+                                        size: AppPlayerStyle.iconSize),
+                                    child: FullScreenButton(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ],
           ),
         ),
+      );
+    });
+  }
+
+  Widget _timeLabel(String text) => Text(
+        text,
+        maxLines: 1,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppColors.textSecondary,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      );
+
+  /// Épisode précédent ou suivant : absent quand il n'y en a pas (un
+  /// film), plutôt qu'un bouton grisé.
+  Widget _desktopEpisodeButton({required bool previous}) {
+    return Consumer(builder: (context, ref, _) {
+      final video = ref.watch(playBackModel.select(
+          (value) => previous ? value?.previousVideo : value?.nextVideo));
+      if (video == null) return const SizedBox.shrink();
+      final action = previous
+          ? loadPreviousVideo(ref, video: video)
+          : loadNextVideo(ref, video: video);
+      final label = previous ? 'Épisode précédent' : 'Épisode suivant';
+      return _desktopSeekButton(
+        icon: previous ? AppIcons.previous : AppIcons.next,
+        tooltip: _tooltipFor(
+            '$label · ${video.detailedName(context.localized) ?? video.name}',
+            previous ? VideoHotKeys.prevVideo : VideoHotKeys.nextVideo),
+        onPressed: action ?? () {},
+      );
+    });
+  }
+
+  /// Chapitre précédent ou suivant, quand le titre en a plusieurs.
+  Widget _desktopChapterButton({required bool next}) {
+    return Consumer(builder: (context, ref, _) {
+      final count = ref.watch(
+          playBackModel.select((value) => value?.chapters?.length ?? 0));
+      if (count < 2) return const SizedBox.shrink();
+      final settings = ref.read(videoPlayerSettingsProvider.notifier);
+      return _desktopSeekButton(
+        icon: next ? AppIcons.chapterNext : AppIcons.chapterPrevious,
+        tooltip: next
+            ? _tooltipFor(
+                context.localized.nextChapter, VideoHotKeys.nextChapter)
+            : _tooltipFor(
+                context.localized.prevChapter, VideoHotKeys.prevChapter),
+        onPressed: () {
+          next ? settings.nextChapter() : settings.prevChapter();
+          resetTimer();
+        },
       );
     });
   }
@@ -805,7 +840,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
           message:
               _tooltipFor(context.localized.playPause, VideoHotKeys.playPause),
           child: IconButton(
-            iconSize: 48,
+            iconSize: AppPlayerStyle.playIconSize,
             onPressed: () => ref.read(videoPlayerProvider).playOrPause(),
             icon: PlayerPlaybackIcon(playing: playing),
           ),
@@ -831,7 +866,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
         child: Tooltip(
           message: context.localized.stop,
           child: IconButton(
-            iconSize: 32,
+            iconSize: AppPlayerStyle.iconSize,
             onPressed: () => closePlayer(),
             icon: const Icon(AppIcons.stop),
           ),
@@ -852,7 +887,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
         child: Tooltip(
           message: tooltip,
           child: IconButton(
-            iconSize: 32,
+            iconSize: AppPlayerStyle.iconSize,
             onPressed: onPressed,
             icon: Icon(icon),
           ),
@@ -893,7 +928,7 @@ class _DesktopControlsState extends ConsumerState<DesktopControls> {
             // au hasard" signalé : un jeton existe, mais appliqué sans
             // notion d'état, il ne veut rien dire.
             child: IconButton(
-              iconSize: 32,
+              iconSize: AppPlayerStyle.iconSize,
               onPressed: controller.toggle,
               icon: Icon(icon),
             ),

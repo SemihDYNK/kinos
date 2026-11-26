@@ -1,4 +1,4 @@
-import 'package:kinos/widgets/shared/frosted_surface.dart';
+import 'package:kinos/screens/video_player/components/playback_loading_screen.dart';
 import 'dart:developer';
 import 'dart:math' show Random, min;
 
@@ -9,8 +9,6 @@ import 'package:async/async.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconsax_plus/iconsax_plus.dart';
-import 'package:square_progress_indicator/square_progress_indicator.dart';
 
 import 'package:kinos/jellyfin/jellyfin_open_api.swagger.dart';
 import 'package:kinos/models/book_model.dart';
@@ -32,9 +30,7 @@ import 'package:kinos/routes/auto_router.gr.dart';
 import 'package:kinos/screens/book_viewer/book_viewer_screen.dart';
 import 'package:kinos/screens/library_search/widgets/library_play_options_.dart';
 import 'package:kinos/screens/shared/kinos_notification_overlay.dart';
-import 'package:kinos/theme.dart';
 import 'package:kinos/util/adaptive_layout/adaptive_layout.dart';
-import 'package:kinos/util/kinos_image.dart';
 import 'package:kinos/util/list_extensions.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/refresh_state.dart';
@@ -811,117 +807,18 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
   }
 }
 
-Future<void> _showLoadingIndicator(BuildContext context, ItemBaseModel? item, CancelableOperation op) async {
-  return showDialog(
-    barrierDismissible: false,
-    useRootNavigator: true,
-    context: context,
-    builder: (context) => _LoadIndicatorCancelable(op: op, item: item),
+Future<void> _showLoadingIndicator(BuildContext context, ItemBaseModel? item, CancelableOperation op) {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  return showPlaybackLoadingScreen(
+    context,
+    item: item,
+    onCancel: () {
+      try {
+        op.cancel();
+      } catch (_) {}
+      navigator.pop();
+    },
   );
-}
-
-class _LoadIndicatorCancelable extends StatelessWidget {
-  final ItemBaseModel? item;
-  final CancelableOperation op;
-  const _LoadIndicatorCancelable({required this.op, this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = const BorderRadius.all(Radius.circular(4));
-
-    return GlassDialog(
-      constraints: const BoxConstraints(
-        maxWidth: 450,
-        maxHeight: 500,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 16,
-          children: [
-            Expanded(
-              child: Row(
-                spacing: 16,
-                children: [
-                  if (item != null)
-                    Flexible(
-                      child: Container(
-                        decoration: KinosTheme.defaultPosterDecoration,
-                        clipBehavior: Clip.hardEdge,
-                        height: 175,
-                        child: AspectRatio(
-                          aspectRatio: 0.7,
-                          child: SquareProgressIndicator(
-                            color: Theme.of(context).colorScheme.primary,
-                            strokeCap: StrokeCap.round,
-                            strokeWidth: 8,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: radius,
-                                  color: Theme.of(context).colorScheme.surfaceContainer,
-                                ),
-                                foregroundDecoration: BoxDecoration(
-                                  borderRadius: radius,
-                                  border: Border.all(width: 1, color: Colors.white.withAlpha(45)),
-                                ),
-                                clipBehavior: Clip.hardEdge,
-                                child: KinosImage(
-                                  image: item!.getPosters?.primary,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    SquareProgressIndicator(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 8,
-                      children: [
-                        Text(
-                          context.localized.loading,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        if (item != null) ...[
-                          Text(
-                            item!.title,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad)
-              IconButton(
-                tooltip: context.localized.close,
-                onPressed: () {
-                  try {
-                    op.cancel();
-                  } catch (_) {}
-                  Navigator.of(context, rootNavigator: true).pop();
-                },
-                icon: const Icon(IconsaxPlusLinear.close_square),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 Future<void> _playVideo(

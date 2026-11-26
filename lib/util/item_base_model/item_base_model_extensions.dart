@@ -1,3 +1,4 @@
+import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/theme/app_icons.dart';
 import 'package:kinos/widgets/shared/frosted_surface.dart';
 import 'package:flutter/foundation.dart';
@@ -284,7 +285,7 @@ extension ItemBaseModelExtensions on ItemBaseModel {
       if (!exclude.contains(ItemActions.addPlaylist))
         if (type != KinosItemType.playlist)
           ItemActionButton(
-            icon: const Icon(IconsaxPlusLinear.archive_add),
+            icon: const Icon(IconsaxPlusLinear.task_square),
             action: () async {
               await addItemToPlaylist(context, [this]);
               if (context.mounted) {
@@ -293,8 +294,10 @@ extension ItemBaseModelExtensions on ItemBaseModel {
             },
             label: Text(context.localized.addToPlaylist),
           ),
+      // Seule l'action utile : « vu » pour un titre pas encore vu, « non vu »
+      // pour un titre vu ou entamé (elle remet aussi la progression à zéro).
       if (showMarkAs) ...[
-        if (!exclude.contains(ItemActions.markPlayed))
+        if (!exclude.contains(ItemActions.markPlayed) && !userData.played)
           ItemActionButton(
             icon: const Icon(AppIcons.watchedSelected),
             action: () async {
@@ -307,7 +310,8 @@ extension ItemBaseModelExtensions on ItemBaseModel {
             },
             label: Text(context.localized.markAsWatched),
           ),
-        if (!exclude.contains(ItemActions.markUnplayed))
+        if (!exclude.contains(ItemActions.markUnplayed) &&
+            (userData.played || userData.progress > 0))
           ItemActionButton(
             icon: const Icon(AppIcons.watchedCircle),
             label: Text(context.localized.markAsUnwatched),
@@ -418,27 +422,6 @@ extension ItemBaseModelExtensions on ItemBaseModel {
           },
           label: Text(context.localized.seerrDetails),
         ),
-      if (canDelete == true)
-        ItemActionButton(
-          icon: Container(
-            child: const Icon(
-              IconsaxPlusLinear.trash,
-            ),
-          ),
-          action: () async {
-            final response = await KinosSnack.showResponse(
-              showDeleteDialog(context, this, ref),
-              successTitle: context.localized.deletedItem(name),
-            );
-            if (response.isSuccess) {
-              onDeleteSuccesFully?.call(this);
-              if (context.mounted) {
-                context.refreshData();
-              }
-            }
-          },
-          label: Text(context.localized.delete),
-        ),
       if (!exclude.contains(ItemActions.identify) && identifiable && isAdmin)
         ItemActionButton(
           icon: const Icon(IconsaxPlusLinear.search_normal),
@@ -460,6 +443,26 @@ extension ItemBaseModelExtensions on ItemBaseModel {
             showInfoScreen(context, this);
           },
           label: Text("${type.label(context.localized)} ${context.localized.info}"),
+        ),
+      // Le seul geste destructif, à part et en dernier.
+      if (canDelete == true) ItemActionDivider(),
+      if (canDelete == true)
+        ItemActionButton(
+          foregroundColor: AppColors.error,
+          icon: const Icon(IconsaxPlusLinear.trash),
+          action: () async {
+            final response = await KinosSnack.showResponse(
+              showDeleteDialog(context, this, ref),
+              successTitle: context.localized.deletedItem(name),
+            );
+            if (response.isSuccess) {
+              onDeleteSuccesFully?.call(this);
+              if (context.mounted) {
+                context.refreshData();
+              }
+            }
+          },
+          label: Text(context.localized.delete),
         ),
     ];
   }

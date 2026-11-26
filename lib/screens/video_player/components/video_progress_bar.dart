@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -14,6 +15,8 @@ import 'package:kinos/util/string_extensions.dart';
 import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/segmented_track.dart';
 import 'package:kinos/widgets/shared/trick_play_image.dart';
+
+import 'seek_preview.dart';
 
 class VideoProgressBar extends ConsumerStatefulWidget {
   final Function(bool value) wasPlayingChanged;
@@ -61,8 +64,39 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
   bool onDragStart = false;
   double _chapterPosition = 0.0;
   double imageBottomOffset = 0.0;
-  double chapterCardWidth = 250;
+  double chapterCardWidth = 288;
   Duration currentDuration = Duration.zero;
+
+  /// L'aperçu tiré du fichier lui-même, quand le serveur n'a pas de
+  /// trickplay (cf. [SeekPreviewEngine]) : ouvert au premier survol.
+  SeekPreviewEngine? _preview;
+  String? _previewSource;
+
+  void _ensurePreview() {
+    final model = ref.read(playBackModel);
+    if (model?.trickPlay?.images.isNotEmpty == true) return;
+    final source = SeekPreviewEngine.sourceOf(model);
+    if (source == null || source == _previewSource) return;
+    _previewSource = source;
+    final old = _preview;
+    _preview = null;
+    unawaited(old?.dispose());
+    SeekPreviewEngine.open(source).then((engine) {
+      if (!mounted || _previewSource != source) {
+        unawaited(engine?.dispose());
+        return;
+      }
+      setState(() => _preview = engine);
+      engine?.request(currentDuration);
+    });
+  }
+
+  @override
+  void dispose() {
+    _previewSource = null;
+    unawaited(_preview?.dispose());
+    super.dispose();
+  }
 
   /// Hauteurs communes à la barre de progression et à la barre de
   /// volume — cf. [SegmentedTrack.heightRest]/[SegmentedTrack.heightHover].
@@ -402,12 +436,16 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
                             borderRadius:
                                 const BorderRadius.all(Radius.circular(8)),
                             child: trickPlay == null || trickPlay.images.isEmpty
-                                ? chapter != null
-                                    ? Image(
-                                        image: chapter.imageProvider,
-                                        fit: BoxFit.contain,
-                                      )
-                                    : const SizedBox.shrink()
+                                ? _preview != null
+                                    ? _PreviewFrame(_preview!)
+                                    : chapter != null
+                                        ? Image(
+                                            image: chapter.imageProvider,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (_, __, ___) =>
+                                                const SizedBox.shrink(),
+                                          )
+                                        : const SizedBox.shrink()
                                 : AspectRatio(
                                     aspectRatio: trickPlay.width.toDouble() /
                                         trickPlay.height.toDouble(),
@@ -512,5 +550,25 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
       currentDuration = Duration(
           milliseconds: (widget.duration.inMilliseconds * value).toInt());
     });
+    _ensurePreview();
+    _preview?.request(currentDuration);
   }
+}
+
+/// La dernière vignette de l'aperçu ; rien tant que la première n'est pas
+/// arrivée.
+class _PreviewFrame extends StatelessWidget {
+  const _PreviewFrame(this.engine);
+  final SeekPreviewEngine engine;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+        valueListenable: engine.frame,
+        builder: (context, frame, _) => frame == null
+            ? const SizedBox.shrink()
+            : AspectRatio(
+                aspectRatio: frame.image.width / frame.image.height,
+                child: RawImage(image: frame.image, fit: BoxFit.cover),
+              ),
+      );
 }

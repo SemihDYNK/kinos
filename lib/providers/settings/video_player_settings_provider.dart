@@ -177,6 +177,12 @@ class VideoPlayerSettingsProviderNotifier extends StateNotifier<VideoPlayerSetti
       final currentChapter = chapters.lastWhereOrNull((element) => element.startPosition <= currentPosition);
 
       if (currentChapter != null) {
+        // Bien entamé, le chapitre en cours revient d'abord à son début,
+        // comme le précédent d'une piste.
+        if (currentPosition - currentChapter.startPosition > const Duration(seconds: 3)) {
+          wrapper?.seek(currentChapter.startPosition);
+          return;
+        }
         final prevChapterIndex = chapters.indexOf(currentChapter) - 1;
         if (prevChapterIndex >= 0) {
           wrapper?.seek(chapters[prevChapterIndex].startPosition);

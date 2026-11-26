@@ -1,3 +1,4 @@
+import 'package:kinos/screens/shared/media/item_context_menu.dart';
 import 'package:kinos/screens/shared/media_navigation.dart';
 import 'package:kinos/widgets/shared/cross_axis_sliver_builder.dart';
 import 'package:flutter/material.dart';
@@ -143,7 +144,9 @@ class _Tile extends StatelessWidget {
     return MediaNavigation(
         previewImage: image ?? fallback,
         key: ValueKey(item.id),
-        builder: (context) => FocusRing(
+        builder: (context) => ItemContextMenuRegion(
+            item: item,
+            child: FocusRing(
               posterMotion: true,
               focusNode: MediaNavigationScope.focusOf(context),
               onActivate: () => openMediaDetails(context, item),
@@ -174,6 +177,6 @@ class _Tile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall),
                   ]),
-            ));
+            )));
   }
 }

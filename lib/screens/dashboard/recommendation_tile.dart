@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kinos/screens/shared/media/item_context_menu.dart';
 import 'package:kinos/widgets/shared/cross_axis_sliver_builder.dart';
 import 'package:kinos/arr/providers/arr_jellyfin_link_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
@@ -57,6 +58,9 @@ class RecommendationTile {
   /// Raccourcis de la tuile quand elle a le focus (demander, suivre…).
   final Map<ShortcutActivator, void Function(BuildContext context)> shortcuts;
 
+  /// Le titre Jellyfin derrière la tuile : son menu au clic droit.
+  final ItemBaseModel? item;
+
   const RecommendationTile({
     required this.identity,
     this.previewImage,
@@ -65,6 +69,7 @@ class RecommendationTile {
     required this.buildPoster,
     required this.navigate,
     this.shortcuts = const {},
+    this.item,
   });
 
   factory RecommendationTile.jellyfin({required ItemBaseModel item}) {
@@ -77,6 +82,7 @@ class RecommendationTile {
       subtitle: item.subText,
       buildPoster: (context) => _jellyfinPoster(item),
       navigate: (context) => openMediaDetails(context, item),
+      item: item,
     );
   }
 
@@ -522,7 +528,9 @@ class _RecommendationTileWidgetState extends State<_RecommendationTileWidget> {
                   in tile.shortcuts.entries)
                 key: () => action(context),
             },
-            child: FocusRing(
+            child: ItemContextMenuRegion(
+              item: tile.item,
+              child: FocusRing(
               posterMotion: true,
               focusNode: MediaNavigationScope.focusOf(context),
               onActivate: () => _open(context),
@@ -554,6 +562,6 @@ class _RecommendationTileWidgetState extends State<_RecommendationTileWidget> {
                     ),
                     PosterCaption(title: tile.title, subtitle: tile.subtitle),
                   ]),
-            )));
+            ))));
   }
 }
