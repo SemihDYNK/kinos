@@ -96,6 +96,14 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
+## v0.18.1 (27 novembre)
+
+- **Mise à jour intégrée (Windows)** : PowerShell lancé détaché (sans
+  console) mourait aussitôt ; Kinos essaie maintenant `cmd /c start`, puis
+  le shell, puis le lancement direct, et garde le premier dont le script
+  note son départ (verrou : un seul remplacement). Le test CI Windows passe
+  par ce même chemin détaché.
+
 ## v0.18.0 (26 novembre)
 
 - **Menu contextuel** (`lib/screens/shared/media/item_context_menu.dart`) :
