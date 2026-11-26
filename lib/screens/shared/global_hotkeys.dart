@@ -13,6 +13,7 @@ import 'package:kinos/util/focus_helper.dart';
 import 'package:kinos/util/input_handler.dart';
 import 'package:kinos/util/localization_helper.dart';
 import 'package:kinos/util/window_actions.dart';
+import 'package:kinos/widgets/full_screen_helpers/full_screen_wrapper.dart';
 
 class GlobalHotkeys extends ConsumerWidget {
   final Widget child;
@@ -62,6 +63,10 @@ class GlobalHotkeys extends ConsumerWidget {
             Future.microtask(() async {
               await quitApplication(context);
             });
+            return true;
+          // Partout, menus compris (le lecteur garde aussi F).
+          case GlobalHotKeys.fullScreen:
+            fullScreenHelper.toggleFullScreen(ref);
             return true;
         }
       },

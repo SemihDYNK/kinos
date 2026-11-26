@@ -24,7 +24,8 @@ enum GlobalHotKeys {
   search,
   closeWindow,
   exit,
-  toggleSideBar;
+  toggleSideBar,
+  fullScreen;
 
   const GlobalHotKeys();
 
@@ -34,6 +35,7 @@ enum GlobalHotKeys {
       GlobalHotKeys.closeWindow => context.localized.closeWindow,
       GlobalHotKeys.exit => context.localized.exitKinosTitle,
       GlobalHotKeys.toggleSideBar => context.localized.toggleSidebar,
+      GlobalHotKeys.fullScreen => context.localized.fullScreen,
     };
   }
 }
@@ -248,6 +250,7 @@ Map<GlobalHotKeys, KeyCombination> get _defaultGlobalHotKeys => switch (defaultT
               GlobalHotKeys.closeWindow =>
                 KeyCombination(key: LogicalKeyboardKey.keyW, modifier: LogicalKeyboardKey.superKey),
               GlobalHotKeys.exit => KeyCombination(key: LogicalKeyboardKey.keyQ, modifier: LogicalKeyboardKey.superKey),
+              GlobalHotKeys.fullScreen => KeyCombination(key: LogicalKeyboardKey.f11),
             },
         },
       _ => {
@@ -260,6 +263,7 @@ Map<GlobalHotKeys, KeyCombination> get _defaultGlobalHotKeys => switch (defaultT
                 KeyCombination(key: LogicalKeyboardKey.keyW, modifier: LogicalKeyboardKey.controlLeft),
               GlobalHotKeys.exit =>
                 KeyCombination(key: LogicalKeyboardKey.keyQ, modifier: LogicalKeyboardKey.controlLeft),
+              GlobalHotKeys.fullScreen => KeyCombination(key: LogicalKeyboardKey.f11),
             },
         }
     };

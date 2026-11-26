@@ -19,6 +19,7 @@ class RouteWrapper extends StatelessWidget {
         enabledHotkeys: {
           GlobalHotKeys.closeWindow,
           GlobalHotKeys.exit,
+          GlobalHotKeys.fullScreen,
         },
       ),
     );

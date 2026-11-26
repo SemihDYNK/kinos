@@ -159,4 +159,5 @@ const _$GlobalHotKeysEnumMap = {
   GlobalHotKeys.closeWindow: 'closeWindow',
   GlobalHotKeys.exit: 'exit',
   GlobalHotKeys.toggleSideBar: 'toggleSideBar',
+  GlobalHotKeys.fullScreen: 'fullScreen',
 };
