@@ -124,7 +124,7 @@ class MediaControlsWrapper extends BaseAudioHandler implements VideoPlayerContro
       _subtitleSettingsSubscription?.close();
       _playerStateSubscription?.cancel();
     } finally {
-      _player?.dispose();
+      await _player?.dispose();
     }
   }
 

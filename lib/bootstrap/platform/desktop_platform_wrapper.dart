@@ -67,6 +67,10 @@ class _DesktopAppWrapperState extends BaseAppWrapperState<DesktopAppWrapper> wit
     // Les aperçus de la barre du lecteur (un mpv chacun) d'abord : détruits
     // avec le moteur Flutter, ils faisaient planter Kinos à la fermeture.
     await SeekPreviewEngine.disposeAll().timeout(const Duration(seconds: 2), onTimeout: () => const []);
+    // Puis le lecteur lui-même : sa sortie vidéo (texture EGL) détruite
+    // avec la fenêtre faisait planter Kinos quand on fermait pendant un
+    // film.
+    await ref.read(videoPlayerProvider).dispose().timeout(const Duration(seconds: 2), onTimeout: () {});
     super.onWindowClose();
     await windowManager.destroy();
   }

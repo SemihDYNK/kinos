@@ -128,10 +128,11 @@ class LibMPV extends BasePlayer {
     _cancelPlayerStreams();
     _onCompleted?.cancel();
     _onCompleted = null;
-    _player?.stop();
-    _player?.dispose();
+    final player = _player;
     _player = null;
     _retryTimer?.cancel();
+    await player?.stop();
+    await player?.dispose();
     _retryTimer = null;
   }
 
