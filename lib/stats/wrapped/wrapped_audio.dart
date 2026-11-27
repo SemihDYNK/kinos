@@ -65,6 +65,11 @@ class WrappedAudio {
   bool _disposed = false;
   final _fades = <Timer>[];
 
+  /// Le fondu en cours de chaque lecteur : un nouveau fondu l'annule. Sans
+  /// cela, la fin d'un fondu de sortie (et sa pause) pouvait tomber sur la
+  /// musique suivante quand on change vite d'acte : silence.
+  final _ramps = <mpv.Player, Timer>{};
+
   /// Volume mpv (0–100) : un fond, nettement sous la lecture vidéo.
   static const volume = 32.0;
   static const _fade = Duration(milliseconds: 2400);
@@ -119,6 +124,7 @@ class WrappedAudio {
       FutureOr<void> Function()? then}) {
     final length = fast ? _fade ~/ 4 : _fade;
     final start = DateTime.now();
+    _ramps.remove(player)?.cancel();
     late final Timer timer;
     timer = Timer.periodic(_fadeStep, (_) {
       if (_disposed) return timer.cancel();
@@ -129,10 +135,15 @@ class WrappedAudio {
       if (t >= 1) {
         timer.cancel();
         _fades.remove(timer);
-        if (then != null) unawaited(Future(then));
+        if (_ramps[player] == timer) _ramps.remove(player);
+        // Redevenu le lecteur actif entre-temps : on ne l'arrête pas.
+        if (then != null && _players[_active] != player) {
+          unawaited(Future(then));
+        }
       }
     });
     _fades.add(timer);
+    _ramps[player] = timer;
   }
 
   Future<void> dispose() async {

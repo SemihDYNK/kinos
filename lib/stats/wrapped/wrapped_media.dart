@@ -146,7 +146,12 @@ final wrappedFinishedProvider = FutureProvider.autoDispose
 });
 
 /// Un titre conseillé pour l'an prochain.
-typedef WrappedPick = ({String title, int? year, ImageData? poster});
+typedef WrappedPick = ({
+  String title,
+  int? year,
+  ImageData? poster,
+  ImageData? backdrop,
+});
 
 /// Trois films de la bibliothèque, pas encore vus, que le moteur de goûts
 /// recommande : la diapo « Pour l'an prochain ». Seulement pour l'année en
@@ -163,6 +168,7 @@ final wrappedNextYearProvider = FutureProvider.autoDispose
       title: item.name,
       year: item.overview.yearAired,
       poster: item.getPosters?.primary,
+      backdrop: item.getPosters?.backDrop?.firstOrNull,
     ));
     if (picks.length == 3) break;
   }

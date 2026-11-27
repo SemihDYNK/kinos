@@ -2992,8 +2992,14 @@ class _FinishedSlide extends StatelessWidget {
         if (inputs.art['series:${f.name}']?.poster case final image?) image
     ].take(5).toList();
     final longest = finished.first;
+    final backdrops = [
+      for (final f in finished)
+        if (inputs.art['series:${f.name}']?.backdrop case final image?) image
+    ];
     return _Frame(
         builder: (context, size, type) => [
+              CyclingBackdrops(backdrops),
+              const WrappedScrim(),
               if (posters.isNotEmpty)
                 Align(
                   alignment: const Alignment(.85, 0),
@@ -3110,6 +3116,11 @@ class _NextYearSlide extends StatelessWidget {
     final next = inputs.data.year + 1;
     return _Frame(
         builder: (context, size, type) => [
+              CyclingBackdrops([
+                for (final pick in picks)
+                  if (pick.backdrop case final image?) image
+              ]),
+              const WrappedScrim(),
               Align(
                 alignment: const Alignment(.82, 0),
                 child: Row(
@@ -3128,6 +3139,7 @@ class _NextYearSlide extends StatelessWidget {
                               child: SizedBox(
                                 width: size.width * .12,
                                 child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     AspectRatio(
