@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:developer';
 import 'dart:ui' as ui;
 
@@ -35,11 +36,31 @@ class SeekPreviewEngine {
   /// Largeur des vignettes.
   static const width = 320;
 
-  /// La dernière vignette tirée, avec sa position.
+  /// Vignettes gardées : la grille du film entier, plus les instants
+  /// survolés précisément.
+  static const maxFrames = 120;
+  static const _maxExact = 40;
+
+  /// Écart minimal de la grille.
+  static const _minStep = Duration(seconds: 10);
+
+  /// Assez proche d'une vignette en cache : pas de nouvelle capture.
+  static const _closeEnough = Duration(seconds: 2);
+
+  /// La vignette montrée, avec l'instant réel de son image.
   final frame = ValueNotifier<({Duration at, ui.Image image})?>(null);
+
+  /// Les vignettes tirées, par instant réel (ms).
+  final _cache = SplayTreeMap<int, ui.Image>();
+  final _exact = Queue<int>();
+
+  /// La grille à précapturer, du plus grossier au plus fin.
+  final _prefetch = Queue<int>();
+  bool _planned = false;
 
   int? _height;
   Duration? _wanted;
+  Duration? _hovered;
   bool _busy = false;
   bool _disposed = false;
 
@@ -86,29 +107,66 @@ class SeekPreviewEngine {
     }
   }
 
-  /// Demande la vignette à [at]. Seule la dernière demande compte : un
-  /// survol rapide ne fait pas la queue.
+  /// Montre aussitôt la vignette en cache la plus proche de [at], puis
+  /// capture l'instant exact s'il n'y en a pas d'assez proche. Seule la
+  /// dernière demande compte : un survol rapide ne fait pas la queue.
   void request(Duration at) {
     if (_disposed) return;
-    _wanted = at;
+    _hovered = at;
+    _show(at);
+    final near = _nearest(at);
+    if (near == null ||
+        (near - at.inMilliseconds).abs() > _closeEnough.inMilliseconds) {
+      _wanted = at;
+    }
     if (!_busy) unawaited(_pump());
   }
 
+  int? _nearest(Duration at) {
+    final ms = at.inMilliseconds;
+    final before = _cache.lastKeyBefore(ms + 1);
+    final after = _cache.firstKeyAfter(ms);
+    if (before == null) return after;
+    if (after == null) return before;
+    return ms - before <= after - ms ? before : after;
+  }
+
+  void _show(Duration at) {
+    final key = _nearest(at);
+    if (key == null) return;
+    final image = _cache[key]!;
+    if (frame.value?.image == image) return;
+    frame.value = (at: Duration(milliseconds: key), image: image);
+  }
+
+  /// Les demandes d'abord, puis la grille du film en arrière-plan.
   Future<void> _pump() async {
     _busy = true;
     try {
-      while (_wanted != null && !_disposed) {
-        final at = _wanted!;
+      while (!_disposed) {
+        final wanted = _wanted;
         _wanted = null;
-        final image = await _grab(at);
-        if (image == null) continue;
+        final int target;
+        if (wanted != null) {
+          target = wanted.inMilliseconds;
+        } else {
+          if (!_planned) await _plan();
+          if (_prefetch.isEmpty) break;
+          target = _prefetch.removeFirst();
+          final near = _nearest(Duration(milliseconds: target));
+          if (near != null &&
+              (near - target).abs() < _closeEnough.inMilliseconds) {
+            continue;
+          }
+        }
+        final grabbed = await _grab(Duration(milliseconds: target));
+        if (grabbed == null) continue;
         if (_disposed) {
-          image.dispose();
+          grabbed.image.dispose();
           return;
         }
-        final previous = frame.value;
-        frame.value = (at: at, image: image);
-        previous?.image.dispose();
+        _store(grabbed.at, grabbed.image, exact: wanted != null);
+        if (_hovered case final hovered?) _show(hovered);
       }
     } catch (error) {
       log('Aperçu de la barre : $error');
@@ -117,11 +175,49 @@ class SeekPreviewEngine {
     }
   }
 
-  Future<ui.Image?> _grab(Duration at) async {
+  void _store(int at, ui.Image image, {required bool exact}) {
+    final old = _cache[at];
+    if (old != null && old != image) {
+      if (frame.value?.image == old) {
+        image.dispose();
+        return;
+      }
+      old.dispose();
+    }
+    _cache[at] = image;
+    if (!exact) return;
+    _exact.addLast(at);
+    // Les instants survolés ne s'accumulent pas : les plus anciens partent,
+    // sauf celui qui est affiché.
+    while (_exact.length > _maxExact) {
+      final key = _exact.removeFirst();
+      final evicted = _cache[key];
+      if (evicted == null || frame.value?.image == evicted) continue;
+      _cache.remove(key)?.dispose();
+    }
+  }
+
+  /// La grille : [maxFrames] instants au plus, tous les [_minStep] au
+  /// moins, dans un ordre qui couvre vite tout le film (d'abord un sur
+  /// huit, puis un sur quatre…).
+  Future<void> _plan() async {
+    _planned = true;
+    var duration = _player.state.duration;
+    if (duration <= Duration.zero) {
+      final native = _player.platform as dynamic;
+      final seconds =
+          double.tryParse(await native.getProperty('duration') as String);
+      if (seconds == null) return;
+      duration = Duration(milliseconds: (seconds * 1000).round());
+    }
+    _prefetch.addAll(previewGrid(duration));
+  }
+
+  Future<({int at, ui.Image image})?> _grab(Duration at) async {
     final native = _player.platform as dynamic;
     await _player.seek(at);
     for (var i = 0; i < 40; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 25));
+      await Future<void>.delayed(const Duration(milliseconds: 15));
       if (_disposed) return null;
       if (await native.getProperty('seeking') != 'yes') break;
     }
@@ -131,10 +227,17 @@ class SeekPreviewEngine {
     if (bytes == null || bytes.isEmpty) return null;
     final pixels = packFrame(bytes, width, height);
     if (pixels == null) return null;
+    // L'image clé atteinte peut précéder l'instant demandé de quelques
+    // secondes : la vignette est rangée à son instant réel.
+    final position =
+        double.tryParse(await native.getProperty('time-pos') as String);
     final completer = Completer<ui.Image>();
     ui.decodeImageFromPixels(
         pixels, width, height, ui.PixelFormat.bgra8888, completer.complete);
-    return completer.future;
+    return (
+      at: position == null ? at.inMilliseconds : (position * 1000).round(),
+      image: await completer.future,
+    );
   }
 
   /// La hauteur des vignettes d'après l'image du film (son rapport
@@ -154,13 +257,36 @@ class SeekPreviewEngine {
     if (_disposed) return;
     _disposed = true;
     _live.remove(this);
-    final last = frame.value;
     // Le notificateur n'est pas libéré : la vignette affichée peut encore
     // l'écouter le temps d'une image ; il part avec le moteur.
     frame.value = null;
-    last?.image.dispose();
+    for (final image in _cache.values) {
+      image.dispose();
+    }
+    _cache.clear();
+    _prefetch.clear();
     await _player.dispose();
   }
+}
+
+/// Les instants à précapturer pour un film de [duration] : une grille de
+/// [SeekPreviewEngine.maxFrames] points au plus, tous les 10 s au moins,
+/// rangée du plus grossier au plus fin.
+List<int> previewGrid(Duration duration) {
+  final total = duration.inMilliseconds;
+  if (total <= 0) return const [];
+  final step = (total / SeekPreviewEngine.maxFrames)
+      .ceil()
+      .clamp(SeekPreviewEngine._minStep.inMilliseconds, total);
+  final count = total ~/ step + 1;
+  final order = <int>[];
+  final seen = <int>{};
+  for (final stride in const [8, 4, 2, 1]) {
+    for (var i = 0; i < count; i += stride) {
+      if (seen.add(i)) order.add(i * step);
+    }
+  }
+  return order;
 }
 
 /// Hauteur paire d'une vignette de [SeekPreviewEngine.width] de large pour

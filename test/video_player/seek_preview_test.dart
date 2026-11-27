@@ -26,4 +26,19 @@ void main() {
   test('a frame of the wrong size is refused', () {
     expect(packFrame(Uint8List(10), 2, 2), isNull);
   });
+
+  test('the prefetch grid covers the film coarse to fine, 120 frames at most',
+      () {
+    final grid = previewGrid(const Duration(minutes: 45));
+    expect(grid.length, lessThanOrEqualTo(SeekPreviewEngine.maxFrames + 1));
+    expect(grid.toSet().length, grid.length);
+    expect(grid.first, 0);
+    // Les premiers points sont espacés d'un huitième de la grille.
+    expect(grid[1] - grid[0], grid[2] - grid[1]);
+    expect(grid[1], greaterThan(const Duration(minutes: 2).inMilliseconds));
+    // Un court extrait : un point toutes les 10 s.
+    expect(previewGrid(const Duration(seconds: 60)),
+        unorderedEquals([0, 10000, 20000, 30000, 40000, 50000, 60000]));
+    expect(previewGrid(Duration.zero), isEmpty);
+  });
 }
