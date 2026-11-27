@@ -23,28 +23,59 @@ void main() {
   const film = LetterboxdFilm(
       uri: 'https://boxd.it/a', title: 'Perfect Blue', year: 1997);
 
-  test('a film dated a year apart is matched when it is the only one', () {
+  test('a film dated differently is matched to the closest same title', () {
+    // Un an d'écart.
     expect(
         closeLetterboxdMatch(film, [work('Perfect Blue', 1998, tmdbId: 1)])
             ?.tmdbId,
         1);
-    // Deux candidats voisins : on ne devine pas.
+    // Deux ans d'écart : encore toléré (sorties selon les pays).
+    expect(
+        closeLetterboxdMatch(film, [work('Perfect Blue', 1999, tmdbId: 1)])
+            ?.tmdbId,
+        1);
+    // Trois ans : trop loin.
+    expect(closeLetterboxdMatch(film, [work('Perfect Blue', 2000, tmdbId: 1)]),
+        isNull);
+    // Le plus proche l'emporte, puis le premier (le plus populaire).
     expect(
         closeLetterboxdMatch(film, [
-          work('Perfect Blue', 1998, tmdbId: 1),
-          work('Perfect Blue', 1996, tmdbId: 2),
-        ]),
-        isNull);
-    // Deux ans d'écart : trop loin.
-    expect(closeLetterboxdMatch(film, [work('Perfect Blue', 1999, tmdbId: 1)]),
-        isNull);
-    // L'année exacte l'emporte toujours.
+          work('Perfect Blue', 1999, tmdbId: 1),
+          work('Perfect Blue', 1998, tmdbId: 2),
+          work('Perfect Blue', 1996, tmdbId: 3),
+        ])?.tmdbId,
+        2);
+    // L'année exacte l'emporte toujours…
     expect(
         closeLetterboxdMatch(film, [
           work('Perfect Blue', 1997, tmdbId: 3),
           work('Perfect Blue', 1998, tmdbId: 1),
         ])?.tmdbId,
         3);
+    // …mais deux titres identiques à la bonne année : on ne devine pas.
+    expect(
+        closeLetterboxdMatch(film, [
+          work('Perfect Blue', 1997, tmdbId: 3),
+          work('Perfect Blue', 1997, tmdbId: 4),
+        ]),
+        isNull);
+  });
+
+  test('a series keeps its own identity and survives a save', () {
+    const series = LetterboxdWork(
+        title: 'Chernobyl',
+        year: 2019,
+        tmdbId: 87108,
+        mediaType: 'tv',
+        traits: []);
+    expect(series.identity, 'tmdb:tv:87108');
+    final back = LetterboxdWork.fromJson(series.toJson());
+    expect(back.isSeries, isTrue);
+    expect(back.identity, 'tmdb:tv:87108');
+    // Les imports enregistrés avant : des films.
+    final legacy = Map<String, dynamic>.from(series.toJson())
+      ..remove('mediaType');
+    expect(LetterboxdWork.fromJson(legacy).identity, 'tmdb:movie:87108');
   });
 
   test('the library is searched by title or original title', () {

@@ -58,8 +58,8 @@ Map<String, (int, DateTime)> letterboxdRatings(LetterboxdSnapshot snapshot) {
     final rating = record.film.rating;
     final work = record.work;
     if (rating == null || work == null) continue;
-    final identity = work.tmdbId != null
-        ? 'tmdb:movie:${work.tmdbId}'
+    final identity = work.tmdbIdentity != null
+        ? work.tmdbIdentity!
         : work.jellyfinId != null
             ? 'jellyfin:${work.jellyfinId}'
             : null;

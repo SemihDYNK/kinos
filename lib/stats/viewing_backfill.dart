@@ -43,6 +43,9 @@ List<ViewingEvent> letterboxdViewings(LetterboxdSnapshot snapshot,
   for (final record in snapshot.records) {
     final film = record.film;
     final work = record.work;
+    // Une série vue sur Letterboxd n'a ni épisodes ni durée : elle nourrit
+    // les goûts et les notes, pas le journal des films.
+    if (work?.isSeries == true) continue;
     final item = work?.jellyfinId == null ? null : library[work!.jellyfinId];
     final meta = item == null ? null : viewingMetadata(item);
     final tmdb = work?.tmdbId ?? meta?.tmdbId;

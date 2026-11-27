@@ -47,8 +47,8 @@ class LetterboxdMatcher {
     if (year == null) return [];
     final key = _titleKey(film.title);
     return {
-      for (final y in [year, year - 1, year + 1])
-        ...?_byTitle[(key, y)],
+      for (var d = 0; d <= letterboxdYearTolerance; d++)
+        for (final y in {year - d, year + d}) ...?_byTitle[(key, y)],
     }.values.toList();
   }
 }
@@ -59,9 +59,14 @@ LetterboxdWork? exactLetterboxdMatch(
   return matches.length == 1 ? matches.single : null;
 }
 
-/// Le titre exact, sinon le seul de même titre à un an près : Letterboxd et
-/// TMDB datent souvent un film l'un de sa sortie en festival, l'autre de sa
-/// sortie en salle.
+/// Écart d'années toléré : Letterboxd retient souvent la première sortie
+/// (festival, pays d'origine), TMDB parfois une autre.
+const letterboxdYearTolerance = 2;
+
+/// Le titre exact à la bonne année ; sinon, le plus proche de même titre
+/// à [letterboxdYearTolerance] ans près, et à écart égal le premier de
+/// [works] (TMDB les rend par popularité). Deux titres identiques à la
+/// bonne année restent sans réponse : on ne devine pas.
 LetterboxdWork? closeLetterboxdMatch(
     LetterboxdFilm film, List<LetterboxdWork> works) {
   final exact = exactLetterboxdMatch(film, works);
@@ -71,11 +76,16 @@ LetterboxdWork? closeLetterboxdMatch(
   final near = {
     for (final work in works)
       if (work.year != null &&
-          (work.year! - year).abs() == 1 &&
+          (work.year! - year).abs() <= letterboxdYearTolerance &&
           [work.title, ...work.aliases].any((t) => _titleKey(t) == key))
         work.identity: work
   }.values.toList();
-  return near.length == 1 ? near.single : null;
+  if (near.isEmpty || near.any((w) => w.year == year)) return null;
+  var best = near.first;
+  for (final work in near.skip(1)) {
+    if ((work.year! - year).abs() < (best.year! - year).abs()) best = work;
+  }
+  return best;
 }
 
 /// Les titres de [library] dont le nom contient [query] (sans accents ni
@@ -106,38 +116,42 @@ class LetterboxdResolver {
     final results = <LetterboxdWork>[];
     for (final item in objects(json['results'])) {
       final id = item['id'];
-      final title = item['title'];
-      if (item['mediaType'] != 'movie' ||
+      // Films, et séries : Letterboxd liste certaines mini-séries.
+      final type = item['mediaType'];
+      final series = type == 'tv';
+      final title = item[series ? 'name' : 'title'];
+      if ((type != 'movie' && !series) ||
           id is! int ||
           id <= 0 ||
           title is! String ||
           title.isEmpty) {
         continue;
       }
-      final date = item['releaseDate'] as String?;
+      final date = item[series ? 'firstAirDate' : 'releaseDate'] as String?;
+      final original = item[series ? 'originalName' : 'originalTitle'];
       results.add(LetterboxdWork(
           title: title,
           year: date == null ? null : int.tryParse(date.split('-').first),
           tmdbId: id,
-          aliases: [
-            if (item['originalTitle'] is String) item['originalTitle'] as String
-          ],
+          mediaType: series ? 'tv' : 'movie',
+          aliases: [if (original is String) original],
           traits: const []));
     }
-    return results.take(8).toList();
+    return results.take(12).toList();
   }
 
-  Future<LetterboxdWork> details(int id) async {
-    final json = await client.get('movie/$id', language: 'en');
-    final item = DiscoveryItem.fromDetails((type: 'movie', id: id), json);
+  Future<LetterboxdWork> details(int id, {String mediaType = 'movie'}) async {
+    final type = mediaType == 'tv' ? 'tv' : 'movie';
+    final json = await client.get('$type/$id', language: 'en');
+    final item = DiscoveryItem.fromDetails((type: type, id: id), json);
+    final original = json[type == 'tv' ? 'originalName' : 'originalTitle'];
     return LetterboxdWork(
         title: item.title,
         year: item.year,
         tmdbId: id,
+        mediaType: type,
         traits: item.traits,
-        aliases: [
-          if (json['originalTitle'] is String) json['originalTitle'] as String
-        ]);
+        aliases: [if (original is String) original]);
   }
 }
 

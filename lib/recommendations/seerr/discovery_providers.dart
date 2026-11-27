@@ -118,7 +118,7 @@ final seerrDiscoveryProvider = FutureProvider.autoDispose
     debug.step('bibliothèque reçue', counts: {'titres': library.length});
     final identities = <String>{
       for (final record in imported.records)
-        if (record.work?.tmdbId != null) 'tmdb:movie:${record.work!.tmdbId}',
+        if (record.work?.tmdbIdentity case final identity?) identity,
     };
     final tvdbIds = <String>{};
     final imdbIds = <String>{};

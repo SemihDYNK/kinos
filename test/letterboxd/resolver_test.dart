@@ -155,4 +155,37 @@ void main() {
     expect(c.state.records.single.work, isNull);
     expect((await store.read()).records, isEmpty);
   });
+
+  test('series are searched too, with their own fields', () async {
+    final client = DiscoveryClient(
+        baseUrl: Uri.parse('https://seerr.test'),
+        headers: {},
+        interval: Duration.zero,
+        client: MockClient((request) async => http.Response(
+            jsonEncode({
+              'results': [
+                {
+                  'id': 87108,
+                  'mediaType': 'tv',
+                  'name': 'Chernobyl',
+                  'originalName': 'Chernobyl',
+                  'firstAirDate': '2019-05-06'
+                },
+                {'id': 7, 'mediaType': 'person', 'name': 'Someone'},
+              ]
+            }),
+            200)));
+    addTearDown(client.close);
+    final found = await LetterboxdResolver(client).search(const LetterboxdFilm(
+        uri: 'https://boxd.it/c', title: 'Chernobyl', year: 2019));
+    expect(found.single.identity, 'tmdb:tv:87108');
+    expect(found.single.year, 2019);
+    expect(
+        closeLetterboxdMatch(
+                const LetterboxdFilm(
+                    uri: 'https://boxd.it/c', title: 'Chernobyl', year: 2019),
+                found)
+            ?.isSeries,
+        isTrue);
+  });
 }

@@ -216,6 +216,7 @@ class _WorkTile extends StatelessWidget {
           maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text([
         if (original != null) original,
+        if (work.isSeries) 'Série',
         work.jellyfinId != null ? 'Dans la bibliothèque' : 'TMDB',
       ].join(' · ')),
       trailing: selected ? const Icon(Icons.check) : null,

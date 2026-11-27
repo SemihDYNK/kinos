@@ -179,10 +179,11 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
             if (match != null) {
               work = match.traits.isNotEmpty
                   ? match
-                  : await resolver.details(match.tmdbId!);
+                  : await resolver.details(match.tmdbId!,
+                      mediaType: match.mediaType);
               if (work.year != null &&
                   film.year != null &&
-                  (work.year! - film.year!).abs() > 1) {
+                  (work.year! - film.year!).abs() > letterboxdYearTolerance) {
                 work = null;
               }
               if (work != null) {
@@ -255,7 +256,8 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
         client = createClient?.call();
         _client = client;
         if (client == null) throw const DiscoveryUnavailable();
-        work = await LetterboxdResolver(client).details(work.tmdbId!);
+        work = await LetterboxdResolver(client)
+            .details(work.tmdbId!, mediaType: work.mediaType);
       }
       if (!_active(generation)) return;
       final records = [...preview.records];
@@ -316,7 +318,8 @@ class LetterboxdImportController extends StateNotifier<LetterboxdImportState> {
       final client = createClient?.call();
       if (client == null) return false;
       try {
-        chosen = await LetterboxdResolver(client).details(chosen.tmdbId!);
+        chosen = await LetterboxdResolver(client)
+            .details(chosen.tmdbId!, mediaType: chosen.mediaType);
       } catch (_) {
         return false;
       } finally {

@@ -114,21 +114,32 @@ class LetterboxdWork {
   final int? tmdbId;
   final List<TraitKey> traits;
   final List<String> aliases;
+
+  /// `movie`, ou `tv` : Letterboxd liste certaines mini-séries (Chernobyl,
+  /// Loki…) comme des films.
+  final String mediaType;
   const LetterboxdWork(
       {required this.title,
       this.year,
       this.jellyfinId,
       this.tmdbId,
       this.aliases = const [],
+      this.mediaType = 'movie',
       required this.traits});
-  String get identity =>
-      tmdbId != null ? 'tmdb:movie:$tmdbId' : 'jellyfin:$jellyfinId';
+
+  bool get isSeries => mediaType == 'tv';
+
+  /// `tmdb:movie:<id>` ou `tmdb:tv:<id>`, null sans identifiant TMDB.
+  String? get tmdbIdentity =>
+      tmdbId == null ? null : 'tmdb:$mediaType:$tmdbId';
+  String get identity => tmdbIdentity ?? 'jellyfin:$jellyfinId';
   Map<String, dynamic> toJson() => {
         'title': title,
         'aliases': aliases,
         'year': year,
         'jellyfinId': jellyfinId,
         'tmdbId': tmdbId,
+        if (isSeries) 'mediaType': mediaType,
         'traits': [
           for (final t in traits) {'kind': t.kind.name, 'value': t.value}
         ]
@@ -147,6 +158,7 @@ class LetterboxdWork {
         year: json['year'] as int?,
         tmdbId: id,
         aliases: List<String>.from(json['aliases'] as List? ?? const []),
+        mediaType: json['mediaType'] == 'tv' ? 'tv' : 'movie',
         jellyfinId: local,
         traits: [
           for (final t in values)
