@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -105,6 +107,12 @@ class SeerrRequest extends _$SeerrRequest {
     }
 
     await _loadQuotaForUser(currentUserBody?.id, force: true);
+    // La liste « Pour » : chargée une fois ici. Demandée depuis la liste
+    // elle-même, elle se rechargeait à chaque reconstruction tant qu'elle
+    // était vide.
+    if (currentUserBody?.canManageUsers == true && state.availableUsers.isEmpty) {
+      unawaited(loadUsers());
+    }
 
     if (isTv) {
       final servers = await api.sonarrServers();

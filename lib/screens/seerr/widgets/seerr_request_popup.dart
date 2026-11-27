@@ -72,13 +72,31 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
     }
   }
 
-  /// « Demander », « Demander la saison 2 », « Demander 3 saisons ».
-  String _actionLabel(SeerrRequestModel state) {
-    if (!state.isTv) return 'Demander';
-    final seasons = state.selectedSeasonNumbers ?? const <int>[];
-    if (seasons.length == 1) return 'Demander la saison ${seasons.single}';
-    if (seasons.isEmpty) return 'Choisissez une saison';
-    return 'Demander ${seasons.length} saisons';
+  /// « Demander », « Demander la saison 2 », « Demander 3 saisons » ; et
+  /// quand il n'y a rien à demander, pourquoi.
+  String _actionLabel(SeerrRequestModel state, List<SeerrSeason> seasons,
+      SeerrDashboardPosterModel model) {
+    final available = model.mediaStatus == SeerrMediaStatus.available;
+    if (!state.isTv) {
+      if (available) return 'Déjà disponible';
+      if (!state.canSubmitRequest && state.hasExistingRequest) {
+        return 'Déjà demandé';
+      }
+      return 'Demander';
+    }
+    final open =
+        seasons.where((s) => !state.isRequestedAlready(s.seasonNumber!));
+    if (seasons.isNotEmpty && open.isEmpty) {
+      return seasons.every((s) =>
+              state.seasonStatuses[s.seasonNumber] ==
+              SeerrMediaStatus.available)
+          ? 'Déjà disponible'
+          : 'Déjà demandée';
+    }
+    final chosen = state.selectedSeasonNumbers ?? const <int>[];
+    if (chosen.length == 1) return 'Demander la saison ${chosen.single}';
+    if (chosen.isEmpty) return 'Choisissez une saison';
+    return 'Demander ${chosen.length} saisons';
   }
 
   @override
@@ -99,110 +117,126 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
 
     return PullToRefresh(
       onRefresh: () => notifier.initialize(widget.requestModel),
-      child: (context) => ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSeerrRequest.maxWidth),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Poster(model: model, onOpen: () => _openInSeerr(model)),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _Overline(model: model, state: state),
-                            const SizedBox(height: AppSpacing.xxs),
-                            Text(model.title,
-                                style: AppTypography.displaySmall),
-                            if (metaLine.isNotEmpty) ...[
+      // La fenêtre grandit en douceur quand saisons et réglages arrivent.
+      child: (context) => AnimatedSize(
+        duration:
+            AppMotion.enabled(context) ? AppDurations.unroll : Duration.zero,
+        curve: AppMotion.easeOut,
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSeerrRequest.maxWidth),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _Poster(
+                            model: model, onOpen: () => _openInSeerr(model)),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _Overline(model: model, state: state),
                               const SizedBox(height: AppSpacing.xxs),
-                              Text(metaLine,
-                                  style: text.bodySmall?.copyWith(
-                                      color: AppColors.textSecondary)),
+                              Text(model.title,
+                                  style: AppTypography.displaySmall),
+                              if (metaLine.isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.xxs),
+                                Text(metaLine,
+                                    style: text.bodySmall?.copyWith(
+                                        color: AppColors.textSecondary)),
+                              ],
+                              if (model.overview.trim().isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(model.overview,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: text.bodyMedium?.copyWith(
+                                        color: AppColors.textSecondary)),
+                              ],
+                              if (state.isTv && seasons.isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.lg),
+                                _Seasons(
+                                    model: model,
+                                    state: state,
+                                    seasons: seasons),
+                              ],
+                              if (state.currentUser?.canManageRequests ==
+                                  true) ...[
+                                const SizedBox(height: AppSpacing.lg),
+                                _Options(state: state),
+                              ],
+                              if (state.activeQuota?.hasRestrictions ==
+                                  true) ...[
+                                const SizedBox(height: AppSpacing.md),
+                                QuotaLimitCard(
+                                    quota: state.activeQuota!,
+                                    type: model.type),
+                              ],
+                              if (state.hasRequestPermission == false) ...[
+                                const SizedBox(height: AppSpacing.md),
+                                const PermissionDeniedWarning(),
+                              ],
+                              if (state.isAnime) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(context.localized.seerrAnimeSeriesNote,
+                                    style: text.bodySmall?.copyWith(
+                                        color: AppColors.textSecondary)),
+                              ],
                             ],
-                            if (model.overview.trim().isNotEmpty) ...[
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(model.overview,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: text.bodyMedium?.copyWith(
-                                      color: AppColors.textSecondary)),
-                            ],
-                            if (state.isTv && seasons.isNotEmpty) ...[
-                              const SizedBox(height: AppSpacing.lg),
-                              _Seasons(
-                                  model: model, state: state, seasons: seasons),
-                            ],
-                            if (state.currentUser?.canManageRequests ==
-                                true) ...[
-                              const SizedBox(height: AppSpacing.lg),
-                              _Options(state: state),
-                            ],
-                            if (state.activeQuota?.hasRestrictions ==
-                                true) ...[
-                              const SizedBox(height: AppSpacing.md),
-                              QuotaLimitCard(
-                                  quota: state.activeQuota!, type: model.type),
-                            ],
-                            if (state.hasRequestPermission == false) ...[
-                              const SizedBox(height: AppSpacing.md),
-                              const PermissionDeniedWarning(),
-                            ],
-                            if (state.isAnime) ...[
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(context.localized.seerrAnimeSeriesNote,
-                                  style: text.bodySmall?.copyWith(
-                                      color: AppColors.textSecondary)),
-                            ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Row(
-                children: [
-                  Expanded(child: _AutoApprove(state: state)),
-                  TextButton(
-                    onPressed: () => context.pop(),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const _KeyCap('Échap'),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(context.localized.close),
-                    ]),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  FilledButton(
-                    autofocus: true,
-                    onPressed: state.canSubmitRequest && !_sending
-                        ? () => _submit(model)
-                        : null,
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (_sending)
-                        const SizedBox.square(
-                            dimension: AppSpacing.md,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                      else
-                        const Icon(IconsaxPlusBold.send_2,
-                            size: AppSpacing.md),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(_actionLabel(state)),
-                    ]),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  children: [
+                    Expanded(child: _AutoApprove(state: state)),
+                    TextButton(
+                      onPressed: () => context.pop(),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const _KeyCap('Échap'),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(context.localized.close),
+                      ]),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    FilledButton(
+                      autofocus: true,
+                      // Désactivé, il doit le paraître : rien à demander.
+                      style: FilledButton.styleFrom(
+                        disabledBackgroundColor: AppColors.surface,
+                        disabledForegroundColor: AppColors.textDisabled,
+                      ),
+                      onPressed: state.canSubmitRequest && !_sending
+                          ? () => _submit(model)
+                          : null,
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (_sending)
+                          const SizedBox.square(
+                              dimension: AppSpacing.md,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                        else
+                          const Icon(IconsaxPlusBold.send_2,
+                              size: AppSpacing.md),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(_actionLabel(state, seasons, model)),
+                      ]),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -261,7 +295,8 @@ class _Overline extends StatelessWidget {
     final style =
         AppTypography.overline.copyWith(color: AppColors.textSecondary);
     return Text.rich(TextSpan(style: style, children: [
-      TextSpan(text: [
+      TextSpan(
+          text: [
         if (year != null) '$year',
         model.type == SeerrMediaType.movie ? 'FILM' : 'SÉRIE',
       ].join(' · ')),
@@ -287,9 +322,8 @@ class _Seasons extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(seerrRequestProvider.notifier);
-    final open = seasons
-        .where((s) => !state.isRequestedAlready(s.seasonNumber!))
-        .length;
+    final open =
+        seasons.where((s) => !state.isRequestedAlready(s.seasonNumber!)).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -316,8 +350,7 @@ class _Seasons extends ConsumerWidget {
                   season: season,
                   status: state.seasonStatuses[season.seasonNumber],
                   locked: state.isRequestedAlready(season.seasonNumber!),
-                  selected:
-                      state.selectedSeasons[season.seasonNumber] ?? false,
+                  selected: state.selectedSeasons[season.seasonNumber] ?? false,
                   onToggle: (value) =>
                       notifier.toggleSeason(season.seasonNumber!, value),
                 ),
@@ -531,9 +564,6 @@ class _Options extends ConsumerWidget {
             value: user?.label ?? l.unknown,
             valueWidget: SeerrUserLabel(user: user),
             itemBuilder: (_) {
-              if (state.availableUsers.isEmpty) {
-                Future.microtask(notifier.loadUsers);
-              }
               final base = state.currentUser!;
               return [
                 ItemActionButton(
