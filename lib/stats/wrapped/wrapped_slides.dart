@@ -2145,32 +2145,17 @@ class _StoryPage extends ConsumerWidget {
           _profileStory(u, capText, condText, body, ground, look!),
       };
 
-      final image = look != null
-          ? look.image
-          : lead == null
-              ? null
-              : w.poster(lead);
       return ClipRect(
         child: ColoredBox(
           color: ground,
           child: Stack(fit: StackFit.expand, children: [
-            // L'affiche en duotone : en noir et blanc, multipliée par la
-            // couleur du fond, à peine visible.
-            if (image != null)
-              Opacity(
-                opacity: ink == AppColors.background
-                    ? AppWrapped.duotoneLight
-                    : AppWrapped.duotoneDark,
-                child: ColorFiltered(
-                  colorFilter: ColorFilter.mode(ground, BlendMode.multiply),
-                  child: ColorFiltered(
-                    colorFilter: _saturation(0),
-                    child: Transform.scale(
-                        scale: 1.15,
-                        child: KinosImage(image: image, disableBlur: true)),
-                  ),
-                ),
-              ),
+            // Des nappes de couleur tirées du film de la page, qui se
+            // fondent sous le grain : l'affiche nette reste la seule image.
+            CustomPaint(
+                painter: StoryMesh(
+                    ground: ground,
+                    seed: (look?.watermark ?? lead?.identity ?? '').hashCode ^
+                        kind.index)),
             // Le chiffre géant en filigrane, qui déborde du cadre.
             // (Pas pour le temps : son cadran porte déjà le chiffre.)
             if (kind != WrappedSummaryKind.time)
@@ -3397,4 +3382,64 @@ ColorFilter duotoneFilter(Color dark, Color light) {
     1,
     0,
   ]);
+}
+
+/// Le fond d'une story : la couleur du film en nappes douces, une plus
+/// profonde, une plus claire, une voisine, posées en larges taches qui se
+/// fondent. [seed] varie leur place d'une page à l'autre.
+class StoryMesh extends CustomPainter {
+  StoryMesh({required this.ground, required this.seed});
+  final Color ground;
+  final int seed;
+
+  // Profil de chaque tache, du centre au bord : une courbe en S, sans
+  // anneau.
+  static const _stops = [0.0, .25, .5, .75, 1.0];
+  static const _falloff = [1.0, .85, .5, .15, 0.0];
+
+  List<Color> get colors {
+    final hsl = HSLColor.fromColor(ground);
+    HSLColor shift(double hue, double saturation, double lightness) => hsl
+        .withHue((hsl.hue + hue) % 360)
+        .withSaturation((hsl.saturation * saturation).clamp(0.0, 1.0))
+        .withLightness(lightness.clamp(0.0, 1.0));
+    return [
+      shift(0, 1.1, hsl.lightness * AppWrapped.meshDeep).toColor(),
+      shift(AppWrapped.meshHueShift * .5, .9,
+              hsl.lightness + AppWrapped.meshLift)
+          .toColor(),
+      shift(-AppWrapped.meshHueShift, 1, hsl.lightness * .8).toColor(),
+      shift(0, 1.1, hsl.lightness * AppWrapped.meshDeep).toColor(),
+      shift(AppWrapped.meshHueShift * .25, .8,
+              hsl.lightness + AppWrapped.meshLift * .7)
+          .toColor(),
+    ];
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = ground);
+    final random = math.Random(seed);
+    final radius = size.longestSide * AppWrapped.meshRadius;
+    for (final color in colors) {
+      final center = Offset(size.width * (.1 + random.nextDouble() * .8),
+          size.height * (.1 + random.nextDouble() * .8));
+      final r = radius * (.7 + random.nextDouble() * .6);
+      canvas.drawCircle(
+          center,
+          r,
+          Paint()
+            ..shader = ui.Gradient.radial(
+                center,
+                r,
+                [
+                  for (final a in _falloff)
+                    color.withValues(alpha: a * AppWrapped.meshStrength)
+                ],
+                _stops));
+    }
+  }
+
+  @override
+  bool shouldRepaint(StoryMesh old) => old.ground != ground || old.seed != seed;
 }

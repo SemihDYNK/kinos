@@ -462,6 +462,15 @@ abstract final class AppWrapped {
   static const duotoneHigh = .78;
   static const duotoneContrast = 1.25;
 
+  /// Le fond en nappes des stories : la plus profonde (fraction de la
+  /// clarté), la plus claire (clarté ajoutée), l'écart de teinte de la
+  /// voisine, la taille des taches et leur force.
+  static const meshDeep = .35;
+  static const meshLift = .2;
+  static const meshHueShift = 24.0;
+  static const meshRadius = .5;
+  static const meshStrength = .9;
+
   /// Le fond du noctambule : la nuit.
   static const nightGround = Color(0xFF15253A);
   static const duotoneDark = .3;
