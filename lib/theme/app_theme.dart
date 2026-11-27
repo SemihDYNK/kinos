@@ -455,6 +455,15 @@ abstract final class AppWrapped {
   static const storyLightness = .42;
   static const storyGraySaturation = .12;
   static const storyPaper = Color(0xFFE8E2D6);
+
+  /// Duotone des stories d'archétype : vers le noir pour les ombres, vers
+  /// le blanc pour les lumières, et le contraste relevé.
+  static const duotoneDeep = .6;
+  static const duotoneHigh = .78;
+  static const duotoneContrast = 1.25;
+
+  /// Le fond du noctambule : la nuit.
+  static const nightGround = Color(0xFF15253A);
   static const duotoneDark = .3;
   static const duotoneLight = .12;
   static const storyGrain = .12;

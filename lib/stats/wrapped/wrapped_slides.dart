@@ -2030,7 +2030,9 @@ class _StoryPage extends ConsumerWidget {
     final stats = data.stats;
     // Le film qui donne sa couleur et son image à la page.
     final lead = _storyLeads(w)[kind];
-    final ground = storyColor(w.tint(lead));
+    // L'acte IV est la story de votre archétype : sa matière à lui.
+    final look = kind == WrappedSummaryKind.films ? _archetypeLook(w) : null;
+    final ground = look?.ground ?? storyColor(look?.tint ?? w.tint(lead));
     final ink = storyInk(ground);
     final soft = ink.withValues(alpha: .72);
     final line = ink.withValues(alpha: .26);
@@ -2039,7 +2041,7 @@ class _StoryPage extends ConsumerWidget {
       WrappedSummaryKind.time => formatHours(stats.seconds).split(' ').first,
       WrappedSummaryKind.taste =>
         (stats.genres.firstOrNull?.name ?? '').toUpperCase(),
-      WrappedSummaryKind.films => '${data.voyage.lastOrNull?.year ?? ''}',
+      WrappedSummaryKind.films => look!.watermark,
     };
 
     return LayoutBuilder(builder: (context, box) {
@@ -2092,26 +2094,34 @@ class _StoryPage extends ConsumerWidget {
                       Row(children: [
                         for (final (value, label) in items)
                           Expanded(
-                            child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      // La police condensée n'a pas d'étoile.
-                                      child: Text(value.toUpperCase(),
-                                          maxLines: 1,
-                                          style: value.contains('★')
-                                              ? body.copyWith(
-                                                  color: ink, fontSize: 6.5 * u)
-                                              : cond.copyWith(
-                                                  fontSize: 9 * u))),
-                                  SizedBox(height: .8 * u),
-                                  Text(label,
-                                      textAlign: TextAlign.center,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: body.copyWith(fontSize: 2.8 * u)),
-                                ]),
+                            // Une marge de chaque côté : un long nom de mois
+                            // (« NOVEMBRE ») venait toucher le filet.
+                            child: Padding(
+                              padding:
+                                  EdgeInsets.symmetric(horizontal: 2.5 * u),
+                              child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        // La police condensée n'a pas d'étoile.
+                                        child: Text(value.toUpperCase(),
+                                            maxLines: 1,
+                                            style: value.contains('★')
+                                                ? body.copyWith(
+                                                    color: ink,
+                                                    fontSize: 6.5 * u)
+                                                : cond.copyWith(
+                                                    fontSize: 9 * u))),
+                                    SizedBox(height: .8 * u),
+                                    Text(label,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style:
+                                            body.copyWith(fontSize: 2.8 * u)),
+                                  ]),
+                            ),
                           ),
                       ]),
                       for (var i = 1; i < items.length; i++)
@@ -2132,10 +2142,14 @@ class _StoryPage extends ConsumerWidget {
         WrappedSummaryKind.taste =>
           _tasteStory(ref, u, capText, condText, body, ink, soft, line),
         WrappedSummaryKind.films =>
-          _filmsStory(u, capText, condText, poster, body, ink),
+          _profileStory(u, capText, condText, body, ground, look!),
       };
 
-      final image = lead == null ? null : w.poster(lead);
+      final image = look != null
+          ? look.image
+          : lead == null
+              ? null
+              : w.poster(lead);
       return ClipRect(
         child: ColoredBox(
           color: ground,
@@ -2500,62 +2514,61 @@ class _StoryPage extends ConsumerWidget {
     );
   }
 
-  _Story _filmsStory(
+  /// La story de l'archétype : son image en duotone (une grille de films
+  /// pour l'explorateur), son nom en très grand, sa phrase, ses chiffres.
+  _Story _profileStory(
       double u,
       Widget Function(String) cap,
       Widget Function(String, double, {int maxLines}) cond,
-      Widget Function(ImageData?, double) poster,
       TextStyle body,
-      Color ink) {
-    final data = inputs.data;
-    final oldest = data.voyage.lastOrNull;
-    final decades = _decades(data).take(3).toList();
-    final most = decades.isEmpty ? 1 : decades.first.count;
+      Color ground,
+      _ArchetypeLook look) {
+    final profile = inputs.data.profile;
+    // Le duotone : les noirs de l'image deviennent une version profonde du
+    // fond, ses blancs une version très claire, avec un peu plus de
+    // contraste. (Multiplier le gris par une teinte claire délavait
+    // l'affiche : ses blancs restaient gris.)
+    final dark = Color.lerp(ground, Colors.black, AppWrapped.duotoneDeep)!;
+    final light = Color.lerp(ground, Colors.white, AppWrapped.duotoneHigh)!;
+    Widget duotone(ImageData? image, double width) => ClipRRect(
+          borderRadius: BorderRadius.circular(1.4 * u),
+          child: SizedBox(
+            width: width,
+            height: width * 1.5,
+            child: image == null
+                ? ColoredBox(color: light.withValues(alpha: .3))
+                : ColorFiltered(
+                    colorFilter: duotoneFilter(dark, light),
+                    child: KinosImage(image: image, disableBlur: true),
+                  ),
+          ),
+        );
+    final grid = look.grid.take(6).toList();
     return (
       hero: Column(mainAxisSize: MainAxisSize.min, children: [
         cap('Acte IV · Vous'),
-        SizedBox(height: 5 * u),
-        poster(oldest == null ? null : inputs.poster(oldest), 46 * u),
-        SizedBox(height: 4 * u),
-        cond(oldest?.title ?? '', 12 * u, maxLines: 2),
-        SizedBox(height: 1 * u),
-        cap('${oldest?.year ?? ''} · votre plus vieux voyage'),
+        SizedBox(height: 6 * u),
+        if (grid.length >= 3)
+          SizedBox(
+            width: 3 * 24 * u + 2 * 1.5 * u,
+            child: Wrap(
+              spacing: 1.5 * u,
+              runSpacing: 1.5 * u,
+              children: [for (final image in grid) duotone(image, 24 * u)],
+            ),
+          )
+        else
+          duotone(look.image, 50 * u),
+        SizedBox(height: 6 * u),
+        cond(profile.title, 15 * u),
+        SizedBox(height: 2.5 * u),
+        Text(profile.line,
+            textAlign: TextAlign.center,
+            style: body.copyWith(fontSize: 3.8 * u)),
       ]),
-      gap: 5 * u,
-      rest: Column(mainAxisSize: MainAxisSize.min, children: [
-        for (final (i, d) in decades.indexed)
-          Padding(
-            padding: EdgeInsets.only(bottom: 2.6 * u),
-            child: Row(children: [
-              SizedBox(
-                  width: 20 * u,
-                  child: Text('${d.decade}',
-                      style: AppTypography.heroEditorial
-                          .copyWith(color: ink, fontSize: 4.6 * u))),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: (d.count / most).clamp(.05, 1.0),
-                    child: Container(
-                      height: 1.3 * u,
-                      decoration: BoxDecoration(
-                        color: ink.withValues(alpha: i == 0 ? 1 : .45),
-                        borderRadius: BorderRadius.circular(u),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 3 * u),
-              Text('${d.count}', style: body.copyWith(color: ink)),
-            ]),
-          ),
-      ]),
-      numbers: [
-        ('${data.stats.elsewhere}', 'vus ailleurs'),
-        if (data.medianYear case final median?) ('$median', 'film moyen'),
-      ]
+      gap: 0,
+      rest: null,
+      numbers: look.numbers,
     );
   }
 }
@@ -3187,4 +3200,201 @@ class _NextYearSlide extends StatelessWidget {
               ]),
             ]);
   }
+}
+
+/// Ce qui habille la story d'un archétype : son image, sa couleur, son
+/// chiffre en filigrane, ses chiffres du bas et, pour l'explorateur, une
+/// grille de films.
+typedef _ArchetypeLook = ({
+  ImageData? image,
+  Color tint,
+
+  /// Un fond propre à l'archétype (la nuit, le papier), sinon celui de son
+  /// film.
+  Color? ground,
+  String watermark,
+  List<(String, String)> numbers,
+  List<ImageData> grid,
+});
+
+_ArchetypeLook _archetypeLook(WrappedInputs w) {
+  final data = w.data;
+  final stats = data.stats;
+  final profile = data.profile;
+  final best = data.filmOfYear?.event;
+  final bestNumber = (best?.title ?? '${stats.films}', 'film de l\'année');
+  String percent(double share) => '${(share * 100).round()} %';
+  final topSeries = data.series.firstOrNull?.name;
+  final seriesArt = topSeries == null ? null : w.art['series:$topSeries'];
+  final seriesTint = topSeries == null ? null : w.tints['series:$topSeries'];
+
+  ViewingEvent? lead = best;
+  ImageData? image;
+  Color? tint;
+  var watermark = '${stats.films}';
+  var numbers = <(String, String)>[];
+  var grid = <ImageData>[];
+
+  switch (profile.id) {
+    case 'night':
+      final hours = data.hours!;
+      // La séance commencée le plus tard dans la nuit : la journée bascule
+      // à 4 h, une séance à 2 h passe après une à 23 h 50.
+      int lateness(DateTime at) => ((at.hour + 20) % 24) * 60 + at.minute;
+      final timed = [
+        for (final e in data.timeline)
+          if (e.sources.contains(ViewingSource.kinos)) e
+      ];
+      lead = timed.isEmpty
+          ? best
+          : timed.reduce((a, b) => lateness(b.at) > lateness(a.at) ? b : a);
+      watermark = '${peakHour(hours)}H';
+      numbers = [
+        (percent(lateShare(hours)), 'après 23 h'),
+        if (lead != null && lead != best)
+          (
+            '${lead.at.hour} H ${lead.at.minute.toString().padLeft(2, '0')}',
+            'votre plus tardive'
+          )
+        else
+          (_weekdays[peakWeekday(hours)].substring(0, 3), 'votre soir'),
+        bestNumber,
+      ];
+    case 'weekend':
+      final hours = data.hours!;
+      final saturday = hours.weekdays[5] >= hours.weekdays[6];
+      lead = data.timeline
+              .where((e) => e.at.weekday == (saturday ? 6 : 7))
+              .lastOrNull ??
+          best;
+      watermark = saturday ? 'SAM.' : 'DIM.';
+      numbers = [
+        (percent(weekendShare(hours)), 'le week-end'),
+        ('${peakHour(hours)} h', 'votre heure'),
+        bestNumber,
+      ];
+    case 'binge':
+      image = seriesArt?.poster;
+      tint = seriesTint;
+      final run = data.marathon?.episodes ?? data.pace?.episodes;
+      watermark = '${run ?? stats.episodes}';
+      numbers = [
+        (percent(bingeShare(data.allSeries) ?? 0), 'en binge'),
+        if (run != null) ('$run', 'd\'affilée'),
+        (topSeries ?? '${stats.series}', 'série de l\'année'),
+      ];
+    case 'series':
+      image = seriesArt?.poster;
+      tint = seriesTint;
+      final seconds = [for (final s in data.allSeries) ...s.episodes]
+          .fold(0, (sum, e) => sum + e.seconds);
+      watermark = '${(seconds / 3600).round()}H';
+      numbers = [
+        ('${stats.series}', 'séries'),
+        ('${stats.episodes}', 'épisodes'),
+        (topSeries ?? '', 'série de l\'année'),
+      ];
+    case 'explorer':
+      // Un film par genre, les six premiers genres.
+      final seen = <String>{};
+      for (final e in data.timeline.reversed) {
+        final genre = e.genres.firstOrNull;
+        final poster = w.poster(e);
+        if (genre == null || poster == null || !seen.add(genre)) continue;
+        grid.add(poster);
+        if (grid.length == 6) break;
+      }
+      watermark = '${stats.genres.length}';
+      numbers = [
+        ('${stats.genres.length}', 'genres'),
+        if (stats.genres.lastOrNull case final rare?)
+          (rare.name, 'le plus rare'),
+        bestNumber,
+      ];
+    case 'world':
+      final languages = <String, int>{};
+      for (final e in data.timeline) {
+        final language =
+            e.tmdbId == null ? null : data.facts[e.tmdbId]?.language;
+        if (language != null && language != 'en') {
+          languages[language] = (languages[language] ?? 0) + 1;
+        }
+      }
+      final top = languages.entries
+          .fold<MapEntry<String, int>?>(
+              null, (a, b) => a == null || b.value > a.value ? b : a)
+          ?.key;
+      lead = data.timeline.reversed.firstWhere(
+          (e) => e.tmdbId != null && data.facts[e.tmdbId]?.language == top,
+          orElse: () => best ?? data.timeline.last);
+      watermark = (top ?? '').toUpperCase();
+      numbers = [
+        (profile.facts.first.split(' ').take(2).join(' '), 'non anglophones'),
+        ((top ?? '').toUpperCase(), 'votre langue'),
+        bestNumber,
+      ];
+    case 'classic':
+      lead = data.voyage.lastOrNull ?? best;
+      watermark = '${data.medianYear ?? ''}';
+      numbers = [
+        ('${data.medianYear ?? ''}', 'film moyen'),
+        ('${data.voyage.lastOrNull?.year ?? ''}', 'le plus vieux'),
+        if (stats.decade case final d?)
+          ('${d.decade % 100}\'S', 'votre décennie'),
+      ];
+    case 'faithful':
+      final most = stats.mostSeen;
+      lead = most?.event ?? best;
+      watermark = '×${most?.times ?? 2}';
+      numbers = [
+        ('×${most?.times ?? 2}', most?.event.title ?? 'le plus revu'),
+        (profile.facts.first.split(' ').first, 'films revus'),
+        bestNumber,
+      ];
+    default:
+      watermark = '${stats.films}';
+      numbers = [
+        ('${stats.films}', 'films'),
+        if (stats.episodes > 0) ('${stats.episodes}', 'épisodes'),
+        bestNumber,
+      ];
+  }
+  return (
+    image: image ?? (lead == null ? null : w.poster(lead)),
+    tint: tint ?? w.tint(lead),
+    ground: switch (profile.id) {
+      'night' => AppWrapped.nightGround,
+      'classic' => AppWrapped.storyPaper,
+      _ => null,
+    },
+    watermark: watermark,
+    numbers: numbers,
+    grid: grid,
+  );
+}
+
+/// Un duotone : la luminance de l'image (contraste relevé de
+/// [AppWrapped.duotoneContrast]) va de [dark] à [light].
+ColorFilter duotoneFilter(Color dark, Color light) {
+  const c = AppWrapped.duotoneContrast;
+  const weights = [.2126, .7152, .0722];
+  List<double> row(double from, double to) {
+    final span = to - from;
+    return [
+      for (final w in weights) span * c * w,
+      0,
+      (from + span * .5 * (1 - c)) * 255,
+    ];
+  }
+
+  return ColorFilter.matrix([
+    ...row(dark.r, light.r),
+    ...row(dark.g, light.g),
+    ...row(dark.b, light.b),
+    0,
+    0,
+    0,
+    1,
+    0,
+  ]);
 }
