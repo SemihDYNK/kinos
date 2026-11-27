@@ -10,8 +10,6 @@ import 'package:kinos/models/items/media_segments_model.dart';
 import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/theme/app_theme.dart';
 import 'package:kinos/util/duration_extensions.dart';
-import 'package:kinos/util/list_padding.dart';
-import 'package:kinos/util/string_extensions.dart';
 import 'package:kinos/widgets/shared/kinos_slider.dart';
 import 'package:kinos/widgets/shared/segmented_track.dart';
 import 'package:kinos/widgets/shared/trick_play_image.dart';
@@ -64,7 +62,7 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
   bool onDragStart = false;
   double _chapterPosition = 0.0;
   double imageBottomOffset = 0.0;
-  double chapterCardWidth = 288;
+  double chapterCardWidth = AppSeekPreview.width;
   Duration currentDuration = Duration.zero;
 
   /// L'aperçu tiré du fichier lui-même, quand le serveur n'a pas de
@@ -108,26 +106,6 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
   static const _trackHeightRest = SegmentedTrack.heightRest;
   static const _trackHeightHover = SegmentedTrack.heightHover;
 
-  /// Géométrie du petit marqueur triangulaire (un carré pivoté à -45°)
-  /// sous l'infobulle de chapitre — cf. [chapterCard]. Taille du carré
-  /// avant rotation, et décalage vers le bas appliqué avant rotation
-  /// pour détacher visuellement sa pointe du bord de l'infobulle.
-  static const _caretSize = 30.0;
-  static const _caretPushDown = 10.0;
-
-  /// Distance verticale entre le bord bas (non transformé) de la carte
-  /// infobulle+marqueur et la pointe du marqueur une fois pivoté.
-  /// `Stack(alignment: bottomCenter)` place le CENTRE du carré (30 px de
-  /// côté) à `côté / 2` au-dessus de ce bord bas, avant le décalage de
-  /// `_caretPushDown` vers le bas ; la rotation à -45° l'éloigne encore
-  /// de `côté × √2 / 2` (moitié de sa diagonale) en dessous de son
-  /// propre centre. Net : `pushDown + côté × (√2 − 1) / 2` — dérivée de
-  /// la géométrie du marqueur, jamais un nombre choisi à l'oeil (mesuré
-  /// et corrigé une première fois via RenderBox : la formule initiale
-  /// omettait le terme `−côté/2` de l'alignement `bottomCenter`, d'où un
-  /// écart de 15 px avec le centre réel de la piste).
-  static final double _caretTipDrop =
-      _caretPushDown + _caretSize * (math.sqrt2 - 1) / 2;
 
   @override
   Widget build(BuildContext context) {
@@ -388,6 +366,9 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
     return constraints.maxWidth - endOffset;
   }
 
+  /// L'aperçu au survol : l'image de l'instant visé, le chapitre et le
+  /// temps posés dessus sur un voile sombre (cf. « Texte sur image »).
+  /// Sans image, le texte seul sur le voile.
   Widget chapterCard(BuildContext context, Duration duration, bool visible,
       double zoneCenterY) {
     final currentStream = ref.watch(playBackModel.select((value) => value));
@@ -395,145 +376,103 @@ class _ChapterProgressSliderState extends ConsumerState<VideoProgressBar> {
         (currentStream?.chapters ?? []).getChapterFromDuration(currentDuration);
     final trickPlay = currentStream?.trickPlay;
     final screenWidth = MediaQuery.of(context).size.width;
-    final calculatedPosition = _chapterPosition;
-    final offsetDifference = _chapterPosition - calculatedPosition;
+    final Widget? image = trickPlay != null && trickPlay.images.isNotEmpty
+        ? AspectRatio(
+            aspectRatio:
+                trickPlay.width.toDouble() / trickPlay.height.toDouble(),
+            child: TrickPlayImage(trickPlay, position: currentDuration))
+        : _preview != null
+            ? _PreviewFrame(_preview!)
+            : chapter != null
+                ? Image(
+                    image: chapter.imageProvider,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  )
+                : null;
+    final name = chapter?.name.trim() ?? '';
+    final caption = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (name.isNotEmpty)
+          Text(name.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.overline.copyWith(
+                  color: AppColors.textPrimary
+                      .withValues(alpha: AppSeekPreview.secondaryOpacity))),
+        Text(
+          currentDuration.readAbleDuration,
+          style: AppTypography.sectionTitle.copyWith(
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
     return Positioned(
-      left:
-          calculatedPosition.clamp(-10, screenWidth - (chapterCardWidth + 45)),
-      // Ancre le bord bas de la carte à une distance FIXE et calculée
-      // (`_caretTipDrop`) du centre de la piste (`zoneCenterY`) : la
-      // pointe du marqueur triangulaire vise exactement ce centre,
-      // quelle que soit la hauteur réelle du contenu (image + légende,
-      // variable selon la longueur du nom de chapitre) — remplace
-      // l'ancien `Transform.translate(0, -height - 10)` qui supposait
-      // une hauteur de carte constante (350 px, jamais la hauteur
-      // réelle), une approximation qui ne coïncidait qu'à quelques
-      // pixels près avec le centre réel de la piste (mesuré : ~3 px
-      // d'écart rapporté).
-      bottom: zoneCenterY + _caretTipDrop,
+      left: _chapterPosition.clamp(
+          0, math.max(0, screenWidth - chapterCardWidth - AppSpacing.lg)),
+      bottom: zoneCenterY + AppSeekPreview.gap,
       child: IgnorePointer(
         child: AnimatedOpacity(
           opacity: visible ? 1 : 0,
-          duration: const Duration(milliseconds: 250),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: chapterCardWidth),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: AnimatedSize(
-                  duration: const Duration(milliseconds: 250),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 250),
-                          child: ClipRRect(
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(8)),
-                            child: trickPlay == null || trickPlay.images.isEmpty
-                                ? _preview != null
-                                    ? _PreviewFrame(_preview!)
-                                    : chapter != null
-                                        ? Image(
-                                            image: chapter.imageProvider,
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (_, __, ___) =>
-                                                const SizedBox.shrink(),
-                                          )
-                                        : const SizedBox.shrink()
-                                : AspectRatio(
-                                    aspectRatio: trickPlay.width.toDouble() /
-                                        trickPlay.height.toDouble(),
-                                    child: TrickPlayImage(
-                                      trickPlay,
-                                      position: currentDuration,
-                                    ),
-                                  ),
+          duration: AppDurations.hover,
+          child: SizedBox(
+            key: const Key('seek-preview-card'),
+            width: chapterCardWidth,
+            child: ClipRRect(
+              borderRadius: AppRadii.cardBorder,
+              child: Stack(
+                children: [
+                  if (image != null)
+                    Positioned.fill(
+                        child: ColoredBox(
+                            color: AppColors.scrim, child: image)),
+                  if (image != null)
+                    // Le voile, dense en bas, transparent aux deux tiers.
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            stops: const [0, AppSeekPreview.scrimReach],
+                            colors: [
+                              AppColors.scrim
+                                  .withValues(alpha: AppSeekPreview.scrim),
+                              AppColors.scrim.withValues(alpha: 0),
+                            ],
                           ),
                         ),
                       ),
-                      Stack(
-                        alignment: Alignment.bottomCenter,
-                        children: [
-                          Transform.translate(
-                            offset: Offset(offsetDifference, _caretPushDown),
-                            child: Transform.rotate(
-                              angle: -math.pi / 4,
-                              child: Container(
-                                key: const Key('chapter-card-caret'),
-                                height: _caretSize,
-                                width: _caretSize,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.surfaceHigh,
-                                  borderRadius: AppRadii.cardBorder,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            decoration: const BoxDecoration(
-                              color: AppColors.surfaceHigh,
-                              borderRadius: AppRadii.cardBorder,
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              // `MainAxisSize.min`, pas `.max` : cette
-                              // Row vit dans une `ConstrainedBox
-                              // (maxWidth: chapterCardWidth)` (250) —
-                              // avec `.max`, elle réclamait ces 250 px
-                              // même quand le texte tenait dans 80,
-                              // d'où la boîte bien plus large que son
-                              // contenu rapportée (mesuré : la largeur
-                              // de la Row égalait la contrainte
-                              // maximale, pas la somme de ses enfants).
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                spacing: AppSpacing.sm,
-                                children: [
-                                  if (chapter?.name.isNotEmpty ?? false)
-                                    Flexible(
-                                      child: Text(
-                                        chapter?.name.capitalize() ?? "",
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall
-                                            ?.copyWith(
-                                                fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  Text(
-                                    currentDuration.readAbleDuration,
-                                    textAlign: TextAlign.center,
-                                    // Typographie tabulaire : même
-                                    // traitement que le compteur du
-                                    // voile (cf.
-                                    // `video_player_bar_content.dart`),
-                                    // les chiffres ne sautent plus
-                                    // latéralement à chaque seconde.
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures()
-                                      ],
-                                    ),
-                                  )
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                    ),
+                  // L'image donne sa hauteur (16:9 par défaut) ; sans
+                  // elle, le texte seul sur un fond voilé.
+                  if (image != null)
+                    AspectRatio(
+                      aspectRatio: AppSeekPreview.aspectRatio,
+                      child: Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          child: caption,
+                        ),
                       ),
-                    ].addPadding(const EdgeInsets.symmetric(vertical: 4)),
-                  ),
-                ),
+                    )
+                  else
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                          color: AppColors.scrim
+                              .withValues(alpha: AppSeekPreview.scrim)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs),
+                        child: caption,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

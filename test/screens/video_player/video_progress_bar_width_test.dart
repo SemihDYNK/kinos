@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -217,16 +216,10 @@ void main() {
         w.decoration is BoxDecoration &&
         (w.decoration as BoxDecoration).shape == BoxShape.circle);
 
-    // Pointe du marqueur triangulaire sous l'infobulle de chapitre : un
-    // carré de 30 px pivoté à -45° (cf. `_caretSize`/`_caretPushDown`
-    // dans `video_progress_bar.dart`) — son centre ne bouge pas sous la
-    // rotation (`Transform.rotate` pivote autour de son propre centre),
-    // sa pointe basse est à `côté × √2 / 2` en dessous.
-    double caretTipY(WidgetTester tester) {
-      final center =
-          tester.getCenter(find.byKey(const Key('chapter-card-caret')));
-      return center.dy + 30.0 * math.sqrt2 / 2;
-    }
+    // Bas de l'aperçu au survol : il flotte à un écart fixe
+    // (`AppSeekPreview.gap`) au-dessus du centre de la piste.
+    double previewBottomY(WidgetTester tester) =>
+        tester.getRect(find.byKey(const Key('seek-preview-card'))).bottom;
 
     testWidgets('au repos : piste et pouce partagent le même centre Y',
         (tester) async {
@@ -244,8 +237,8 @@ void main() {
     });
 
     testWidgets(
-        'au survol : piste, pouce et marqueur de chapitre partagent le '
-        'même centre Y', (tester) async {
+        'au survol : piste et pouce partagent le même centre Y, l\'aperçu '
+        'flotte à son écart', (tester) async {
       await tester.pumpWidget(harness(
         width: 1280,
         duration: const Duration(minutes: 45),
@@ -257,7 +250,8 @@ void main() {
       final trackY = tester.getCenter(find.byType(SegmentedTrack)).dy;
       final dotY = tester.getCenter(thumbDotFinder()).dy;
       expect((trackY - dotY).abs(), lessThanOrEqualTo(0.5));
-      expect((trackY - caretTipY(tester)).abs(), lessThanOrEqualTo(0.5));
+      expect((trackY - previewBottomY(tester) - AppSeekPreview.gap).abs(),
+          lessThanOrEqualTo(0.5));
     });
 
     testWidgets(

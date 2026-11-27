@@ -199,6 +199,20 @@ abstract final class AppPlayerStyle {
   static const playIconSize = 52.0;
 }
 
+/// L'aperçu au survol de la barre du lecteur : l'image, le temps dessus.
+abstract final class AppSeekPreview {
+  static const width = 320.0;
+  static const aspectRatio = 16 / 9;
+
+  /// Écart entre le bas de l'aperçu et le centre de la barre.
+  static const gap = 20.0;
+
+  /// Voile sous le texte (cf. « Texte sur image »), et sa hauteur.
+  static const scrim = .85;
+  static const scrimReach = .6;
+  static const secondaryOpacity = .75;
+}
+
 /// L'écran de chargement d'un film ou d'un épisode.
 abstract final class AppPlaybackLoading {
   /// Entrée de l'image, puis du titre et de sa ligne, décalés.
