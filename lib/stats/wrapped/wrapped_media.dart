@@ -8,6 +8,7 @@ import 'package:kinos/models/item_base_model.dart';
 import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/theme/palette_service_provider.dart';
+import 'package:kinos/recommendations/providers/recommendation_providers.dart';
 import 'package:kinos/upcoming/upcoming_models.dart' show tmdbImage;
 
 import '../viewing_log.dart';
@@ -40,7 +41,7 @@ final wrappedArtProvider = FutureProvider.autoDispose
   }
   // Les séries : l'épisode donne sa série, la série ses images.
   final episodes = [
-    for (final s in data.series)
+    for (final s in data.allSeries.take(_maxSeries))
       if (s.episodes.firstWhere((e) => e.jellyfinId != null,
               orElse: () => s.episodes.first)
           case final e when e.jellyfinId != null)
@@ -94,6 +95,79 @@ WrappedArt _artOf(
         item?.images?.primary,
   );
 }
+
+/// Séries cherchées au plus pour les images et les séries terminées.
+const _maxSeries = 40;
+
+/// Une série terminée cette année.
+typedef WrappedFinished = ({String name, int episodes});
+
+/// Les séries finies cette année : tous leurs épisodes (hors spéciaux) vus
+/// dans Jellyfin, dont au moins un cette année. Le journal ne connaît pas
+/// le nombre total d'épisodes : on le demande à Jellyfin.
+final wrappedFinishedProvider = FutureProvider.autoDispose
+    .family<List<WrappedFinished>, int>((ref, year) async {
+  final data = await ref.watch(wrappedDataProvider(year).future);
+  final api = ref.read(jellyApiProvider);
+  final firstEpisode = <String, String>{
+    for (final s in data.allSeries.take(_maxSeries))
+      if (s.episodes.firstWhere((e) => e.jellyfinId != null,
+              orElse: () => s.episodes.first)
+          case final e when e.jellyfinId != null)
+        e.jellyfinId!: s.name
+  };
+  if (firstEpisode.isEmpty) return const [];
+  final episodeItems = await api.usersUserIdItemsGet(
+      ids: firstEpisode.keys.toList(), enableUserData: false);
+  final seriesOf = <String, String>{
+    for (final dto in episodeItems.body?.items ?? const <BaseItemDto>[])
+      if (dto.seriesId != null && firstEpisode[dto.id] != null)
+        dto.seriesId!: firstEpisode[dto.id]!
+  };
+  final finished = <WrappedFinished>[];
+  for (final entry in seriesOf.entries) {
+    final response = await api.usersUserIdItemsGet(
+        parentId: entry.key,
+        recursive: true,
+        includeItemTypes: const [BaseItemKind.episode],
+        enableUserData: true,
+        enableImages: false);
+    final episodes = [
+      for (final dto in response.body?.items ?? const <BaseItemDto>[])
+        if ((dto.parentIndexNumber ?? 1) > 0) dto
+    ];
+    if (episodes.isEmpty) continue;
+    if (episodes.every((dto) => dto.userData?.played == true)) {
+      finished.add((name: entry.value, episodes: episodes.length));
+    }
+  }
+  ref.keepAlive();
+  return finished..sort((a, b) => b.episodes.compareTo(a.episodes));
+});
+
+/// Un titre conseillé pour l'an prochain.
+typedef WrappedPick = ({String title, int? year, ImageData? poster});
+
+/// Trois films de la bibliothèque, pas encore vus, que le moteur de goûts
+/// recommande : la diapo « Pour l'an prochain ». Seulement pour l'année en
+/// cours (une année passée n'a pas d'« an prochain » à proposer).
+final wrappedNextYearProvider = FutureProvider.autoDispose
+    .family<List<WrappedPick>, int>((ref, year) async {
+  if (year != DateTime.now().year) return const [];
+  final result = await ref.watch(recommendationResultProvider.future);
+  final picks = <WrappedPick>[];
+  for (final scored in result.candidates) {
+    final item = result.jellyfinItemsById[scored.item.id];
+    if (item == null || item.type != KinosItemType.movie) continue;
+    picks.add((
+      title: item.name,
+      year: item.overview.yearAired,
+      poster: item.getPosters?.primary,
+    ));
+    if (picks.length == 3) break;
+  }
+  return picks;
+});
 
 /// La teinte dominante de chaque film d'une année, publiée au fil de
 /// l'extraction : les titres des grandes diapos d'abord (film et série de

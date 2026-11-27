@@ -147,21 +147,28 @@ class WrappedAudio {
   }
 }
 
-/// L'acte d'une diapo (0 : le temps, 1 : les goûts, 2 : les films), d'après
-/// son identifiant.
+/// L'acte d'une diapo (0 : le temps, 1 : les goûts, 2 : les séries,
+/// 3 : vous), d'après son identifiant.
 int wrappedActOf(String slideId) => switch (slideId) {
-      'opening' || 'act1' || 'time' || 'rhythm' => 0,
+      'opening' || 'act1' || 'time' || 'when' || 'rhythm' => 0,
       'act2' ||
       'genre' ||
-      'series' ||
-      'marathon' ||
       'director' ||
       'actor' ||
       'ratings' ||
       'friends' ||
       'public-loves' ||
       'you-love' ||
-      'agreement' =>
+      'agreement' ||
+      'voyage' ||
+      'elsewhere' =>
         1,
-      _ => 2,
+      'act3' ||
+      'series' ||
+      'marathon' ||
+      'pace' ||
+      'finished' ||
+      'series-of-year' =>
+        2,
+      _ => 3,
     };

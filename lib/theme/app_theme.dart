@@ -481,6 +481,11 @@ abstract final class AppWrapped {
   static const elsewhere = 8.0;
   static const filmOfYear = 11.0;
   static const recap = 14.0;
+  static const when = 10.0;
+  static const pace = 9.0;
+  static const finished = 10.0;
+  static const profile = 11.0;
+  static const nextYear = 11.0;
 }
 
 abstract final class AppStatsLayout {

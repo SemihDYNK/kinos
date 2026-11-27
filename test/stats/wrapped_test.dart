@@ -110,8 +110,12 @@ void main() {
     expect(data.friendsDisagree!.film.tmdbId, 1);
     expect(data.friendsAgree!.film.tmdbId, 2);
     expect(data.filmOfYear!.event.tmdbId, 2);
-    expect(data.moods,
-        [WrappedMood.piano, WrappedMood.tension, WrappedMood.tension]);
+    expect(data.moods, [
+      WrappedMood.piano,
+      WrappedMood.tension,
+      WrappedMood.piano,
+      WrappedMood.tension
+    ]);
     expect(data.genreFilms.length, 2);
   });
 
@@ -273,11 +277,29 @@ void main() {
       1
     ]);
     expect([
-      for (final id in ['voyage', 'film-of-year', 'recap']) wrappedActOf(id)
+      for (final id in ['voyage', 'elsewhere']) wrappedActOf(id)
+    ], [
+      1,
+      1
+    ]);
+    expect([
+      for (final id in ['act3', 'series', 'marathon', 'pace', 'finished'])
+        wrappedActOf(id)
     ], [
       2,
       2,
+      2,
+      2,
       2
+    ]);
+    expect([
+      for (final id in ['profile', 'next-year', 'film-of-year', 'recap'])
+        wrappedActOf(id)
+    ], [
+      3,
+      3,
+      3,
+      3
     ]);
     expect(wrappedMoodAsset(WrappedMood.tension),
         'asset:///assets/sounds/wrapped_tension.ogg');

@@ -182,6 +182,12 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
     final tints =
         ref.watch(wrappedTintsProvider(widget.year)).valueOrNull ?? const {};
     final ratings = ref.watch(kinosRatingsProvider);
+    final finished =
+        ref.watch(wrappedFinishedProvider(widget.year)).valueOrNull ??
+            const <WrappedFinished>[];
+    final nextYear =
+        ref.watch(wrappedNextYearProvider(widget.year)).valueOrNull ??
+            const <WrappedPick>[];
     final text = Theme.of(context).textTheme;
 
     Widget message(String label) => Center(
@@ -197,7 +203,12 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
     final inputs = !ready
         ? null
         : WrappedInputs(
-            data: data.value!, art: art.value!, tints: tints, ratings: ratings);
+            data: data.value!,
+            art: art.value!,
+            tints: tints,
+            ratings: ratings,
+            finished: finished,
+            nextYear: nextYear);
     final slides =
         inputs == null ? const <WrappedSlide>[] : buildWrappedSlides(inputs);
     final index = slides.indexWhere((s) => s.id == _current);

@@ -24,6 +24,7 @@ import '../viewing_log.dart';
 import '../viewing_stats.dart' show Ranked;
 import 'wrapped_data.dart';
 import 'wrapped_export.dart' show WrappedPage, WrappedStoryLayout;
+import 'wrapped_habits.dart';
 import 'wrapped_media.dart';
 import 'wrapped_motion.dart';
 import 'wrapped_quotes.dart';
@@ -45,17 +46,30 @@ class WrappedInputs {
       required this.art,
       required this.tints,
       required this.ratings,
+      this.finished = const [],
+      this.nextYear = const [],
       this.userName});
   final WrappedData data;
   final Map<String, WrappedArt> art;
   final Map<String, Color> tints;
   final Map<String, KinosRating> ratings;
 
+  /// Les séries terminées (demandées à Jellyfin), et les films conseillés
+  /// pour l'an prochain : vides tant qu'ils ne sont pas arrivés.
+  final List<WrappedFinished> finished;
+  final List<WrappedPick> nextYear;
+
   /// Le nom affiché sur les pages de synthèse (à l'export, si demandé).
   final String? userName;
 
   WrappedInputs withName(String? name) => WrappedInputs(
-      data: data, art: art, tints: tints, ratings: ratings, userName: name);
+      data: data,
+      art: art,
+      tints: tints,
+      ratings: ratings,
+      finished: finished,
+      nextYear: nextYear,
+      userName: name);
 
   ImageData? backdrop(ViewingEvent e) => art[e.identity]?.backdrop;
   ImageData? poster(ViewingEvent e) => art[e.identity]?.poster;
@@ -108,7 +122,7 @@ String _list(List<String> names) => names.length <= 1
     ? names.join()
     : '${names.sublist(0, names.length - 1).join(', ')} et ${names.last}';
 
-/// Les diapos de l'année, dans l'ordre des trois actes. Une diapo sans
+/// Les diapos de l'année, dans l'ordre des quatre actes. Une diapo sans
 /// matière n'existe pas.
 List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
   final data = w.data;
@@ -200,6 +214,11 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
           id: 'time',
           seconds: AppWrapped.time,
           builder: (_) => _TimeSlide(inputs: w)),
+    if (data.hours case final hours?)
+      WrappedSlide(
+          id: 'when',
+          seconds: AppWrapped.when,
+          builder: (_) => _WhenSlide(inputs: w, hours: hours)),
     if (stats.streak != null || stats.busiestDay != null)
       WrappedSlide(
           id: 'rhythm',
@@ -218,16 +237,6 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
           id: 'genre',
           seconds: AppWrapped.genre,
           builder: (_) => _GenreSlide(inputs: w, images: genreImages)),
-    if (data.series.isNotEmpty)
-      WrappedSlide(
-          id: 'series',
-          seconds: AppWrapped.genre,
-          builder: (_) => _SeriesSlide(inputs: w)),
-    if (data.marathon case final marathon?)
-      WrappedSlide(
-          id: 'marathon',
-          seconds: AppWrapped.genre,
-          builder: (_) => _MarathonSlide(inputs: w, marathon: marathon)),
     if (stats.directors.firstOrNull case final director?)
       WrappedSlide(
           id: 'director',
@@ -284,17 +293,6 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
           seconds: AppWrapped.hotTake,
           builder: (_) =>
               _AgreementSlide(inputs: w, gap: gap, images: agreementImages)),
-    WrappedSlide(
-        id: 'act3',
-        seconds: AppWrapped.act,
-        builder: (_) => _ActCard(
-            number: 'Acte III',
-            title: 'Le palmarès',
-            colors: [
-              if (filmOfYear != null) w.tint(filmOfYear),
-              for (final r in data.runnersUp.take(2)) w.tint(r.event),
-            ],
-            focus: const Alignment(0, .4))),
     if (data.voyage.length >= 2)
       WrappedSlide(
           id: 'voyage',
@@ -305,11 +303,66 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
           id: 'elsewhere',
           seconds: AppWrapped.elsewhere,
           builder: (_) => _ElsewhereSlide(inputs: w, films: films)),
-    if (data.series.firstOrNull case final show?)
+    // Acte III : les séries, s'il y en a.
+    if (data.series.isNotEmpty) ...[
       WrappedSlide(
-          id: 'series-of-year',
+          id: 'act3',
+          seconds: AppWrapped.act,
+          builder: (_) => _ActCard(
+              number: 'Acte III',
+              title: 'Les séries',
+              colors: [
+                for (final s in data.series.take(3))
+                  w.tints['series:${s.name}'] ?? AppColors.heroFallback
+              ],
+              focus: const Alignment(-.4, .3))),
+      WrappedSlide(
+          id: 'series',
           seconds: AppWrapped.genre,
-          builder: (_) => _SeriesOfYearSlide(inputs: w, series: show)),
+          builder: (_) => _SeriesSlide(inputs: w)),
+      if (data.marathon case final marathon?)
+        WrappedSlide(
+            id: 'marathon',
+            seconds: AppWrapped.genre,
+            builder: (_) => _MarathonSlide(inputs: w, marathon: marathon)),
+      if (data.pace case final pace?
+          when pace.series != data.marathon?.series || data.marathon == null)
+        WrappedSlide(
+            id: 'pace',
+            seconds: AppWrapped.pace,
+            builder: (_) => _PaceSlide(inputs: w, pace: pace)),
+      if (w.finished.isNotEmpty)
+        WrappedSlide(
+            id: 'finished',
+            seconds: AppWrapped.finished,
+            builder: (_) => _FinishedSlide(inputs: w)),
+      if (data.series.firstOrNull case final show?)
+        WrappedSlide(
+            id: 'series-of-year',
+            seconds: AppWrapped.genre,
+            builder: (_) => _SeriesOfYearSlide(inputs: w, series: show)),
+    ],
+    // Acte IV : vous.
+    WrappedSlide(
+        id: 'act4',
+        seconds: AppWrapped.act,
+        builder: (_) => _ActCard(
+            number: 'Acte IV',
+            title: 'Vous',
+            colors: [
+              if (filmOfYear != null) w.tint(filmOfYear),
+              for (final r in data.runnersUp.take(2)) w.tint(r.event),
+            ],
+            focus: const Alignment(0, .4))),
+    WrappedSlide(
+        id: 'profile',
+        seconds: AppWrapped.profile,
+        builder: (_) => _ProfileSlide(inputs: w)),
+    if (w.nextYear.isNotEmpty)
+      WrappedSlide(
+          id: 'next-year',
+          seconds: AppWrapped.nextYear,
+          builder: (_) => _NextYearSlide(inputs: w)),
     if (data.filmOfYear case final best?)
       WrappedSlide(
           id: 'film-of-year',
@@ -1821,7 +1874,7 @@ WrappedSummary filmsSummary(WrappedInputs w) {
   }
   return WrappedSummary(
     kind: WrappedSummaryKind.films,
-    label: 'Acte III · Le palmarès',
+    label: 'Acte IV · Vous',
     headline: oldest == null
         ? '${stats.films} films'
         : '${oldest.title} · ${oldest.year}',
@@ -2460,7 +2513,7 @@ class _StoryPage extends ConsumerWidget {
     final most = decades.isEmpty ? 1 : decades.first.count;
     return (
       hero: Column(mainAxisSize: MainAxisSize.min, children: [
-        cap('Acte III · Le palmarès'),
+        cap('Acte IV · Vous'),
         SizedBox(height: 5 * u),
         poster(oldest == null ? null : inputs.poster(oldest), 46 * u),
         SizedBox(height: 4 * u),
@@ -2751,7 +2804,7 @@ List<WrappedPage> wrappedExportPages(
             summary: true,
             builder: (_) => WrappedRecap(inputs: w, summary: tasteSummary(w))),
         WrappedPage(
-            file: '03-acte-3-les-films',
+            file: '03-acte-4-vous',
             seconds: AppWrapped.recap,
             summary: true,
             builder: (_) => WrappedRecap(inputs: w, summary: filmsSummary(w))),
@@ -2764,3 +2817,362 @@ List<WrappedPage> wrappedExportPages(
                 seconds: slide.seconds,
                 builder: slide.builder),
     ];
+
+// ---------------------------------------------------------------------------
+// Quand vous regardez, le rythme des séries, les séries terminées, le
+// profil et l'an prochain
+// ---------------------------------------------------------------------------
+
+const _weekdays = [
+  'lundi',
+  'mardi',
+  'mercredi',
+  'jeudi',
+  'vendredi',
+  'samedi',
+  'dimanche'
+];
+
+/// « 22 h – 1 h » : la tranche de trois heures la plus regardée.
+String _hourRange(int start) => '$start h – ${(start + 3) % 24} h';
+
+/// Quand vous regardez : une horloge de vingt-quatre heures, la tranche la
+/// plus regardée en blanc plein.
+class _WhenSlide extends StatelessWidget {
+  const _WhenSlide({required this.inputs, required this.hours});
+  final WrappedInputs inputs;
+  final WrappedHours hours;
+
+  @override
+  Widget build(BuildContext context) {
+    final peak = peakHour(hours);
+    final day = _weekdays[peakWeekday(hours)];
+    final weekend = (weekendShare(hours) * 100).round();
+    final grow = WrappedClock.at(context, .8, length: 2.4);
+    return _Frame(
+        builder: (context, size, type) => [
+              Align(
+                alignment: const Alignment(.62, 0),
+                child: SizedBox.square(
+                  dimension: size.shortestSide * .62,
+                  child: CustomPaint(
+                      painter: _HourDial(
+                          hours: hours.hours,
+                          peak: peak,
+                          grow: grow,
+                          ink: AppColors.textPrimary,
+                          label: type.cap)),
+                ),
+              ),
+              WrappedTextBlock(widthFraction: .45, children: [
+                WrappedText('Quand vous regardez',
+                    style: type.cap, at: .4, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText(_hourRange(peak), style: type.big, at: 1.4),
+                SizedBox(height: size.height * .025),
+                WrappedText('Votre heure, le plus souvent le $day.',
+                    style: type.small, at: 3),
+                SizedBox(height: size.height * .015),
+                WrappedText('$weekend % de vos séances le week-end.',
+                    style: type.small, at: 4.2),
+              ]),
+            ]);
+  }
+}
+
+class _HourDial extends CustomPainter {
+  _HourDial(
+      {required this.hours,
+      required this.peak,
+      required this.grow,
+      required this.ink,
+      required this.label});
+  final List<int> hours;
+  final int peak;
+  final double grow;
+  final Color ink;
+  final TextStyle label;
+
+  bool _inPeak(int h) => (h - peak) % 24 < 3;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2;
+    final inner = radius * .5, outer = radius * .86;
+    final top = hours.fold(0, (a, b) => a > b ? a : b);
+    final width = radius * .045;
+    for (var h = 0; h < 24; h++) {
+      // Minuit en haut, comme une horloge.
+      final angle = h / 24 * 2 * math.pi - math.pi / 2;
+      final direction = Offset(math.cos(angle), math.sin(angle));
+      final value = top == 0 ? 0.0 : hours[h] / top * grow;
+      final length = inner + (outer - inner) * math.max(.04, value);
+      canvas.drawLine(
+          center + direction * inner,
+          center + direction * outer,
+          Paint()
+            ..color = ink.withValues(alpha: .1)
+            ..strokeWidth = width
+            ..strokeCap = StrokeCap.round);
+      canvas.drawLine(
+          center + direction * inner,
+          center + direction * length,
+          Paint()
+            ..color = ink.withValues(alpha: _inPeak(h) ? 1 : .4)
+            ..strokeWidth = width
+            ..strokeCap = StrokeCap.round);
+      if (h % 6 == 0) {
+        final text = TextPainter(
+            text: TextSpan(
+                text: '$h h',
+                style: label.copyWith(color: ink.withValues(alpha: .6))),
+            textDirection: ui.TextDirection.ltr)
+          ..layout();
+        text.paint(
+            canvas,
+            center +
+                direction * (radius * .98) -
+                Offset(text.width / 2, text.height / 2));
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_HourDial old) =>
+      old.grow != grow || old.peak != peak || old.hours != hours;
+}
+
+/// Votre rythme : la saison avalée le plus vite.
+class _PaceSlide extends StatelessWidget {
+  const _PaceSlide({required this.inputs, required this.pace});
+  final WrappedInputs inputs;
+  final WrappedPace pace;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = pace;
+    final when = p.days == 1 ? 'en une seule journée' : 'en ${p.days} jours';
+    final perDay = p.episodes / p.days;
+    return _Frame(
+        builder: (context, size, type) => [
+              KenBurns(
+                  child:
+                      WrappedImage(inputs.art['series:${p.series}']?.backdrop)),
+              const WrappedScrim(),
+              WrappedTextBlock(children: [
+                WrappedText('Votre rythme',
+                    style: type.cap, at: .4, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText('${p.episodes} épisodes', style: type.big, at: 1.4),
+                SizedBox(height: size.height * .025),
+                WrappedText('$when : la saison ${p.season} de ${p.series}.',
+                    style: type.small, at: 3),
+                if (p.days > 1) ...[
+                  SizedBox(height: size.height * .015),
+                  WrappedText('Près de ${perDay.round()} épisodes par jour.',
+                      style: type.small, at: 4.2),
+                ],
+              ]),
+            ]);
+  }
+}
+
+/// Les séries terminées : leurs affiches en rangée, qui entrent une à une.
+class _FinishedSlide extends StatelessWidget {
+  const _FinishedSlide({required this.inputs});
+  final WrappedInputs inputs;
+
+  @override
+  Widget build(BuildContext context) {
+    final finished = inputs.finished;
+    final count = finished.length;
+    final posters = [
+      for (final f in finished)
+        if (inputs.art['series:${f.name}']?.poster case final image?) image
+    ].take(5).toList();
+    final longest = finished.first;
+    return _Frame(
+        builder: (context, size, type) => [
+              if (posters.isNotEmpty)
+                Align(
+                  alignment: const Alignment(.85, 0),
+                  child: SizedBox(
+                    width: size.width * .5,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        for (final (i, image) in posters.indexed)
+                          Builder(builder: (context) {
+                            final t = WrappedClock.at(context, .8 + i * .35);
+                            return Opacity(
+                              opacity: t,
+                              child: Transform.translate(
+                                offset: Offset(0, size.height * .04 * (1 - t)),
+                                child: Padding(
+                                  padding:
+                                      EdgeInsets.only(left: size.width * .01),
+                                  child: SizedBox(
+                                    width: size.width * .085,
+                                    child: AspectRatio(
+                                      aspectRatio: AppMedia.posterAspectRatio,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                            AppSpacing.xxs),
+                                        child: KinosImage(
+                                            image: image, disableBlur: true),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                      ],
+                    ),
+                  ),
+                ),
+              WrappedTextBlock(widthFraction: .42, children: [
+                WrappedText('Allé jusqu\'au bout',
+                    style: type.cap, at: .4, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText('$count ${count > 1 ? 'séries' : 'série'}',
+                    style: type.big, at: 1.4),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    count > 1
+                        ? 'terminées cette année, dont ${longest.name} '
+                            'et ses ${longest.episodes} épisodes.'
+                        : '${longest.name}, terminée cette année : '
+                            '${longest.episodes} épisodes.',
+                    style: type.small,
+                    at: 3),
+              ]),
+            ]);
+  }
+}
+
+/// Votre profil de spectateur : son nom en très grand, sur la couleur du
+/// film de l'année.
+class _ProfileSlide extends StatelessWidget {
+  const _ProfileSlide({required this.inputs});
+  final WrappedInputs inputs;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = inputs.data.profile;
+    final tint = storyColor(inputs.tint(inputs.data.filmOfYear?.event));
+    final glow = WrappedClock.at(context, 0, length: 4);
+    return _Frame(
+        builder: (context, size, type) => [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(-.4, -.2),
+                    radius: 1.2,
+                    colors: [
+                      Color.lerp(AppColors.scrim, tint, .55 * glow)!,
+                      AppColors.scrim,
+                    ],
+                  ),
+                ),
+              ),
+              WrappedTextBlock(widthFraction: .8, children: [
+                WrappedText('Votre profil de spectateur',
+                    style: type.cap, at: .5, caps: true),
+                SizedBox(height: size.height * .03),
+                WrappedText(profile.title,
+                    style:
+                        type.big.copyWith(fontSize: type.big.fontSize! * 1.35),
+                    at: 1.6,
+                    maxLines: 2),
+                SizedBox(height: size.height * .03),
+                WrappedText(profile.line,
+                    style: type.mid, at: 3.2, maxLines: 2),
+                for (final (i, fact) in profile.facts.indexed) ...[
+                  SizedBox(height: size.height * .015),
+                  WrappedText(fact, style: type.small, at: 4.6 + i * .8),
+                ],
+              ]),
+            ]);
+  }
+}
+
+/// L'an prochain : trois films de la bibliothèque, pas encore vus, que vos
+/// goûts recommandent.
+class _NextYearSlide extends StatelessWidget {
+  const _NextYearSlide({required this.inputs});
+  final WrappedInputs inputs;
+
+  @override
+  Widget build(BuildContext context) {
+    final picks = inputs.nextYear;
+    final next = inputs.data.year + 1;
+    return _Frame(
+        builder: (context, size, type) => [
+              Align(
+                alignment: const Alignment(.82, 0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final (i, pick) in picks.indexed)
+                      Builder(builder: (context) {
+                        final t = WrappedClock.at(context, 1 + i * .5);
+                        return Opacity(
+                          opacity: t,
+                          child: Transform.translate(
+                            offset: Offset(0, size.height * .05 * (1 - t)),
+                            child: Padding(
+                              padding: EdgeInsets.only(left: size.width * .02),
+                              child: SizedBox(
+                                width: size.width * .12,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    AspectRatio(
+                                      aspectRatio: AppMedia.posterAspectRatio,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                            AppSpacing.xxs),
+                                        child: ColoredBox(
+                                          color: AppColors.surface,
+                                          child: KinosImage(
+                                              image: pick.poster,
+                                              disableBlur: true),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: size.height * .012),
+                                    Text(pick.title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: type.small.copyWith(
+                                            color: AppColors.textPrimary)),
+                                    if (pick.year != null)
+                                      Text('${pick.year}', style: type.cap),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                  ],
+                ),
+              ),
+              WrappedTextBlock(widthFraction: .38, children: [
+                WrappedText('Pour $next', style: type.cap, at: .4, caps: true),
+                SizedBox(height: size.height * .025),
+                WrappedText('Par où commencer',
+                    style: type.big, at: 1.4, maxLines: 2),
+                SizedBox(height: size.height * .025),
+                WrappedText(
+                    'Trois films de votre bibliothèque, pas encore vus, '
+                    'choisis d\'après vos goûts.',
+                    style: type.small,
+                    at: 3),
+              ]),
+            ]);
+  }
+}

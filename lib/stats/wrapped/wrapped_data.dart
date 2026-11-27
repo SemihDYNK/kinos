@@ -5,6 +5,7 @@ import 'package:kinos/ratings/kinos_ratings.dart';
 import '../viewing_log.dart';
 import '../viewing_stats.dart';
 import 'film_facts.dart';
+import 'wrapped_habits.dart';
 import 'wrapped_hook.dart';
 
 /// L'ambiance musicale d'un acte, tirée des genres qui le portent.
@@ -134,7 +135,11 @@ class WrappedData {
     required this.hook,
     this.facts = const {},
     this.series = const [],
+    this.allSeries = const [],
     this.marathon,
+    this.hours,
+    this.pace,
+    required this.profile,
   });
 
   final int year;
@@ -166,13 +171,26 @@ class WrappedData {
   final FriendTake? friendsDisagree;
   final FriendTake? friendsAgree;
 
-  /// Les ambiances des trois actes : le temps, les goûts, les films.
+  /// Les ambiances des quatre actes : le temps, les goûts, les séries,
+  /// vous.
   final List<WrappedMood> moods;
+
+  /// Quand vous regardez (séances à l'heure connue), s'il y en a assez.
+  final WrappedHours? hours;
+
+  /// La saison avalée le plus vite.
+  final WrappedPace? pace;
+
+  /// Votre profil de spectateur.
+  final WrappedProfile profile;
   final WrappedHook? hook;
 
   /// Les séries de l'année, de la plus regardée à la moins : leurs
   /// épisodes vus.
   final List<({String name, List<ViewingEvent> episodes})> series;
+
+  /// Toutes les séries de l'année (les séries terminées les cherchent).
+  final List<({String name, List<ViewingEvent> episodes})> allSeries;
 
   /// Le plus long marathon de l'année, s'il y en a un.
   final WrappedMarathon? marathon;
@@ -352,9 +370,34 @@ WrappedData computeWrapped(
   ]..sort((a, b) => b.episodes.length.compareTo(a.episodes.length));
 
   final top = stats.topRated;
+  final hours = wrappedHours([
+    for (final e in all)
+      if (e.at.year == year) e
+  ]);
+  final rewatched = viewings.values.where((n) => n > 1).length +
+      timeline.where((e) => e.rewatch && viewings[e.identity] == 1).length;
+  final profile = wrappedProfile(ProfileSignals(
+    year: year,
+    films: stats.films,
+    episodes: stats.episodes,
+    filmSeconds: timeline.fold(0, (sum, e) => sum + e.seconds),
+    episodeSeconds: [for (final s in series) ...s.episodes]
+        .fold(0, (sum, e) => sum + e.seconds),
+    hours: hours,
+    binge: bingeShare(series),
+    genres: {for (final e in films.values) ...e.genres}.length,
+    foreignShare:
+        withLanguage.length < 8 ? null : foreign.length / withLanguage.length,
+    medianYear: releases.length < 8 ? null : medianYear,
+    rewatched: rewatched,
+  ));
   return WrappedData(
     series: series.take(5).toList(),
+    allSeries: series,
     marathon: wrappedMarathon(series),
+    hours: hours,
+    pace: fastestSeason(series),
+    profile: profile,
     year: year,
     stats: stats,
     timeline: timeline,
@@ -378,6 +421,10 @@ WrappedData computeWrapped(
     moods: [
       WrappedMood.piano,
       genre == null ? WrappedMood.piano : moodOfGenres([genre]),
+      moodOfGenres([
+        for (final e in series.firstOrNull?.episodes ?? const <ViewingEvent>[])
+          ...e.genres
+      ]),
       moodOfGenres(top.firstOrNull?.event.genres ?? const []),
     ],
     hook: hook,

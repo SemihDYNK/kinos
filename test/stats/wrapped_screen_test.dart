@@ -137,7 +137,7 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
 
     final seen = <String>{};
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < 30; i++) {
       // Jusqu'à la fin de la diapo : tous ses textes sont posés.
       await tester.pump(const Duration(seconds: 7));
       await tester.pump(const Duration(seconds: 7));
@@ -153,6 +153,7 @@ void main() {
         'VOTRE PLUS VIEUX VOYAGE',
         'HORS DE CHEZ VOUS',
         'VOTRE FILM DE L\'ANNÉE',
+        'VOTRE PROFIL DE SPECTATEUR',
         'Film de l\'année',
         '« Je rêve pour gagner ma vie. »',
         "“The name's Bond. James Bond.”",
@@ -164,7 +165,7 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     }
     expect(tester.takeException(), isNull);
-    expect(seen.length, 15, reason: 'seen: $seen');
+    expect(seen.length, 16, reason: 'seen: $seen');
   });
 
   test('the timeline speed never jumps nor goes backwards', () {
@@ -261,7 +262,7 @@ void main() {
       '00-recap',
       '01-acte-1-le-temps',
       '02-acte-2-les-gouts',
-      '03-acte-3-les-films'
+      '03-acte-4-vous'
     ]);
     // Les vraies entrées-sorties passent par runAsync : dans le temps
     // simulé du test, elles ne se terminent jamais.
@@ -280,7 +281,7 @@ void main() {
       '00-recap.png',
       '01-acte-1-le-temps.png',
       '02-acte-2-les-gouts.png',
-      '03-acte-3-les-films.png'
+      '03-acte-4-vous.png'
     ]);
     final frame = await tester.runAsync(() => codec!.getNextFrame());
     expect((frame!.image.width, frame.image.height), (1080, 1920));
