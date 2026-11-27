@@ -133,67 +133,71 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
               children: [
                 Flexible(
                   child: SingleChildScrollView(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _Poster(
-                            model: model, onOpen: () => _openInSeerr(model)),
-                        const SizedBox(width: AppSpacing.lg),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _Overline(model: model, state: state),
-                              const SizedBox(height: AppSpacing.xxs),
-                              Text(model.title,
-                                  style: AppTypography.displaySmall),
-                              if (metaLine.isNotEmpty) ...[
-                                const SizedBox(height: AppSpacing.xxs),
-                                Text(metaLine,
-                                    style: text.bodySmall?.copyWith(
-                                        color: AppColors.textSecondary)),
-                              ],
-                              if (model.overview.trim().isNotEmpty) ...[
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(model.overview,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: text.bodyMedium?.copyWith(
-                                        color: AppColors.textSecondary)),
-                              ],
-                              if (state.isTv && seasons.isNotEmpty) ...[
-                                const SizedBox(height: AppSpacing.lg),
-                                _Seasons(
-                                    model: model,
-                                    state: state,
-                                    seasons: seasons),
-                              ],
-                              if (state.currentUser?.canManageRequests ==
-                                  true) ...[
-                                const SizedBox(height: AppSpacing.lg),
-                                _Options(state: state),
-                              ],
-                              if (state.activeQuota?.hasRestrictions ==
-                                  true) ...[
-                                const SizedBox(height: AppSpacing.md),
-                                QuotaLimitCard(
-                                    quota: state.activeQuota!,
-                                    type: model.type),
-                              ],
-                              if (state.hasRequestPermission == false) ...[
-                                const SizedBox(height: AppSpacing.md),
-                                const PermissionDeniedWarning(),
-                              ],
-                              if (state.isAnime) ...[
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(context.localized.seerrAnimeSeriesNote,
-                                    style: text.bodySmall?.copyWith(
-                                        color: AppColors.textSecondary)),
-                              ],
-                            ],
-                          ),
+                        // L'affiche à côté du titre ; les saisons et les
+                        // réglages prennent toute la largeur dessous.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _Poster(
+                                model: model,
+                                onOpen: () => _openInSeerr(model)),
+                            const SizedBox(width: AppSpacing.lg),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _Overline(model: model, state: state),
+                                  const SizedBox(height: AppSpacing.xxs),
+                                  Text(model.title,
+                                      style: AppTypography.displaySmall),
+                                  if (metaLine.isNotEmpty) ...[
+                                    const SizedBox(height: AppSpacing.xxs),
+                                    Text(metaLine,
+                                        style: text.bodySmall?.copyWith(
+                                            color: AppColors.textSecondary)),
+                                  ],
+                                  if (model.overview.trim().isNotEmpty) ...[
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(model.overview,
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: text.bodyMedium?.copyWith(
+                                            color: AppColors.textSecondary)),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
+                        if (state.isTv && seasons.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.lg),
+                          _Seasons(
+                              model: model, state: state, seasons: seasons),
+                        ],
+                        if (state.currentUser?.canManageRequests == true) ...[
+                          const SizedBox(height: AppSpacing.lg),
+                          _Options(state: state),
+                        ],
+                        if (state.activeQuota?.hasRestrictions == true) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          QuotaLimitCard(
+                              quota: state.activeQuota!, type: model.type),
+                        ],
+                        if (state.hasRequestPermission == false) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          const PermissionDeniedWarning(),
+                        ],
+                        if (state.isAnime) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(context.localized.seerrAnimeSeriesNote,
+                              style: text.bodySmall
+                                  ?.copyWith(color: AppColors.textSecondary)),
+                        ],
                       ],
                     ),
                   ),
@@ -204,11 +208,7 @@ class _SeerrRequestPopupState extends ConsumerState<SeerrRequestPopup> {
                     Expanded(child: _AutoApprove(state: state)),
                     TextButton(
                       onPressed: () => context.pop(),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const _KeyCap('Échap'),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(context.localized.close),
-                      ]),
+                      child: Text(context.localized.close),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     FilledButton(
@@ -614,26 +614,4 @@ class _AutoApprove extends StatelessWidget {
       ),
     ]);
   }
-}
-
-class _KeyCap extends StatelessWidget {
-  const _KeyCap(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: AppRadii.controlBorder,
-          border: Border.all(color: AppColors.borderStrong),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs, vertical: AppSpacing.xxs / 2),
-          child: Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(color: AppColors.textSecondary)),
-        ),
-      );
 }

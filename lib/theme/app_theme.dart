@@ -202,7 +202,7 @@ abstract final class AppPlayerStyle {
 /// La fenêtre de demande Seerr (« fenêtre cinéma »).
 abstract final class AppSeerrRequest {
   static const maxWidth = 960.0;
-  static const posterWidth = 168.0;
+  static const posterWidth = 120.0;
   static const seasonWidth = 96.0;
   static const pillMaxWidth = 280.0;
 
