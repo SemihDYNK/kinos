@@ -447,20 +447,13 @@ abstract final class AppWrapped {
 
   /// La story : largeur du logo (pages 16:9), la couleur franche de son
   /// fond (saturation bornée, clarté fixe), le papier crème des films sans
-  /// couleur, l'opacité de l'affiche en duotone (sur fond sombre, sur fond
-  /// clair) et du grain.
+  /// couleur, et son grain.
   static const storyLogo = .2;
   static const storySaturationMin = .45;
   static const storySaturationMax = .65;
   static const storyLightness = .42;
   static const storyGraySaturation = .12;
   static const storyPaper = Color(0xFFE8E2D6);
-
-  /// Duotone des stories d'archétype : vers le noir pour les ombres, vers
-  /// le blanc pour les lumières, et le contraste relevé.
-  static const duotoneDeep = .6;
-  static const duotoneHigh = .78;
-  static const duotoneContrast = 1.25;
 
   /// Le fond en nappes des stories : la plus profonde (fraction de la
   /// clarté), la plus claire (clarté ajoutée), l'écart de teinte de la
@@ -473,8 +466,7 @@ abstract final class AppWrapped {
 
   /// Le fond du noctambule : la nuit.
   static const nightGround = Color(0xFF15253A);
-  static const duotoneDark = .3;
-  static const duotoneLight = .12;
+
   static const storyGrain = .12;
 
   /// Portraits et avatars.

@@ -1975,7 +1975,7 @@ class _MonthDial extends CustomPainter {
       old.months != months || old.peak != peak || old.ink != ink;
 }
 
-/// Le film de chaque story (sa couleur, son affiche en duotone) : jamais
+/// Le film de chaque story (sa couleur, son affiche) : jamais
 /// le même d'une page à l'autre. Le film de l'année et le plus vieux sont
 /// fixés ; le genre et le mois le plus chargé prennent le premier film qui
 /// n'est pas déjà pris.
@@ -2004,7 +2004,7 @@ Map<WrappedSummaryKind, ViewingEvent?> _storyLeads(WrappedInputs w) {
 
 /// Une page de synthèse composée pour le vertical (story), d'après les
 /// bilans annuels des services de musique : un aplat de la couleur du
-/// film de la page, son affiche en duotone, un chiffre géant en filigrane
+/// film de la page en nappes, son affiche, un chiffre géant en filigrane
 /// qui déborde, le contenu centré, des chiffres séparés de filets, et le
 /// pied de page à la même place sur chaque page (le K à gauche, l'année à
 /// droite).
@@ -2499,8 +2499,8 @@ class _StoryPage extends ConsumerWidget {
     );
   }
 
-  /// La story de l'archétype : son image en duotone (une grille de films
-  /// pour l'explorateur), son nom en très grand, sa phrase, ses chiffres.
+  /// La story de l'archétype : son affiche (une grille de films pour
+  /// l'explorateur), son nom en très grand, sa phrase, ses chiffres.
   _Story _profileStory(
       double u,
       Widget Function(String) cap,
@@ -2509,23 +2509,16 @@ class _StoryPage extends ConsumerWidget {
       Color ground,
       _ArchetypeLook look) {
     final profile = inputs.data.profile;
-    // Le duotone : les noirs de l'image deviennent une version profonde du
-    // fond, ses blancs une version très claire, avec un peu plus de
-    // contraste. (Multiplier le gris par une teinte claire délavait
-    // l'affiche : ses blancs restaient gris.)
-    final dark = Color.lerp(ground, Colors.black, AppWrapped.duotoneDeep)!;
-    final light = Color.lerp(ground, Colors.white, AppWrapped.duotoneHigh)!;
-    Widget duotone(ImageData? image, double width) => ClipRRect(
+    // L'affiche dans ses vraies couleurs : le fond en nappes porte déjà
+    // la couleur du film.
+    Widget poster(ImageData? image, double width) => ClipRRect(
           borderRadius: BorderRadius.circular(1.4 * u),
           child: SizedBox(
             width: width,
             height: width * 1.5,
             child: image == null
-                ? ColoredBox(color: light.withValues(alpha: .3))
-                : ColorFiltered(
-                    colorFilter: duotoneFilter(dark, light),
-                    child: KinosImage(image: image, disableBlur: true),
-                  ),
+                ? ColoredBox(color: ground.withValues(alpha: .3))
+                : KinosImage(image: image, disableBlur: true),
           ),
         );
     final grid = look.grid.take(6).toList();
@@ -2539,11 +2532,11 @@ class _StoryPage extends ConsumerWidget {
             child: Wrap(
               spacing: 1.5 * u,
               runSpacing: 1.5 * u,
-              children: [for (final image in grid) duotone(image, 24 * u)],
+              children: [for (final image in grid) poster(image, 24 * u)],
             ),
           )
         else
-          duotone(look.image, 50 * u),
+          poster(look.image, 50 * u),
         SizedBox(height: 6 * u),
         cond(profile.title, 15 * u),
         SizedBox(height: 2.5 * u),
@@ -3356,32 +3349,6 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
     numbers: numbers,
     grid: grid,
   );
-}
-
-/// Un duotone : la luminance de l'image (contraste relevé de
-/// [AppWrapped.duotoneContrast]) va de [dark] à [light].
-ColorFilter duotoneFilter(Color dark, Color light) {
-  const c = AppWrapped.duotoneContrast;
-  const weights = [.2126, .7152, .0722];
-  List<double> row(double from, double to) {
-    final span = to - from;
-    return [
-      for (final w in weights) span * c * w,
-      0,
-      (from + span * .5 * (1 - c)) * 255,
-    ];
-  }
-
-  return ColorFilter.matrix([
-    ...row(dark.r, light.r),
-    ...row(dark.g, light.g),
-    ...row(dark.b, light.b),
-    0,
-    0,
-    0,
-    1,
-    0,
-  ]);
 }
 
 /// Le fond d'une story : la couleur du film en nappes douces, une plus
