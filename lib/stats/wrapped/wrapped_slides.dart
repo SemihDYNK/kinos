@@ -2516,9 +2516,16 @@ class _StoryPage extends ConsumerWidget {
           child: SizedBox(
             width: width,
             height: width * 1.5,
+            // Sans fondu d'apparition : à l'export, une affiche arrivée
+            // tard était capturée à moitié transparente.
             child: image == null
                 ? ColoredBox(color: ground.withValues(alpha: .3))
-                : KinosImage(image: image, disableBlur: true),
+                : Image(
+                    image: image.imageProvider,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, __, ___) =>
+                        ColoredBox(color: ground.withValues(alpha: .3))),
           ),
         );
     final grid = look.grid.take(6).toList();

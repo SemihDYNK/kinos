@@ -100,7 +100,8 @@ Future<void> openWrappedDirectory(Directory dir) async {
 
 /// Le temps laissé aux images pour arriver, et à leur fondu pour finir.
 const _settleTimeout = Duration(seconds: 10);
-const _settleAfterImages = Duration(milliseconds: 900);
+// Au-delà du fondu complet de [FadeInImage] (0,3 s + 0,7 s).
+const _settleAfterImages = Duration(milliseconds: 1300);
 
 /// Rend [child] hors écran, à la taille [size] (pixels logiques = pixels de
 /// l'image), et rend l'image. L'arbre reçoit le conteneur Riverpod, le
