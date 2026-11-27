@@ -43,6 +43,10 @@ class SeerrService {
     return response;
   }
 
+  /// Profils de langue de chaque serveur Sonarr (v3), lus dans la réponse
+  /// brute : le modèle généré ne les connaît pas.
+  final Map<int, List<SeerrServiceProfile>> sonarrLanguageProfiles = {};
+
   Future<List<SeerrSonarrServer>> sonarrServers() async {
     final servers = await _api.getSonarrServers();
 
@@ -54,6 +58,9 @@ class SeerrService {
         if (serverSettings.isSuccessful && serverSettings.body != null) {
           final response = serverSettings.body!;
           final server = response.server;
+          if (server?.id case final id?) {
+            sonarrLanguageProfiles[id] = parseLanguageProfiles(serverSettings.bodyString);
+          }
           if (server != null) {
             final updatedServer = server.copyWith(
               profiles: response.profiles,
@@ -80,6 +87,9 @@ class SeerrService {
         if (serverSettings.isSuccessful && serverSettings.body != null) {
           final response = serverSettings.body!;
           final server = response.server;
+          if (server?.id case final id?) {
+            sonarrLanguageProfiles[id] = parseLanguageProfiles(serverSettings.bodyString);
+          }
           if (server != null) {
             radarrServers.add(
               server.copyWith(
@@ -532,10 +542,12 @@ class SeerrService {
     int? profileId,
     String? rootFolder,
     List<int>? tags,
+    int? languageProfileId,
   }) {
     return _api.createRequest(
       SeerrCreateRequestBody(
         mediaType: 'tv',
+        languageProfileId: languageProfileId,
         mediaId: tmdbId,
         is4k: is4k ?? false,
         seasons: seasons?.isEmpty == true ? null : seasons,
@@ -781,4 +793,21 @@ class SeerrLocalAuthFailure implements Exception {
   @override
   String toString() =>
       'Local authentication failed ($status${message == null ? '' : ': $message'})';
+}
+
+/// Les `languageProfiles` d'une réponse `service/sonarr/{id}` de Seerr
+/// (Sonarr v3 ; absents en v4, où la langue vient du profil de qualité).
+List<SeerrServiceProfile> parseLanguageProfiles(String body) {
+  try {
+    final json = jsonDecode(body);
+    final list = json is Map ? json['languageProfiles'] : null;
+    if (list is! List) return const [];
+    return [
+      for (final item in list)
+        if (item is Map && item['id'] is int)
+          SeerrServiceProfile(id: item['id'] as int, name: item['name'] as String?)
+    ];
+  } catch (_) {
+    return const [];
+  }
 }

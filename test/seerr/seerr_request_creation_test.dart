@@ -63,7 +63,8 @@ class _FakeUser extends User {
 
 void main() {
   group('SeerrService — request creation body construction', () {
-    test('requestMovie: mediaType movie, mediaId is the tmdbId, no seasons '
+    test(
+        'requestMovie: mediaType movie, mediaId is the tmdbId, no seasons '
         'key at all (includeIfNull: false)', () async {
       late Map<String, dynamic> sentBody;
       final (service, container) = _service((request) async {
@@ -76,7 +77,8 @@ void main() {
       });
       addTearDown(container.dispose);
 
-      await service.requestMovie(tmdbId: 603692, profileId: 6, rootFolder: '/movies');
+      await service.requestMovie(
+          tmdbId: 603692, profileId: 6, rootFolder: '/movies');
 
       expect(sentBody['mediaType'], 'movie');
       expect(sentBody['mediaId'], 603692);
@@ -106,7 +108,40 @@ void main() {
       expect(sentBody['seasons'], [1, 2]);
     });
 
-    test('requestSeries with an empty seasons list: omitted entirely, not '
+    test('requestSeries carries the language profile, omitted when unset',
+        () async {
+      late Map<String, dynamic> sentBody;
+      final (service, container) = _service((request) async {
+        sentBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response('{"id": 514, "status": 1}', 201,
+            headers: {'content-type': 'application/json'});
+      });
+      addTearDown(container.dispose);
+
+      await service.requestSeries(
+          tmdbId: 355567, seasons: [2], languageProfileId: 3);
+      expect(sentBody['languageProfileId'], 3);
+
+      await service.requestSeries(tmdbId: 355567, seasons: [2]);
+      expect(sentBody.containsKey('languageProfileId'), isFalse);
+    });
+
+    test('language profiles are read from a Sonarr v3 response, none in v4',
+        () {
+      expect(
+          parseLanguageProfiles(jsonEncode({
+            'languageProfiles': [
+              {'id': 1, 'name': 'English'},
+              {'id': 3, 'name': 'French'},
+            ]
+          })).map((p) => p.name),
+          ['English', 'French']);
+      expect(parseLanguageProfiles(jsonEncode({'profiles': []})), isEmpty);
+      expect(parseLanguageProfiles('not json'), isEmpty);
+    });
+
+    test(
+        'requestSeries with an empty seasons list: omitted entirely, not '
         'sent as []', () async {
       late Map<String, dynamic> sentBody;
       final (service, container) = _service((request) async {
@@ -143,7 +178,8 @@ void main() {
       expect(sentBody['tags'], [1, 2]);
     });
 
-    test('neither requestMovie nor requestSeries body ever contains the '
+    test(
+        'neither requestMovie nor requestSeries body ever contains the '
         'apiKey or sessionCookie - only auth headers carry credentials, '
         'never the JSON body', () async {
       late Map<String, dynamic> sentBody;
@@ -164,7 +200,8 @@ void main() {
   });
 
   group('SeerrService — request creation error responses', () {
-    test('quota exceeded (409, Jellyseerr\'s real shape) does not throw; '
+    test(
+        'quota exceeded (409, Jellyseerr\'s real shape) does not throw; '
         '.error carries the raw message, caller must check isSuccessful',
         () async {
       final (service, container) = _service((request) async => http.Response(
@@ -181,7 +218,8 @@ void main() {
       expect(response.error, contains('quota'));
     });
 
-    test('already requested (409 with a different message) - same shape, '
+    test(
+        'already requested (409 with a different message) - same shape, '
         'no exception', () async {
       final (service, container) = _service((request) async => http.Response(
             '{"message":"Movie already requested"}',
@@ -196,8 +234,7 @@ void main() {
       expect(response.error, contains('already requested'));
     });
 
-    test('refused/declined by an admin policy (403) does not throw',
-        () async {
+    test('refused/declined by an admin policy (403) does not throw', () async {
       final (service, container) = _service((request) async => http.Response(
             '{"message":"Not authorized to request 4K media"}',
             403,
@@ -219,13 +256,15 @@ void main() {
           ));
       addTearDown(container.dispose);
 
-      final response = await service.requestSeries(tmdbId: 355567, seasons: [1]);
+      final response =
+          await service.requestSeries(tmdbId: 355567, seasons: [1]);
 
       expect(response.isSuccessful, isFalse);
       expect(response.statusCode, 401);
     });
 
-    test('no error response, for any of the above, ever contains the '
+    test(
+        'no error response, for any of the above, ever contains the '
         'apiKey', () async {
       final (service, container) = _service((request) async => http.Response(
             '{"message":"Request quota exceeded"}',
@@ -239,7 +278,8 @@ void main() {
       expect(response.error.toString(), isNot(contains('test-key')));
     });
 
-    test('a network failure during request creation is wrapped as '
+    test(
+        'a network failure during request creation is wrapped as '
         'HttpException, not an unhandled exception type', () async {
       final (service, container) = _service((request) async {
         throw const SocketException('Connection refused');

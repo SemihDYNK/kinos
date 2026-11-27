@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -14,6 +15,16 @@ import 'package:kinos/util/seerr_helpers.dart';
 part 'seerr_request_provider.freezed.dart';
 part 'seerr_request_provider.g.dart';
 
+/// Profils de langue du serveur Sonarr choisi (Sonarr v3 ; vide en v4,
+/// où la langue vient du profil de qualité). Hors du modèle généré, qu'on
+/// ne régénère pas ici.
+final seerrLanguageProfilesProvider =
+    StateProvider<List<SeerrServiceProfile>>((ref) => const []);
+
+/// Le profil de langue choisi pour la demande de série.
+final seerrSelectedLanguageProfileProvider =
+    StateProvider<SeerrServiceProfile?>((ref) => null);
+
 @riverpod
 class SeerrRequest extends _$SeerrRequest {
   late final api = ref.read(seerrApiProvider);
@@ -23,8 +34,26 @@ class SeerrRequest extends _$SeerrRequest {
     return SeerrRequestModel();
   }
 
+  /// Les langues du serveur Sonarr [server], celle configurée dans Seerr
+  /// par défaut (celle des animés pour un animé).
+  void _syncLanguages(SeerrServer? server) {
+    final profiles = server is SeerrSonarrServer && server.id != null
+        ? api.sonarrLanguageProfiles[server.id] ?? const <SeerrServiceProfile>[]
+        : const <SeerrServiceProfile>[];
+    final preferred = server is SeerrSonarrServer
+        ? (state.isAnime ? server.activeAnimeLanguageProfileId : null) ?? server.activeLanguageProfileId
+        : null;
+    ref.read(seerrLanguageProfilesProvider.notifier).state = profiles;
+    ref.read(seerrSelectedLanguageProfileProvider.notifier).state =
+        profiles.firstWhereOrNull((p) => p.id == preferred) ?? profiles.firstOrNull;
+  }
+
+  void selectLanguageProfile(SeerrServiceProfile profile) =>
+      ref.read(seerrSelectedLanguageProfileProvider.notifier).state = profile;
+
   Future<void> initialize(SeerrDashboardPosterModel poster) async {
     state = state.copyWith(poster: poster);
+    _syncLanguages(null);
 
     final currentUserBody = await ref.read(seerrUserProvider.notifier).refreshUser();
     final isTv = poster.type == SeerrMediaType.tvshow;
@@ -91,6 +120,7 @@ class SeerrRequest extends _$SeerrRequest {
         currentUser: currentUserBody,
         selectedUser: currentUserBody,
       );
+      _syncLanguages(selectedServer);
     } else {
       final servers = await api.radarrServers();
       final nextState = state.copyWith(
@@ -163,6 +193,7 @@ class SeerrRequest extends _$SeerrRequest {
         selectedRootFolder: state.pickRootFolderForServer(server),
         use4k: server.is4k == true && state.has4k,
       );
+      _syncLanguages(server);
     } else if (server is SeerrRadarrServer) {
       state = state.copyWith(
         selectedRadarrServer: server,
@@ -186,6 +217,7 @@ class SeerrRequest extends _$SeerrRequest {
         selectedProfile: nextState.pickProfileForServer(selectedServer),
         selectedRootFolder: nextState.pickRootFolderForServer(selectedServer),
       );
+      _syncLanguages(selectedServer);
     } else {
       final selectedServer = nextState.activeRadarr;
       state = nextState.copyWith(
@@ -226,6 +258,7 @@ class SeerrRequest extends _$SeerrRequest {
         rootFolder: rootFolder,
         tags: tags,
         seasons: state.selectedSeasonNumbers,
+        languageProfileId: ref.read(seerrSelectedLanguageProfileProvider)?.id,
       ).apiResult;
     } else {
       result = await api.requestMovie(
@@ -274,7 +307,9 @@ class SeerrRequest extends _$SeerrRequest {
   void selectAllSeasons() {
     final updatedSelection = <int, bool>{};
     for (final seasonNumber in state.selectedSeasons.keys) {
-      if (state.isRequestedAlready(seasonNumber)) {
+      // Les épisodes spéciaux (saison 0), masqués dans la fenêtre, ne sont
+      // jamais ajoutés d'office.
+      if (seasonNumber == 0 || state.isRequestedAlready(seasonNumber)) {
         updatedSelection[seasonNumber] = false;
       } else {
         updatedSelection[seasonNumber] = true;

@@ -199,6 +199,20 @@ abstract final class AppPlayerStyle {
   static const playIconSize = 52.0;
 }
 
+/// La fenêtre de demande Seerr (« fenêtre cinéma »).
+abstract final class AppSeerrRequest {
+  static const maxWidth = 960.0;
+  static const posterWidth = 168.0;
+  static const seasonWidth = 96.0;
+  static const pillMaxWidth = 280.0;
+
+  /// Une saison déjà disponible ou demandée : estompée, non cochable.
+  static const lockedOpacity = .45;
+
+  /// Contour d'une saison choisie.
+  static const selectedOutline = 2.0;
+}
+
 /// L'aperçu au survol de la barre du lecteur : l'image, le temps dessus.
 abstract final class AppSeekPreview {
   static const width = 320.0;

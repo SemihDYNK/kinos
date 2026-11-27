@@ -1160,6 +1160,10 @@ class SeerrCreateRequestBody {
   @JsonKey(includeIfNull: false)
   final int? userId;
 
+  /// Profil de langue Sonarr (v3) d'une série.
+  @JsonKey(includeIfNull: false)
+  final int? languageProfileId;
+
   SeerrCreateRequestBody({
     this.mediaType,
     this.mediaId,
@@ -1170,6 +1174,7 @@ class SeerrCreateRequestBody {
     this.rootFolder,
     this.tags,
     this.userId,
+    this.languageProfileId,
   });
 
   factory SeerrCreateRequestBody.fromJson(Map<String, dynamic> json) => _$SeerrCreateRequestBodyFromJson(json);

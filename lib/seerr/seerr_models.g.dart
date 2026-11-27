@@ -647,6 +647,7 @@ SeerrCreateRequestBody _$SeerrCreateRequestBodyFromJson(
           ?.map((e) => (e as num).toInt())
           .toList(),
       userId: (json['userId'] as num?)?.toInt(),
+      languageProfileId: (json['languageProfileId'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$SeerrCreateRequestBodyToJson(
@@ -661,6 +662,8 @@ Map<String, dynamic> _$SeerrCreateRequestBodyToJson(
       if (instance.rootFolder case final value?) 'rootFolder': value,
       if (instance.tags case final value?) 'tags': value,
       if (instance.userId case final value?) 'userId': value,
+      if (instance.languageProfileId case final value?)
+        'languageProfileId': value,
     };
 
 SeerrMedia _$SeerrMediaFromJson(Map<String, dynamic> json) => SeerrMedia(

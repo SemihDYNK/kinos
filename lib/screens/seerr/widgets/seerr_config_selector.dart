@@ -119,3 +119,93 @@ class _SeerrConfigSelectorState extends State<SeerrConfigSelector> {
     );
   }
 }
+
+/// Un réglage de la demande en pastille « Qualité  HD-1080p ▾ » : la
+/// valeur se lit d'un coup d'œil, la liste s'ouvre au clic (ou Entrée)
+/// dans un [AnchoredPopover]. Une seule option : la pastille est inerte.
+class SeerrOptionPill extends StatefulWidget {
+  final String label;
+  final String value;
+  final Widget? valueWidget;
+  final List<ItemAction> Function(BuildContext context) itemBuilder;
+
+  const SeerrOptionPill({
+    required this.label,
+    required this.value,
+    this.valueWidget,
+    required this.itemBuilder,
+    super.key,
+  });
+
+  @override
+  State<SeerrOptionPill> createState() => _SeerrOptionPillState();
+}
+
+class _SeerrOptionPillState extends State<SeerrOptionPill> {
+  final _controller = AnchoredPopoverController();
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.itemBuilder(context);
+    final open = items.length > 1 ? _controller.toggle : null;
+    final text = Theme.of(context).textTheme;
+    return AnchoredPopover(
+      controller: _controller,
+      popoverBuilder: (context, close) => PopoverOptionList(
+        options: [
+          for (final item in items.whereType<ItemActionButton>())
+            PopoverOption(
+              content: item.label ?? const SizedBox.shrink(),
+              selected: item.selected,
+              onSelect: () {
+                item.action?.call();
+                close();
+              },
+            ),
+        ],
+      ),
+      child: FocusRing(
+        borderRadius: AppRadii.controlBorder,
+        onActivate: open,
+        child: ExcludeFocus(
+          child: InkWell(
+            borderRadius: AppRadii.controlBorder,
+            onTap: open,
+            child: Container(
+              constraints:
+                  const BoxConstraints(maxWidth: AppSeerrRequest.pillMaxWidth),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+              decoration: BoxDecoration(
+                borderRadius: AppRadii.controlBorder,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(widget.label,
+                      style: text.bodySmall
+                          ?.copyWith(color: AppColors.textSecondary)),
+                  const SizedBox(width: AppSpacing.xs),
+                  Flexible(
+                    child: widget.valueWidget ??
+                        Text(widget.value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.bodyMedium
+                                ?.copyWith(color: AppColors.textPrimary)),
+                  ),
+                  if (open != null) ...[
+                    const SizedBox(width: AppSpacing.xxs),
+                    const Icon(Icons.keyboard_arrow_down_rounded,
+                        size: AppSpacing.md, color: AppColors.textSecondary),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
