@@ -3207,7 +3207,9 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
   final stats = data.stats;
   final profile = data.profile;
   final best = data.filmOfYear?.event;
-  final bestNumber = (best?.title ?? '${stats.films}', 'film de l\'année');
+  // Le film de l'année a sa propre diapo : ici, des chiffres du profil.
+  final hoursNumber =
+      ('${(stats.seconds / 3600).round()} H', 'devant l\'écran');
   String percent(double share) => '${(share * 100).round()} %';
   final topSeries = data.series.firstOrNull?.name;
   final seriesArt = topSeries == null ? null : w.art['series:$topSeries'];
@@ -3243,7 +3245,10 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
           )
         else
           (_weekdays[peakWeekday(hours)].substring(0, 3), 'votre soir'),
-        bestNumber,
+        if (lead != null && lead != best)
+          (_weekdays[peakWeekday(hours)].substring(0, 3), 'votre soir')
+        else
+          hoursNumber,
       ];
     case 'weekend':
       final hours = data.hours!;
@@ -3256,7 +3261,7 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
       numbers = [
         (percent(weekendShare(hours)), 'le week-end'),
         ('${peakHour(hours)} h', 'votre heure'),
-        bestNumber,
+        ('${stats.films}', 'films'),
       ];
     case 'binge':
       image = seriesArt?.poster;
@@ -3311,8 +3316,8 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
       watermark = '${counts.length}';
       numbers = [
         ('${counts.length}', 'genres'),
+        if (ranked.firstOrNull case final top?) (top.key, 'votre genre'),
         if (ranked.lastOrNull case final rare?) (rare.key, 'le plus rare'),
-        bestNumber,
       ];
     case 'world':
       final languages = <String, int>{};
@@ -3334,7 +3339,7 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
       numbers = [
         (profile.facts.first.split(' ').take(2).join(' '), 'non anglophones'),
         ((top ?? '').toUpperCase(), 'votre langue'),
-        bestNumber,
+        ('${languages.length}', 'langues'),
       ];
     case 'classic':
       lead = data.voyage.lastOrNull ?? best;
@@ -3352,14 +3357,14 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
       numbers = [
         ('×${most?.times ?? 2}', most?.event.title ?? 'le plus revu'),
         (profile.facts.first.split(' ').first, 'films revus'),
-        bestNumber,
+        hoursNumber,
       ];
     default:
       watermark = '${stats.films}';
       numbers = [
         ('${stats.films}', 'films'),
         if (stats.episodes > 0) ('${stats.episodes}', 'épisodes'),
-        bestNumber,
+        hoursNumber,
       ];
   }
   return (

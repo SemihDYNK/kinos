@@ -12,10 +12,13 @@ import 'dart:io';
 Never hardExit([int code = 0]) {
   if (Platform.isLinux || Platform.isMacOS) {
     try {
-      DynamicLibrary.process()
-          .lookupFunction<Void Function(Int32), void Function(int)>(
-              '_exit')(code);
-    } catch (_) {}
+      final quit = DynamicLibrary.process()
+          .lookupFunction<Void Function(Int32), void Function(int)>('_exit');
+      stdout.writeln('Kinos : fermeture directe.');
+      quit(code);
+    } catch (error) {
+      stdout.writeln('Kinos : sortie directe indisponible ($error).');
+    }
   }
   exit(code);
 }

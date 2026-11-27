@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
@@ -83,6 +84,7 @@ class _DesktopAppWrapperState extends BaseAppWrapperState<DesktopAppWrapper> wit
     // démonter pendant que des fils de mpv tournent encore (cf. hardExit).
     // Une fenêtre secondaire se ferme normalement.
     final windows = await WindowController.getAll().catchError((_) => const <WindowController>[]);
+    stdout.writeln('Kinos : fermeture, ${windows.length} fenêtre(s) ouverte(s).');
     if (windows.length <= 1) {
       // Le temps aux dernières écritures (réglages) d'arriver sur le disque.
       await Future<void>.delayed(const Duration(milliseconds: 150));
