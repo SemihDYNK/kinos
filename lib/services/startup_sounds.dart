@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:kinos/services/background_players.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,8 +57,7 @@ class StartupSounds {
     try {
       mpv.MediaKit.ensureInitialized();
       Future<mpv.Player> load(String asset, double volume) async {
-        final player = mpv.Player(
-            configuration: const mpv.PlayerConfiguration(
+        final player = openBackgroundPlayer(const mpv.PlayerConfiguration(
                 vo: 'null', title: 'Kinos', logLevel: mpv.MPVLogLevel.error));
         await player.setVolume(volume);
         await player.open(mpv.Media('asset:///assets/sounds/$asset'),
@@ -134,9 +134,9 @@ class StartupSounds {
     if (_disposed) return;
     _disposed = true;
     _fading?.cancel();
-    await _clap.dispose();
-    await _aurora.dispose();
-    await _beam.dispose();
-    await _window.dispose();
+    await disposeBackgroundPlayer(_clap);
+    await disposeBackgroundPlayer(_aurora);
+    await disposeBackgroundPlayer(_beam);
+    await disposeBackgroundPlayer(_window);
   }
 }

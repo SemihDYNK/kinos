@@ -14,6 +14,7 @@ import 'package:kinos/providers/arguments_provider.dart';
 import 'package:kinos/providers/settings/client_settings_provider.dart';
 import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/screens/video_player/components/seek_preview.dart';
+import 'package:kinos/services/background_players.dart';
 import 'package:kinos/src/application_menu.g.dart';
 import 'package:kinos/util/macos_window_helpers.dart';
 import 'package:kinos/util/window_helper.dart';
@@ -66,7 +67,11 @@ class _DesktopAppWrapperState extends BaseAppWrapperState<DesktopAppWrapper> wit
     ref.read(clientSettingsProvider.notifier).closeDirectory();
     // Les aperçus de la barre du lecteur (un mpv chacun) d'abord : détruits
     // avec le moteur Flutter, ils faisaient planter Kinos à la fermeture.
-    await SeekPreviewEngine.disposeAll().timeout(const Duration(seconds: 2), onTimeout: () => const []);
+    await Future.wait([
+      SeekPreviewEngine.disposeAll(),
+      // La musique du Wrapped, les sons de l'intro.
+      disposeBackgroundPlayers(),
+    ]).timeout(const Duration(seconds: 2), onTimeout: () => const []);
     // Puis le lecteur lui-même : sa sortie vidéo (texture EGL) détruite
     // avec la fenêtre faisait planter Kinos quand on fermait pendant un
     // film.

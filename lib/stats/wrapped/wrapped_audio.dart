@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart' as mpv;
 
 import 'package:kinos/providers/api_provider.dart';
+import 'package:kinos/services/background_players.dart';
 import 'package:kinos/providers/shared_provider.dart';
 import 'package:kinos/providers/user_provider.dart';
 
@@ -82,9 +83,8 @@ class WrappedAudio {
     }
     try {
       mpv.MediaKit.ensureInitialized();
-      mpv.Player player() => mpv.Player(
-          configuration: const mpv.PlayerConfiguration(
-              vo: 'null', title: 'Kinos', logLevel: mpv.MPVLogLevel.error));
+      mpv.Player player() => openBackgroundPlayer(const mpv.PlayerConfiguration(
+          vo: 'null', title: 'Kinos', logLevel: mpv.MPVLogLevel.error));
       return WrappedAudio._([player(), player()]);
     } catch (_) {
       return null;
@@ -153,7 +153,7 @@ class WrappedAudio {
       timer.cancel();
     }
     for (final player in _players) {
-      await player.dispose();
+      await disposeBackgroundPlayer(player);
     }
   }
 }
