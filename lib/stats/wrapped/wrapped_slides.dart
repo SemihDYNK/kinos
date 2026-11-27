@@ -3280,20 +3280,38 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
         (topSeries ?? '', 'série de l\'année'),
       ];
     case 'explorer':
-      // Un film par genre, les six premiers genres.
-      final seen = <String>{};
-      for (final e in data.timeline.reversed) {
-        final genre = e.genres.firstOrNull;
-        final poster = w.poster(e);
-        if (genre == null || poster == null || !seen.add(genre)) continue;
-        grid.add(poster);
+      // Tous les genres de l'année, comptés sur tous les films (la liste
+      // des statistiques n'en garde que les premiers).
+      final counts = <String, int>{};
+      final films = {for (final e in data.timeline) e.identity: e}.values;
+      for (final e in films) {
+        for (final genre in e.genres.toSet()) {
+          counts[genre] = (counts[genre] ?? 0) + 1;
+        }
+      }
+      final ranked = counts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      // Vos six genres les plus vus, chacun par votre film le mieux noté
+      // dans ce genre (jamais deux fois le même film).
+      final used = <String>{};
+      for (final genre in ranked.map((e) => e.key)) {
+        final candidates = [
+          for (final e in films)
+            if (e.genres.contains(genre) &&
+                !used.contains(e.identity) &&
+                w.poster(e) != null)
+              e
+        ]..sort((a, b) => (w.rating(b) ?? 0).compareTo(w.rating(a) ?? 0));
+        final pick = candidates.firstOrNull;
+        if (pick == null) continue;
+        used.add(pick.identity);
+        grid.add(w.poster(pick)!);
         if (grid.length == 6) break;
       }
-      watermark = '${stats.genres.length}';
+      watermark = '${counts.length}';
       numbers = [
-        ('${stats.genres.length}', 'genres'),
-        if (stats.genres.lastOrNull case final rare?)
-          (rare.name, 'le plus rare'),
+        ('${counts.length}', 'genres'),
+        if (ranked.lastOrNull case final rare?) (rare.key, 'le plus rare'),
         bestNumber,
       ];
     case 'world':
