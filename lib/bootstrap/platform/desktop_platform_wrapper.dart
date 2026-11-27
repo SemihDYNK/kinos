@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:macos_window_utils/window_manipulator.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -16,6 +17,7 @@ import 'package:kinos/providers/video_player_provider.dart';
 import 'package:kinos/screens/video_player/components/seek_preview.dart';
 import 'package:kinos/services/background_players.dart';
 import 'package:kinos/src/application_menu.g.dart';
+import 'package:kinos/util/hard_exit.dart';
 import 'package:kinos/util/macos_window_helpers.dart';
 import 'package:kinos/util/window_helper.dart';
 
@@ -77,6 +79,15 @@ class _DesktopAppWrapperState extends BaseAppWrapperState<DesktopAppWrapper> wit
     // film.
     await ref.read(videoPlayerProvider).dispose().timeout(const Duration(seconds: 2), onTimeout: () {});
     super.onWindowClose();
+    // Dernière fenêtre : on quitte d'un coup, sans laisser le moteur se
+    // démonter pendant que des fils de mpv tournent encore (cf. hardExit).
+    // Une fenêtre secondaire se ferme normalement.
+    final windows = await WindowController.getAll().catchError((_) => const <WindowController>[]);
+    if (windows.length <= 1) {
+      // Le temps aux dernières écritures (réglages) d'arriver sur le disque.
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      hardExit();
+    }
     await windowManager.destroy();
   }
 
