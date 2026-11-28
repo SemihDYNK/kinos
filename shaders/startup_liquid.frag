@@ -106,43 +106,49 @@ void main() {
     vec2 w = d * depth + vec2(uSide, 0.0);
     float density = 1.25;
     float x = w.x * density + float(layer) * 3.17;
-    float id = floor(x) + float(layer) * 31.0;
-    // Le centre de la lame, qui oscille, et sa pente : la plupart presque
-    // droites, une sur trois franchement penchée.
-    float centre = (floor(x) + 0.5 - float(layer) * 3.17) / density +
-                   0.05 * sin(uTime * (0.25 + 0.3 * hash(id + 4.0)) + id);
-    float lean = hash(id + 5.0) < 0.33 ? (hash(id + 6.0) - 0.5) * 0.9
-                                       : (hash(id + 6.0) - 0.5) * 0.12;
-    lean += 0.03 * sin(uTime * 0.3 + id * 1.7);
-    float local = (w.x - centre) + w.y * lean;
-    float width = (0.5 + 0.5 * hash(id + 1.0)) / density;
-    float inside = step(abs(local), width * 0.5);
-    float g = local / width + 0.5;
-    float wx = w.x + w.y * lean;
-    float side = smoothstep(kCorridor, kCorridor + 0.2, abs(wx));
-    // Les arêtes ne sont jamais plus fines qu'un pixel et demi.
-    float pixel = depth / (uSize.y * width);
-    float defocus = abs(depth - kFocus) * 0.012;
-    float edge =
-        exp(-pow(g / max(0.012 + defocus, 1.5 * pixel), 2.0)) * 0.9 +
-        exp(-pow((1.0 - g) / max(0.009 + defocus, 1.5 * pixel), 2.0)) * 0.5;
     // La lumière s'allume plan après plan, vers le fond.
     float on = smoothstep(plane - 0.2, plane + 0.6, uIgnite);
-    float sheen = pow(
-        noise(vec2(w.y * 1.4 - uTime * (0.15 + 0.6 * hash(id + 13.0)), id)),
-        2.0);
     float fog = exp(-depth * 0.17);
+    float defocus = abs(depth - kFocus) * 0.012;
     float soft = mix(1.0, 1.0 / (1.0 + defocus * 30.0), 0.5);
-    float tint = fract(g * 0.6 + w.y * 0.12 + hash(id));
-    vec3 iris = hsv(fract(uHue + (tint - 0.5) * 0.32), 0.75 * uIris, 1.0);
-    float spread = smoothstep(0.15, 0.5, g) * smoothstep(0.95, 0.55, g) *
-                   (0.4 + 0.6 * noise(vec2(w.y * 2.0 + uTime * 0.2, id * 3.0)));
-    float own = 0.45 + 0.55 * hash(id + 2.0);
-    color += mix(uHot, vec3(1.0), 0.2) * spill * (edge * 0.9 + spread * 0.6) *
-             inside * side * fog;
-    color += (vec3(1.0) * edge * (0.3 + 0.7 * sheen) * on +
-              iris * spread * sheen * 0.9 * on + vec3(0.014)) *
-             inside * side * fog * own * soft;
+    // Une lame penchée déborde de sa case : chaque point regarde aussi les
+    // lames voisines, pour qu'aucune ne soit coupée.
+    for (int k = -2; k <= 2; k++) {
+      float cell = floor(x) + float(k);
+      float id = cell + float(layer) * 31.0;
+      // Le centre de la lame, qui oscille, et sa pente : la plupart presque
+      // droites, une sur trois franchement penchée.
+      float centre = (cell + 0.5 - float(layer) * 3.17) / density +
+                     0.05 * sin(uTime * (0.25 + 0.3 * hash(id + 4.0)) + id);
+      float lean = hash(id + 5.0) < 0.33 ? (hash(id + 6.0) - 0.5) * 0.9
+                                         : (hash(id + 6.0) - 0.5) * 0.12;
+      lean += 0.03 * sin(uTime * 0.3 + id * 1.7);
+      float width = (0.5 + 0.5 * hash(id + 1.0)) / density;
+      float local = (w.x - centre) + w.y * lean;
+      if (abs(local) > width * 0.5) continue;
+      float g = local / width + 0.5;
+      // Le couloir de la caméra écarte les lames entières, jamais en biais.
+      float side = smoothstep(kCorridor, kCorridor + 0.2, abs(centre));
+      // Les arêtes ne sont jamais plus fines qu'un pixel et demi.
+      float pixel = depth / (uSize.y * width);
+      float edge =
+          exp(-pow(g / max(0.012 + defocus, 1.5 * pixel), 2.0)) * 0.9 +
+          exp(-pow((1.0 - g) / max(0.009 + defocus, 1.5 * pixel), 2.0)) * 0.5;
+      float sheen = pow(
+          noise(vec2(w.y * 1.4 - uTime * (0.15 + 0.6 * hash(id + 13.0)), id)),
+          2.0);
+      float tint = fract(g * 0.6 + w.y * 0.12 + hash(id));
+      vec3 iris = hsv(fract(uHue + (tint - 0.5) * 0.32), 0.75 * uIris, 1.0);
+      float spread =
+          smoothstep(0.15, 0.5, g) * smoothstep(0.95, 0.55, g) *
+          (0.4 + 0.6 * noise(vec2(w.y * 2.0 + uTime * 0.2, id * 3.0)));
+      float own = 0.45 + 0.55 * hash(id + 2.0);
+      color += mix(uHot, vec3(1.0), 0.2) * spill *
+               (edge * 0.9 + spread * 0.6) * side * fog;
+      color += (vec3(1.0) * edge * (0.3 + 0.7 * sheen) * on +
+                iris * spread * sheen * 0.9 * on + vec3(0.014)) *
+               side * fog * own * soft;
+    }
   }
 
   // Le K éclairé : ses rayons dans la brume, avec la poussière qui y
