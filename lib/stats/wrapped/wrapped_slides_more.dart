@@ -141,8 +141,8 @@ class _RecordsSlide extends StatelessWidget {
     return _Frame(builder: (context, size, type) {
       final portrait = size.height > size.width;
       // La place des affiches : à droite en 16:9, en bas en story.
-      final areaW = size.width * (portrait ? .84 : .4);
-      final tallest = size.height * (portrait ? .42 : .56);
+      final areaW = size.width * (portrait ? .84 : .46);
+      final tallest = size.height * (portrait ? .42 : .6);
       final gap = size.width * .015;
       final ratio = AppMedia.posterAspectRatio;
       final total = columns.fold(
@@ -153,70 +153,80 @@ class _RecordsSlide extends StatelessWidget {
       final scale = total > areaW ? areaW / total : 1.0;
       return [
         CustomPaint(painter: StoryMesh(ground: ground, seed: longest)),
-        Align(
-          alignment:
-              portrait ? const Alignment(0, .72) : const Alignment(.9, .35),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              for (final (i, (film, label)) in columns.indexed)
-                Builder(builder: (context) {
-                  final grow = WrappedClock.at(context, 1.6 + i * .5,
-                      length: 1.4, curve: Curves.easeOutCubic);
-                  final h = tallest * scale * film.runtimeSeconds! / longest;
-                  return Padding(
-                    padding: EdgeInsets.only(left: i == 0 ? 0 : gap),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      SizedBox(
-                        width: h * ratio,
-                        height: h,
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(AppSpacing.xxs),
-                            child: SizedBox(
-                              width: h * ratio,
-                              height: h * grow,
-                              child: inputs.poster(film) == null
-                                  ? const ColoredBox(
-                                      color: AppColors.heroFallback)
-                                  : KinosImage(
-                                      image: inputs.poster(film)!,
-                                      alignment: Alignment.bottomCenter,
-                                      disableBlur: true),
+        const WrappedGrain(opacity: AppWrapped.storyGrain),
+        // En 16:9, les affiches occupent la moitié droite, centrées dans
+        // l'espace que le texte laisse ; en story, le bas de l'image.
+        Positioned(
+          left: size.width * (portrait ? 0 : .46),
+          right: size.width * (portrait ? 0 : .04),
+          top: size.height * (portrait ? .45 : .1),
+          bottom: size.height * (portrait ? .08 : .08),
+          child: Align(
+            alignment: portrait ? Alignment.bottomCenter : Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (final (i, (film, label)) in columns.indexed)
+                  Builder(builder: (context) {
+                    final grow = WrappedClock.at(context, 1.6 + i * .5,
+                        length: 1.4, curve: Curves.easeOutCubic);
+                    final h = tallest * scale * film.runtimeSeconds! / longest;
+                    return Padding(
+                      padding: EdgeInsets.only(left: i == 0 ? 0 : gap),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        SizedBox(
+                          width: h * ratio,
+                          height: h,
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: ClipRRect(
+                              borderRadius:
+                                  BorderRadius.circular(AppSpacing.xxs),
+                              child: SizedBox(
+                                width: h * ratio,
+                                height: h * grow,
+                                child: inputs.poster(film) == null
+                                    ? const ColoredBox(
+                                        color: AppColors.heroFallback)
+                                    : KinosImage(
+                                        image: inputs.poster(film)!,
+                                        alignment: Alignment.bottomCenter,
+                                        disableBlur: true),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      SizedBox(height: size.height * .015),
-                      // Les légendes ne dépassent jamais leur affiche.
-                      SizedBox(
-                        width: h * ratio,
-                        // Même hauteur pour toutes : les affiches gardent
-                        // leurs pieds alignés.
-                        height: type.mid.fontSize! * type.mid.height! +
-                            type.cap.fontSize! * 1.6,
-                        child: Opacity(
-                          opacity: grow,
-                          child: Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(_runtime(film.runtimeSeconds!),
-                                        style: type.mid)),
-                                FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(label.toUpperCase(),
-                                        style: type.cap)),
-                              ]),
+                        SizedBox(height: size.height * .015),
+                        // Les légendes ne dépassent jamais leur affiche.
+                        SizedBox(
+                          width: h * ratio,
+                          // Même hauteur pour toutes : les affiches gardent
+                          // leurs pieds alignés.
+                          height: type.mid.fontSize! * type.mid.height! +
+                              type.cap.fontSize! * 1.6,
+                          child: Opacity(
+                            opacity: grow,
+                            child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                          _runtime(film.runtimeSeconds!),
+                                          style: type.mid)),
+                                  FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(label.toUpperCase(),
+                                          style: type.cap)),
+                                ]),
+                          ),
                         ),
-                      ),
-                    ]),
-                  );
-                }),
-            ],
+                      ]),
+                    );
+                  }),
+              ],
+            ),
           ),
         ),
         WrappedTextBlock(

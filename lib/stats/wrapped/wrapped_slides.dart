@@ -2114,6 +2114,8 @@ class _StoryPage extends ConsumerWidget {
     final lead = _storyLeads(w)[kind];
     // L'acte IV est la story de votre archétype : sa matière à lui.
     final look = kind == WrappedSummaryKind.films ? _archetypeLook(w) : null;
+    // L'âme sœur, quand elle signe la story de l'archétype.
+    final soulmate = look == null ? null : data.soulmate?.friend;
     final ground = look?.ground ?? storyColor(look?.tint ?? w.tint(lead));
     final ink = storyInk(ground);
     final soft = ink.withValues(alpha: .72);
@@ -2186,15 +2188,48 @@ class _StoryPage extends ConsumerWidget {
                                   children: [
                                     FittedBox(
                                         fit: BoxFit.scaleDown,
-                                        // La police condensée n'a pas d'étoile.
-                                        child: Text(value.toUpperCase(),
-                                            maxLines: 1,
-                                            style: value.contains('★')
-                                                ? body.copyWith(
-                                                    color: ink,
-                                                    fontSize: 6.5 * u)
-                                                : cond.copyWith(
-                                                    fontSize: 9 * u))),
+                                        // L'âme sœur : sa photo devant son
+                                        // nom.
+                                        child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (soulmate != null &&
+                                                  value == soulmate.name) ...[
+                                                ClipOval(
+                                                  child: SizedBox.square(
+                                                    dimension: 8 * u,
+                                                    child: soulmate.avatarUrl == null
+                                                        ? ColoredBox(
+                                                            color: ink.withValues(
+                                                                alpha: .15),
+                                                            child: Center(
+                                                                child: Text(
+                                                                    value.isEmpty
+                                                                        ? ''
+                                                                        : value[0]
+                                                                            .toUpperCase(),
+                                                                    style: cond.copyWith(
+                                                                        fontSize: 5 *
+                                                                            u))))
+                                                        : KinosImage(
+                                                            image: ImageData(
+                                                                path: soulmate.avatarUrl!,
+                                                                key: 'avatar:${soulmate.avatarUrl}'),
+                                                            disableBlur: true),
+                                                  ),
+                                                ),
+                                                SizedBox(width: 2 * u),
+                                              ],
+                                              // La police condensée n'a pas d'étoile.
+                                              Text(value.toUpperCase(),
+                                                  maxLines: 1,
+                                                  style: value.contains('★')
+                                                      ? body.copyWith(
+                                                          color: ink,
+                                                          fontSize: 6.5 * u)
+                                                      : cond.copyWith(
+                                                          fontSize: 9 * u)),
+                                            ])),
                                     SizedBox(height: .8 * u),
                                     Text(label,
                                         textAlign: TextAlign.center,
@@ -3515,9 +3550,10 @@ class StoryMesh extends CustomPainter {
       final center = Offset(size.width * (.1 + random.nextDouble() * .8),
           size.height * (.1 + random.nextDouble() * .8));
       final r = radius * (.7 + random.nextDouble() * .6);
-      canvas.drawCircle(
-          center,
-          r,
+      // Toute la surface, pas un cercle : le dégradé s'éteint seul, sans
+      // bord où l'anticrénelage laisserait des points clairs.
+      canvas.drawRect(
+          Offset.zero & size,
           Paint()
             ..shader = ui.Gradient.radial(
                 center,

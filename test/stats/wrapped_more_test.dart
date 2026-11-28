@@ -268,6 +268,9 @@ void main() {
     ];
     final pages = wrappedExportPages(w, slides,
         year: false, acts: false, allSlides: true);
+    // La story de l'acte IV, signée par l'âme sœur.
+    final summaries = wrappedExportPages(w, const [],
+        year: false, acts: true, allSlides: false);
     final dir =
         (await tester.runAsync(() => Directory.systemTemp.createTemp('w')))!;
     addTearDown(() => dir.deleteSync(recursive: true));
@@ -277,5 +280,11 @@ void main() {
       expect(tester.takeException(), isNull, reason: page.file);
     }
     expect(pages.length, added.length);
+    for (final page in summaries) {
+      await tester.runAsync(() => exportWrapped(context,
+          dir: dir, pages: [page], formats: {WrappedFormat.story}));
+      expect(tester.takeException(), isNull, reason: page.file);
+    }
+    expect([for (final p in summaries) p.file], contains('03-acte-4-vous'));
   });
 }
