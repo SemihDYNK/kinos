@@ -846,11 +846,13 @@ abstract final class AppMotion {
   static const startupLiquidNeutralLightness = [.5, .75];
   // Les lettres chargées par la lumière : un dégradé du haut (chaud) vers
   // le bas (la dominante), qui monte entre ces deux instants après le clap
-  // (secondes).
+  // (secondes), quand les traînées les frappent.
   static const startupLetterTop = (22.0, .95, .74);
   static const startupLetterBottom = (0.0, .85, .6);
-  static const startupLetterChargeFrom = .2;
-  static const startupLetterChargeTo = 1.1;
+  static const startupLetterChargeFrom = 0.0;
+  static const startupLetterChargeTo = .45;
+  // Les traînées partent des bords tant de secondes avant le clap.
+  static const startupLightLead = .7;
   // Passage du repli neutre à la vraie dominante, si elle arrive tard.
   static const startupTintFade = Duration(milliseconds: 400);
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie

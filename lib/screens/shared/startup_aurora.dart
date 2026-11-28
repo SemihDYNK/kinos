@@ -190,7 +190,8 @@ abstract final class StartupAurora {
     // Les irisations du verre suivent la dominante ; sans elle, gris.
     set(tint == null ? 0 : HSLColor.fromColor(tint).hue / 360);
     set(tint == null ? 0 : 1);
-    shader.setImageSampler(0, mask);
+    // Lissé : lu au pixel le plus proche, le pochoir crénelait la lueur.
+    shader.setImageSampler(0, mask, filterQuality: FilterQuality.medium);
 
     final recorder = ui.PictureRecorder();
     Canvas(recorder).drawRect(

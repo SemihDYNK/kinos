@@ -672,23 +672,26 @@ class _AuroraPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Sans le mot, l'intro s'arrête à la fin de l'assemblage.
-    final bloom = AppMotion.startupIntroBloom.transform(word
-        ? progress.value
-        : progress.value * AppMotion.startupIntroAssemblyEnd);
-    if (bloom <= 0) {
-      StartupAurora.clapAt = null;
-      return;
-    }
-    // Le clap : la lumière arrive, les lettres se chargent de ses couleurs
-    // (avec ou sans shader).
-    StartupAurora.clapAt ??= StartupAurora.time.value;
+    final full = word ? 1.0 : AppMotion.startupIntroAssemblyEnd;
+    final bloom = AppMotion.startupIntroBloom.transform(progress.value * full);
+    // Le temps depuis le clap, tiré de l'avancement de l'animation (pas de
+    // l'horloge) : les traînées frappent le K au moment exact où il se
+    // referme. L'horloge en garde l'origine pour l'ouverture qui suit.
+    final duration =
+        (word ? AppDurations.startupIntro : AppDurations.startupIntroShort)
+                .inMicroseconds /
+            1e6;
+    const clap = AppMotion.startupIntroAssemblyEnd * AppMotion.startupIntroClap;
+    final wave = (progress.value * full - clap) / full * duration;
+    StartupAurora.clapAt = StartupAurora.time.value - wave;
+    if (wave < -AppMotion.startupLightLead) return;
     StartupAurora.letters = letters;
     if (StartupAurora.liquid) {
       final centre = size.center(Offset.zero);
       const mark = AppBrand.startupMarkSize;
       StartupAurora.paintLiquid(canvas, Offset.zero & size,
           colors: liquid,
-          wave: StartupAurora.wave,
+          wave: wave,
           centre: centre,
           tint: tint, paintMask: (mask) {
         mask.translate(centre.dx - mark / 2, centre.dy - mark / 2);
@@ -697,6 +700,7 @@ class _AuroraPainter extends CustomPainter {
       });
       return;
     }
+    if (bloom <= 0) return;
     StartupAurora.paint(canvas, Offset.zero & size,
         colors: colors, intensity: bloom);
   }

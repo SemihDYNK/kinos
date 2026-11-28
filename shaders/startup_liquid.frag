@@ -10,7 +10,8 @@
 #include <flutter/runtime_effect.glsl>
 
 uniform vec2 uSize;
-// Secondes depuis le début de l'intro, et depuis le clap (négatif avant).
+// Secondes depuis le début de l'intro, et depuis le clap (négatif avant :
+// les traînées partent un peu avant).
 uniform float uTime;
 uniform float uWave;
 // Intensité globale (0 : le noir seul).
@@ -57,17 +58,19 @@ vec3 hsv(float h, float s, float v) {
   return v * mix(vec3(1.0), k, s);
 }
 
-// Une couche de lames de verre en diagonale qui glissent : une arête vive,
-// un reflet qui court le long du verre, et à l'intérieur une irisation
-// limitée aux teintes voisines de la dominante.
-vec3 glass(vec2 d, float depth, float speed, float density) {
-  float turn = -0.62;
+// Une couche de lames de verre qui glissent : une arête vive, un reflet
+// qui court le long du verre, et à l'intérieur une irisation limitée aux
+// teintes voisines de la dominante. Pour qu'elles ne soient pas toutes
+// pareilles, chaque couche a son angle et sa vitesse, les lames ondulent
+// un peu, et chacune a sa lumière et l'allure de son reflet.
+vec3 glass(vec2 d, float depth, float speed, float density, float turn) {
   vec2 q = vec2(cos(turn) * d.x - sin(turn) * d.y,
                 sin(turn) * d.x + cos(turn) * d.y);
-  float x = q.x * density + uTime * speed + depth * 7.0;
+  float bend = 0.18 * sin(q.y * 0.9 + uTime * 0.25 + depth * 2.3);
+  float x = (q.x + bend) * density + uTime * speed + depth * 7.0;
   float id = floor(x);
   float f = fract(x);
-  float width = 0.55 + 0.45 * hash(id + depth);
+  float width = 0.45 + 0.55 * hash(id + depth);
   float inside = step(f, width);
   float g = f / width;
   // Les arêtes ne sont jamais plus fines qu'un pixel et demi : plus
@@ -75,19 +78,20 @@ vec3 glass(vec2 d, float depth, float speed, float density) {
   float pixel = density / (uSize.y * width);
   float edge = exp(-pow(g / max(0.025, 1.5 * pixel), 2.0)) * 1.4 +
                exp(-pow((1.0 - g) / max(0.015, 1.5 * pixel), 2.0)) * 0.9;
-  float sheen =
-      pow(noise(vec2(q.y * 1.5 - uTime * speed * sign(speed) * 1.0, id)), 3.0);
+  float pace = 0.15 + 0.7 * hash(id + 13.0 + depth);
+  float sheen = pow(noise(vec2(q.y * 1.5 - uTime * pace, id)), 3.0);
   float spread = smoothstep(0.15, 0.5, g) * smoothstep(0.95, 0.55, g) *
                  (0.4 + 0.6 * noise(vec2(q.y * 2.0 + uTime * 0.2, id * 3.0)));
   float tint = fract(g * 0.6 + q.y * 0.15 + hash(id));
   vec3 iris = hsv(fract(uHue + (tint - 0.5) * 0.32), 0.75 * uIris, 1.0);
+  float own = 0.35 + 0.65 * hash(id + 2.0 + depth);
   vec3 c = vec3(0.025) + iris * spread * 0.55 * sheen * 2.0 +
            vec3(0.9) * edge * (0.25 + 0.75 * sheen) + uInk * 0.05 * g;
-  return c * inside;
+  return c * inside * own;
 }
 
 // Traînées : autant de couloirs autour du centre, un sur trois ou presque
-// éteint ; chacune part d'un instant à elle, à sa vitesse, et ne passe
+// éteint ; chacune arrive à un instant à elle, à sa vitesse, et ne passe
 // qu'une fois.
 const float kLanes = 150.0;
 const float kLength = 0.28;
@@ -102,26 +106,30 @@ void main() {
   float angle = atan(d.y, d.x);
   vec3 color = uBlack;
 
+  // Le verre, éclairé par la lumière arrivée : trois couches d'angles,
+  // de finesses et de vitesses différentes, plus claires près des lettres.
   if (uWave > 0.0) {
-    // Le verre, éclairé par la lumière qui arrive : deux couches qui
-    // glissent en sens contraires, plus claires près des lettres.
-    float lit = smoothstep(0.3, 1.6, uWave);
-    vec3 panes = glass(d, 0.0, 0.035, 2.2) +
-                 glass(d * 1.4 + vec2(0.3, 0.0), 1.0, -0.06, 3.0) * 0.55;
+    float lit = smoothstep(0.25, 1.1, uWave);
+    vec3 panes = glass(d, 0.0, 0.03, 2.0, -0.62) +
+                 glass(d * 1.3 + vec2(0.3, 0.0), 1.0, -0.055, 3.1, -0.48) *
+                     0.55 +
+                 glass(d * 0.8, 2.0, 0.012, 1.3, -0.8) * 0.4;
     color += panes * lit * (1.1 - smoothstep(0.0, 1.0, r * 0.9)) * 1.1;
+  }
 
-    // Les traînées, des bords vers les lettres.
+  // Les traînées : elles partent des bords un peu avant le clap et
+  // frappent les lettres quand le K se referme, chacune une seule fois.
+  if (uWave > -0.7) {
     float lane = (angle + 3.14159) / 6.28318 * kLanes;
     float id = floor(lane);
     float across = fract(lane);
-    float delay = hash(id + 11.0) * 0.45;
-    float speed = 1.6 + 1.4 * hash(id);
-    float travel = clamp((uWave - delay) * speed, 0.0, 1.25);
+    float arrive = 0.12 * hash(id + 11.0);
+    float span = 0.45 + 0.15 * hash(id);
+    float head = 1.15 * (arrive - uWave) / span;
     float reach = clamp(r / (0.95 * aspect * 0.5), 0.0, 1.2);
-    float head = 1.15 - travel;
     float streak = smoothstep(head + kLength, head, reach) *
                    smoothstep(head - 0.01, head, reach);
-    float live = step(0.0, uWave - delay) * step(travel, 1.2);
+    float live = step(-0.05, head) * step(head, 1.2);
     // Un couloir n'est jamais plus fin qu'un pixel et demi (crénelage).
     float lanePixel = kLanes / (6.28318 * max(r, 1e-3) * uSize.y);
     float thin = exp(-pow((across - 0.5) / max(0.07, 1.5 * lanePixel), 2.0));
@@ -130,9 +138,11 @@ void main() {
                     0.3 * hash(id + 9.0));
     color += tone * streak * thin * keep * live * smoothstep(0.05, 0.2, r) *
              2.4;
+  }
 
+  if (uWave > 0.0) {
     // Les rayons : la lumière derrière les lettres, étirée depuis leur
-    // centre vers l'extérieur, une fois les traînées arrivées.
+    // centre vers l'extérieur, juste après l'impact.
     if (uRays > 0.0) {
       vec2 toward = centreUv - uv;
       float light = 0.0;
@@ -141,7 +151,7 @@ void main() {
         light += mask(uv + toward * (float(i) / 40.0) * 0.8) * weight;
         weight *= 0.95;
       }
-      light = light / 16.0 * smoothstep(0.5, 1.1, uWave) * uRays;
+      light = light / 22.0 * smoothstep(0.1, 0.6, uWave) * uRays;
       vec3 beam = mix(uInk, uHot, clamp(light * 0.7, 0.0, 1.0));
       float dust =
           smoothstep(0.985, 1.0,
@@ -157,8 +167,8 @@ void main() {
       float a = float(i) * 0.785;
       halo += mask(uv + vec2(cos(a), sin(a)) * 0.012);
     }
-    color += mix(uInk, uHot, 0.5) * halo / 8.0 * 0.25 *
-             smoothstep(0.2, 1.2, uWave);
+    color += mix(uInk, uHot, 0.5) * halo / 8.0 * 0.18 *
+             smoothstep(0.0, 0.5, uWave);
   }
 
   color = mix(uBlack, color, uIntensity);
