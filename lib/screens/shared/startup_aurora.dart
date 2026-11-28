@@ -7,8 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:logging/logging.dart';
 
-import 'package:kinos/screens/shared/startup_mark.dart' show StartupMark;
-
 import 'package:kinos/theme/app_theme.dart';
 
 /// Le fond de l'intro, au clap.
@@ -63,7 +61,6 @@ abstract final class StartupAurora {
     try {
       _liquid =
           await ui.FragmentProgram.fromAsset('shaders/startup_liquid.frag');
-      atlas ??= StartupMark.pieceAtlas();
     } catch (error) {
       _log.warning('Fond liquide indisponible : $error');
     }
@@ -156,81 +153,45 @@ abstract final class StartupAurora {
           AppDurations.startupIntro.inMicroseconds /
           1e6;
 
-  /// Le vol à l'instant [story] (secondes de la scène) : la caméra
-  /// (position, direction, droite et haut), l'angle des trois lames du K
-  /// (π/2 de profil, 0 face à la caméra), l'éclairage du K, le reflet
-  /// d'objectif et la sortie du noir.
+  /// La galerie de verre à l'instant [story] (secondes de la scène) :
+  /// profondeur et décalage de la caméra, front de la lumière dans les
+  /// arêtes, éclairage du K, reflet d'objectif et sortie du noir.
   static ({
-    List<double> camera,
-    List<double> turns,
+    double depth,
+    double side,
+    double ignite,
     double lit,
     double flare,
     double fade,
-  }) flightAt(double story) {
+  }) galleryAt(double story) {
     double clamp01(double x) => x.clamp(0.0, 1.0);
     double out(double x) => Curves.easeOutCubic.transform(clamp01(x));
-    double inOut(double x) => Curves.easeInOutCubic.transform(clamp01(x));
-    List<double> bezier(List<(double, double, double)> p, double t) {
-      final u = 1 - t;
-      final w = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
-      return [
-        for (final axis in [0, 1, 2])
-          [
-            for (var i = 0; i < 4; i++) w[i] * [p[i].$1, p[i].$2, p[i].$3][axis]
-          ].reduce((a, b) => a + b),
-      ];
-    }
-
-    List<double> normal(List<double> v) {
-      final l = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-      return [v[0] / l, v[1] / l, v[2] / l];
-    }
-
-    List<double> cross(List<double> a, List<double> b) => [
-          a[1] * b[2] - a[2] * b[1],
-          a[2] * b[0] - a[0] * b[2],
-          a[0] * b[1] - a[1] * b[0],
-        ];
-
-    final fly = inOut(story / AppMotion.startupFlightTime);
-    final position = bezier(AppMotion.startupFlightPath, fly);
-    final aim = bezier(AppMotion.startupFlightAim,
-        inOut(story / AppMotion.startupFlightAimTime));
-    final forward = normal([for (var i = 0; i < 3; i++) aim[i] - position[i]]);
-    final right = normal(cross(const [0, 1, 0], forward));
-    final up = cross(forward, right);
-    final roll = AppMotion.startupFlightRoll * math.sin(story * .7) * (1 - fly);
-    final c = math.cos(roll), sn = math.sin(roll);
+    final travel = Curves.easeInOutCubic
+        .transform(clamp01(story / AppMotion.startupGalleryDollyTime));
     final clap = storyOf(0);
     return (
-      camera: [
-        ...position,
-        ...forward,
-        for (var i = 0; i < 3; i++) right[i] * c + up[i] * sn,
-        for (var i = 0; i < 3; i++) up[i] * c - right[i] * sn,
-      ],
-      turns: [
-        for (var i = 0; i < 3; i++)
-          math.pi /
-              2 *
-              (1 -
-                  inOut((story -
-                          AppMotion.startupFlightTurnFrom -
-                          i * AppMotion.startupFlightTurnStep) /
-                      AppMotion.startupFlightTurnTime)),
-      ],
-      lit: out((story - AppMotion.startupFlightLitFrom) /
-          AppMotion.startupFlightLitTime),
+      depth: AppMotion.startupGalleryDolly * travel,
+      side: AppMotion.startupGalleryArc *
+          math.sin(story * AppMotion.startupGalleryArcRate) *
+          (1 - travel),
+      ignite: -1 +
+          AppMotion.startupGalleryIgniteDepth *
+              out((story - AppMotion.startupGalleryIgniteFrom) /
+                  AppMotion.startupGalleryIgniteTime),
+      lit: out((story - AppMotion.startupGalleryLitFrom) /
+          AppMotion.startupGalleryLitTime),
       flare: story > clap
-          ? math.exp(-(story - clap) * AppMotion.startupFlightFlare)
+          ? math.exp(-(story - clap) * AppMotion.startupGalleryFlare)
           : 0.0,
-      fade: out(story / AppMotion.startupFlightFadeIn),
+      fade: out(story / AppMotion.startupGalleryFadeIn),
     );
   }
 
-  /// Les trois pièces du K, chacune dans sa case d'une image (barre,
-  /// branche du haut, du bas) : le shader les fait pivoter dans l'espace.
-  static ui.Image? atlas;
+  /// Échelle du K au fond de la galerie : il grandit à mesure que la
+  /// caméra approche, jusqu'à sa taille finale.
+  static double markScale(double story) => (AppMotion.startupGalleryMarkRest /
+          (AppMotion.startupGalleryMarkDepth - galleryAt(story).depth))
+      .clamp(0.0, 1.0);
 
   /// Peint la lumière du clap sur [rect] : [colors] (encre, cœur), [wave]
   /// secondes après le clap, les traînées convergeant vers [centre] et les
@@ -305,28 +266,15 @@ abstract final class StartupAurora {
     // Les irisations du verre suivent la dominante ; sans elle, gris.
     set(tint == null ? 0 : HSLColor.fromColor(tint).hue / 360);
     set(tint == null ? 0 : 1);
-    final shot = flightAt(storyOf(wave));
-    for (final v in shot.camera) {
-      set(v);
-    }
-    for (final v in shot.turns) {
-      set(v);
-    }
+    final shot = galleryAt(storyOf(wave));
+    set(shot.depth);
+    set(shot.side);
+    set(shot.ignite);
     set(shot.lit);
     set(shot.flare);
     set(shot.fade);
-    // Taille d'une unité du signe dans l'espace : au point de vue final,
-    // le K a exactement la taille de la signature à l'écran.
-    set(AppBrand.startupMarkSize *
-        scale /
-        256 *
-        AppMotion.startupFlightRest /
-        (AppMotion.startupFlightFocal * height));
-    set(AppMotion.startupFlightFocal);
     shader.setImageSampler(0, glow, filterQuality: FilterQuality.medium);
     shader.setImageSampler(1, spill, filterQuality: FilterQuality.medium);
-    shader.setImageSampler(2, atlas ?? glow,
-        filterQuality: FilterQuality.medium);
 
     final recorder = ui.PictureRecorder();
     Canvas(recorder).drawRect(

@@ -30,29 +30,6 @@ class StartupMark extends StatelessWidget {
       _StartupIntroPainter(progress, word: word, stencil: true)
           ._draw(canvas, size);
 
-  /// Les trois pièces de la signature, chacune étirée dans sa case carrée
-  /// de 256 pixels (barre, branche du haut, du bas) : le shader du vol les
-  /// fait pivoter dans l'espace (cf. StartupAurora.atlas).
-  static ui.Image pieceAtlas() {
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    final white = Paint()..color = AppColors.textPrimary;
-    final parts = _StartupMarkPainter._parts;
-    for (var i = 0; i < parts.length; i++) {
-      final box = parts[i].getBounds();
-      canvas.save();
-      canvas.translate(i * 256.0, 0);
-      canvas.scale(256 / box.width, 256 / box.height);
-      canvas.translate(-box.left, -box.top);
-      canvas.drawPath(parts[i], white);
-      canvas.restore();
-    }
-    final picture = recorder.endRecording();
-    final image = picture.toImageSync(256 * parts.length, 256);
-    picture.dispose();
-    return image;
-  }
-
   /// Version longue du premier lancement de la session (allumage,
   /// assemblage en profondeur, clap) ; sinon, l'assemblage court.
   final bool intro;
@@ -241,11 +218,12 @@ class _StartupIntroPainter extends CustomPainter {
     final progress = word
         ? this.progress
         : this.progress * AppMotion.startupIntroAssemblyEnd;
+    final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
     // Le K posé (et le mot) : dessiné en double résolution puis réduit. Le
     // moteur de rendu n'adoucit pas toujours le bord des formes (sans
-    // multi-échantillonnage).
-    final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
-    if (AppMotion.startupIntroArrivals.any((i) => i.transform(a) <= 0)) {
+    // multi-échantillonnage) ; avant, le K s'allume dans le noir, et
+    // l'escalier ne se voit pas.
+    if (AppMotion.startupIntroArrivals.any((i) => i.transform(a) < 1)) {
       _draw(canvas, size);
       return;
     }
@@ -294,13 +272,17 @@ class _StartupIntroPainter extends CustomPainter {
     // Avancement de l'assemblage et du clap, avant le mot.
     final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
     final impact = impactScale(a);
+    // Le K est au fond de la galerie : il grandit pendant que la caméra
+    // approche (cf. StartupAurora.markScale).
+    final depth = StartupAurora.markScale(
+        progress * AppDurations.startupIntro.inMicroseconds / 1e6);
+    final scale = unit * impact * depth;
     canvas.translate(size.width / 2, size.height / 2);
-    canvas.scale(unit * impact);
+    canvas.scale(scale);
     canvas.translate(-_centre.dx, -_centre.dy);
 
-    // Le shader du vol fait pivoter les trois lames jusqu'à former le K ;
-    // la signature prend le relais quand elles sont face à la caméra. Le
-    // pochoir de la lumière l'a entier.
+    // Le K s'éclaire d'un bloc, rétroéclairé ; le pochoir de la lumière
+    // l'a entier dès le début.
     for (var i = 0; i < _parts.length; i++) {
       final arrival =
           stencil ? 1.0 : AppMotion.startupIntroArrivals[i].transform(a);
