@@ -121,14 +121,24 @@ abstract final class StartupAurora {
 
   /// Le pinceau des lettres de la signature (repère du signe, 256 unités) :
   /// blanc, puis le dégradé des couleurs du film à mesure qu'elles se
-  /// chargent.
+  /// chargent ; en retenue avant le clap, pleinement éclairées après.
   static Paint letterPaint(double alpha) {
     final amount = charge;
+    // Avant le clap, le K s'éclaire en retenue ; au clap, tout son éclat.
+    final burst = wave < 0
+        ? 0.0
+        : Curves.easeOut
+            .transform((wave / AppMotion.startupLetterBurst).clamp(0.0, 1.0));
+    final level = ui.lerpDouble(AppMotion.startupLetterRestraint, 1, burst)!;
     if (amount <= 0) {
-      return Paint()..color = AppColors.textPrimary.withValues(alpha: alpha);
+      return Paint()
+        ..color =
+            Color.lerp(AppColors.background, AppColors.textPrimary, level)!
+                .withValues(alpha: alpha);
     }
-    Color stop(Color c) =>
-        Color.lerp(AppColors.textPrimary, c, amount)!.withValues(alpha: alpha);
+    Color stop(Color c) => Color.lerp(AppColors.background,
+            Color.lerp(AppColors.textPrimary, c, amount)!, level)!
+        .withValues(alpha: alpha);
     return Paint()
       ..shader = ui.Gradient.linear(const Offset(0, 15), const Offset(0, 241),
           [stop(letters[0]), stop(letters[1])]);

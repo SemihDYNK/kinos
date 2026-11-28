@@ -841,6 +841,10 @@ abstract final class AppMotion {
   static const startupLetterBottom = (0.0, .85, .6);
   static const startupLetterChargeFrom = -1.9;
   static const startupLetterChargeTo = -.9;
+  // Avant le clap, les lettres n'ont que cette part de leur éclat ; elles
+  // le prennent en entier en ce temps après le clap (secondes).
+  static const startupLetterRestraint = .6;
+  static const startupLetterBurst = .18;
   // L'intro commence tant de secondes avant le clap (de la scène, en
   // version longue).
   static const startupLightLead = 4.7;
