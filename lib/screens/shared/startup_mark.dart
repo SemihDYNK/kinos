@@ -30,6 +30,29 @@ class StartupMark extends StatelessWidget {
       _StartupIntroPainter(progress, word: word, stencil: true)
           ._draw(canvas, size);
 
+  /// Les trois pièces de la signature, chacune étirée dans sa case carrée
+  /// de 256 pixels (barre, branche du haut, du bas) : le shader du vol les
+  /// fait pivoter dans l'espace (cf. StartupAurora.atlas).
+  static ui.Image pieceAtlas() {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final white = Paint()..color = AppColors.textPrimary;
+    final parts = _StartupMarkPainter._parts;
+    for (var i = 0; i < parts.length; i++) {
+      final box = parts[i].getBounds();
+      canvas.save();
+      canvas.translate(i * 256.0, 0);
+      canvas.scale(256 / box.width, 256 / box.height);
+      canvas.translate(-box.left, -box.top);
+      canvas.drawPath(parts[i], white);
+      canvas.restore();
+    }
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(256 * parts.length, 256);
+    picture.dispose();
+    return image;
+  }
+
   /// Version longue du premier lancement de la session (allumage,
   /// assemblage en profondeur, clap) ; sinon, l'assemblage court.
   final bool intro;
@@ -171,14 +194,6 @@ class _StartupIntroPainter extends CustomPainter {
   static const _extent = _StartupMarkPainter._extent;
   static List<Path> get _parts => _StartupMarkPainter._parts;
 
-  // Centre de chaque pièce par rapport à celui du signe : chacune y est
-  // mise à l'échelle par la perspective.
-  static const _pieceCentres = [
-    Offset(-78, 0),
-    Offset(32, -59),
-    Offset(32, 59)
-  ];
-
   // Charnière de la branche du haut : là où elle rejoint la hampe.
   static const _hinge = Offset(80, 123);
   static const _centre = Offset(_extent / 2, _extent / 2);
@@ -228,11 +243,9 @@ class _StartupIntroPainter extends CustomPainter {
         : this.progress * AppMotion.startupIntroAssemblyEnd;
     // Le K posé (et le mot) : dessiné en double résolution puis réduit. Le
     // moteur de rendu n'adoucit pas toujours le bord des formes (sans
-    // multi-échantillonnage). Tant que les pièces bougent dans la
-    // profondeur, elles débordent de la zone suréchantillonnée : dessin
-    // direct, le mouvement cache l'escalier.
-    if (progress * AppDurations.startupIntro.inMicroseconds / 1e6 <
-        AppMotion.startupGalleryPullTime) {
+    // multi-échantillonnage).
+    final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
+    if (AppMotion.startupIntroArrivals.any((i) => i.transform(a) <= 0)) {
       _draw(canvas, size);
       return;
     }
@@ -281,35 +294,24 @@ class _StartupIntroPainter extends CustomPainter {
     // Avancement de l'assemblage et du clap, avant le mot.
     final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
     final impact = impactScale(a);
-    final story = progress * AppDurations.startupIntro.inMicroseconds / 1e6;
     canvas.translate(size.width / 2, size.height / 2);
     canvas.scale(unit * impact);
     canvas.translate(-_centre.dx, -_centre.dy);
 
-    // Les pièces flottent à des profondeurs différentes pendant le recul de
-    // la caméra et ne s'alignent qu'à la fin (cf. StartupAurora.pieceAt) ;
-    // le K s'éclaire d'un bloc, rétroéclairé ; le pochoir de la lumière
-    // l'a entier dès le début.
+    // Le shader du vol fait pivoter les trois lames jusqu'à former le K ;
+    // la signature prend le relais quand elles sont face à la caméra. Le
+    // pochoir de la lumière l'a entier.
     for (var i = 0; i < _parts.length; i++) {
       final arrival =
           stencil ? 1.0 : AppMotion.startupIntroArrivals[i].transform(a);
-      final piece = StartupAurora.pieceAt(i, story);
-      final alpha = arrival * piece.presence;
-      if (alpha <= 0 || piece.scale <= 0) continue;
-      final pivot = _pieceCentres[i];
+      if (arrival <= 0) continue;
       canvas.save();
-      canvas.translate(pivot.dx * piece.scale + piece.offset.dx,
-          pivot.dy * piece.scale + piece.offset.dy);
-      canvas.translate(_centre.dx, _centre.dy);
-      canvas.scale(piece.scale);
-      canvas.rotate(piece.turn);
-      canvas.translate(-_centre.dx - pivot.dx, -_centre.dy - pivot.dy);
       if (i == 1) {
         canvas.translate(_hinge.dx, _hinge.dy);
         canvas.rotate(clapAngle(a));
         canvas.translate(-_hinge.dx, -_hinge.dy);
       }
-      canvas.drawPath(_parts[i], StartupAurora.letterPaint(alpha));
+      canvas.drawPath(_parts[i], StartupAurora.letterPaint(arrival));
       canvas.restore();
     }
   }

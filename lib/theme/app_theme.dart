@@ -705,14 +705,14 @@ abstract final class AppDurations {
   /// Au-delà de cet écart moyen entre deux images pendant l'attente du
   /// calme (moins de 15 images/s), l'ouverture ne s'anime pas.
   static const startupStrugglingFrame = Duration(milliseconds: 66);
-  // Premier lancement de la session : depuis le cœur lumineux, la caméra
-  // recule dans une galerie de verre pendant que les pièces du K
-  // s'alignent, clap, puis le mot et un plan fixe (cf.
-  // AppMotion.startupIntro* et AppMotion.startupGallery*).
-  static const startupIntro = Duration(milliseconds: 6200);
+  // Premier lancement de la session : la caméra vole à travers une galerie
+  // de plaques de verre, trois lames pivotent et forment le K, clap, puis
+  // le mot et un plan fixe (cf. AppMotion.startupIntro* et
+  // AppMotion.startupFlight*).
+  static const startupIntro = Duration(milliseconds: 7200);
   // Lancements suivants : la même scène sans « KINOS », arrêtée à la fin
   // de l'assemblage, et jouée en accéléré pour ne pas peser au quotidien.
-  static const startupIntroShort = Duration(milliseconds: 2500);
+  static const startupIntroShort = Duration(milliseconds: 3000);
   // Avance des sons de l'intro sur leur moment : la latence de la sortie
   // audio.
   static const startupSoundLead = Duration(milliseconds: 35);
@@ -758,8 +758,8 @@ abstract final class AppMotion {
   // fraction de cette partie. Ensuite vient le mot : le K glisse pour que
   // « KINOS » soit centré, les lettres INOS arrivent écartées et se
   // resserrent, puis le mot complet se pose.
-  static const startupIntroAssemblyEnd = .798;
-  static const startupIntroWord = Interval(.798, .927);
+  static const startupIntroAssemblyEnd = .840;
+  static const startupIntroWord = Interval(.840, .951);
   // Dans le mot (fraction de [startupIntroWord]) : glissement du K, puis
   // chaque lettre, en décalé.
   static const startupIntroWordSlide = Interval(0, .8, curve: easeOut);
@@ -772,16 +772,16 @@ abstract final class AppMotion {
   // Écart supplémentaire entre lettres à leur arrivée, en unités du signe.
   static const startupIntroTracking = 48.0;
 
-  // Assemblage (fraction de la partie assemblage). La caméra recule dans
-  // une galerie de verre depuis le cœur lumineux (cf.
-  // StartupAurora.galleryAt) ; les pièces du K, éclairées dès le début aux
-  // couleurs du film, s'alignent en perspective pendant le recul. Puis la
-  // branche du haut s'ouvre, prend son élan et se referme comme un clap,
-  // et la marque encaisse le choc.
+  // Assemblage (fraction de la partie assemblage). La caméra vole à
+  // travers une galerie de plaques de verre (cf. StartupAurora.flightAt) ;
+  // au bout, trois lames vues de profil pivotent vers elle et forment le K
+  // (dessinées par le shader), puis la signature prend le relais, ici.
+  // Puis la branche du haut s'ouvre, prend son élan et se referme comme un
+  // clap, et la marque encaisse le choc.
   static const startupIntroArrivals = [
-    Interval(.06, .364, curve: Cubic(.4, 0, .2, 1)),
-    Interval(.06, .364, curve: Cubic(.4, 0, .2, 1)),
-    Interval(.06, .364, curve: Cubic(.4, 0, .2, 1)),
+    Interval(.876, .893),
+    Interval(.876, .893),
+    Interval(.876, .893),
   ];
   // Images d'affilée sorties à temps avant de lancer l'ouverture.
   static const startupSettleFrames = 8;
@@ -790,19 +790,19 @@ abstract final class AppMotion {
   static const startupIntroClapOpen = -.32;
   static const startupIntroClapLift = -.07;
   static const startupIntroClapOpening =
-      Interval(.869, .913, curve: Cubic(.3, 0, .2, 1));
-  static const startupIntroClapWindup = Interval(.913, .919, curve: easeOut);
+      Interval(.893, .929, curve: Cubic(.3, 0, .2, 1));
+  static const startupIntroClapWindup = Interval(.929, .934, curve: easeOut);
   static const startupIntroClapClose =
-      Interval(.919, .929, curve: Cubic(.6, 0, 1, .6));
+      Interval(.934, .942, curve: Cubic(.6, 0, 1, .6));
   // Instant du clap (fin de la fermeture), puis choc encaissé sans rebond.
-  static const startupIntroClap = .929;
+  static const startupIntroClap = .942;
   static const startupIntroImpact = .04;
-  static const startupIntroImpactIn = Interval(.929, .937);
-  static const startupIntroImpactOut = Interval(.937, .99, curve: easeOut);
+  static const startupIntroImpactIn = Interval(.942, .95);
+  static const startupIntroImpactOut = Interval(.95, .99, curve: easeOut);
   // Le dégradé de couleur (repli sans shader) naît au clap (fraction de
-  // toute l'intro : startupIntroAssemblyEnd × startupIntroClap ≈ .741) et
+  // toute l'intro : startupIntroAssemblyEnd × startupIntroClap ≈ .791) et
   // s'étend comme une onde avant de se poser.
-  static const startupIntroBloom = Interval(.741, .85, curve: easeOut);
+  static const startupIntroBloom = Interval(.791, .88, curve: easeOut);
   // Aurore du clap (cf. StartupAurora) : clarté de chaque tache, écart de
   // teinte des voisines (degrés), saturation maximale (le K blanc doit
   // rester lisible) et vitesse de dérive.
@@ -841,40 +841,44 @@ abstract final class AppMotion {
   // (secondes) : le K s'allume déjà coloré.
   static const startupLetterTop = (22.0, .95, .74);
   static const startupLetterBottom = (0.0, .85, .6);
-  static const startupLetterChargeFrom = -4.3;
-  static const startupLetterChargeTo = -2.8;
+  static const startupLetterChargeFrom = -2.0;
+  static const startupLetterChargeTo = -1.0;
   // Avant le clap, les lettres n'ont que cette part de leur éclat ; elles
   // le prennent en entier en ce temps après le clap (secondes).
   static const startupLetterRestraint = .6;
   static const startupLetterBurst = .18;
   // L'intro commence tant de secondes avant le clap (de la scène, en
   // version longue).
-  static const startupLightLead = 4.7;
-  // La galerie de verre (secondes de la scène longue, depuis son début) :
-  // sortie du noir ; la caméra part tout près du cœur lumineux et recule
-  // (profondeurs de départ et d'arrivée, durée), avec un léger arc
-  // latéral ; la lueur claire du départ (force, durée) ; le K qui
-  // s'éclaire (début, durée) ; le reflet d'objectif au clap
-  // (amortissement) ; profondeur du K.
-  static const startupGalleryFadeIn = .6;
-  static const startupGalleryFrom = 8.95;
-  static const startupGalleryTo = .6;
-  static const startupGalleryPullTime = 4.4;
-  static const startupGalleryArc = .2;
-  static const startupGalleryArcRate = .55;
-  static const startupGalleryWhite = .9;
-  static const startupGalleryWhiteTime = 1.6;
-  static const startupGalleryLitFrom = .3;
-  static const startupGalleryLitTime = 1.5;
-  static const startupGalleryFlare = 3.2;
-  static const startupGalleryMarkDepth = 9.5;
-  // Les pièces du K (barre, branche du haut, du bas) flottent à des
-  // profondeurs différentes, décalées (unités du signe) et pivotées
-  // (radians) : elles ne forment le K qu'au point de vue final.
-  static const startupGalleryPieces = [
-    (-1.6, Offset(-480, 260), -.5),
-    (1.8, Offset(407, -315), .6),
-    (.7, Offset(296, 370), -.35),
+  static const startupLightLead = 5.8;
+  // Le vol (secondes de la scène longue, depuis son début) : sortie du
+  // noir ; trajectoire de la caméra (durée du vol, de la visée, roulis) ;
+  // focale et distance finale au K ; les trois lames du K qui pivotent
+  // vers la caméra (début, décalage entre elles, durée) ; le K qui
+  // s'éclaire en retenue avant le clap (début, durée) ; reflet d'objectif.
+  static const startupFlightFadeIn = .7;
+  static const startupFlightTime = 4.6;
+  static const startupFlightAimTime = 4.2;
+  static const startupFlightRoll = .08;
+  static const startupFlightFocal = 1.6;
+  static const startupFlightRest = 3.3;
+  static const startupFlightTurnFrom = 3.7;
+  static const startupFlightTurnStep = .3;
+  static const startupFlightTurnTime = 1.0;
+  static const startupFlightLitFrom = 4.0;
+  static const startupFlightLitTime = 1.2;
+  static const startupFlightFlare = 3.2;
+  // Trajectoire de la caméra (courbe de Bézier) et de son point de visée.
+  static const startupFlightPath = [
+    (2.6, .5, -16.0),
+    (3.2, .2, -9.0),
+    (-2.4, -.1, -6.5),
+    (0.0, 0.0, -3.3),
+  ];
+  static const startupFlightAim = [
+    (0.0, 0.0, -9.0),
+    (.5, 0.0, -4.0),
+    (0.0, 0.0, 0.0),
+    (0.0, 0.0, 0.0),
   ];
   // Flou du pochoir des lettres (fraction de la hauteur) : la brillance
   // et les rayons, puis la lumière renvoyée sur le verre.

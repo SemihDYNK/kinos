@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:logging/logging.dart';
 
+import 'package:kinos/screens/shared/startup_mark.dart' show StartupMark;
+
 import 'package:kinos/theme/app_theme.dart';
 
 /// Le fond de l'intro, au clap.
@@ -61,6 +63,7 @@ abstract final class StartupAurora {
     try {
       _liquid =
           await ui.FragmentProgram.fromAsset('shaders/startup_liquid.frag');
+      atlas ??= StartupMark.pieceAtlas();
     } catch (error) {
       _log.warning('Fond liquide indisponible : $error');
     }
@@ -153,65 +156,81 @@ abstract final class StartupAurora {
           AppDurations.startupIntro.inMicroseconds /
           1e6;
 
-  /// La galerie de verre à l'instant [story] (secondes de la scène) :
-  /// position et décalage de la caméra (qui recule depuis le cœur
-  /// lumineux), lueur claire du départ, éclairage du K, reflet d'objectif
-  /// et sortie du noir.
+  /// Le vol à l'instant [story] (secondes de la scène) : la caméra
+  /// (position, direction, droite et haut), l'angle des trois lames du K
+  /// (π/2 de profil, 0 face à la caméra), l'éclairage du K, le reflet
+  /// d'objectif et la sortie du noir.
   static ({
-    double depth,
-    double side,
-    double white,
+    List<double> camera,
+    List<double> turns,
     double lit,
     double flare,
     double fade,
-  }) galleryAt(double story) {
+  }) flightAt(double story) {
     double clamp01(double x) => x.clamp(0.0, 1.0);
     double out(double x) => Curves.easeOutCubic.transform(clamp01(x));
-    final pull = Curves.easeInOutCubic
-        .transform(clamp01(story / AppMotion.startupGalleryPullTime));
+    double inOut(double x) => Curves.easeInOutCubic.transform(clamp01(x));
+    List<double> bezier(List<(double, double, double)> p, double t) {
+      final u = 1 - t;
+      final w = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
+      return [
+        for (final axis in [0, 1, 2])
+          [
+            for (var i = 0; i < 4; i++) w[i] * [p[i].$1, p[i].$2, p[i].$3][axis]
+          ].reduce((a, b) => a + b),
+      ];
+    }
+
+    List<double> normal(List<double> v) {
+      final l = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+      return [v[0] / l, v[1] / l, v[2] / l];
+    }
+
+    List<double> cross(List<double> a, List<double> b) => [
+          a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0],
+        ];
+
+    final fly = inOut(story / AppMotion.startupFlightTime);
+    final position = bezier(AppMotion.startupFlightPath, fly);
+    final aim = bezier(AppMotion.startupFlightAim,
+        inOut(story / AppMotion.startupFlightAimTime));
+    final forward = normal([for (var i = 0; i < 3; i++) aim[i] - position[i]]);
+    final right = normal(cross(const [0, 1, 0], forward));
+    final up = cross(forward, right);
+    final roll = AppMotion.startupFlightRoll * math.sin(story * .7) * (1 - fly);
+    final c = math.cos(roll), sn = math.sin(roll);
     final clap = storyOf(0);
     return (
-      depth: ui.lerpDouble(
-          AppMotion.startupGalleryFrom, AppMotion.startupGalleryTo, pull)!,
-      side: AppMotion.startupGalleryArc *
-          math.sin(story * AppMotion.startupGalleryArcRate) *
-          (1 - pull),
-      white: AppMotion.startupGalleryWhite *
-          (1 - out(story / AppMotion.startupGalleryWhiteTime)),
-      lit: out((story - AppMotion.startupGalleryLitFrom) /
-          AppMotion.startupGalleryLitTime),
+      camera: [
+        ...position,
+        ...forward,
+        for (var i = 0; i < 3; i++) right[i] * c + up[i] * sn,
+        for (var i = 0; i < 3; i++) up[i] * c - right[i] * sn,
+      ],
+      turns: [
+        for (var i = 0; i < 3; i++)
+          math.pi /
+              2 *
+              (1 -
+                  inOut((story -
+                          AppMotion.startupFlightTurnFrom -
+                          i * AppMotion.startupFlightTurnStep) /
+                      AppMotion.startupFlightTurnTime)),
+      ],
+      lit: out((story - AppMotion.startupFlightLitFrom) /
+          AppMotion.startupFlightLitTime),
       flare: story > clap
-          ? math.exp(-(story - clap) * AppMotion.startupGalleryFlare)
+          ? math.exp(-(story - clap) * AppMotion.startupFlightFlare)
           : 0.0,
-      fade: out(story / AppMotion.startupGalleryFadeIn),
+      fade: out(story / AppMotion.startupFlightFadeIn),
     );
   }
 
-  /// Une pièce du K à l'instant [story] : son échelle (la perspective,
-  /// 1 au point de vue final), son décalage (unités du signe), sa rotation
-  /// et sa présence (0 tant qu'elle est derrière la caméra). Elles ne
-  /// forment le K qu'à la fin du recul.
-  static ({double scale, Offset offset, double turn, double presence}) pieceAt(
-      int index, double story) {
-    final (depthOffset, offset, turn) = AppMotion.startupGalleryPieces[index];
-    final camera = galleryAt(story).depth;
-    final depth = AppMotion.startupGalleryMarkDepth + depthOffset;
-    final distance = depth - camera;
-    final rest = depth - AppMotion.startupGalleryTo;
-    // Le désalignement s'éteint à mesure que la caméra recule.
-    final apart = ((camera - AppMotion.startupGalleryTo) /
-            (AppMotion.startupGalleryMarkDepth -
-                .6 -
-                AppMotion.startupGalleryTo))
-        .clamp(0.0, 1.0);
-    final settle = apart * apart;
-    return (
-      scale: distance <= .05 ? 0.0 : rest / distance,
-      offset: offset * settle,
-      turn: turn * settle,
-      presence: ((distance - .2) / .8).clamp(0.0, 1.0),
-    );
-  }
+  /// Les trois pièces du K, chacune dans sa case d'une image (barre,
+  /// branche du haut, du bas) : le shader les fait pivoter dans l'espace.
+  static ui.Image? atlas;
 
   /// Peint la lumière du clap sur [rect] : [colors] (encre, cœur), [wave]
   /// secondes après le clap, les traînées convergeant vers [centre] et les
@@ -286,15 +305,28 @@ abstract final class StartupAurora {
     // Les irisations du verre suivent la dominante ; sans elle, gris.
     set(tint == null ? 0 : HSLColor.fromColor(tint).hue / 360);
     set(tint == null ? 0 : 1);
-    final shot = galleryAt(storyOf(wave));
-    set(shot.depth);
-    set(shot.side);
-    set(shot.white);
+    final shot = flightAt(storyOf(wave));
+    for (final v in shot.camera) {
+      set(v);
+    }
+    for (final v in shot.turns) {
+      set(v);
+    }
     set(shot.lit);
     set(shot.flare);
     set(shot.fade);
+    // Taille d'une unité du signe dans l'espace : au point de vue final,
+    // le K a exactement la taille de la signature à l'écran.
+    set(AppBrand.startupMarkSize *
+        scale /
+        256 *
+        AppMotion.startupFlightRest /
+        (AppMotion.startupFlightFocal * height));
+    set(AppMotion.startupFlightFocal);
     shader.setImageSampler(0, glow, filterQuality: FilterQuality.medium);
     shader.setImageSampler(1, spill, filterQuality: FilterQuality.medium);
+    shader.setImageSampler(2, atlas ?? glow,
+        filterQuality: FilterQuality.medium);
 
     final recorder = ui.PictureRecorder();
     Canvas(recorder).drawRect(

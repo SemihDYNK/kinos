@@ -1,10 +1,11 @@
 #version 460 core
 
-// L'intro de Kinos : partie du cœur lumineux, la caméra recule dans une
-// galerie de lames de verre qui s'allument en sortant de derrière elle ;
-// le K, rétroéclairé, projette ses rayons dans la brume où la poussière
-// scintille, et un reflet d'objectif marque le clap. Le K et KINOS sont
-// peints par-dessus (cf. StartupMark) : ici, leur pochoir flouté seulement.
+// L'intro de Kinos : la caméra vole à travers une galerie de plaques de
+// verre posées dans l'espace (de vraies plaques, avec leur position et leur
+// orientation). Elles s'éclairent quand elle les frôle. Au bout, trois
+// lames vues de profil pivotent vers elle et forment le K ; la signature
+// (cf. StartupMark) prend alors le relais, rétroéclairée, avec ses rayons
+// dans la brume, et un reflet d'objectif marque le clap.
 
 #include <flutter/runtime_effect.glsl>
 
@@ -14,29 +15,36 @@ uniform float uTime;
 uniform float uWave;
 // Intensité globale (0 : le noir seul).
 uniform float uIntensity;
-// Centre des lettres (pixels) et force des rayons (0 à l'ouverture).
+// Centre de la signature (pixels) et force des rayons (0 à l'ouverture).
 uniform vec2 uCentre;
 uniform float uRays;
 uniform vec3 uBlack;
 uniform vec3 uInk;
 uniform vec3 uHot;
 uniform float uGrain;
-// Teinte de la dominante (0 à 1) et force des irisations (0 : gris, sans
-// dominante).
+// Teinte de la dominante (0 à 1) et force des irisations (0 : gris).
 uniform float uHue;
 uniform float uIris;
-// La caméra (position, décalage latéral), la lueur claire du départ,
-// l'éclairage du K, le reflet d'objectif et la sortie du noir (cf.
-// StartupAurora.galleryAt).
-uniform float uDepth;
-uniform float uSide;
-uniform float uWhite;
+// La caméra : position, direction, droite, haut (cf. StartupAurora
+// .flightAt).
+uniform vec3 uCam;
+uniform vec3 uForward;
+uniform vec3 uRight;
+uniform vec3 uUp;
+// Angle des trois lames du K (π/2 : de profil, 0 : face à la caméra).
+uniform vec3 uTurns;
+// Éclairage du K, reflet d'objectif, sortie du noir.
 uniform float uLit;
 uniform float uFlare;
 uniform float uFade;
-// Le pochoir des lettres, flou léger puis flou large.
+// Taille d'une unité du signe dans l'espace, et focale.
+uniform float uMarkScale;
+uniform float uFocal;
+// Le pochoir de la signature, flou léger puis flou large, et les trois
+// pièces du K, chacune dans sa case.
 uniform sampler2D uGlow;
 uniform sampler2D uSpill;
+uniform sampler2D uAtlas;
 
 out vec4 fragColor;
 
@@ -67,13 +75,11 @@ float glowAt(vec2 uv) {
   return texture(uGlow, uv).a;
 }
 
-// La galerie : huit plans de lames, du plus proche au plus lointain, avec
-// un couloir libre au centre où la caméra recule. La mise au point est à
-// cette distance ; au-delà comme en deçà, les arêtes s'élargissent.
-const float kFirst = 1.4;
-const float kGap = 1.05;
-const float kFocus = 3.0;
-const float kCorridor = 0.55;
+// Les plaques : candidates tirées au hasard dans le volume, écartées du
+// couloir de la caméra et de l'avant du K. Hautes, pour remplir l'écran
+// de haut en bas.
+const int kCandidates = 54;
+const float kFocus = 3.3;
 
 void main() {
   vec2 px = FlutterFragCoord().xy;
@@ -82,94 +88,109 @@ void main() {
   vec2 centreUv = uCentre / uSize;
   vec2 d = (uv - centreUv) * vec2(aspect, 1.0);
   float r = length(d);
+  vec3 ray = normalize(uForward * uFocal + uRight * d.x - uUp * d.y);
+  float pixel = 1.0 / (uFocal * uSize.y);
   vec3 color = uBlack;
 
-  // La brume : une clarté autour du K, plus forte quand il s'éclaire.
-  // Large quand la caméra est près du K, resserrée une fois reculée.
-  float haze = exp(-r * mix(0.6, 2.2, clamp((9.0 - uDepth) / 8.0, 0.0, 1.0)));
-  color += mix(uInk, uHot, 0.4) * haze *
-           (0.10 * (0.3 + 0.7 * uLit * (uWave > 0.0 ? 1.0 : 0.5)) +
-            0.5 * uWhite);
-
-  // Avant le clap, le K s'éclaire en retenue ; au clap, toute sa
-  // brillance d'un coup.
+  // Avant le clap, le K s'éclaire en retenue ; au clap, toute sa brillance.
   float burst = uWave > 0.0 ? smoothstep(0.0, 0.18, uWave) : 0.0;
   float shine = uLit * mix(0.32, 1.0, burst);
+  // La signature prend le relais des trois lames quand elles ont pivoté.
+  float handoff = smoothstep(-0.45, -0.3, uWave);
 
-  // La lumière des lettres, très étalée : ce que le verre proche en reçoit.
-  float spill = texture(uSpill, uv).a * 5.5 * shine;
-
-  // Les lames, du fond vers l'avant. Chacune a sa largeur, sa lumière, son
-  // allure de reflet ; certaines penchent, et toutes oscillent un peu.
-  for (int layer = 7; layer >= 0; layer--) {
-    float plane = kFirst + float(layer) * kGap;
-    float depth = plane - uDepth;
-    if (depth < 0.15) continue;
-    vec2 w = d * depth + vec2(uSide, 0.0);
-    float density = 1.25;
-    float x = w.x * density + float(layer) * 3.17;
-    float fog = exp(-depth * 0.17);
-    // Un plan s'efface en douceur quand la caméra l'approche, au lieu de
-    // disparaître d'un coup en la dépassant.
-    float near = smoothstep(0.15, 0.9, depth);
-    float defocus = abs(depth - kFocus) * 0.012;
-    float soft = mix(1.0, 1.0 / (1.0 + defocus * 30.0), 0.5);
-    // Une lame penchée déborde de sa case : chaque point regarde aussi les
-    // lames voisines, pour qu'aucune ne soit coupée.
-    for (int k = -2; k <= 2; k++) {
-      float cell = floor(x) + float(k);
-      float id = cell + float(layer) * 31.0;
-      // Le centre de la lame, qui oscille, et sa pente : la plupart presque
-      // droites, une sur trois franchement penchée.
-      float centre = (cell + 0.5 - float(layer) * 3.17) / density +
-                     0.05 * sin(uTime * (0.25 + 0.3 * hash(id + 4.0)) + id);
-      float lean = hash(id + 5.0) < 0.33 ? (hash(id + 6.0) - 0.5) * 0.9
-                                         : (hash(id + 6.0) - 0.5) * 0.12;
-      lean += 0.03 * sin(uTime * 0.3 + id * 1.7);
-      float width = (0.5 + 0.5 * hash(id + 1.0)) / density;
-      float local = (w.x - centre) + w.y * lean;
-      if (abs(local) > width * 0.5) continue;
-      float g = local / width + 0.5;
-      // Le couloir de la caméra écarte les lames entières, jamais en biais.
-      float side = smoothstep(kCorridor, kCorridor + 0.2, abs(centre));
-      // Les arêtes ne sont jamais plus fines qu'un pixel et demi.
-      float pixel = depth / (uSize.y * width);
-      float edge =
-          exp(-pow(g / max(0.012 + defocus, 1.5 * pixel), 2.0)) * 0.9 +
-          exp(-pow((1.0 - g) / max(0.009 + defocus, 1.5 * pixel), 2.0)) * 0.5;
-      float sheen = pow(
-          noise(vec2(w.y * 1.4 - uTime * (0.15 + 0.6 * hash(id + 13.0)), id)),
-          2.0);
-      float tint = fract(g * 0.6 + w.y * 0.12 + hash(id));
-      vec3 iris = hsv(fract(uHue + (tint - 0.5) * 0.32), 0.75 * uIris, 1.0);
-      float spread =
-          smoothstep(0.15, 0.5, g) * smoothstep(0.95, 0.55, g) *
-          (0.4 + 0.6 * noise(vec2(w.y * 2.0 + uTime * 0.2, id * 3.0)));
-      float own = 0.45 + 0.55 * hash(id + 2.0);
-      // Chaque lame s'allume en sortant de derrière la caméra, à son tour :
-      // un éclat descend le long de son arête, puis son irisation apparaît.
-      float lit = clamp((depth - 0.1 - 0.8 * hash(id + 21.0)) / 1.4, 0.0, 1.0);
-      float front = lit * 1.4 - 0.2;
-      float height = d.y + 0.5;
-      float run = smoothstep(front + 0.05, front - 0.05, height);
-      float glint = exp(-pow((height - front) / 0.03, 2.0)) * (1.0 - lit) *
-                    step(0.001, lit);
-      float body = lit * lit;
-      // La lumière de KINOS sur le verre : ses arêtes et son irisation
-      // prennent la couleur des lettres.
-      vec3 letterLight = mix(uHot, vec3(1.0), 0.15);
-      color += letterLight * spill * (edge * 1.2 + spread * 0.9) * side * fog *
-               near * body;
-      iris = mix(iris, uHot, clamp(spill * 0.6, 0.0, 0.7));
-      color += (vec3(1.0) * edge * ((0.3 + 0.7 * sheen) * run + glint * 2.5) +
-                iris * spread * sheen * 0.9 * body + vec3(0.014) * body) *
-               side * fog * own * soft * near;
+  // Les trois lames du K, en verre, qui pivotent vers la caméra.
+  float nearestK = 1e9;
+  vec3 markColor = vec3(0.0);
+  if (handoff < 1.0) {
+    for (int i = 0; i < 3; i++) {
+      // Centre et demi-taille de chaque pièce, en unités du signe (centré).
+      vec2 centre = i == 0 ? vec2(-78.0, 0.0)
+                           : (i == 1 ? vec2(31.5, 59.0) : vec2(31.5, -59.0));
+      vec2 extent = i == 0 ? vec2(30.0, 102.0) : vec2(79.5, 54.0);
+      float turn = i == 0 ? uTurns.x : (i == 1 ? uTurns.y : uTurns.z);
+      vec3 across = vec3(cos(turn), 0.0, sin(turn));
+      vec3 normal = vec3(-sin(turn), 0.0, cos(turn));
+      vec3 origin = vec3(centre * uMarkScale, 0.0);
+      float facing = dot(ray, normal);
+      if (abs(facing) < 1e-4) continue;
+      float t = dot(origin - uCam, normal) / facing;
+      if (t <= 0.0 || t > nearestK) continue;
+      vec3 hit = uCam + ray * t - origin;
+      vec2 local = vec2(dot(hit, across), hit.y) / (extent * uMarkScale);
+      if (abs(local.x) > 1.0 || abs(local.y) > 1.0) continue;
+      float shape = texture(uAtlas,
+                            vec2((float(i) + 0.5 + local.x * 0.5) / 3.0,
+                                 0.5 - local.y * 0.5)).a;
+      if (shape < 0.02) continue;
+      nearestK = t;
+      float level = (centre.y + local.y * extent.y) / 128.0;
+      vec3 grad = mix(mix(uInk, uHot, clamp(0.5 + level * 0.5, 0.0, 1.0)) * 1.15,
+                      vec3(1.0), 0.15);
+      float face = abs(facing);
+      // De profil, un trait de verre clair ; de face, la lame colorée.
+      markColor = (mix(vec3(0.05) + grad * 0.25, grad, shine) * (0.35 + 0.65 * face) +
+                   vec3(1.0) * (1.0 - face) * 0.9) *
+                  shape * (1.0 - handoff);
     }
   }
 
-  // Le K éclairé : ses rayons dans la brume, avec la poussière qui y
-  // scintille, et sa brillance.
-  if (uLit > 0.0) {
+  // La galerie : chaque plaque, éclairée quand la caméra la frôle, plus
+  // sombre derrière le K. Le verre est transparent : elles s'additionnent.
+  for (int i = 0; i < kCandidates; i++) {
+    float k = float(i);
+    vec3 q = vec3((hash(k + 1.0) - 0.5) * 16.0, (hash(k + 3.0) - 0.5) * 0.6,
+                  -16.0 + hash(k + 2.0) * 26.0);
+    // Le couloir du vol, puis l'espace entre la caméra posée et le K ;
+    // derrière le K, la galerie remplit tout le fond.
+    if (q.z < -3.6 && abs(q.x) < 1.4) continue;
+    if (q.z >= -3.6 && q.z < 0.8 && abs(q.x) < 2.1) continue;
+    float yaw = (hash(k + 4.0) - 0.5) * 2.2;
+    float lean = hash(k + 5.0) < 0.3 ? (hash(k + 6.0) - 0.5) * 0.7
+                                      : (hash(k + 6.0) - 0.5) * 0.1;
+    float halfW = 0.45 + 0.75 * hash(k + 7.0);
+    float halfH = 6.0 + 3.0 * hash(k + 8.0);
+    vec3 across = vec3(cos(yaw), 0.0, sin(yaw));
+    vec3 upward = normalize(vec3(-sin(lean) * cos(yaw), cos(lean),
+                                 -sin(lean) * sin(yaw)));
+    vec3 normal = normalize(cross(across, upward));
+    float facing = dot(ray, normal);
+    if (abs(facing) < 1e-4) continue;
+    float t = dot(q - uCam, normal) / facing;
+    if (t <= 0.05) continue;
+    vec3 hit = uCam + ray * t - q;
+    float a = dot(hit, across) / halfW;
+    float b = dot(hit, upward) / halfH;
+    if (abs(a) > 1.0 || abs(b) > 1.0) continue;
+    // Les bords ne sont jamais plus fins qu'un pixel et demi.
+    float defocus = abs(t - kFocus) * 0.006;
+    float width = max(0.006 + defocus, 1.6 * pixel * t);
+    float edge = exp(-pow((1.0 - abs(a)) * halfW / width, 2.0)) +
+                 0.5 * exp(-pow((1.0 - abs(b)) * halfH / width, 2.0));
+    float fog = exp(-t * 0.09);
+    vec3 offset = q - uCam;
+    float pass = exp(-dot(offset, offset) * 0.12);
+    float sheen = pow(noise(vec2(b * 2.0 - uTime * 0.4, k * 3.1)), 2.0);
+    vec3 iris = hsv(fract(uHue + (a * 0.5 + 0.5) * 0.25 - 0.12 + b * 0.05),
+                    0.7 * uIris, 1.0);
+    float spread = smoothstep(0.95, 0.2, abs(a)) *
+                   (0.4 + 0.6 * noise(vec2(b * 3.0 + uTime * 0.2, k)));
+    // Celles qui entourent le K prennent aussi sa lumière.
+    float around = exp(-dot(q.xz, q.xz) * 0.04) * shine;
+    vec3 pane = (vec3(1.0) * edge * (0.45 + 0.55 * sheen) *
+                     (0.6 + 1.8 * pass + 1.2 * around) +
+                 iris * spread * sheen * 0.85 * (0.6 + 1.2 * pass + around) +
+                 mix(uHot, vec3(1.0), 0.2) * edge * around * 0.6 +
+                 vec3(0.012)) *
+                fog;
+    if (t > nearestK) pane *= 0.35;
+    color += pane;
+  }
+  color += markColor;
+
+  // La brume autour du K, la lumière qu'il renvoie, ses rayons et sa
+  // brillance, une fois la signature en place.
+  color += mix(uInk, uHot, 0.4) * exp(-r * 2.2) * 0.08 * (0.3 + 0.7 * shine);
+  if (handoff > 0.0 && uLit > 0.0) {
     if (uRays > 0.0) {
       vec2 toward = centreUv - uv;
       float light = 0.0;
@@ -178,7 +199,7 @@ void main() {
         light += glowAt(uv + toward * (float(i) / 36.0) * 0.85) * weight;
         weight *= 0.955;
       }
-      light = light / 14.0 * shine * uRays;
+      light = light / 14.0 * shine * uRays * handoff;
       vec2 grain = uv * vec2(aspect, 1.0);
       float dust =
           smoothstep(0.986, 1.0,
@@ -190,27 +211,20 @@ void main() {
                (1.0 + dust * 1.6);
     }
     float flash = uWave > 0.0 ? exp(-uWave * 3.0) : 0.0;
-    color += mix(uHot, vec3(1.0), 0.25) * glowAt(uv) * (0.45 * shine + flash);
+    float spill = texture(uSpill, uv).a;
+    color += mix(uHot, vec3(1.0), 0.25) *
+             (glowAt(uv) * (0.45 * shine + flash) + spill * 0.15 * shine) *
+             handoff;
   }
 
-  // Le reflet d'objectif du clap : un trait horizontal et un halo, puis
-  // quelques reflets discrets de la dominante.
+  // Le reflet d'objectif du clap.
   if (uFlare > 0.001) {
     float streak = exp(-abs(d.y) / 0.004) * exp(-abs(d.x) * 1.3);
     float bloom = exp(-dot(d, d) / 0.01);
     color += (mix(uHot, vec3(1.0), 0.5) * streak * 1.4 +
               mix(uInk, vec3(1.0), 0.3) * bloom * 0.6) *
              uFlare;
-    for (int i = 1; i < 4; i++) {
-      vec2 ghost = vec2(-0.12 * float(i) * aspect, 0.05 * float(i));
-      float gd = length(d - ghost);
-      color += hsv(fract(uHue + 0.1 * float(i)), 0.6 * uIris, 1.0) *
-               smoothstep(0.05, 0.035, gd) * 0.08 * uFlare;
-    }
   }
-
-  // Au départ, on est dans la lumière : une lueur claire qui se retire.
-  color += mix(uHot, vec3(1.0), 0.5) * uWhite * 0.9 * exp(-r * 1.5);
 
   color = mix(uBlack, color, uIntensity * uFade);
   color += (hash2(px + fract(uTime * 7.0) * 91.0) - 0.5) * uGrain;
