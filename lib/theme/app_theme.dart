@@ -705,13 +705,13 @@ abstract final class AppDurations {
   /// Au-delà de cet écart moyen entre deux images pendant l'attente du
   /// calme (moins de 15 images/s), l'ouverture ne s'anime pas.
   static const startupStrugglingFrame = Duration(milliseconds: 66);
-  // Premier lancement de la session : allumage, assemblage en profondeur,
-  // hyperespace qui charge le K de couleur, clap, puis le mot (cf.
+  // Premier lancement de la session : hyperespace, le K arrive avec la
+  // lumière qui ralentit et prend ses couleurs, clap, puis le mot (cf.
   // AppMotion.startupIntro*).
-  static const startupIntro = Duration(milliseconds: 4250);
+  static const startupIntro = Duration(milliseconds: 3650);
   // Lancements suivants : la même intro sans « KINOS », arrêtée à la fin
   // de l'assemblage (startupIntro × AppMotion.startupIntroAssemblyEnd).
-  static const startupIntroShort = Duration(milliseconds: 3550);
+  static const startupIntroShort = Duration(milliseconds: 2950);
   // Avance des sons de l'intro sur leur moment : la latence de la sortie
   // audio.
   static const startupSoundLead = Duration(milliseconds: 35);
@@ -757,8 +757,8 @@ abstract final class AppMotion {
   // fraction de cette partie. Ensuite vient le mot : le K glisse pour que
   // « KINOS » soit centré, les lettres INOS arrivent écartées et se
   // resserrent, puis le mot complet se pose.
-  static const startupIntroAssemblyEnd = .835;
-  static const startupIntroWord = Interval(.835, .941);
+  static const startupIntroAssemblyEnd = .808;
+  static const startupIntroWord = Interval(.808, .931);
   // Dans le mot (fraction de [startupIntroWord]) : glissement du K, puis
   // chaque lettre, en décalé.
   static const startupIntroWordSlide = Interval(0, .8, curve: easeOut);
@@ -771,33 +771,21 @@ abstract final class AppMotion {
   // Écart supplémentaire entre lettres à leur arrivée, en unités du signe.
   static const startupIntroTracking = 48.0;
 
-  // Assemblage (fraction de la partie assemblage). La caméra part d'un
-  // gros plan : le contour du K se dessine en fantôme à l'échelle de
-  // l'écran, les pièces arrivent des bords et du fond pendant qu'elle
-  // recule, et le K se pose, fermé. Vient l'hyperespace : des traînées de
-  // lumière filent vers le K et le chargent de couleur. Puis la branche
-  // du haut s'ouvre, prend son élan et se referme comme un clap, et la
-  // marque encaisse le choc.
-  static const startupIntroTrace =
-      Interval(0, .30, curve: Cubic(.45, 0, .25, 1));
-  static const startupIntroTraceFade = Interval(0, .073, curve: easeOut);
+  // Assemblage (fraction de la partie assemblage). Kinos s'ouvre en plein
+  // hyperespace ; le voyage ralentit et les pièces du K arrivent avec la
+  // lumière, des bords et du fond, en prenant ses couleurs. Puis la
+  // branche du haut s'ouvre, prend son élan et se referme comme un clap,
+  // et la marque encaisse le choc.
   static const startupIntroArrivals = [
-    Interval(.085, .315, curve: easeOut),
-    Interval(.158, .388, curve: easeOut),
-    Interval(.121, .351, curve: easeOut),
+    Interval(.305, .61, curve: easeOut),
+    Interval(.37, .68, curve: easeOut),
+    Interval(.34, .65, curve: easeOut),
   ];
   // Taille d'une pièce au fond, avant d'arriver (1 = à sa place).
   static const startupIntroDepth = .6;
   // Distance de départ des pièces, en multiple des écarts de l'assemblage
   // court : assez loin pour qu'elles entrent par les bords de l'écran.
   static const startupIntroSpread = 2.2;
-  // Gros plan de départ (en multiple de la taille finale), et recul de la
-  // caméra : lent au départ pour laisser voir le trait, posé avant l'élan.
-  static const startupIntroCloseup = 6.0;
-  static const startupIntroCamera =
-      Interval(.061, .412, curve: Cubic(.75, 0, .25, 1));
-  // Inclinaison de départ de la caméra, résorbée pendant le recul.
-  static const startupIntroTilt = .35;
   // Images d'affilée sorties à temps avant de lancer l'ouverture.
   static const startupSettleFrames = 8;
   // Branche du haut : arrivée fermée, elle s'ouvre (radians), prend son
@@ -805,21 +793,19 @@ abstract final class AppMotion {
   static const startupIntroClapOpen = -.32;
   static const startupIntroClapLift = -.07;
   static const startupIntroClapOpening =
-      Interval(.80, .855, curve: Cubic(.3, 0, .2, 1));
-  static const startupIntroClapWindup = Interval(.855, .88, curve: easeOut);
+      Interval(.729, .83, curve: Cubic(.3, 0, .2, 1));
+  static const startupIntroClapWindup = Interval(.83, .855, curve: easeOut);
   static const startupIntroClapClose =
-      Interval(.88, .90, curve: Cubic(.6, 0, 1, .6));
+      Interval(.855, .881, curve: Cubic(.6, 0, 1, .6));
   // Instant du clap (fin de la fermeture), puis choc encaissé sans rebond.
-  static const startupIntroClap = .90;
+  static const startupIntroClap = .881;
   static const startupIntroImpact = .02;
-  static const startupIntroImpactIn = Interval(.90, .91);
-  static const startupIntroImpactOut = Interval(.91, .98, curve: easeOut);
-  // Le contour fantôme s'efface quand le K est posé.
-  static const startupIntroGhostOut = Interval(.36, .46, curve: easeOut);
+  static const startupIntroImpactIn = Interval(.881, .89);
+  static const startupIntroImpactOut = Interval(.89, .96, curve: easeOut);
   // Le dégradé de couleur (repli sans shader) naît au clap (fraction de
-  // toute l'intro : startupIntroAssemblyEnd × startupIntroClap ≈ .7515) et
+  // toute l'intro : startupIntroAssemblyEnd × startupIntroClap ≈ .712) et
   // s'étend comme une onde avant de se poser.
-  static const startupIntroBloom = Interval(.7515, .85, curve: easeOut);
+  static const startupIntroBloom = Interval(.712, .82, curve: easeOut);
   // Aurore du clap (cf. StartupAurora) : clarté de chaque tache, écart de
   // teinte des voisines (degrés), saturation maximale (le K blanc doit
   // rester lisible) et vitesse de dérive.
@@ -854,15 +840,23 @@ abstract final class AppMotion {
   static const startupLiquidHot = (22.0, .95, .68);
   static const startupLiquidNeutralLightness = [.5, .75];
   // Les lettres chargées par la lumière : un dégradé du haut (chaud) vers
-  // le bas (la dominante), qui monte entre ces deux instants autour du
-  // clap (secondes) : pendant l'hyperespace, à mesure que les traînées
-  // frappent le K.
+  // le bas (la dominante), qui monte entre ces deux instants avant le
+  // clap (secondes) : pendant que les pièces arrivent avec la lumière.
   static const startupLetterTop = (22.0, .95, .74);
   static const startupLetterBottom = (0.0, .85, .6);
-  static const startupLetterChargeFrom = -1.3;
-  static const startupLetterChargeTo = -.15;
-  // L'hyperespace commence tant de secondes avant le clap.
-  static const startupLightLead = 1.6;
+  static const startupLetterChargeFrom = -1.6;
+  static const startupLetterChargeTo = -.3;
+  // L'intro commence tant de secondes avant le clap : la lumière est là
+  // dès la première image.
+  static const startupLightLead = 2.7;
+  // L'hyperespace : il ralentit entre ces deux instants (secondes depuis
+  // le clap) jusqu'à cette fraction de sa vitesse, et s'éteint entre les
+  // deux suivants.
+  static const startupHyperSlowFrom = -1.7;
+  static const startupHyperSlowTo = -.45;
+  static const startupHyperRest = .05;
+  static const startupHyperOutFrom = -.7;
+  static const startupHyperOutTo = .05;
   // Flou du pochoir des lettres (fraction de la hauteur) : la brillance
   // et les rayons, puis la lumière renvoyée sur le verre.
   static const startupLightGlowBlur = .012;

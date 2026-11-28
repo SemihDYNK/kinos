@@ -148,11 +148,10 @@ class _StartupMarkPainter extends CustomPainter {
       oldDelegate.progress != progress;
 }
 
-/// Premier lancement de la session : depuis un gros plan, le contour du
-/// K se dessine en fantôme, les pièces arrivent des bords de
-/// l'écran et du fond pendant que la caméra recule, et la branche du haut,
-/// arrivée
-/// ouverte, se referme comme un clap (cf. [AppMotion.startupIntroClap]).
+/// Premier lancement de la session : en plein hyperespace (cf.
+/// [StartupAurora]), les pièces du K arrivent des bords de l'écran et du
+/// fond avec la lumière qui ralentit, et se posent ; la branche du haut
+/// s'ouvre puis se referme comme un clap (cf. [AppMotion.startupIntroClap]).
 /// Décalage du K vers la gauche, en unités du signe, pour que « KINOS »
 /// soit centré là où se tenait le K seul.
 final double introWordShift = (_StartupMarkPainter._kLeft + wordmarkRight) / 2 -
@@ -165,7 +164,6 @@ class _StartupIntroPainter extends CustomPainter {
 
   static const _extent = _StartupMarkPainter._extent;
   static List<Path> get _parts => _StartupMarkPainter._parts;
-  static List<ui.PathMetric> get _metrics => _StartupMarkPainter._metrics;
 
   // Charnière de la branche du haut : là où elle rejoint la hampe.
   static const _hinge = Offset(80, 123);
@@ -219,7 +217,7 @@ class _StartupIntroPainter extends CustomPainter {
     // moteur de rendu n'adoucit pas toujours le bord des formes (sans
     // multi-échantillonnage) ; pendant l'assemblage, les pièces viennent
     // de hors de l'écran et le mouvement cache l'escalier.
-    if (AppMotion.startupIntroCamera.transform(a) < 1) {
+    if (AppMotion.startupIntroArrivals.any((i) => i.transform(a) < 1)) {
       _draw(canvas, size);
       return;
     }
@@ -254,7 +252,6 @@ class _StartupIntroPainter extends CustomPainter {
         ? this.progress
         : this.progress * AppMotion.startupIntroAssemblyEnd;
     final unit = size.shortestSide / _extent;
-    final white = AppColors.textPrimary;
     final word = AppMotion.startupIntroWord.transform(progress);
     if (word > 0) {
       // Assemblage fini : le K est à sa taille, sans caméra ni choc.
@@ -266,35 +263,11 @@ class _StartupIntroPainter extends CustomPainter {
     }
     // Avancement de l'assemblage et du clap, avant le mot.
     final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
-    final camera = AppMotion.startupIntroCamera.transform(a);
-    final zoom = ui.lerpDouble(AppMotion.startupIntroCloseup, 1, camera)!;
     final impact = impactScale(a);
-    // Échelle à l'écran d'une unité du signe : les traits gardent leur
-    // épaisseur en pixels pendant le recul de la caméra.
-    final scale = unit * zoom * impact;
+    final scale = unit * impact;
     canvas.translate(size.width / 2, size.height / 2);
     canvas.scale(scale);
-    canvas.transform((Matrix4.identity()
-          ..setEntry(3, 2, AppMotion.startupMarkPerspective / _extent)
-          ..rotateY(AppMotion.startupIntroTilt * (1 - camera)))
-        .storage);
     canvas.translate(-_centre.dx, -_centre.dy);
-
-    // Le contour fantôme : les trois contours se dessinent ensemble, d'un
-    // mouvement régulier, apparaissent en fondu, puis s'effacent au clap.
-    final ghost = 1 - AppMotion.startupIntroGhostOut.transform(a);
-    final trace = AppMotion.startupIntroTrace.transform(a);
-    final appear = AppMotion.startupIntroTraceFade.transform(a);
-    if (ghost > 0 && trace > 0) {
-      final stroke = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = AppBrand.startupGuideWidth / scale
-        ..color = white.withValues(
-            alpha: AppBrand.startupGuideOpacity * ghost * appear);
-      for (final metric in _metrics) {
-        canvas.drawPath(metric.extractPath(0, metric.length * trace), stroke);
-      }
-    }
 
     // Les pièces arrivent des bords et du fond vers leur place.
     for (var i = 0; i < _parts.length; i++) {
