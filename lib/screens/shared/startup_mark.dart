@@ -232,7 +232,9 @@ class _StartupIntroPainter extends CustomPainter {
     final factor = AppBrand.startupMarkSupersample * ratio;
     final region = Rect.fromCenter(
         center: size.center(Offset.zero),
-        width: size.width * 3.4,
+        // Le mot entier, K décalé compris (à 3,4 fois, la barre du K
+        // était coupée).
+        width: size.width * 4.4,
         height: size.height * 1.6);
     final recorder = ui.PictureRecorder();
     final sharp = Canvas(recorder)

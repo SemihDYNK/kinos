@@ -163,7 +163,17 @@ void main() {
   // les pièces viennent se solidifier.
   float condense = smoothstep(-2.2, -0.9, uWave) *
                    (1.0 - smoothstep(-0.35, 0.1, uWave));
-  color += mix(uHot, vec3(1.0), 0.3) * glowAt(uv) * condense * 1.1;
+  // La lumière forme le K : elle s'y dépose par plaques qui s'étendent et
+  // se rejoignent à mesure qu'elle s'accumule, un liseré plus vif au bord
+  // de ce qu'elle a déjà couvert.
+  vec2 grain = uv * vec2(aspect, 1.0);
+  float field = 0.7 * noise(grain * 9.0 + uTime * 0.3) +
+                0.3 * noise(grain * 23.0 - uTime * 0.5);
+  float gathered = smoothstep(-2.3, -0.6, uWave) * 1.3 - 0.15;
+  float formed = smoothstep(field - 0.12, field + 0.12, gathered);
+  float rim = exp(-pow((gathered - field) / 0.05, 2.0));
+  color += mix(uHot, vec3(1.0), 0.3) * glowAt(uv) * condense *
+           (formed * 1.1 + rim * 1.4);
 
   if (uWave > 0.0) {
     // Les rayons : la lumière derrière les lettres, étirée depuis leur
@@ -197,14 +207,6 @@ void main() {
     float flash = uWave > 0.0 ? exp(-uWave * 3.0) : 0.0;
     color += mix(uHot, vec3(1.0), 0.25) * bloom * charge *
              (0.18 * (1.0 - condense) + 1.2 * flash);
-  }
-
-  // Le clap : un anneau de lumière part du K et s'éteint en s'éloignant.
-  if (uWave > 0.0 && uWave < 0.9) {
-    float front = uWave * 1.1;
-    float ring = exp(-pow((r - front) / (0.025 + 0.05 * uWave), 2.0));
-    color += mix(uHot, vec3(1.0), 0.4) * ring * (1.0 - uWave / 0.9) *
-             (1.0 - uWave / 0.9) * 0.8;
   }
 
   color = mix(uBlack, color, uIntensity);
