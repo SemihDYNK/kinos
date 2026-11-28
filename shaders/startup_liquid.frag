@@ -1,7 +1,7 @@
 #version 460 core
 
-// La lumière de l'intro de Kinos : l'hyperespace dès la première image, qui
-// ralentit pendant que le K arrive et s'éteint avant le clap ; puis des rayons
+// La lumière de l'intro de Kinos : des traînées qui convergent vers le
+// centre et s'y condensent en K, avant le clap ; puis des rayons
 // qui traversent le K et KINOS, avec de la poussière dans la lumière, et
 // derrière, des lames de verre irisées qui glissent. Les
 // lettres elles-mêmes sont peintes par-dessus (cf. StartupMark) : ici, leur
@@ -19,10 +19,6 @@ uniform float uIntensity;
 // Centre des lettres (pixels) et force des rayons (0 à l'ouverture).
 uniform vec2 uCentre;
 uniform float uRays;
-// L'hyperespace : chemin parcouru, vitesse (1 au départ) et présence.
-uniform float uTravel;
-uniform float uSpeed;
-uniform float uStreaks;
 uniform vec3 uBlack;
 uniform vec3 uInk;
 uniform vec3 uHot;
@@ -102,7 +98,7 @@ vec3 glass(vec2 d, float depth, float speed, float density, float turn,
 }
 
 // Traînées : autant de couloirs autour du centre, un sur trois ou presque
-// éteint, trois traînées par couloir, chacune à son allure.
+// éteint, trois traînées par couloir, chacune à son instant et son allure.
 const float kLanes = 170.0;
 
 void main() {
@@ -133,31 +129,40 @@ void main() {
     color += panes * lit * (1.1 - smoothstep(0.0, 1.0, r * 0.9)) * 1.1;
   }
 
-  // L'hyperespace : la lumière défile du centre vers vous, puis le voyage
-  // ralentit (les traînées raccourcissent) et s'éteint avant le clap.
-  if (uStreaks > 0.0) {
+  // La condensation : des traînées filent des bords vers le centre, en
+  // vagues, longues ou courtes, rapides ou lentes ; la dernière arrive peu
+  // avant le clap.
+  if (uWave > -2.7 && uWave < 0.0) {
     float lane = (angle + 3.14159) / 6.28318 * kLanes;
     float id = floor(lane);
     float across = fract(lane);
-    float reach = r / (aspect * 0.5);
+    float reach = clamp(r / (0.95 * aspect * 0.5), 0.0, 1.2);
     // Un couloir n'est jamais plus fin qu'un pixel et demi (crénelage).
     float lanePixel = kLanes / (6.28318 * max(r, 1e-3) * uSize.y);
     float thin = exp(-pow((across - 0.5) / max(0.08, 1.5 * lanePixel), 2.0));
     for (int k = 0; k < 3; k++) {
       float seed = id * 3.0 + float(k);
-      float pace = 0.8 + 1.6 * hash(seed);
-      float head = fract(hash(seed + 7.0) + uTravel * pace * 0.6) * 1.3;
-      float len = (0.15 + 0.5 * hash(seed + 21.0)) * max(uSpeed, 0.12);
-      float streak = smoothstep(head - len, head, reach) *
-                     smoothstep(head + 0.01, head, reach) *
-                     smoothstep(0.04, 0.12, reach);
-      float keep = step(0.3, hash(seed + 3.0));
+      float arrive = mix(-2.0, -0.35, hash(seed + 11.0));
+      float span = 0.4 + 0.5 * hash(seed);
+      float len = 0.2 + 0.5 * hash(seed + 21.0);
+      float head = 1.15 * (arrive - uWave) / span;
+      float streak = smoothstep(head + len, head, reach) *
+                     smoothstep(head - 0.01, head, reach);
+      float live = step(-0.05, head) * step(head, 1.2);
+      float keep = step(0.35, hash(seed + 3.0));
       vec3 tone = mix(mix(uInk, uHot, hash(seed + 5.0)), vec3(1.0),
                       0.35 * hash(seed + 9.0));
-      color += tone * streak * thin * keep * (0.6 + 0.8 * hash(seed + 17.0)) *
-               uStreaks * 1.8;
+      color += tone * streak * thin * keep * live *
+               (0.6 + 0.8 * hash(seed + 17.0)) * smoothstep(0.04, 0.16, r) *
+               2.0;
     }
   }
+
+  // La lumière accumulée dessine le K : un K flou qui s'intensifie, où
+  // les pièces viennent se solidifier.
+  float condense = smoothstep(-2.2, -0.9, uWave) *
+                   (1.0 - smoothstep(-0.2, 0.4, uWave));
+  color += mix(uHot, vec3(1.0), 0.3) * glowAt(uv) * condense * 1.3;
 
   if (uWave > 0.0) {
     // Les rayons : la lumière derrière les lettres, étirée depuis leur

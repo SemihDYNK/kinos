@@ -27,7 +27,8 @@ class StartupMark extends StatelessWidget {
   /// [size] : le pochoir de la lumière du clap.
   static void paintIntro(Canvas canvas, Size size, double progress,
           {bool word = true}) =>
-      _StartupIntroPainter(progress, word: word)._draw(canvas, size);
+      _StartupIntroPainter(progress, word: word, stencil: true)
+          ._draw(canvas, size);
 
   /// Version longue du premier lancement de la session (allumage,
   /// assemblage en profondeur, clap) ; sinon, l'assemblage court.
@@ -148,19 +149,24 @@ class _StartupMarkPainter extends CustomPainter {
       oldDelegate.progress != progress;
 }
 
-/// Premier lancement de la session : en plein hyperespace (cf.
-/// [StartupAurora]), les pièces du K arrivent des bords de l'écran et du
-/// fond avec la lumière qui ralentit, et se posent ; la branche du haut
-/// s'ouvre puis se referme comme un clap (cf. [AppMotion.startupIntroClap]).
+/// Premier lancement de la session : la lumière converge et se condense en
+/// K (cf. [StartupAurora]), les pièces s'y solidifient sur place ; la
+/// branche du haut s'ouvre puis se referme comme un clap (cf.
+/// [AppMotion.startupIntroClap]).
 /// Décalage du K vers la gauche, en unités du signe, pour que « KINOS »
 /// soit centré là où se tenait le K seul.
 final double introWordShift = (_StartupMarkPainter._kLeft + wordmarkRight) / 2 -
     _StartupMarkPainter._extent / 2;
 
 class _StartupIntroPainter extends CustomPainter {
-  const _StartupIntroPainter(this.progress, {this.word = true});
+  const _StartupIntroPainter(this.progress,
+      {this.word = true, this.stencil = false});
   final double progress;
   final bool word;
+
+  /// Le pochoir de la lumière (cf. [StartupMark.paintIntro]) : les pièces
+  /// entières, avant qu'elles ne se solidifient.
+  final bool stencil;
 
   static const _extent = _StartupMarkPainter._extent;
   static List<Path> get _parts => _StartupMarkPainter._parts;
@@ -215,8 +221,8 @@ class _StartupIntroPainter extends CustomPainter {
     final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
     // Le K posé (et le mot) : dessiné en double résolution puis réduit. Le
     // moteur de rendu n'adoucit pas toujours le bord des formes (sans
-    // multi-échantillonnage) ; pendant l'assemblage, les pièces viennent
-    // de hors de l'écran et le mouvement cache l'escalier.
+    // multi-échantillonnage) ; avant, les pièces se solidifient dans la
+    // lumière, qui cache l'escalier.
     if (AppMotion.startupIntroArrivals.any((i) => i.transform(a) < 1)) {
       _draw(canvas, size);
       return;
@@ -269,18 +275,13 @@ class _StartupIntroPainter extends CustomPainter {
     canvas.scale(scale);
     canvas.translate(-_centre.dx, -_centre.dy);
 
-    // Les pièces arrivent des bords et du fond vers leur place.
+    // Les pièces se solidifient sur place, dans la lumière condensée ; le
+    // pochoir de la lumière les a entières dès le début.
     for (var i = 0; i < _parts.length; i++) {
-      final arrival = AppMotion.startupIntroArrivals[i].transform(a);
+      final arrival =
+          stencil ? 1.0 : AppMotion.startupIntroArrivals[i].transform(a);
       if (arrival <= 0) continue;
-      final depth = ui.lerpDouble(AppMotion.startupIntroDepth, 1, arrival)!;
-      final offset = AppMotion.startupMarkOffsets[i] *
-          (_extent * AppMotion.startupIntroSpread * (1 - arrival));
       canvas.save();
-      canvas.translate(offset.dx, offset.dy);
-      canvas.translate(_centre.dx, _centre.dy);
-      canvas.scale(depth);
-      canvas.translate(-_centre.dx, -_centre.dy);
       if (i == 1) {
         canvas.translate(_hinge.dx, _hinge.dy);
         canvas.rotate(clapAngle(a));

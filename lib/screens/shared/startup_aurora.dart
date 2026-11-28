@@ -134,33 +134,6 @@ abstract final class StartupAurora {
           [stop(letters[0]), stop(letters[1])]);
   }
 
-  static double _smooth(double from, double to, double x) {
-    final t = ((x - from) / (to - from)).clamp(0.0, 1.0);
-    return t * t * (3 - 2 * t);
-  }
-
-  /// Vitesse de l'hyperespace [wave] secondes après le clap : 1, puis le
-  /// voyage ralentit jusqu'au repos.
-  static double hyperSpeed(double wave) =>
-      1 -
-      (1 - AppMotion.startupHyperRest) *
-          _smooth(AppMotion.startupHyperSlowFrom, AppMotion.startupHyperSlowTo,
-              wave);
-
-  /// Chemin parcouru par l'hyperespace depuis le début de l'intro : la
-  /// vitesse intégrée, pour que les traînées ralentissent sans sauter.
-  static double hyperTravel(double wave) {
-    const steps = 48;
-    final from = -AppMotion.startupLightLead;
-    if (wave <= from) return 0;
-    final dt = (wave - from) / steps;
-    var travel = 0.0;
-    for (var i = 0; i < steps; i++) {
-      travel += hyperSpeed(from + (i + .5) * dt) * dt;
-    }
-    return travel;
-  }
-
   /// Peint la lumière du clap sur [rect] : [colors] (encre, cœur), [wave]
   /// secondes après le clap, les traînées convergeant vers [centre] et les
   /// rayons ([rays], de 0 à 1) à travers les lettres que [paintMask] dessine
@@ -226,13 +199,6 @@ abstract final class StartupAurora {
     set((centre.dx - rect.left) * scale);
     set((centre.dy - rect.top) * scale);
     set(rays);
-    set(hyperTravel(wave));
-    set(hyperSpeed(wave));
-    set(_smooth(AppMotion.startupLightLead * -1.02,
-            AppMotion.startupLightLead * -.9, wave) *
-        (1 -
-            _smooth(AppMotion.startupHyperOutFrom, AppMotion.startupHyperOutTo,
-                wave)));
     color(AppColors.background);
     for (final c in colors) {
       color(c);
