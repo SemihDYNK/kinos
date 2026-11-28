@@ -863,6 +863,10 @@ abstract final class AppMotion {
   static const startupLetterChargeTo = -.15;
   // L'hyperespace commence tant de secondes avant le clap.
   static const startupLightLead = 1.6;
+  // Flou du pochoir des lettres (fraction de la hauteur) : la brillance
+  // et les rayons, puis la lumière renvoyée sur le verre.
+  static const startupLightGlowBlur = .012;
+  static const startupLightSpillBlur = .07;
   // Passage du repli neutre à la vraie dominante, si elle arrive tard.
   static const startupTintFade = Duration(milliseconds: 400);
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie

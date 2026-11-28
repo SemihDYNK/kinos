@@ -27,7 +27,9 @@ uniform float uGrain;
 // sans dominante).
 uniform float uHue;
 uniform float uIris;
-uniform sampler2D uMask;
+// Le pochoir des lettres, flou léger puis flou large.
+uniform sampler2D uGlow;
+uniform sampler2D uSpill;
 
 out vec4 fragColor;
 
@@ -48,8 +50,8 @@ float noise(vec2 p) {
              f.y);
 }
 
-float mask(vec2 uv) {
-  return texture(uMask, uv).a;
+float glowAt(vec2 uv) {
+  return texture(uGlow, uv).a;
 }
 
 vec3 hsv(float h, float s, float v) {
@@ -113,16 +115,9 @@ void main() {
 
   // La lumière des lettres, très étalée : ce que le verre autour d'elles
   // en reçoit.
-  float spill = 0.0;
-  if (uWave > 0.0) {
-    for (int i = 0; i < 12; i++) {
-      float a = float(i) * 0.5236;
-      spill += mask(uv + vec2(cos(a) / aspect, sin(a)) * 0.07);
-      spill += mask(uv + vec2(cos(a + 0.26) / aspect, sin(a + 0.26)) * 0.14) *
-               0.6;
-    }
-    spill = spill / 12.0 * smoothstep(0.0, 0.5, uWave);
-  }
+  float spill = uWave > 0.0 ? texture(uSpill, uv).a * 2.2 *
+                                  smoothstep(0.0, 0.5, uWave)
+                            : 0.0;
 
   // Le verre, éclairé par la lumière arrivée : trois couches d'angles,
   // de finesses et de vitesses différentes, plus claires près des lettres.
@@ -173,7 +168,7 @@ void main() {
       float light = 0.0;
       float weight = 1.0;
       for (int i = 0; i < 40; i++) {
-        light += mask(uv + toward * (float(i) / 40.0) * 0.55) * weight;
+        light += glowAt(uv + toward * (float(i) / 40.0) * 0.55) * weight;
         weight *= 0.94;
       }
       light = light / 30.0 * smoothstep(0.05, 0.5, uWave) * uRays;
@@ -187,21 +182,13 @@ void main() {
     }
   }
 
-  // La brillance des lettres chargées : un flou doux sur deux rayons (pas
-  // un anneau de copies), plus vif au clap.
+  // La brillance des lettres chargées : leur pochoir flouté, plus vif au
+  // clap.
   float charge = smoothstep(-1.3, -0.15, uWave);
   if (charge > 0.0) {
-    float near = 0.0;
-    float far = 0.0;
-    for (int i = 0; i < 12; i++) {
-      float a = float(i) * 0.5236;
-      vec2 dir = vec2(cos(a) / aspect, sin(a));
-      near += mask(uv + dir * 0.006) + mask(uv + dir * 0.012);
-      far += mask(uv + dir * 0.025);
-    }
-    float bloom = near / 24.0 * 0.5 + far / 12.0 * 0.5;
+    float bloom = glowAt(uv);
     float flash = uWave > 0.0 ? exp(-uWave * 4.0) : 0.0;
-    color += mix(uHot, vec3(1.0), 0.25) * bloom * charge * (0.22 + 0.5 * flash);
+    color += mix(uHot, vec3(1.0), 0.25) * bloom * charge * (0.3 + 0.6 * flash);
   }
 
   color = mix(uBlack, color, uIntensity);

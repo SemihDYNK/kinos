@@ -155,15 +155,32 @@ abstract final class StartupAurora {
     final width = math.max(1, (rect.width * scale).ceil());
     final height = math.max(1, (rect.height * scale).ceil());
 
-    // Le pochoir des lettres, à la taille de l'image.
-    final maskRecorder = ui.PictureRecorder();
-    final maskCanvas = Canvas(maskRecorder)
-      ..scale(scale)
-      ..translate(-rect.left, -rect.top);
-    paintMask(maskCanvas);
-    final maskPicture = maskRecorder.endRecording();
-    final mask = maskPicture.toImageSync(width, height);
-    maskPicture.dispose();
+    // Le pochoir des lettres, à la taille de l'image, flouté par Flutter
+    // (un vrai flou ; échantillonné à quelques décalages dans le shader,
+    // il laissait voir des copies des lettres) : un flou léger pour leur
+    // brillance et leurs rayons, un flou large pour la lumière qu'elles
+    // renvoient sur le verre.
+    ui.Image blurred(double sigma) {
+      final recorder = ui.PictureRecorder();
+      final layer = Canvas(recorder)
+        ..saveLayer(
+            null,
+            Paint()
+              ..imageFilter =
+                  ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma));
+      layer
+        ..scale(scale)
+        ..translate(-rect.left, -rect.top);
+      paintMask(layer);
+      layer.restore();
+      final picture = recorder.endRecording();
+      final image = picture.toImageSync(width, height);
+      picture.dispose();
+      return image;
+    }
+
+    final glow = blurred(height * AppMotion.startupLightGlowBlur);
+    final spill = blurred(height * AppMotion.startupLightSpillBlur);
 
     final shader = program.fragmentShader();
     var i = 0;
@@ -190,8 +207,8 @@ abstract final class StartupAurora {
     // Les irisations du verre suivent la dominante ; sans elle, gris.
     set(tint == null ? 0 : HSLColor.fromColor(tint).hue / 360);
     set(tint == null ? 0 : 1);
-    // Lissé : lu au pixel le plus proche, le pochoir crénelait la lueur.
-    shader.setImageSampler(0, mask, filterQuality: FilterQuality.medium);
+    shader.setImageSampler(0, glow, filterQuality: FilterQuality.medium);
+    shader.setImageSampler(1, spill, filterQuality: FilterQuality.medium);
 
     final recorder = ui.PictureRecorder();
     Canvas(recorder).drawRect(
@@ -201,7 +218,8 @@ abstract final class StartupAurora {
     final image = picture.toImageSync(width, height);
     picture.dispose();
     shader.dispose();
-    mask.dispose();
+    glow.dispose();
+    spill.dispose();
     canvas.drawImageRect(
         image,
         Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
