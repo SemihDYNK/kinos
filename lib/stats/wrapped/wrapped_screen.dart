@@ -182,9 +182,10 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
     final tints =
         ref.watch(wrappedTintsProvider(widget.year)).valueOrNull ?? const {};
     final ratings = ref.watch(kinosRatingsProvider);
-    final finished =
-        ref.watch(wrappedFinishedProvider(widget.year)).valueOrNull ??
-            const <WrappedFinished>[];
+    final shows = ref.watch(wrappedShowsProvider(widget.year)).valueOrNull;
+    final returning =
+        ref.watch(wrappedReturningProvider(widget.year)).valueOrNull ??
+            const <WrappedReturning>[];
     final nextYear =
         ref.watch(wrappedNextYearProvider(widget.year)).valueOrNull ??
             const <WrappedPick>[];
@@ -207,7 +208,10 @@ class _YearWrappedScreenState extends ConsumerState<YearWrappedScreen> {
             art: art.value!,
             tints: tints,
             ratings: ratings,
-            finished: finished,
+            finished: shows?.finished ?? const [],
+            abandoned: shows?.abandoned ?? const [],
+            anime: shows?.anime ?? const {},
+            returning: returning,
             nextYear: nextYear);
     final slides =
         inputs == null ? const <WrappedSlide>[] : buildWrappedSlides(inputs);

@@ -230,6 +230,19 @@ class AnilistCatalogIndex {
     if (valid == 0) throw const FormatException('No valid anime mappings');
     return AnilistCatalogIndex._(index);
   }
+
+  /// Une série que ses identifiants (`Tvdb`, `Tmdb`, `AniDB`…) désignent
+  /// comme un anime du catalogue.
+  bool knowsSeries(Map<String, String> providerIds) {
+    final ids = AnilistIds.from(providerIds);
+    if (ids.values.containsKey('anilist')) return true;
+    for (final e in ids.values.entries) {
+      final key =
+          e.key == 'tmdb' ? 'tmdb:series:${e.value}' : '${e.key}:${e.value}';
+      if (_index.containsKey(key)) return true;
+    }
+    return false;
+  }
 }
 
 AnilistMatch resolveAnilistTarget(

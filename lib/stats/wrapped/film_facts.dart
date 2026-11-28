@@ -21,7 +21,8 @@ class FilmFacts {
       this.language,
       this.year,
       this.poster,
-      this.backdrop});
+      this.backdrop,
+      this.countries = const []});
   final double? publicRating;
   final int? votes;
   final String? language;
@@ -32,6 +33,9 @@ class FilmFacts {
   final String? poster;
   final String? backdrop;
 
+  /// Pays de production (codes ISO 3166-1, « FR », « JP »).
+  final List<String> countries;
+
   Map<String, Object?> toJson() => {
         if (publicRating != null) 'r': publicRating,
         if (votes != null) 'v': votes,
@@ -39,6 +43,7 @@ class FilmFacts {
         if (year != null) 'y': year,
         if (poster != null) 'p': poster,
         if (backdrop != null) 'b': backdrop,
+        if (countries.isNotEmpty) 'c': countries,
       };
 
   static FilmFacts fromJson(Map json) => FilmFacts(
@@ -48,6 +53,10 @@ class FilmFacts {
         year: json['y'] as int?,
         poster: json['p'] as String?,
         backdrop: json['b'] as String?,
+        countries: [
+          for (final c in json['c'] as List? ?? const [])
+            if (c is String) c
+        ],
       );
 
   /// Depuis la fiche film brute de Seerr (`movie/<id>`). Une note sans
@@ -70,16 +79,20 @@ class FilmFacts {
       backdrop: json['backdropPath'] is String
           ? json['backdropPath'] as String
           : null,
+      countries: [
+        for (final c in json['productionCountries'] as List? ?? const [])
+          if (c is Map && c['iso_3166_1'] is String) c['iso_3166_1'] as String
+      ],
     );
   }
 }
 
 /// Le cache des faits par film TMDB, dans la table `Settings`, une portée
-/// par profil (v2 : avec les images). Les faits bougent peu : relus après
-/// [maxAge].
+/// par profil (v3 : avec les images et les pays). Les faits bougent peu :
+/// relus après [maxAge].
 class FilmFactsStore {
   FilmFactsStore(this.db, String profileScope)
-      : scope = '$profileScope:film-facts:v2';
+      : scope = '$profileScope:film-facts:v3';
   final AppDatabase db;
   final String scope;
 

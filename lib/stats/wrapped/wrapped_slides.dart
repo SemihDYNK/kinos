@@ -26,8 +26,11 @@ import 'wrapped_data.dart';
 import 'wrapped_export.dart' show WrappedPage, WrappedStoryLayout;
 import 'wrapped_habits.dart';
 import 'wrapped_media.dart';
+import 'wrapped_more.dart';
 import 'wrapped_motion.dart';
 import 'wrapped_quotes.dart';
+
+part 'wrapped_slides_more.dart';
 
 /// Une diapo : son identifiant (stable d'un calcul à l'autre), sa durée en
 /// secondes et son contenu, posé dans une [WrappedClock].
@@ -48,6 +51,9 @@ class WrappedInputs {
       required this.ratings,
       this.finished = const [],
       this.nextYear = const [],
+      this.abandoned = const [],
+      this.anime = const {},
+      this.returning = const [],
       this.userName});
   final WrappedData data;
   final Map<String, WrappedArt> art;
@@ -59,6 +65,12 @@ class WrappedInputs {
   final List<WrappedFinished> finished;
   final List<WrappedPick> nextYear;
 
+  /// Les séries laissées de côté, les anime parmi les séries, et les
+  /// séries qui reviennent : vides tant qu'ils ne sont pas arrivés.
+  final List<WrappedAbandoned> abandoned;
+  final Set<String> anime;
+  final List<WrappedReturning> returning;
+
   /// Le nom affiché sur les pages de synthèse (à l'export, si demandé).
   final String? userName;
 
@@ -69,6 +81,9 @@ class WrappedInputs {
       ratings: ratings,
       finished: finished,
       nextYear: nextYear,
+      abandoned: abandoned,
+      anime: anime,
+      returning: returning,
       userName: name);
 
   ImageData? backdrop(ViewingEvent e) => art[e.identity]?.backdrop;
@@ -188,6 +203,27 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
       mode < 0 ? const <ImageData>[] : fresh(ratingColumns[mode]);
   final agreementImages =
       fresh([for (final r in stats.topRated) r.event], take: 4);
+  final versusImages = fresh(films.reversed);
+  // Le tour du monde : d'abord les films des pays les moins vus.
+  final world = data.world;
+  final worldImages = world == null
+      ? const <ImageData>[]
+      : fresh([
+          for (final c in world.countries.reversed)
+            for (final e in films)
+              if (e.tmdbId != null &&
+                  (data.facts[e.tmdbId]?.countries.contains(c.code) ?? false))
+                e
+        ]);
+  // L'anime : la part de ses épisodes, et l'anime le plus regardé.
+  final animeSeries = [
+    for (final s in data.allSeries)
+      if (w.anime.contains(s.name)) s
+  ];
+  final animeEpisodes =
+      animeSeries.fold(0, (sum, s) => sum + s.episodes.length);
+  final allEpisodes =
+      data.allSeries.fold(0, (sum, s) => sum + s.episodes.length);
 
   return [
     WrappedSlide(
@@ -224,6 +260,12 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
           id: 'rhythm',
           seconds: AppWrapped.rhythm,
           builder: (_) => _RhythmSlide(inputs: w, images: rhythmImages)),
+    if (data.versus case final versus?)
+      WrappedSlide(
+          id: 'versus',
+          seconds: AppWrapped.versus,
+          builder: (_) =>
+              _VersusSlide(inputs: w, versus: versus, images: versusImages)),
     WrappedSlide(
         id: 'act2',
         seconds: AppWrapped.act,
@@ -298,11 +340,22 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
           id: 'voyage',
           seconds: AppWrapped.voyage,
           builder: (_) => _VoyageSlide(inputs: w)),
+    if (world != null)
+      WrappedSlide(
+          id: 'world',
+          seconds: AppWrapped.world,
+          builder: (_) =>
+              _WorldSlide(inputs: w, world: world, images: worldImages)),
     if (stats.elsewhere > 0)
       WrappedSlide(
           id: 'elsewhere',
           seconds: AppWrapped.elsewhere,
           builder: (_) => _ElsewhereSlide(inputs: w, films: films)),
+    if (data.records case final records?)
+      WrappedSlide(
+          id: 'records',
+          seconds: AppWrapped.records,
+          builder: (_) => _RecordsSlide(inputs: w, records: records)),
     // Acte III : les séries, s'il y en a.
     if (data.series.isNotEmpty) ...[
       WrappedSlide(
@@ -320,6 +373,20 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
           id: 'series',
           seconds: AppWrapped.genre,
           builder: (_) => _SeriesSlide(inputs: w)),
+      if (data.channel case final channel?)
+        WrappedSlide(
+            id: 'channel',
+            seconds: AppWrapped.channel,
+            builder: (_) => _ChannelSlide(inputs: w, channel: channel)),
+      if (animeEpisodes >= AppWrapped.animeMinEpisodes && allEpisodes > 0)
+        WrappedSlide(
+            id: 'anime',
+            seconds: AppWrapped.anime,
+            builder: (_) => _AnimeSlide(
+                inputs: w,
+                share: animeEpisodes / allEpisodes,
+                top: animeSeries.first.name,
+                episodes: animeSeries.first.episodes.length)),
       if (data.marathon case final marathon?)
         WrappedSlide(
             id: 'marathon',
@@ -336,6 +403,16 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
             id: 'finished',
             seconds: AppWrapped.finished,
             builder: (_) => _FinishedSlide(inputs: w)),
+      if (w.abandoned.isNotEmpty)
+        WrappedSlide(
+            id: 'abandoned',
+            seconds: AppWrapped.abandoned,
+            builder: (_) => _AbandonedSlide(inputs: w)),
+      if (w.returning.isNotEmpty)
+        WrappedSlide(
+            id: 'returning',
+            seconds: AppWrapped.returning,
+            builder: (_) => _ReturningSlide(inputs: w)),
       if (data.series.firstOrNull case final show?)
         WrappedSlide(
             id: 'series-of-year',
@@ -358,6 +435,11 @@ List<WrappedSlide> buildWrappedSlides(WrappedInputs w) {
         id: 'profile',
         seconds: AppWrapped.profile,
         builder: (_) => _ProfileSlide(inputs: w)),
+    if (data.soulmate case final soulmate?)
+      WrappedSlide(
+          id: 'soulmate',
+          seconds: AppWrapped.soulmate,
+          builder: (_) => _SoulmateSlide(inputs: w, soulmate: soulmate)),
     if (w.nextYear.isNotEmpty)
       WrappedSlide(
           id: 'next-year',

@@ -9,7 +9,13 @@ import 'package:kinos/models/items/images_models.dart';
 import 'package:kinos/providers/api_provider.dart';
 import 'package:kinos/providers/theme/palette_service_provider.dart';
 import 'package:kinos/recommendations/providers/recommendation_providers.dart';
+import 'package:kinos/anilist/anilist_providers.dart'
+    show anilistCatalogProvider;
+import 'package:kinos/anilist/anilist_runtime.dart'
+    show anilistConnectionProvider;
+import 'package:kinos/anilist/mapping.dart' show AnilistCatalogIndex;
 import 'package:kinos/upcoming/upcoming_models.dart' show tmdbImage;
+import 'package:kinos/upcoming/upcoming_providers.dart' show upcomingProvider;
 
 import '../viewing_log.dart';
 import 'wrapped_data.dart';
@@ -102,13 +108,35 @@ const _maxSeries = 40;
 /// Une série terminée cette année.
 typedef WrappedFinished = ({String name, int episodes});
 
-/// Les séries finies cette année : tous leurs épisodes (hors spéciaux) vus
-/// dans Jellyfin, dont au moins un cette année. Le journal ne connaît pas
+/// Une série commencée cette année puis laissée de côté : vue jusqu'à
+/// [played] épisodes sur [total].
+typedef WrappedAbandoned = ({String name, int played, int total});
+
+/// Ce que Jellyfin dit des séries de l'année : les terminées, les laissées
+/// de côté, et celles qui sont des anime.
+typedef WrappedShows = ({
+  List<WrappedFinished> finished,
+  List<WrappedAbandoned> abandoned,
+  Set<String> anime,
+});
+
+/// Sans épisode depuis tant de jours, une série commencée est mise de côté.
+const abandonedAfter = Duration(days: 45);
+
+/// Les séries de l'année vues par Jellyfin : terminées (tous les épisodes
+/// hors spéciaux vus, dont au moins un cette année), commencées cette année
+/// puis laissées de côté, et reconnues comme anime (genre « Anime », ou
+/// catalogue AniList quand un compte est relié). Le journal ne connaît pas
 /// le nombre total d'épisodes : on le demande à Jellyfin.
-final wrappedFinishedProvider = FutureProvider.autoDispose
-    .family<List<WrappedFinished>, int>((ref, year) async {
+final wrappedShowsProvider =
+    FutureProvider.autoDispose.family<WrappedShows, int>((ref, year) async {
   final data = await ref.watch(wrappedDataProvider(year).future);
   final api = ref.read(jellyApiProvider);
+  const empty = (
+    finished: <WrappedFinished>[],
+    abandoned: <WrappedAbandoned>[],
+    anime: <String>{},
+  );
   final firstEpisode = <String, String>{
     for (final s in data.allSeries.take(_maxSeries))
       if (s.episodes.firstWhere((e) => e.jellyfinId != null,
@@ -116,7 +144,7 @@ final wrappedFinishedProvider = FutureProvider.autoDispose
           case final e when e.jellyfinId != null)
         e.jellyfinId!: s.name
   };
-  if (firstEpisode.isEmpty) return const [];
+  if (firstEpisode.isEmpty) return empty;
   final episodeItems = await api.usersUserIdItemsGet(
       ids: firstEpisode.keys.toList(), enableUserData: false);
   final seriesOf = <String, String>{
@@ -124,7 +152,45 @@ final wrappedFinishedProvider = FutureProvider.autoDispose
       if (dto.seriesId != null && firstEpisode[dto.id] != null)
         dto.seriesId!: firstEpisode[dto.id]!
   };
+  if (seriesOf.isEmpty) return empty;
+
+  // Les anime : le genre, sinon le catalogue AniList (seulement si un
+  // compte est relié : il est alors déjà téléchargé).
+  final shows = await api.usersUserIdItemsGet(
+      ids: seriesOf.keys.toList(),
+      fields: const [ItemFields.providerids, ItemFields.genres],
+      enableUserData: false,
+      enableImages: false);
+  AnilistCatalogIndex? catalog;
+  try {
+    if (await ref.read(anilistConnectionProvider.future) != null) {
+      catalog = await ref.read(anilistCatalogProvider).load();
+    }
+  } catch (_) {
+    catalog = null;
+  }
+  final anime = <String>{};
+  for (final dto in shows.body?.items ?? const <BaseItemDto>[]) {
+    final name = seriesOf[dto.id];
+    if (name == null) continue;
+    final genre =
+        (dto.genres ?? const []).any((g) => g.toLowerCase() == 'anime');
+    final ids = {
+      for (final e in (dto.providerIds ?? const {}).entries)
+        if (e.value != null) e.key: '${e.value}'
+    };
+    if (genre || (catalog?.knowsSeries(ids) ?? false)) anime.add(name);
+  }
+
+  final end = DateTime.now().isBefore(DateTime(year + 1))
+      ? DateTime.now()
+      : DateTime(year + 1);
+  final lastSeen = {
+    for (final s in data.allSeries)
+      s.name: s.episodes.map((e) => e.at).reduce((a, b) => a.isAfter(b) ? a : b)
+  };
   final finished = <WrappedFinished>[];
+  final abandoned = <WrappedAbandoned>[];
   for (final entry in seriesOf.entries) {
     final response = await api.usersUserIdItemsGet(
         parentId: entry.key,
@@ -137,12 +203,64 @@ final wrappedFinishedProvider = FutureProvider.autoDispose
         if ((dto.parentIndexNumber ?? 1) > 0) dto
     ];
     if (episodes.isEmpty) continue;
-    if (episodes.every((dto) => dto.userData?.played == true)) {
+    final played = episodes.where((dto) => dto.userData?.played == true).length;
+    if (played == episodes.length) {
       finished.add((name: entry.value, episodes: episodes.length));
+    } else if (data.startedThisYear.contains(entry.value) &&
+        end.difference(lastSeen[entry.value] ?? end) > abandonedAfter) {
+      abandoned
+          .add((name: entry.value, played: played, total: episodes.length));
     }
   }
   ref.keepAlive();
-  return finished..sort((a, b) => b.episodes.compareTo(a.episodes));
+  return (
+    finished: finished..sort((a, b) => b.episodes.compareTo(a.episodes)),
+    abandoned: abandoned..sort((a, b) => a.played.compareTo(b.played)),
+    anime: anime,
+  );
+});
+
+/// Une série qui revient : sa prochaine saison annoncée.
+typedef WrappedReturning = ({
+  String title,
+  int? season,
+  DateTime date,
+  ImageData? backdrop,
+});
+
+/// Les séries de l'année dont une suite est annoncée, d'après la frise de
+/// la page Prochainement (déjà calculée, aucune requête). Seulement pour
+/// l'année en cours.
+final wrappedReturningProvider = FutureProvider.autoDispose
+    .family<List<WrappedReturning>, int>((ref, year) async {
+  final now = DateTime.now();
+  if (year != now.year) return const [];
+  final data = await ref.watch(wrappedDataProvider(year).future);
+  final entries = ref.watch(upcomingProvider.select((s) => s.entries));
+  if (entries == null) return const [];
+  String norm(String s) => s.toLowerCase().trim();
+  final watched = {for (final s in data.allSeries) norm(s.name): s.name};
+  final found = <String, WrappedReturning>{};
+  for (final e in entries) {
+    final date = e.date;
+    final name = watched[norm(e.title)];
+    if (e.type != 'tv' || date == null || !date.isAfter(now) || name == null) {
+      continue;
+    }
+    final known = found[name];
+    if (known != null && !date.isBefore(known.date)) continue;
+    found[name] = (
+      title: name,
+      season: e.season,
+      date: date,
+      backdrop: e.backdropPath == null
+          ? null
+          : ImageData(
+              path: tmdbImage(e.backdropPath!, size: 'w1280'),
+              key: 'wrapped:w1280:${e.backdropPath}'),
+    );
+  }
+  return found.values.toList()..sort((a, b) => a.date.compareTo(b.date));
 });
 
 /// Un titre conseillé pour l'an prochain.

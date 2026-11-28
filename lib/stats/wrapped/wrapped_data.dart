@@ -8,6 +8,7 @@ import '../viewing_stats.dart';
 import 'film_facts.dart';
 import 'wrapped_habits.dart';
 import 'wrapped_hook.dart';
+import 'wrapped_more.dart';
 
 /// L'ambiance musicale d'un acte, tirée des genres qui le portent.
 enum WrappedMood { piano, tension, ampleur, melancolie, legerete }
@@ -150,6 +151,12 @@ class WrappedData {
     this.hours,
     this.pace,
     required this.profile,
+    this.versus,
+    this.soulmate,
+    this.records,
+    this.world,
+    this.channel,
+    this.startedThisYear = const {},
   });
 
   final int year;
@@ -193,6 +200,17 @@ class WrappedData {
 
   /// Votre profil de spectateur.
   final WrappedProfile profile;
+
+  /// L'an dernier, l'âme sœur cinéphile, les records, le tour du monde et
+  /// la chaîne de l'année : null faute de matière.
+  final WrappedVersus? versus;
+  final WrappedSoulmate? soulmate;
+  final WrappedRecords? records;
+  final WrappedWorld? world;
+  final WrappedChannel? channel;
+
+  /// Les séries commencées cette année (les abandons les cherchent).
+  final Set<String> startedThisYear;
   final WrappedHook? hook;
 
   /// Les séries de l'année, de la plus regardée à la moins : leurs
@@ -408,6 +426,15 @@ WrappedData computeWrapped(
     hours: hours,
     pace: fastestSeason(series),
     profile: profile,
+    versus: wrappedVersus(all, ratings, year),
+    soulmate: wrappedSoulmate([
+      for (final t in friendTakes)
+        (film: t.film, mine: t.mine, ratings: t.ratings)
+    ]),
+    records: wrappedRecords(timeline),
+    world: wrappedWorld(films.values, facts),
+    channel: wrappedChannel(series),
+    startedThisYear: seriesStartedIn(all, year),
     year: year,
     stats: stats,
     timeline: timeline,

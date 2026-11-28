@@ -496,6 +496,21 @@ abstract final class AppWrapped {
   static const finished = 10.0;
   static const profile = 11.0;
   static const nextYear = 11.0;
+  static const versus = 10.0;
+  static const soulmate = 11.0;
+  static const world = 10.0;
+  static const records = 10.0;
+  static const channel = 9.0;
+  static const anime = 9.0;
+  static const abandoned = 9.0;
+  static const returning = 10.0;
+
+  /// Pays nommés sur le tour du monde, affiches partagées avec l'âme sœur.
+  static const worldCountries = 5;
+  static const soulmatePosters = 4;
+
+  /// Épisodes d'anime au minimum pour leur diapo.
+  static const animeMinEpisodes = 10;
 }
 
 abstract final class AppStatsLayout {
