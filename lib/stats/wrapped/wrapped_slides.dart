@@ -3290,7 +3290,7 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
       final counts = <String, int>{};
       final films = {for (final e in data.timeline) e.identity: e}.values;
       for (final e in films) {
-        for (final genre in e.genres.toSet()) {
+        for (final genre in wrappedGenres(e.genres)) {
           counts[genre] = (counts[genre] ?? 0) + 1;
         }
       }
@@ -3302,7 +3302,7 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
       for (final genre in ranked.map((e) => e.key)) {
         final candidates = [
           for (final e in films)
-            if (e.genres.contains(genre) &&
+            if (wrappedGenres(e.genres).contains(genre) &&
                 !used.contains(e.identity) &&
                 w.poster(e) != null)
               e

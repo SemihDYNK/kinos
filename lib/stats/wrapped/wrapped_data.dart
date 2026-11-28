@@ -1,6 +1,7 @@
 import 'package:kinos/letterboxd/friends/letterboxd_friends_store.dart'
     show FriendRating;
 import 'package:kinos/ratings/kinos_ratings.dart';
+import 'package:kinos/recommendations/adapters/catalog_inventory.dart';
 
 import '../viewing_log.dart';
 import '../viewing_stats.dart';
@@ -43,6 +44,15 @@ const _moods = {
     'family',
   ],
 };
+
+/// Les genres d'une œuvre, fusionnés entre taxonomies (« Drama » et
+/// « Drame » ne font qu'un) ; « Téléfilm » est un format, pas un genre.
+Set<String> wrappedGenres(Iterable<String> genres) => {
+      for (final g in genres)
+        if (canonicalGenreLabel(g) case final label
+            when label.isNotEmpty && label != 'Téléfilm')
+          label
+    };
 
 /// L'humeur du premier genre reconnu de [genres], le piano sinon.
 WrappedMood moodOfGenres(Iterable<String> genres) {
@@ -385,7 +395,7 @@ WrappedData computeWrapped(
         .fold(0, (sum, e) => sum + e.seconds),
     hours: hours,
     binge: bingeShare(series),
-    genres: {for (final e in films.values) ...e.genres}.length,
+    genres: {for (final e in films.values) ...wrappedGenres(e.genres)}.length,
     foreignShare:
         withLanguage.length < 8 ? null : foreign.length / withLanguage.length,
     medianYear: releases.length < 8 ? null : medianYear,
