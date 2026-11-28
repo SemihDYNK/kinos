@@ -70,8 +70,11 @@ vec3 glass(vec2 d, float depth, float speed, float density) {
   float width = 0.55 + 0.45 * hash(id + depth);
   float inside = step(f, width);
   float g = f / width;
-  float edge = exp(-pow(g / 0.025, 2.0)) * 1.4 +
-               exp(-pow((1.0 - g) / 0.015, 2.0)) * 0.9;
+  // Les arêtes ne sont jamais plus fines qu'un pixel et demi : plus
+  // fines, elles crénelaient.
+  float pixel = density / (uSize.y * width);
+  float edge = exp(-pow(g / max(0.025, 1.5 * pixel), 2.0)) * 1.4 +
+               exp(-pow((1.0 - g) / max(0.015, 1.5 * pixel), 2.0)) * 0.9;
   float sheen =
       pow(noise(vec2(q.y * 1.5 - uTime * speed * sign(speed) * 1.0, id)), 3.0);
   float spread = smoothstep(0.15, 0.5, g) * smoothstep(0.95, 0.55, g) *
@@ -119,7 +122,9 @@ void main() {
     float streak = smoothstep(head + kLength, head, reach) *
                    smoothstep(head - 0.01, head, reach);
     float live = step(0.0, uWave - delay) * step(travel, 1.2);
-    float thin = exp(-pow((across - 0.5) / 0.07, 2.0));
+    // Un couloir n'est jamais plus fin qu'un pixel et demi (crénelage).
+    float lanePixel = kLanes / (6.28318 * max(r, 1e-3) * uSize.y);
+    float thin = exp(-pow((across - 0.5) / max(0.07, 1.5 * lanePixel), 2.0));
     float keep = step(0.3, hash(id + 3.0));
     vec3 tone = mix(mix(uInk, uHot, hash(id + 5.0)), vec3(1.0),
                     0.3 * hash(id + 9.0));

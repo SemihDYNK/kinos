@@ -836,7 +836,7 @@ abstract final class AppMotion {
   // Lumière du clap (cf. StartupAurora.paintLiquid) : côté le plus long
   // de son image (agrandie à l'écran), grain, et clap depuis longtemps
   // passé quand il n'a pas été vu (intro passée).
-  static const startupLiquidResolution = 640.0;
+  static const startupLiquidResolution = 1280.0;
   static const startupLiquidGrain = .05;
   static const startupLiquidCalm = 30.0;
   // Couleurs de la lumière : l'encre (la dominante) et le cœur chaud
