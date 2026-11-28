@@ -1,10 +1,37 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:logging/logging.dart';
 
 import 'package:kinos/theme/app_theme.dart';
+
+/// Le fond de l'intro, au clap.
+enum StartupBackdrop {
+  /// La goutte : l'onde part du K et découvre le liquide du film.
+  drop,
+
+  /// La goutte, puis le liquide se retire dans un faisceau qui s'ouvre
+  /// depuis le K.
+  dropBeam,
+
+  /// L'ancienne aurore : des taches de couleur floues.
+  aurora,
+}
+
+/// `KINOS_STARTUP_BACKDROP=drop`, `drop-beam` ou `aurora` (mise au point) ;
+/// la goutte par défaut.
+StartupBackdrop startupBackdropFrom(Map<String, String> environment) =>
+    switch (environment['KINOS_STARTUP_BACKDROP']) {
+      'drop-beam' => StartupBackdrop.dropBeam,
+      'aurora' => StartupBackdrop.aurora,
+      _ => StartupBackdrop.drop,
+    };
+
+final _log = Logger('StartupAurora');
 
 /// Aurore de l'intro longue : de grandes taches de couleur floues, tirées
 /// de la dominante du film du bandeau, qui dérivent lentement et se
@@ -23,6 +50,123 @@ abstract final class StartupAurora {
   /// Temps de l'aurore, en secondes, mis à jour à chaque image par
   /// [StartupAuroraTicker].
   static final time = ValueNotifier<double>(0);
+
+  /// Le fond choisi pour cette session.
+  static StartupBackdrop backdrop = kIsWeb
+      ? StartupBackdrop.aurora
+      : startupBackdropFrom(Platform.environment);
+
+  static ui.FragmentProgram? _liquid;
+  static Future<void>? _loading;
+
+  /// Charge le shader du fond liquide (une fois). Sans lui (échec, ou pas
+  /// encore prêt au clap), l'aurore prend le relais.
+  static Future<void> loadLiquid() => _loading ??= _load();
+
+  static Future<void> _load() async {
+    if (backdrop == StartupBackdrop.aurora) return;
+    try {
+      _liquid =
+          await ui.FragmentProgram.fromAsset('shaders/startup_liquid.frag');
+    } catch (error) {
+      _log.warning('Fond liquide indisponible : $error');
+    }
+  }
+
+  /// Le fond liquide est prêt et choisi.
+  static bool get liquid =>
+      backdrop != StartupBackdrop.aurora && _liquid != null;
+
+  /// Temps de l'aurore au clap ; `null` tant qu'il n'a pas eu lieu.
+  static double? clapAt;
+
+  /// Secondes depuis le clap. Sans clap vu (intro passée), une onde depuis
+  /// longtemps calmée : le liquide est entier.
+  static double get wave =>
+      clapAt == null ? AppMotion.startupLiquidCalm : time.value - clapAt!;
+
+  /// Le fond, l'encre et le cœur chaud du liquide, tirés de la dominante.
+  /// Un fond de la teinte opposée : le film orangé sur un fond sarcelle.
+  static List<Color> liquidColorsFor(Color tint) {
+    final base = HSLColor.fromColor(tint);
+    Color shade((double, double, double) spec) => base
+        .withHue((base.hue + spec.$1) % 360)
+        .withSaturation(spec.$2)
+        .withLightness(spec.$3)
+        .toColor();
+    return [
+      shade(AppMotion.startupLiquidGround),
+      shade(AppMotion.startupLiquidInk),
+      shade(AppMotion.startupLiquidHot),
+    ];
+  }
+
+  /// Le liquide en attendant la dominante : des gris.
+  static List<Color> get liquidNeutral => [
+        for (final lightness in AppMotion.startupLiquidNeutralLightness)
+          HSLColor.fromAHSL(1, 0, 0, lightness).toColor(),
+      ];
+
+  /// Peint le fond liquide sur [rect] : [colors] (fond, encre, cœur),
+  /// [wave] secondes après le clap, le faisceau (variante) depuis
+  /// [source]. Comme l'aurore, dans une petite image agrandie à l'écran.
+  static void paintLiquid(Canvas canvas, Rect rect,
+      {required List<Color> colors,
+      required double wave,
+      required Offset source,
+      double intensity = 1,
+      BlendMode blendMode = BlendMode.srcOver}) {
+    final program = _liquid;
+    if (rect.isEmpty || program == null) return;
+    final scale =
+        math.min(1.0, AppMotion.startupLiquidResolution / rect.longestSide);
+    final width = math.max(1, (rect.width * scale).ceil());
+    final height = math.max(1, (rect.height * scale).ceil());
+    final beam = Curves.easeInOut.transform(
+        ((wave - AppMotion.startupLiquidBeamDelay) /
+                AppMotion.startupLiquidBeamOpen)
+            .clamp(0.0, 1.0));
+    final shader = program.fragmentShader();
+    var i = 0;
+    void set(double value) => shader.setFloat(i++, value);
+    void color(Color c) {
+      set(c.r);
+      set(c.g);
+      set(c.b);
+    }
+
+    set(width.toDouble());
+    set(height.toDouble());
+    set(time.value);
+    set(wave);
+    set(intensity);
+    set(backdrop == StartupBackdrop.dropBeam ? 1 : 0);
+    set((source.dx - rect.left) * scale);
+    set((source.dy - rect.top) * scale);
+    set(beam);
+    color(AppColors.background);
+    for (final c in colors) {
+      color(c);
+    }
+    set(AppMotion.startupLiquidGrain);
+
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawRect(
+        Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+        Paint()..shader = shader);
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width, height);
+    picture.dispose();
+    shader.dispose();
+    canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+        rect,
+        Paint()
+          ..blendMode = blendMode
+          ..filterQuality = FilterQuality.medium);
+    image.dispose();
+  }
 
   static void _tick() {
     if (!_clock.isRunning) _clock.start();

@@ -628,6 +628,12 @@ class _ClapBloom extends StatelessWidget {
                     tint == null
                         ? StartupAurora.neutral
                         : StartupAurora.colorsFor(tint!),
+                    ready),
+                liquid: StartupAurora.blend(
+                    StartupAurora.liquidNeutral,
+                    tint == null
+                        ? StartupAurora.liquidNeutral
+                        : StartupAurora.liquidColorsFor(tint!),
                     ready)),
           ),
         ),
@@ -636,10 +642,16 @@ class _ClapBloom extends StatelessWidget {
 
 class _AuroraPainter extends CustomPainter {
   _AuroraPainter(
-      {required this.progress, required this.colors, required this.word})
+      {required this.progress,
+      required this.colors,
+      required this.liquid,
+      required this.word})
       : super(repaint: Listenable.merge([progress, StartupAurora.time]));
   final Animation<double> progress;
   final List<Color> colors;
+
+  /// Le fond, l'encre et le cœur du liquide (cf. [StartupAurora.liquid]).
+  final List<Color> liquid;
   final bool word;
 
   @override
@@ -648,12 +660,28 @@ class _AuroraPainter extends CustomPainter {
     final bloom = AppMotion.startupIntroBloom.transform(word
         ? progress.value
         : progress.value * AppMotion.startupIntroAssemblyEnd);
-    if (bloom <= 0) return;
+    if (bloom <= 0) {
+      StartupAurora.clapAt = null;
+      return;
+    }
+    if (StartupAurora.liquid) {
+      // La goutte tombe au clap : l'onde part du K, au centre.
+      StartupAurora.clapAt ??= StartupAurora.time.value;
+      StartupAurora.paintLiquid(canvas, Offset.zero & size,
+          colors: liquid,
+          wave: StartupAurora.wave,
+          source: size.center(Offset.zero) -
+              Offset(
+                  size.shortestSide * AppMotion.startupLiquidSourceShift, 0));
+      return;
+    }
     StartupAurora.paint(canvas, Offset.zero & size,
         colors: colors, intensity: bloom);
   }
 
   @override
   bool shouldRepaint(_AuroraPainter oldDelegate) =>
-      oldDelegate.colors != colors || oldDelegate.progress != progress;
+      oldDelegate.colors != colors ||
+      oldDelegate.liquid != liquid ||
+      oldDelegate.progress != progress;
 }

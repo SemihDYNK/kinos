@@ -352,9 +352,24 @@ class StartupIntroBeam extends CustomPainter {
     final aurora =
         tint == null ? StartupAurora.neutral : StartupAurora.colorsFor(tint!);
     const glowing = 1.0;
+    // Le fond né au clap : le liquide s'il est prêt, sinon l'aurore.
+    void backdrop({BlendMode blendMode = BlendMode.srcOver}) {
+      if (StartupAurora.liquid) {
+        StartupAurora.paintLiquid(canvas, Offset.zero & size,
+            colors: tint == null
+                ? StartupAurora.liquidNeutral
+                : StartupAurora.liquidColorsFor(tint!),
+            wave: StartupAurora.wave,
+            source: notch,
+            blendMode: blendMode);
+      } else {
+        StartupAurora.paint(canvas, Offset.zero & size,
+            colors: aurora, intensity: glowing, blendMode: blendMode);
+      }
+    }
+
     if (on <= 0 || length <= 0) {
-      StartupAurora.paint(canvas, Offset.zero & size,
-          colors: aurora, intensity: glowing);
+      backdrop();
       _paintMark(canvas, toScreen, unit, half, progress);
       return;
     }
@@ -480,8 +495,7 @@ class StartupIntroBeam extends CustomPainter {
             const [0, 1 - AppMotion.startupIntroBeamFront, 1],
           ));
 
-    StartupAurora.paint(canvas, Offset.zero & size,
-        colors: aurora, intensity: glowing, blendMode: BlendMode.srcATop);
+    backdrop(blendMode: BlendMode.srcATop);
     canvas.restore();
 
     _paintMark(canvas, toScreen, unit, half, progress);

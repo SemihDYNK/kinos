@@ -237,6 +237,10 @@ flutter:
   uses-material-design: true
   generate: true
 
+  # Le fond liquide de l'intro (lib/screens/shared/startup_aurora.dart).
+  shaders:
+    - shaders/startup_liquid.frag
+
   assets:
     - icons/
     - assets/fonts/

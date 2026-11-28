@@ -14,6 +14,7 @@ import 'package:kinos/providers/user_provider.dart';
 import 'package:kinos/providers/theme/palette_service_provider.dart';
 import 'package:kinos/providers/views_provider.dart';
 import 'package:kinos/routes/auto_router.gr.dart';
+import 'package:kinos/screens/shared/startup_aurora.dart';
 import 'package:kinos/screens/shared/startup_curtain.dart';
 import 'package:kinos/screens/shared/startup_frame_log.dart';
 import 'package:kinos/screens/shared/startup_home.dart';
@@ -71,6 +72,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // Le fond liquide du clap : prêt bien avant lui (repli sur l'aurore).
+    if (_intro) unawaited(StartupAurora.loadLiquid());
     // Relevé des images lentes, jusqu'à la fin de la révélation.
     if (ref.read(argumentsStateProvider).newWindow != true) {
       StartupFrameLog.start();
