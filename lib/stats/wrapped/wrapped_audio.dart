@@ -127,7 +127,7 @@ class WrappedAudio {
     _ramps.remove(player)?.cancel();
     late final Timer timer;
     timer = Timer.periodic(_fadeStep, (_) {
-      if (_disposed) return timer.cancel();
+      if (_disposed || !backgroundPlayerOpen(player)) return timer.cancel();
       final t = (DateTime.now().difference(start).inMicroseconds /
               length.inMicroseconds)
           .clamp(0.0, 1.0);

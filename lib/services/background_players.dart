@@ -12,6 +12,11 @@ mpv.Player openBackgroundPlayer(mpv.PlayerConfiguration configuration) {
   return player;
 }
 
+/// [player] n'a pas encore été libéré : la fermeture de la fenêtre libère
+/// tous les lecteurs d'un coup, sans prévenir leurs propriétaires, dont les
+/// fondus en cours doivent alors s'arrêter.
+bool backgroundPlayerOpen(mpv.Player player) => _players.contains(player);
+
 /// Libère [player], une seule fois même si la fermeture de la fenêtre l'a
 /// déjà fait.
 Future<void> disposeBackgroundPlayer(mpv.Player player) async {

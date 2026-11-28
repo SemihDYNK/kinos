@@ -58,7 +58,7 @@ class StartupSounds {
       mpv.MediaKit.ensureInitialized();
       Future<mpv.Player> load(String asset, double volume) async {
         final player = openBackgroundPlayer(const mpv.PlayerConfiguration(
-                vo: 'null', title: 'Kinos', logLevel: mpv.MPVLogLevel.error));
+            vo: 'null', title: 'Kinos', logLevel: mpv.MPVLogLevel.error));
         await player.setVolume(volume);
         await player.open(mpv.Media('asset:///assets/sounds/$asset'),
             play: false);
@@ -84,7 +84,7 @@ class StartupSounds {
 
   /// Le clap : l'interrupteur, et la nappe qui monte avec l'aurore.
   void clap() {
-    if (_disposed) return;
+    if (_disposed || !backgroundPlayerOpen(_clap)) return;
     _clap.play();
     _aurora.play();
   }
@@ -98,9 +98,10 @@ class StartupSounds {
     _fading = Timer.periodic(_fadeStep, (timer) {
       final t = DateTime.now().difference(start).inMicroseconds /
           duration.inMicroseconds;
-      if (_disposed || t >= 1) {
+      final open = !_disposed && backgroundPlayerOpen(_aurora);
+      if (!open || t >= 1) {
         timer.cancel();
-        if (!_disposed) _aurora.pause();
+        if (open) _aurora.pause();
         return;
       }
       // Descente en douceur, plus marquée vers la fin.
@@ -113,11 +114,11 @@ class StartupSounds {
   static const _fadeStep = Duration(milliseconds: 15);
 
   void beam() {
-    if (!_disposed) _beam.play();
+    if (!_disposed && backgroundPlayerOpen(_beam)) _beam.play();
   }
 
   void window() {
-    if (!_disposed) _window.play();
+    if (!_disposed && backgroundPlayerOpen(_window)) _window.play();
   }
 
   /// Libère les lecteurs une fois les derniers sons finis : libérés à la
