@@ -95,7 +95,7 @@ void main() {
   float shine = uLit * mix(0.32, 1.0, burst);
 
   // La lumière des lettres, très étalée : ce que le verre proche en reçoit.
-  float spill = texture(uSpill, uv).a * 3.5 * shine;
+  float spill = texture(uSpill, uv).a * 5.5 * shine;
 
   // Les lames, du fond vers l'avant. Chacune a sa largeur, sa lumière, son
   // allure de reflet ; certaines penchent, et toutes oscillent un peu.
@@ -106,9 +106,10 @@ void main() {
     vec2 w = d * depth + vec2(uSide, 0.0);
     float density = 1.25;
     float x = w.x * density + float(layer) * 3.17;
-    // La lumière s'allume plan après plan, vers le fond.
-    float on = smoothstep(plane - 0.2, plane + 0.6, uIgnite);
     float fog = exp(-depth * 0.17);
+    // Un plan s'efface en douceur quand la caméra l'approche, au lieu de
+    // disparaître d'un coup en la dépassant.
+    float near = smoothstep(0.15, 0.9, depth);
     float defocus = abs(depth - kFocus) * 0.012;
     float soft = mix(1.0, 1.0 / (1.0 + defocus * 30.0), 0.5);
     // Une lame penchée déborde de sa case : chaque point regarde aussi les
@@ -143,11 +144,25 @@ void main() {
           smoothstep(0.15, 0.5, g) * smoothstep(0.95, 0.55, g) *
           (0.4 + 0.6 * noise(vec2(w.y * 2.0 + uTime * 0.2, id * 3.0)));
       float own = 0.45 + 0.55 * hash(id + 2.0);
-      color += mix(uHot, vec3(1.0), 0.2) * spill *
-               (edge * 0.9 + spread * 0.6) * side * fog;
-      color += (vec3(1.0) * edge * (0.3 + 0.7 * sheen) * on +
-                iris * spread * sheen * 0.9 * on + vec3(0.014)) *
-               side * fog * own * soft;
+      // Chaque lame s'allume à son tour, d'avant en arrière : un éclat
+      // descend le long de son arête, puis son irisation apparaît.
+      float start = plane * 0.55 + 1.6 * hash(id + 21.0);
+      float lit = clamp((uIgnite - start) / 1.4, 0.0, 1.0);
+      float front = lit * 1.4 - 0.2;
+      float height = d.y + 0.5;
+      float run = smoothstep(front + 0.05, front - 0.05, height);
+      float glint = exp(-pow((height - front) / 0.03, 2.0)) * (1.0 - lit) *
+                    step(0.001, lit);
+      float body = lit * lit;
+      // La lumière de KINOS sur le verre : ses arêtes et son irisation
+      // prennent la couleur des lettres.
+      vec3 letterLight = mix(uHot, vec3(1.0), 0.15);
+      color += letterLight * spill * (edge * 1.2 + spread * 0.9) * side * fog *
+               near * body;
+      iris = mix(iris, uHot, clamp(spill * 0.6, 0.0, 0.7));
+      color += (vec3(1.0) * edge * ((0.3 + 0.7 * sheen) * run + glint * 2.5) +
+                iris * spread * sheen * 0.9 * body + vec3(0.014) * body) *
+               side * fog * own * soft * near;
     }
   }
 

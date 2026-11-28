@@ -860,7 +860,7 @@ abstract final class AppMotion {
   static const startupGalleryArc = .35;
   static const startupGalleryArcRate = .55;
   static const startupGalleryIgniteFrom = .7;
-  static const startupGalleryIgniteTime = 2.6;
+  static const startupGalleryIgniteTime = 3.0;
   static const startupGalleryIgniteDepth = 11.0;
   static const startupGalleryLitFrom = 2.7;
   static const startupGalleryLitTime = 1.0;
