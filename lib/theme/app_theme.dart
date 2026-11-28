@@ -789,13 +789,13 @@ abstract final class AppMotion {
   static const startupIntroClapOpen = -.32;
   static const startupIntroClapLift = -.07;
   static const startupIntroClapOpening =
-      Interval(.729, .83, curve: Cubic(.3, 0, .2, 1));
-  static const startupIntroClapWindup = Interval(.83, .855, curve: easeOut);
+      Interval(.80, .85, curve: Cubic(.3, 0, .2, 1));
+  static const startupIntroClapWindup = Interval(.85, .865, curve: easeOut);
   static const startupIntroClapClose =
-      Interval(.855, .881, curve: Cubic(.6, 0, 1, .6));
+      Interval(.865, .881, curve: Cubic(.6, 0, 1, .6));
   // Instant du clap (fin de la fermeture), puis choc encaissé sans rebond.
   static const startupIntroClap = .881;
-  static const startupIntroImpact = .02;
+  static const startupIntroImpact = .05;
   static const startupIntroImpactIn = Interval(.881, .89);
   static const startupIntroImpactOut = Interval(.89, .96, curve: easeOut);
   // Le dégradé de couleur (repli sans shader) naît au clap (fraction de
