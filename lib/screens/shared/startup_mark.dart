@@ -23,6 +23,12 @@ class StartupMark extends StatelessWidget {
       (size / _StartupMarkPainter._extent);
   final double progress;
 
+  /// Peint la signature de l'intro (K, puis KINOS) dans un carré de côté
+  /// [size] : le pochoir de la lumière du clap.
+  static void paintIntro(Canvas canvas, Size size, double progress,
+          {bool word = true}) =>
+      _StartupIntroPainter(progress, word: word).paint(canvas, size);
+
   /// Version longue du premier lancement de la session (allumage,
   /// assemblage en profondeur, clap) ; sinon, l'assemblage court.
   final bool intro;
@@ -182,9 +188,10 @@ class _StartupIntroPainter extends CustomPainter {
   }
 
   /// Le mot posé : K et INOS, centrés ensemble.
-  void _paintWord(Canvas canvas, double word, Paint paint) {
+  void _paintWord(Canvas canvas, double word) {
     final slide = AppMotion.startupIntroWordSlide.transform(word);
     canvas.translate(-introWordShift * slide, 0);
+    final paint = StartupAurora.letterPaint(1);
     for (final part in _parts) {
       canvas.drawPath(part, paint);
     }
@@ -195,8 +202,7 @@ class _StartupIntroPainter extends CustomPainter {
       canvas.save();
       canvas.translate(
           AppMotion.startupIntroTracking * (i + 1) * (1 - letter), 0);
-      canvas.drawPath(wordmarkLetters[i],
-          Paint()..color = paint.color.withValues(alpha: letter));
+      canvas.drawPath(wordmarkLetters[i], StartupAurora.letterPaint(letter));
       canvas.restore();
     }
   }
@@ -217,7 +223,7 @@ class _StartupIntroPainter extends CustomPainter {
       canvas.translate(size.width / 2, size.height / 2);
       canvas.scale(unit);
       canvas.translate(-_centre.dx, -_centre.dy);
-      _paintWord(canvas, word, Paint()..color = white);
+      _paintWord(canvas, word);
       return;
     }
     // Avancement de l'assemblage et du clap, avant le mot.
@@ -269,8 +275,7 @@ class _StartupIntroPainter extends CustomPainter {
         canvas.rotate(clapAngle(a));
         canvas.translate(-_hinge.dx, -_hinge.dy);
       }
-      canvas.drawPath(
-          _parts[i], Paint()..color = white.withValues(alpha: arrival));
+      canvas.drawPath(_parts[i], StartupAurora.letterPaint(arrival));
       canvas.restore();
     }
   }
@@ -351,16 +356,27 @@ class StartupIntroBeam extends CustomPainter {
     // Sans dominante (pas encore calculée), l'aurore neutre en gris profonds.
     final aurora =
         tint == null ? StartupAurora.neutral : StartupAurora.colorsFor(tint!);
+    StartupAurora.letters = tint == null
+        ? StartupAurora.letterNeutral
+        : StartupAurora.letterColorsFor(tint!);
     const glowing = 1.0;
     // Le fond né au clap : le liquide s'il est prêt, sinon l'aurore.
     void backdrop({BlendMode blendMode = BlendMode.srcOver}) {
       if (StartupAurora.liquid) {
+        // La lumière du clap, ses rayons éteints à mesure que le
+        // projecteur s'allume.
         StartupAurora.paintLiquid(canvas, Offset.zero & size,
             colors: tint == null
                 ? StartupAurora.liquidNeutral
                 : StartupAurora.liquidColorsFor(tint!),
             wave: StartupAurora.wave,
-            blendMode: blendMode);
+            centre: centre,
+            rays: 1 - on,
+            tint: tint,
+            blendMode: blendMode, paintMask: (mask) {
+          mask.translate(centre.dx - markSize / 2, centre.dy - markSize / 2);
+          StartupMark.paintIntro(mask, Size.square(markSize), 1, word: word);
+        });
       } else {
         StartupAurora.paint(canvas, Offset.zero & size,
             colors: aurora, intensity: glowing, blendMode: blendMode);
@@ -510,8 +526,7 @@ class StartupIntroBeam extends CustomPainter {
     // que parce qu'elles s'écartent. Tout s'efface à la fin.
     final mark = 1 - AppMotion.startupIntroMarkOut.transform(progress);
     if (mark > 0) {
-      final white = Paint()
-        ..color = AppColors.textPrimary.withValues(alpha: mark);
+      final white = StartupAurora.letterPaint(mark);
       final turn = half - mouthAngle;
       canvas.save();
       canvas.translate(toScreen(Offset.zero).dx, toScreen(Offset.zero).dy);
@@ -535,8 +550,7 @@ class StartupIntroBeam extends CustomPainter {
       canvas.save();
       canvas.translate(toScreen(Offset.zero).dx, toScreen(Offset.zero).dy);
       canvas.scale(unit);
-      final paint = Paint()
-        ..color = AppColors.textPrimary.withValues(alpha: letters);
+      final paint = StartupAurora.letterPaint(letters);
       for (final letter in wordmarkLetters) {
         canvas.drawPath(letter, paint);
       }

@@ -623,6 +623,7 @@ class _ClapBloom extends StatelessWidget {
             painter: _AuroraPainter(
                 progress: progress,
                 word: word,
+                tint: tint,
                 colors: StartupAurora.blend(
                     StartupAurora.neutral,
                     tint == null
@@ -634,6 +635,12 @@ class _ClapBloom extends StatelessWidget {
                     tint == null
                         ? StartupAurora.liquidNeutral
                         : StartupAurora.liquidColorsFor(tint!),
+                    ready),
+                letters: StartupAurora.blend(
+                    StartupAurora.letterNeutral,
+                    tint == null
+                        ? StartupAurora.letterNeutral
+                        : StartupAurora.letterColorsFor(tint!),
                     ready)),
           ),
         ),
@@ -645,13 +652,21 @@ class _AuroraPainter extends CustomPainter {
       {required this.progress,
       required this.colors,
       required this.liquid,
-      required this.word})
+      required this.letters,
+      required this.word,
+      this.tint})
       : super(repaint: Listenable.merge([progress, StartupAurora.time]));
   final Animation<double> progress;
   final List<Color> colors;
 
-  /// Le fond, l'encre et le cœur du liquide (cf. [StartupAurora.liquid]).
+  /// L'encre et le cœur de la lumière (cf. [StartupAurora.liquid]), et les
+  /// couleurs des lettres chargées.
   final List<Color> liquid;
+  final List<Color> letters;
+
+  /// La dominante du film (les irisations du verre), `null` tant qu'elle
+  /// n'est pas prête.
+  final Color? tint;
   final bool word;
 
   @override
@@ -664,11 +679,22 @@ class _AuroraPainter extends CustomPainter {
       StartupAurora.clapAt = null;
       return;
     }
+    // Le clap : la lumière arrive, les lettres se chargent de ses couleurs
+    // (avec ou sans shader).
+    StartupAurora.clapAt ??= StartupAurora.time.value;
+    StartupAurora.letters = letters;
     if (StartupAurora.liquid) {
-      // La goutte tombe au clap : l'onde part du K, au centre.
-      StartupAurora.clapAt ??= StartupAurora.time.value;
+      final centre = size.center(Offset.zero);
+      const mark = AppBrand.startupMarkSize;
       StartupAurora.paintLiquid(canvas, Offset.zero & size,
-          colors: liquid, wave: StartupAurora.wave);
+          colors: liquid,
+          wave: StartupAurora.wave,
+          centre: centre,
+          tint: tint, paintMask: (mask) {
+        mask.translate(centre.dx - mark / 2, centre.dy - mark / 2);
+        StartupMark.paintIntro(mask, const Size.square(mark), progress.value,
+            word: word);
+      });
       return;
     }
     StartupAurora.paint(canvas, Offset.zero & size,
@@ -679,5 +705,7 @@ class _AuroraPainter extends CustomPainter {
   bool shouldRepaint(_AuroraPainter oldDelegate) =>
       oldDelegate.colors != colors ||
       oldDelegate.liquid != liquid ||
+      oldDelegate.letters != letters ||
+      oldDelegate.tint != tint ||
       oldDelegate.progress != progress;
 }

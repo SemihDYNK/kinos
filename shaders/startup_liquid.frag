@@ -1,26 +1,40 @@
 #version 460 core
 
-// Le fond liquide de l'intro de Kinos : des ruisseaux de lumière aux
-// couleurs du film, qui coulent sur un fond presque noir, révélés au clap
-// par l'onde d'une goutte tombée sur le K.
+// La lumière de l'intro de Kinos, au clap : des traînées qui filent des
+// bords vers les lettres (une fois chacune, puis plus rien), des rayons
+// qui traversent le K et KINOS, avec de la poussière dans la lumière, et
+// derrière, des lames de verre irisées qui glissent. Les
+// lettres elles-mêmes sont peintes par-dessus (cf. StartupMark) : ici, leur
+// pochoir seulement.
 
 #include <flutter/runtime_effect.glsl>
 
 uniform vec2 uSize;
-// Secondes depuis le début de l'aurore, et depuis le clap (négatif avant).
+// Secondes depuis le début de l'intro, et depuis le clap (négatif avant).
 uniform float uTime;
 uniform float uWave;
-// Intensité globale (0 : le fond seul, 1 : le liquide entier).
+// Intensité globale (0 : le noir seul).
 uniform float uIntensity;
+// Centre des lettres (pixels) et force des rayons (0 à l'ouverture).
+uniform vec2 uCentre;
+uniform float uRays;
 uniform vec3 uBlack;
-uniform vec3 uGround;
 uniform vec3 uInk;
 uniform vec3 uHot;
 uniform float uGrain;
+// Teinte de la dominante (0 à 1) et force des irisations du verre (0 : gris,
+// sans dominante).
+uniform float uHue;
+uniform float uIris;
+uniform sampler2D uMask;
 
 out vec4 fragColor;
 
-float hash(vec2 p) {
+float hash(float p) {
+  return fract(sin(p * 127.1) * 43758.5453);
+}
+
+float hash2(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
@@ -28,121 +42,121 @@ float noise(vec2 p) {
   vec2 i = floor(p);
   vec2 f = fract(p);
   f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
-             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+  return mix(mix(hash2(i), hash2(i + vec2(1.0, 0.0)), f.x),
+             mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), f.x),
+             f.y);
 }
 
-float fbm(vec2 p) {
-  float v = 0.0;
-  float a = 0.5;
-  for (int i = 0; i < 5; i++) {
-    v += a * noise(p);
-    p = p * 2.03 + vec2(1.7, 9.2);
-    a *= 0.5;
-  }
-  return v;
+float mask(vec2 uv) {
+  return texture(uMask, uv).a;
 }
 
-// Le même bruit, en trois octaves : un champ lisse pour les ruisseaux.
-float fbm3(vec2 p) {
-  float v = 0.0;
-  float a = 0.5;
-  for (int i = 0; i < 3; i++) {
-    v += a * noise(p);
-    p = p * 2.03 + vec2(1.7, 9.2);
-    a *= 0.5;
-  }
-  return v;
+vec3 hsv(float h, float s, float v) {
+  vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0,
+                 0.0, 1.0);
+  return v * mix(vec3(1.0), k, s);
 }
 
-// Phase des ruisseaux en un point (coordonnées en hauteurs d'écran) : une
-// pente en diagonale, ondulée par un champ lisse qui se déforme lentement.
-// Ses lignes sont de longs arcs presque parallèles qui balaient l'écran,
-// jamais des boucles fermées.
-float streamPhase(vec2 s0, float t) {
-  vec2 w = vec2(fbm3(s0 * 0.8 + t * 0.2), fbm3(s0 * 0.8 + vec2(4.1, 7.3) - t * 0.2));
-  return dot(s0, vec2(0.75, 0.55)) * 4.0 + fbm3(s0 * 0.9 + 1.5 * w) * 5.0;
+// Une couche de lames de verre en diagonale qui glissent : une arête vive,
+// un reflet qui court le long du verre, et à l'intérieur une irisation
+// limitée aux teintes voisines de la dominante.
+vec3 glass(vec2 d, float depth, float speed, float density) {
+  float turn = -0.62;
+  vec2 q = vec2(cos(turn) * d.x - sin(turn) * d.y,
+                sin(turn) * d.x + cos(turn) * d.y);
+  float x = q.x * density + uTime * speed + depth * 7.0;
+  float id = floor(x);
+  float f = fract(x);
+  float width = 0.55 + 0.45 * hash(id + depth);
+  float inside = step(f, width);
+  float g = f / width;
+  float edge = exp(-pow(g / 0.025, 2.0)) * 1.4 +
+               exp(-pow((1.0 - g) / 0.015, 2.0)) * 0.9;
+  float sheen =
+      pow(noise(vec2(q.y * 1.5 - uTime * speed * sign(speed) * 1.0, id)), 3.0);
+  float spread = smoothstep(0.15, 0.5, g) * smoothstep(0.95, 0.55, g) *
+                 (0.4 + 0.6 * noise(vec2(q.y * 2.0 + uTime * 0.2, id * 3.0)));
+  float tint = fract(g * 0.6 + q.y * 0.15 + hash(id));
+  vec3 iris = hsv(fract(uHue + (tint - 0.5) * 0.32), 0.75 * uIris, 1.0);
+  vec3 c = vec3(0.025) + iris * spread * 0.55 * sheen * 2.0 +
+           vec3(0.9) * edge * (0.25 + 0.75 * sheen) + uInk * 0.05 * g;
+  return c * inside;
 }
 
-// Vitesse du front de l'onde, en hauteurs d'écran par seconde.
-const float kSpeed = 0.95;
-// Fréquence des rides (par hauteur d'écran).
-const float kRipples = 55.0;
+// Traînées : autant de couloirs autour du centre, un sur trois ou presque
+// éteint ; chacune part d'un instant à elle, à sa vitesse, et ne passe
+// qu'une fois.
+const float kLanes = 150.0;
+const float kLength = 0.28;
 
 void main() {
   vec2 px = FlutterFragCoord().xy;
   vec2 uv = px / uSize;
   float aspect = uSize.x / uSize.y;
-  vec2 d = (uv - 0.5) * vec2(aspect, 1.0);
-  float dist = length(d);
+  vec2 centreUv = uCentre / uSize;
+  vec2 d = (uv - centreUv) * vec2(aspect, 1.0);
+  float r = length(d);
+  float angle = atan(d.y, d.x);
+  vec3 color = uBlack;
 
-  // L'onde : des rides qui partent du centre, amorties derrière le front
-  // et avec le temps. Elles déforment le liquide et accrochent la lumière.
-  float front = uWave * kSpeed;
-  float spec = 0.0;
-  vec2 offset = vec2(0.0);
   if (uWave > 0.0) {
-    float x = dist - front;
-    float envelope = smoothstep(0.03, -0.02, x) * exp(-2.6 * max(0.0, -x)) *
-                     exp(-uWave * 0.75);
-    float slope = cos(x * kRipples) * envelope;
-    offset = normalize(d + 1e-4) * sin(x * kRipples) * envelope * 0.025;
-    spec = pow(max(0.0, slope), 3.0) * 0.9;
+    // Le verre, éclairé par la lumière qui arrive : deux couches qui
+    // glissent en sens contraires, plus claires près des lettres.
+    float lit = smoothstep(0.3, 1.6, uWave);
+    vec3 panes = glass(d, 0.0, 0.035, 2.2) +
+                 glass(d * 1.4 + vec2(0.3, 0.0), 1.0, -0.06, 3.0) * 0.55;
+    color += panes * lit * (1.1 - smoothstep(0.0, 1.0, r * 0.9)) * 1.1;
+
+    // Les traînées, des bords vers les lettres.
+    float lane = (angle + 3.14159) / 6.28318 * kLanes;
+    float id = floor(lane);
+    float across = fract(lane);
+    float delay = hash(id + 11.0) * 0.45;
+    float speed = 1.6 + 1.4 * hash(id);
+    float travel = clamp((uWave - delay) * speed, 0.0, 1.25);
+    float reach = clamp(r / (0.95 * aspect * 0.5), 0.0, 1.2);
+    float head = 1.15 - travel;
+    float streak = smoothstep(head + kLength, head, reach) *
+                   smoothstep(head - 0.01, head, reach);
+    float live = step(0.0, uWave - delay) * step(travel, 1.2);
+    float thin = exp(-pow((across - 0.5) / 0.07, 2.0));
+    float keep = step(0.3, hash(id + 3.0));
+    vec3 tone = mix(mix(uInk, uHot, hash(id + 5.0)), vec3(1.0),
+                    0.3 * hash(id + 9.0));
+    color += tone * streak * thin * keep * live * smoothstep(0.05, 0.2, r) *
+             2.4;
+
+    // Les rayons : la lumière derrière les lettres, étirée depuis leur
+    // centre vers l'extérieur, une fois les traînées arrivées.
+    if (uRays > 0.0) {
+      vec2 toward = centreUv - uv;
+      float light = 0.0;
+      float weight = 1.0;
+      for (int i = 0; i < 40; i++) {
+        light += mask(uv + toward * (float(i) / 40.0) * 0.8) * weight;
+        weight *= 0.95;
+      }
+      light = light / 16.0 * smoothstep(0.5, 1.1, uWave) * uRays;
+      vec3 beam = mix(uInk, uHot, clamp(light * 0.7, 0.0, 1.0));
+      float dust =
+          smoothstep(0.985, 1.0,
+                     noise(uv * vec2(aspect, 1.0) * 140.0 +
+                           vec2(uTime * 0.5, -uTime * 0.8))) *
+          1.4;
+      color += beam * light * (1.1 + dust);
+    }
+
+    // Une lueur douce autour des lettres, chargées de lumière.
+    float halo = 0.0;
+    for (int i = 0; i < 8; i++) {
+      float a = float(i) * 0.785;
+      halo += mask(uv + vec2(cos(a), sin(a)) * 0.012);
+    }
+    color += mix(uInk, uHot, 0.5) * halo / 8.0 * 0.25 *
+             smoothstep(0.2, 1.2, uWave);
   }
 
-  // Le liquide : un bruit qui se déforme deux fois sur lui-même, assez
-  // vite pour qu'on le voie couler pendant les trois secondes de l'intro.
-  vec2 p = (uv + offset) * vec2(aspect, 1.0) * 1.6;
-  float t = uTime * 0.22;
-  vec2 q = vec2(fbm(p + t), fbm(p + vec2(5.2, 1.3) - t));
-  vec2 r = vec2(fbm(p + 3.0 * q + vec2(1.7, 9.2) + t * 1.4),
-                fbm(p + 3.0 * q + vec2(8.3, 2.8) - t));
-  float f = fbm(p + 3.0 * r);
-
-  // Les ruisseaux : quelques larges rubans de lumière qui glissent
-  // lentement, de largeur constante (la distance à leur ligne centrale
-  // tient compte de la pente du champ : sans elle, un champ presque plat
-  // donnait des flaques). Sur leur largeur, un dégradé : la teinte opposée
-  // au bord, l'encre, puis le cœur chaud ; une lueur douce les entoure.
-  // Un second champ, presque fixe, les fait naître et s'éteindre.
-  vec2 s0 = (uv + offset) * vec2(aspect, 1.0) * 0.55;
-  float e = 0.004;
-  float ph = streamPhase(s0, t);
-  vec2 grad = vec2(streamPhase(s0 + vec2(e, 0.0), t) - ph,
-                   streamPhase(s0 + vec2(0.0, e), t) - ph) / (e / 0.55);
-  float flow = ph - uTime * 0.12;
-  float v = fract(flow) - 0.5;
-  // Chaque ruban a sa lumière : certains s'éteignent, d'autres brillent.
-  float id = floor(flow + 0.5);
-  float own = hash(vec2(id, 7.0));
-  float lightness = own < 0.15 ? 0.0 : mix(0.4, 1.0, (own - 0.15) / 0.85);
-  float keep = smoothstep(0.22, 0.5, fbm3(s0 * 0.45 + vec2(3.1, 7.4) + t * 0.05));
-  // Sa largeur va et vient le long de sa course.
-  float width = mix(0.04, 0.1, fbm3(s0 * 1.3 + vec2(id * 3.7, 1.0)));
-  float slope = max(length(grad), 0.5);
-  float across = 1.0 - clamp(abs(v) / slope / width, 0.0, 1.0);
-  float band = smoothstep(0.0, 0.25, across) * keep * lightness;
-  float halo = 1.0 - clamp(abs(v) / slope / (width * 3.0), 0.0, 1.0);
-  halo = halo * halo * keep * lightness;
-
-  vec3 fringe = normalize(uGround + 1e-3) * 0.75;
-  vec3 ribbon = mix(fringe, uInk * 1.5, smoothstep(0.05, 0.6, across));
-  ribbon = mix(ribbon, uHot * 1.2, smoothstep(0.7, 1.0, across));
-  // Le long du ruban, la lumière va et vient avec le second champ.
-  ribbon *= 0.6 + 0.4 * keep;
-
-  vec3 color = uGround * (0.5 + 0.6 * f);
-  color += uInk * halo * 0.3;
-  color = mix(color, min(ribbon, vec3(1.0)), band);
-
-  // Ce que l'onde a découvert.
-  float lit = uWave > 0.0
-                  ? smoothstep(front + 0.02, front - 0.3, dist + (f - 0.5) * 0.12)
-                  : 0.0;
-  float mask = lit * uIntensity;
-
-  color = mix(uBlack, color, mask);
-  color += vec3(spec) * (0.35 + 0.65 * (1.0 - mask * 0.5)) * uIntensity;
-  color += (hash(px + fract(uTime * 7.0) * 91.0) - 0.5) * uGrain;
+  color = mix(uBlack, color, uIntensity);
+  color += (hash2(px + fract(uTime * 7.0) * 91.0) - 0.5) * uGrain;
   fragColor = vec4(color, 1.0);
 }

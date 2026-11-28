@@ -833,19 +833,24 @@ abstract final class AppMotion {
     Offset(.26, .24),
   ];
   static const startupAuroraDrift = Offset(.24, .22);
-  // Fond liquide (cf. StartupAurora.paintLiquid) : côté le plus long de
-  // son image (agrandie à l'écran), grain, et onde depuis longtemps calmée
-  // quand le clap n'a pas été vu (intro passée).
+  // Lumière du clap (cf. StartupAurora.paintLiquid) : côté le plus long
+  // de son image (agrandie à l'écran), grain, et clap depuis longtemps
+  // passé quand il n'a pas été vu (intro passée).
   static const startupLiquidResolution = 640.0;
   static const startupLiquidGrain = .05;
   static const startupLiquidCalm = 30.0;
-  // Couleurs du liquide : le fond (teinte opposée, presque noir), l'encre
-  // (la dominante) et le cœur chaud (voisine, plus claire). Teinte décalée
-  // (degrés), saturation, clarté.
-  static const startupLiquidGround = (180.0, .45, .07);
-  static const startupLiquidInk = (0.0, .85, .42);
-  static const startupLiquidHot = (18.0, .95, .62);
-  static const startupLiquidNeutralLightness = [.05, .22, .40];
+  // Couleurs de la lumière : l'encre (la dominante) et le cœur chaud
+  // (voisine, plus claire). Teinte décalée (degrés), saturation, clarté.
+  static const startupLiquidInk = (0.0, .85, .5);
+  static const startupLiquidHot = (22.0, .95, .68);
+  static const startupLiquidNeutralLightness = [.5, .75];
+  // Les lettres chargées par la lumière : un dégradé du haut (chaud) vers
+  // le bas (la dominante), qui monte entre ces deux instants après le clap
+  // (secondes).
+  static const startupLetterTop = (22.0, .95, .74);
+  static const startupLetterBottom = (0.0, .85, .6);
+  static const startupLetterChargeFrom = .2;
+  static const startupLetterChargeTo = 1.1;
   // Passage du repli neutre à la vraie dominante, si elle arrive tard.
   static const startupTintFade = Duration(milliseconds: 400);
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie

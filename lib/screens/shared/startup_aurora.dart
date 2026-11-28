@@ -73,39 +73,79 @@ abstract final class StartupAurora {
   /// Temps de l'aurore au clap ; `null` tant qu'il n'a pas eu lieu.
   static double? clapAt;
 
-  /// Secondes depuis le clap. Sans clap vu (intro passée), une onde depuis
-  /// longtemps calmée : le liquide est entier.
+  /// Secondes depuis le clap. Sans clap vu (intro passée), un clap depuis
+  /// longtemps passé : la lumière est posée, les lettres chargées.
   static double get wave =>
       clapAt == null ? AppMotion.startupLiquidCalm : time.value - clapAt!;
 
-  /// Le fond, l'encre et le cœur chaud du liquide, tirés de la dominante.
-  /// Un fond de la teinte opposée : le film orangé sur un fond sarcelle.
-  static List<Color> liquidColorsFor(Color tint) {
+  static Color _shade(Color tint, (double, double, double) spec) {
     final base = HSLColor.fromColor(tint);
-    Color shade((double, double, double) spec) => base
+    return base
         .withHue((base.hue + spec.$1) % 360)
         .withSaturation(spec.$2)
         .withLightness(spec.$3)
         .toColor();
-    return [
-      shade(AppMotion.startupLiquidGround),
-      shade(AppMotion.startupLiquidInk),
-      shade(AppMotion.startupLiquidHot),
-    ];
   }
 
-  /// Le liquide en attendant la dominante : des gris.
+  /// L'encre et le cœur chaud de la lumière, tirés de la dominante.
+  static List<Color> liquidColorsFor(Color tint) => [
+        _shade(tint, AppMotion.startupLiquidInk),
+        _shade(tint, AppMotion.startupLiquidHot),
+      ];
+
+  /// La lumière en attendant la dominante : des gris.
   static List<Color> get liquidNeutral => [
         for (final lightness in AppMotion.startupLiquidNeutralLightness)
           HSLColor.fromAHSL(1, 0, 0, lightness).toColor(),
       ];
 
-  /// Peint le fond liquide sur [rect] : [colors] (fond, encre, cœur),
-  /// [wave] secondes après le clap. Comme l'aurore, dans une petite image
+  /// Le haut et le bas des lettres chargées, tirés de la dominante.
+  static List<Color> letterColorsFor(Color tint) => [
+        _shade(tint, AppMotion.startupLetterTop),
+        _shade(tint, AppMotion.startupLetterBottom),
+      ];
+
+  /// Lettres sans dominante : blanches.
+  static const letterNeutral = [AppColors.textPrimary, AppColors.textPrimary];
+
+  /// Les couleurs des lettres chargées, tenues à jour par le fond du clap
+  /// (elles suivent l'arrivée de la dominante).
+  static List<Color> letters = letterNeutral;
+
+  /// Charge des lettres (0 : blanches, 1 : aux couleurs du film), d'après
+  /// le temps depuis le clap.
+  static double get charge => Curves.easeInOut.transform(((wave -
+              AppMotion.startupLetterChargeFrom) /
+          (AppMotion.startupLetterChargeTo - AppMotion.startupLetterChargeFrom))
+      .clamp(0.0, 1.0));
+
+  /// Le pinceau des lettres de la signature (repère du signe, 256 unités) :
+  /// blanc, puis le dégradé des couleurs du film à mesure qu'elles se
+  /// chargent.
+  static Paint letterPaint(double alpha) {
+    final amount = charge;
+    if (amount <= 0) {
+      return Paint()..color = AppColors.textPrimary.withValues(alpha: alpha);
+    }
+    Color stop(Color c) =>
+        Color.lerp(AppColors.textPrimary, c, amount)!.withValues(alpha: alpha);
+    return Paint()
+      ..shader = ui.Gradient.linear(const Offset(0, 15), const Offset(0, 241),
+          [stop(letters[0]), stop(letters[1])]);
+  }
+
+  /// Peint la lumière du clap sur [rect] : [colors] (encre, cœur), [wave]
+  /// secondes après le clap, les traînées convergeant vers [centre] et les
+  /// rayons ([rays], de 0 à 1) à travers les lettres que [paintMask] dessine
+  /// (en coordonnées de l'écran), et le verre irisé autour de [tint]. Comme l'aurore, dans une petite image
   /// agrandie à l'écran.
   static void paintLiquid(Canvas canvas, Rect rect,
       {required List<Color> colors,
       required double wave,
+      required Offset centre,
+      required void Function(Canvas canvas) paintMask,
+      double rays = 1,
+      Color? tint,
       double intensity = 1,
       BlendMode blendMode = BlendMode.srcOver}) {
     final program = _liquid;
@@ -114,6 +154,17 @@ abstract final class StartupAurora {
         math.min(1.0, AppMotion.startupLiquidResolution / rect.longestSide);
     final width = math.max(1, (rect.width * scale).ceil());
     final height = math.max(1, (rect.height * scale).ceil());
+
+    // Le pochoir des lettres, à la taille de l'image.
+    final maskRecorder = ui.PictureRecorder();
+    final maskCanvas = Canvas(maskRecorder)
+      ..scale(scale)
+      ..translate(-rect.left, -rect.top);
+    paintMask(maskCanvas);
+    final maskPicture = maskRecorder.endRecording();
+    final mask = maskPicture.toImageSync(width, height);
+    maskPicture.dispose();
+
     final shader = program.fragmentShader();
     var i = 0;
     void set(double value) => shader.setFloat(i++, value);
@@ -128,11 +179,18 @@ abstract final class StartupAurora {
     set(time.value);
     set(wave);
     set(intensity);
+    set((centre.dx - rect.left) * scale);
+    set((centre.dy - rect.top) * scale);
+    set(rays);
     color(AppColors.background);
     for (final c in colors) {
       color(c);
     }
     set(AppMotion.startupLiquidGrain);
+    // Les irisations du verre suivent la dominante ; sans elle, gris.
+    set(tint == null ? 0 : HSLColor.fromColor(tint).hue / 360);
+    set(tint == null ? 0 : 1);
+    shader.setImageSampler(0, mask);
 
     final recorder = ui.PictureRecorder();
     Canvas(recorder).drawRect(
@@ -142,6 +200,7 @@ abstract final class StartupAurora {
     final image = picture.toImageSync(width, height);
     picture.dispose();
     shader.dispose();
+    mask.dispose();
     canvas.drawImageRect(
         image,
         Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
