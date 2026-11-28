@@ -120,7 +120,8 @@ class _WorldSlide extends StatelessWidget {
   }
 }
 
-/// Les records : le plus long, le plus court, le plus revu.
+/// Les records : les affiches debout, chacune à la hauteur de sa durée,
+/// qui montent depuis le bas ; le plus revu en dernier, si vous en avez un.
 class _RecordsSlide extends StatelessWidget {
   const _RecordsSlide({required this.inputs, required this.records});
   final WrappedInputs inputs;
@@ -129,36 +130,121 @@ class _RecordsSlide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = records;
-    final rows = [
-      ('Le plus long', r.longest.title, _runtime(r.longest.runtimeSeconds!)),
-      ('Le plus court', r.shortest.title, _runtime(r.shortest.runtimeSeconds!)),
-      if (r.mostSeen case final e?)
-        ('Le plus revu', e.title, '${r.times} fois'),
+    final columns = [
+      (r.longest, 'Le plus long'),
+      if (r.mostSeen case final e? when e.runtimeSeconds != null)
+        (e, 'Revu ${r.times} fois'),
+      (r.shortest, 'Le plus court'),
     ];
-    return _Frame(
-        builder: (context, size, type) => [
-              CyclingBackdrops([
-                for (final e in [
-                  r.longest,
-                  r.shortest,
-                  if (r.mostSeen case final e?) e
-                ])
-                  if (inputs.backdrop(e) case final image?) image
-              ]),
-              const WrappedScrim(),
-              WrappedTextBlock(children: [
-                WrappedText('Vos records', style: type.cap, at: .4, caps: true),
-                for (final (i, (label, title, value)) in rows.indexed) ...[
-                  SizedBox(height: size.height * .045),
-                  WrappedText(label.toUpperCase(),
-                      style: type.cap, at: 1.2 + i * 1.3, caps: true),
-                  SizedBox(height: size.height * .008),
-                  WrappedText(title,
-                      style: type.mid, at: 1.5 + i * 1.3, maxLines: 2),
-                  WrappedText(value, style: type.small, at: 1.9 + i * 1.3),
-                ],
-              ]),
-            ]);
+    final longest = r.longest.runtimeSeconds!;
+    final ground = storyColor(inputs.tint(r.longest));
+    return _Frame(builder: (context, size, type) {
+      final portrait = size.height > size.width;
+      // La place des affiches : à droite en 16:9, en bas en story.
+      final areaW = size.width * (portrait ? .84 : .4);
+      final tallest = size.height * (portrait ? .42 : .56);
+      final gap = size.width * .015;
+      final ratio = AppMedia.posterAspectRatio;
+      final total = columns.fold(
+              0.0,
+              (sum, c) =>
+                  sum + tallest * c.$1.runtimeSeconds! / longest * ratio) +
+          gap * (columns.length - 1);
+      final scale = total > areaW ? areaW / total : 1.0;
+      return [
+        CustomPaint(painter: StoryMesh(ground: ground, seed: longest)),
+        Align(
+          alignment:
+              portrait ? const Alignment(0, .72) : const Alignment(.9, .35),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (final (i, (film, label)) in columns.indexed)
+                Builder(builder: (context) {
+                  final grow = WrappedClock.at(context, 1.6 + i * .5,
+                      length: 1.4, curve: Curves.easeOutCubic);
+                  final h = tallest * scale * film.runtimeSeconds! / longest;
+                  return Padding(
+                    padding: EdgeInsets.only(left: i == 0 ? 0 : gap),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      SizedBox(
+                        width: h * ratio,
+                        height: h,
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(AppSpacing.xxs),
+                            child: SizedBox(
+                              width: h * ratio,
+                              height: h * grow,
+                              child: inputs.poster(film) == null
+                                  ? const ColoredBox(
+                                      color: AppColors.heroFallback)
+                                  : KinosImage(
+                                      image: inputs.poster(film)!,
+                                      alignment: Alignment.bottomCenter,
+                                      disableBlur: true),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: size.height * .015),
+                      // Les légendes ne dépassent jamais leur affiche.
+                      SizedBox(
+                        width: h * ratio,
+                        // Même hauteur pour toutes : les affiches gardent
+                        // leurs pieds alignés.
+                        height: type.mid.fontSize! * type.mid.height! +
+                            type.cap.fontSize! * 1.6,
+                        child: Opacity(
+                          opacity: grow,
+                          child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(_runtime(film.runtimeSeconds!),
+                                        style: type.mid)),
+                                FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(label.toUpperCase(),
+                                        style: type.cap)),
+                              ]),
+                        ),
+                      ),
+                    ]),
+                  );
+                }),
+            ],
+          ),
+        ),
+        WrappedTextBlock(
+            alignment:
+                portrait ? const Alignment(-1, -.75) : Alignment.centerLeft,
+            widthFraction: portrait ? .9 : .34,
+            children: [
+              WrappedText('Vos records', style: type.cap, at: .4, caps: true),
+              SizedBox(height: size.height * .025),
+              WrappedText(_runtime(longest), style: type.big, at: 1),
+              SizedBox(height: size.height * .025),
+              WrappedText('${r.longest.title}, votre plus long film.',
+                  style: type.small, at: 2.4, maxLines: 2),
+              SizedBox(height: size.height * .012),
+              WrappedText(
+                  'Le plus court : ${r.shortest.title}, '
+                  '${_runtime(r.shortest.runtimeSeconds!)}.',
+                  style: type.small,
+                  at: 3.4,
+                  maxLines: 2),
+              if (r.mostSeen case final e?) ...[
+                SizedBox(height: size.height * .012),
+                WrappedText('${e.title}, revu ${r.times} fois.',
+                    style: type.small, at: 4.4, maxLines: 2),
+              ],
+            ]),
+      ];
+    });
   }
 }
 
