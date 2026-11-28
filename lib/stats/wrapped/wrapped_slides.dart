@@ -3271,7 +3271,7 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
       numbers = [
         (percent(bingeShare(data.allSeries) ?? 0), 'en binge'),
         if (run != null) ('$run', 'd\'affilée'),
-        (topSeries ?? '${stats.series}', 'série de l\'année'),
+        ('${stats.episodes}', 'épisodes'),
       ];
     case 'series':
       image = seriesArt?.poster;
@@ -3282,7 +3282,10 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
       numbers = [
         ('${stats.series}', 'séries'),
         ('${stats.episodes}', 'épisodes'),
-        (topSeries ?? '', 'série de l\'année'),
+        if (w.finished.isNotEmpty)
+          ('${w.finished.length}', 'terminées')
+        else
+          ('${(seconds / 3600).round()} H', 'de séries'),
       ];
     case 'explorer':
       // Tous les genres de l'année, comptés sur tous les films (la liste
