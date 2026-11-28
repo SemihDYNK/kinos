@@ -171,6 +171,14 @@ class _StartupIntroPainter extends CustomPainter {
   static const _extent = _StartupMarkPainter._extent;
   static List<Path> get _parts => _StartupMarkPainter._parts;
 
+  // Centre de chaque pièce par rapport à celui du signe : chacune y est
+  // mise à l'échelle par la perspective.
+  static const _pieceCentres = [
+    Offset(-78, 0),
+    Offset(32, -59),
+    Offset(32, 59)
+  ];
+
   // Charnière de la branche du haut : là où elle rejoint la hampe.
   static const _hinge = Offset(80, 123);
   static const _centre = Offset(_extent / 2, _extent / 2);
@@ -218,12 +226,13 @@ class _StartupIntroPainter extends CustomPainter {
     final progress = word
         ? this.progress
         : this.progress * AppMotion.startupIntroAssemblyEnd;
-    final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
     // Le K posé (et le mot) : dessiné en double résolution puis réduit. Le
     // moteur de rendu n'adoucit pas toujours le bord des formes (sans
-    // multi-échantillonnage) ; avant, le K s'allume dans le noir, et
-    // l'escalier ne se voit pas.
-    if (AppMotion.startupIntroArrivals.any((i) => i.transform(a) < 1)) {
+    // multi-échantillonnage). Tant que les pièces bougent dans la
+    // profondeur, elles débordent de la zone suréchantillonnée : dessin
+    // direct, le mouvement cache l'escalier.
+    if (progress * AppDurations.startupIntro.inMicroseconds / 1e6 <
+        AppMotion.startupGalleryPullTime) {
       _draw(canvas, size);
       return;
     }
@@ -272,28 +281,35 @@ class _StartupIntroPainter extends CustomPainter {
     // Avancement de l'assemblage et du clap, avant le mot.
     final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
     final impact = impactScale(a);
-    // Le K est au fond de la galerie : il grandit pendant que la caméra
-    // approche (cf. StartupAurora.markScale).
-    final depth = StartupAurora.markScale(
-        progress * AppDurations.startupIntro.inMicroseconds / 1e6);
-    final scale = unit * impact * depth;
+    final story = progress * AppDurations.startupIntro.inMicroseconds / 1e6;
     canvas.translate(size.width / 2, size.height / 2);
-    canvas.scale(scale);
+    canvas.scale(unit * impact);
     canvas.translate(-_centre.dx, -_centre.dy);
 
-    // Le K s'éclaire d'un bloc, rétroéclairé ; le pochoir de la lumière
+    // Les pièces flottent à des profondeurs différentes pendant le recul de
+    // la caméra et ne s'alignent qu'à la fin (cf. StartupAurora.pieceAt) ;
+    // le K s'éclaire d'un bloc, rétroéclairé ; le pochoir de la lumière
     // l'a entier dès le début.
     for (var i = 0; i < _parts.length; i++) {
       final arrival =
           stencil ? 1.0 : AppMotion.startupIntroArrivals[i].transform(a);
-      if (arrival <= 0) continue;
+      final piece = StartupAurora.pieceAt(i, story);
+      final alpha = arrival * piece.presence;
+      if (alpha <= 0 || piece.scale <= 0) continue;
+      final pivot = _pieceCentres[i];
       canvas.save();
+      canvas.translate(pivot.dx * piece.scale + piece.offset.dx,
+          pivot.dy * piece.scale + piece.offset.dy);
+      canvas.translate(_centre.dx, _centre.dy);
+      canvas.scale(piece.scale);
+      canvas.rotate(piece.turn);
+      canvas.translate(-_centre.dx - pivot.dx, -_centre.dy - pivot.dy);
       if (i == 1) {
         canvas.translate(_hinge.dx, _hinge.dy);
         canvas.rotate(clapAngle(a));
         canvas.translate(-_hinge.dx, -_hinge.dy);
       }
-      canvas.drawPath(_parts[i], StartupAurora.letterPaint(arrival));
+      canvas.drawPath(_parts[i], StartupAurora.letterPaint(alpha));
       canvas.restore();
     }
   }

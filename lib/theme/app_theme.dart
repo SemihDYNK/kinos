@@ -705,9 +705,10 @@ abstract final class AppDurations {
   /// Au-delà de cet écart moyen entre deux images pendant l'attente du
   /// calme (moins de 15 images/s), l'ouverture ne s'anime pas.
   static const startupStrugglingFrame = Duration(milliseconds: 66);
-  // Premier lancement de la session : travelling dans une galerie de verre
-  // où la lumière s'allume, le K s'éclaire au fond, clap, puis le mot et
-  // un plan fixe (cf. AppMotion.startupIntro* et AppMotion.startupGallery*).
+  // Premier lancement de la session : depuis le cœur lumineux, la caméra
+  // recule dans une galerie de verre pendant que les pièces du K
+  // s'alignent, clap, puis le mot et un plan fixe (cf.
+  // AppMotion.startupIntro* et AppMotion.startupGallery*).
   static const startupIntro = Duration(milliseconds: 6200);
   // Lancements suivants : la même scène sans « KINOS », arrêtée à la fin
   // de l'assemblage, et jouée en accéléré pour ne pas peser au quotidien.
@@ -771,15 +772,16 @@ abstract final class AppMotion {
   // Écart supplémentaire entre lettres à leur arrivée, en unités du signe.
   static const startupIntroTracking = 48.0;
 
-  // Assemblage (fraction de la partie assemblage). La caméra avance dans
-  // une galerie de verre (cf. StartupAurora.galleryAt) ; au fond, le K
-  // s'éclaire d'un bloc, rétroéclairé, déjà aux couleurs du film. Puis la
+  // Assemblage (fraction de la partie assemblage). La caméra recule dans
+  // une galerie de verre depuis le cœur lumineux (cf.
+  // StartupAurora.galleryAt) ; les pièces du K, éclairées dès le début aux
+  // couleurs du film, s'alignent en perspective pendant le recul. Puis la
   // branche du haut s'ouvre, prend son élan et se referme comme un clap,
   // et la marque encaisse le choc.
   static const startupIntroArrivals = [
-    Interval(.545, .747, curve: Cubic(.4, 0, .2, 1)),
-    Interval(.545, .747, curve: Cubic(.4, 0, .2, 1)),
-    Interval(.545, .747, curve: Cubic(.4, 0, .2, 1)),
+    Interval(.06, .364, curve: Cubic(.4, 0, .2, 1)),
+    Interval(.06, .364, curve: Cubic(.4, 0, .2, 1)),
+    Interval(.06, .364, curve: Cubic(.4, 0, .2, 1)),
   ];
   // Images d'affilée sorties à temps avant de lancer l'ouverture.
   static const startupSettleFrames = 8;
@@ -839,8 +841,8 @@ abstract final class AppMotion {
   // (secondes) : le K s'allume déjà coloré.
   static const startupLetterTop = (22.0, .95, .74);
   static const startupLetterBottom = (0.0, .85, .6);
-  static const startupLetterChargeFrom = -1.9;
-  static const startupLetterChargeTo = -.9;
+  static const startupLetterChargeFrom = -4.3;
+  static const startupLetterChargeTo = -2.8;
   // Avant le clap, les lettres n'ont que cette part de leur éclat ; elles
   // le prennent en entier en ce temps après le clap (secondes).
   static const startupLetterRestraint = .6;
@@ -849,24 +851,31 @@ abstract final class AppMotion {
   // version longue).
   static const startupLightLead = 4.7;
   // La galerie de verre (secondes de la scène longue, depuis son début) :
-  // sortie du noir ; travelling (profondeur parcourue, durée) avec un arc
-  // latéral qui s'éteint ; la lumière qui court dans les arêtes (début,
-  // durée, profondeur atteinte) ; le K qui s'éclaire (début, durée) ; le
-  // reflet d'objectif au clap (amortissement) ; profondeur du K et distance
-  // où il a sa taille finale.
-  static const startupGalleryFadeIn = .8;
-  static const startupGalleryDolly = 6.1;
-  static const startupGalleryDollyTime = 4.4;
-  static const startupGalleryArc = .35;
+  // sortie du noir ; la caméra part tout près du cœur lumineux et recule
+  // (profondeurs de départ et d'arrivée, durée), avec un léger arc
+  // latéral ; la lueur claire du départ (force, durée) ; le K qui
+  // s'éclaire (début, durée) ; le reflet d'objectif au clap
+  // (amortissement) ; profondeur du K.
+  static const startupGalleryFadeIn = .6;
+  static const startupGalleryFrom = 8.95;
+  static const startupGalleryTo = .6;
+  static const startupGalleryPullTime = 4.4;
+  static const startupGalleryArc = .2;
   static const startupGalleryArcRate = .55;
-  static const startupGalleryIgniteFrom = .7;
-  static const startupGalleryIgniteTime = 3.0;
-  static const startupGalleryIgniteDepth = 11.0;
-  static const startupGalleryLitFrom = 2.7;
-  static const startupGalleryLitTime = 1.0;
+  static const startupGalleryWhite = .9;
+  static const startupGalleryWhiteTime = 1.6;
+  static const startupGalleryLitFrom = .3;
+  static const startupGalleryLitTime = 1.5;
   static const startupGalleryFlare = 3.2;
   static const startupGalleryMarkDepth = 9.5;
-  static const startupGalleryMarkRest = 3.4;
+  // Les pièces du K (barre, branche du haut, du bas) flottent à des
+  // profondeurs différentes, décalées (unités du signe) et pivotées
+  // (radians) : elles ne forment le K qu'au point de vue final.
+  static const startupGalleryPieces = [
+    (-1.6, Offset(-480, 260), -.5),
+    (1.8, Offset(407, -315), .6),
+    (.7, Offset(296, 370), -.35),
+  ];
   // Flou du pochoir des lettres (fraction de la hauteur) : la brillance
   // et les rayons, puis la lumière renvoyée sur le verre.
   static const startupLightGlowBlur = .012;

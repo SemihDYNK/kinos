@@ -1,8 +1,8 @@
 #version 460 core
 
-// L'intro de Kinos : un lent travelling dans une galerie de lames de verre.
-// La lumière s'allume dans leurs arêtes et court vers le fond, où le K
-// s'éclaire, rétroéclairé ; ses rayons traversent la brume, la poussière y
+// L'intro de Kinos : partie du cœur lumineux, la caméra recule dans une
+// galerie de lames de verre qui s'allument en sortant de derrière elle ;
+// le K, rétroéclairé, projette ses rayons dans la brume où la poussière
 // scintille, et un reflet d'objectif marque le clap. Le K et KINOS sont
 // peints par-dessus (cf. StartupMark) : ici, leur pochoir flouté seulement.
 
@@ -25,12 +25,12 @@ uniform float uGrain;
 // dominante).
 uniform float uHue;
 uniform float uIris;
-// La caméra (profondeur parcourue, décalage latéral), le front de la
-// lumière dans les arêtes, l'éclairage du K, le reflet d'objectif et la
-// sortie du noir (cf. StartupAurora.galleryAt).
+// La caméra (position, décalage latéral), la lueur claire du départ,
+// l'éclairage du K, le reflet d'objectif et la sortie du noir (cf.
+// StartupAurora.galleryAt).
 uniform float uDepth;
 uniform float uSide;
-uniform float uIgnite;
+uniform float uWhite;
 uniform float uLit;
 uniform float uFlare;
 uniform float uFade;
@@ -67,11 +67,11 @@ float glowAt(vec2 uv) {
   return texture(uGlow, uv).a;
 }
 
-// La galerie : six plans de lames, du plus proche au plus lointain, avec
-// un couloir libre au centre où la caméra avance. La mise au point est à
+// La galerie : huit plans de lames, du plus proche au plus lointain, avec
+// un couloir libre au centre où la caméra recule. La mise au point est à
 // cette distance ; au-delà comme en deçà, les arêtes s'élargissent.
-const float kFirst = 1.6;
-const float kGap = 1.45;
+const float kFirst = 1.4;
+const float kGap = 1.05;
 const float kFocus = 3.0;
 const float kCorridor = 0.55;
 
@@ -85,9 +85,11 @@ void main() {
   vec3 color = uBlack;
 
   // La brume : une clarté autour du K, plus forte quand il s'éclaire.
-  float haze = exp(-r * 2.2);
-  color += mix(uInk, uHot, 0.4) * haze * 0.10 *
-           (0.3 + 0.7 * uLit * (uWave > 0.0 ? 1.0 : 0.5));
+  // Large quand la caméra est près du K, resserrée une fois reculée.
+  float haze = exp(-r * mix(0.6, 2.2, clamp((9.0 - uDepth) / 8.0, 0.0, 1.0)));
+  color += mix(uInk, uHot, 0.4) * haze *
+           (0.10 * (0.3 + 0.7 * uLit * (uWave > 0.0 ? 1.0 : 0.5)) +
+            0.5 * uWhite);
 
   // Avant le clap, le K s'éclaire en retenue ; au clap, toute sa
   // brillance d'un coup.
@@ -99,7 +101,7 @@ void main() {
 
   // Les lames, du fond vers l'avant. Chacune a sa largeur, sa lumière, son
   // allure de reflet ; certaines penchent, et toutes oscillent un peu.
-  for (int layer = 5; layer >= 0; layer--) {
+  for (int layer = 7; layer >= 0; layer--) {
     float plane = kFirst + float(layer) * kGap;
     float depth = plane - uDepth;
     if (depth < 0.15) continue;
@@ -144,10 +146,9 @@ void main() {
           smoothstep(0.15, 0.5, g) * smoothstep(0.95, 0.55, g) *
           (0.4 + 0.6 * noise(vec2(w.y * 2.0 + uTime * 0.2, id * 3.0)));
       float own = 0.45 + 0.55 * hash(id + 2.0);
-      // Chaque lame s'allume à son tour, d'avant en arrière : un éclat
-      // descend le long de son arête, puis son irisation apparaît.
-      float start = plane * 0.55 + 1.6 * hash(id + 21.0);
-      float lit = clamp((uIgnite - start) / 1.4, 0.0, 1.0);
+      // Chaque lame s'allume en sortant de derrière la caméra, à son tour :
+      // un éclat descend le long de son arête, puis son irisation apparaît.
+      float lit = clamp((depth - 0.1 - 0.8 * hash(id + 21.0)) / 1.4, 0.0, 1.0);
       float front = lit * 1.4 - 0.2;
       float height = d.y + 0.5;
       float run = smoothstep(front + 0.05, front - 0.05, height);
@@ -207,6 +208,9 @@ void main() {
                smoothstep(0.05, 0.035, gd) * 0.08 * uFlare;
     }
   }
+
+  // Au départ, on est dans la lumière : une lueur claire qui se retire.
+  color += mix(uHot, vec3(1.0), 0.5) * uWhite * 0.9 * exp(-r * 1.5);
 
   color = mix(uBlack, color, uIntensity * uFade);
   color += (hash2(px + fract(uTime * 7.0) * 91.0) - 0.5) * uGrain;

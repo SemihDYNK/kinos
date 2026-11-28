@@ -154,30 +154,30 @@ abstract final class StartupAurora {
           1e6;
 
   /// La galerie de verre à l'instant [story] (secondes de la scène) :
-  /// profondeur et décalage de la caméra, front de la lumière dans les
-  /// arêtes, éclairage du K, reflet d'objectif et sortie du noir.
+  /// position et décalage de la caméra (qui recule depuis le cœur
+  /// lumineux), lueur claire du départ, éclairage du K, reflet d'objectif
+  /// et sortie du noir.
   static ({
     double depth,
     double side,
-    double ignite,
+    double white,
     double lit,
     double flare,
     double fade,
   }) galleryAt(double story) {
     double clamp01(double x) => x.clamp(0.0, 1.0);
     double out(double x) => Curves.easeOutCubic.transform(clamp01(x));
-    final travel = Curves.easeInOutCubic
-        .transform(clamp01(story / AppMotion.startupGalleryDollyTime));
+    final pull = Curves.easeInOutCubic
+        .transform(clamp01(story / AppMotion.startupGalleryPullTime));
     final clap = storyOf(0);
     return (
-      depth: AppMotion.startupGalleryDolly * travel,
+      depth: ui.lerpDouble(
+          AppMotion.startupGalleryFrom, AppMotion.startupGalleryTo, pull)!,
       side: AppMotion.startupGalleryArc *
           math.sin(story * AppMotion.startupGalleryArcRate) *
-          (1 - travel),
-      ignite: -1 +
-          AppMotion.startupGalleryIgniteDepth *
-              out((story - AppMotion.startupGalleryIgniteFrom) /
-                  AppMotion.startupGalleryIgniteTime),
+          (1 - pull),
+      white: AppMotion.startupGalleryWhite *
+          (1 - out(story / AppMotion.startupGalleryWhiteTime)),
       lit: out((story - AppMotion.startupGalleryLitFrom) /
           AppMotion.startupGalleryLitTime),
       flare: story > clap
@@ -187,11 +187,31 @@ abstract final class StartupAurora {
     );
   }
 
-  /// Échelle du K au fond de la galerie : il grandit à mesure que la
-  /// caméra approche, jusqu'à sa taille finale.
-  static double markScale(double story) => (AppMotion.startupGalleryMarkRest /
-          (AppMotion.startupGalleryMarkDepth - galleryAt(story).depth))
-      .clamp(0.0, 1.0);
+  /// Une pièce du K à l'instant [story] : son échelle (la perspective,
+  /// 1 au point de vue final), son décalage (unités du signe), sa rotation
+  /// et sa présence (0 tant qu'elle est derrière la caméra). Elles ne
+  /// forment le K qu'à la fin du recul.
+  static ({double scale, Offset offset, double turn, double presence}) pieceAt(
+      int index, double story) {
+    final (depthOffset, offset, turn) = AppMotion.startupGalleryPieces[index];
+    final camera = galleryAt(story).depth;
+    final depth = AppMotion.startupGalleryMarkDepth + depthOffset;
+    final distance = depth - camera;
+    final rest = depth - AppMotion.startupGalleryTo;
+    // Le désalignement s'éteint à mesure que la caméra recule.
+    final apart = ((camera - AppMotion.startupGalleryTo) /
+            (AppMotion.startupGalleryMarkDepth -
+                .6 -
+                AppMotion.startupGalleryTo))
+        .clamp(0.0, 1.0);
+    final settle = apart * apart;
+    return (
+      scale: distance <= .05 ? 0.0 : rest / distance,
+      offset: offset * settle,
+      turn: turn * settle,
+      presence: ((distance - .2) / .8).clamp(0.0, 1.0),
+    );
+  }
 
   /// Peint la lumière du clap sur [rect] : [colors] (encre, cœur), [wave]
   /// secondes après le clap, les traînées convergeant vers [centre] et les
@@ -269,7 +289,7 @@ abstract final class StartupAurora {
     final shot = galleryAt(storyOf(wave));
     set(shot.depth);
     set(shot.side);
-    set(shot.ignite);
+    set(shot.white);
     set(shot.lit);
     set(shot.flare);
     set(shot.fade);
