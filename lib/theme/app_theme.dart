@@ -715,6 +715,8 @@ abstract final class AppDurations {
   // Avance des sons de l'intro sur leur moment : la latence de la sortie
   // audio.
   static const startupSoundLead = Duration(milliseconds: 35);
+  // Le célesta part ce temps avant le clap : sa cascade s'y pose.
+  static const startupCelestaLead = Duration(milliseconds: 550);
   static const startupReveal = Duration(milliseconds: 900);
   // Ouverture après l'intro longue : le faisceau du K s'allume et s'élargit.
   static const startupIntroReveal = Duration(milliseconds: 2000);

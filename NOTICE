@@ -58,13 +58,12 @@ Startup sounds
 --------------
 assets/sounds/intro_clap.wav is cut from "VideoTronic Super 8mm Projector"
 by ajoyce86 (https://freesound.org/s/213741/).
-assets/sounds/intro_aurora.ogg is made from "Shimmery.wav" by opticaillusions
-(https://freesound.org/s/521886/): slowed, pitched down, softened, chained
-into a longer pad and given a reverb.
-assets/sounds/intro_beam.wav is cut from "Fast whoosh, bamboo swoosh through
-air, version 2" by zapsplat.com (https://freesound.org/s/719637/).
-assets/sounds/intro_window.wav is cut from "Whoosh stereo light (transition)"
-by xkeril (https://freesound.org/s/701104/).
+assets/sounds/intro_bed.ogg mixes "MUSCChim_Atonal Crystal Chime Texture 1_EM"
+by newlocknew (https://freesound.org/s/772279/) with "Singing Bowl, long
+without reverb" by hollandm (https://freesound.org/s/573805/), low-passed and
+kept far below.
+assets/sounds/intro_celesta.ogg is made from "Celesta Chime Descending" by
+Qvantor (https://freesound.org/s/879801/): slowed and given a reverb.
 All four are released under Creative Commons 0 (public domain dedication),
 https://creativecommons.org/publicdomain/zero/1.0/; they were trimmed,
 faded and level-adjusted for Kinos.

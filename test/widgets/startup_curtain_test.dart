@@ -199,27 +199,28 @@ void main() {
     expect(claps, 1);
   });
 
-  testWidgets('le souffle part quand la fenêtre du faisceau s\'élargit',
+  testWidgets('le célesta part une fois, assez tôt pour se poser sur le clap',
       (tester) async {
-    var windows = 0;
+    var celestas = 0;
     await tester.pumpWidget(MaterialApp(
         home: StartupCurtain(
-            intro: true, onWindow: () => windows++, onRevealed: () {})));
+            intro: true, onCelesta: () => celestas++, onLogoReady: () {})));
     await tester.pump();
-    final at = AppDurations.startupIntroReveal *
-        AppMotion.startupIntroBeamOpen.begin;
+    final at = AppDurations.startupIntro *
+            (AppMotion.startupIntroAssemblyEnd * AppMotion.startupIntroClap) -
+        AppDurations.startupCelestaLead;
     var elapsed = Duration.zero;
     while (elapsed < at - AppDurations.startupSoundLead * 2) {
       await tester.pump(const Duration(milliseconds: 16));
       elapsed += const Duration(milliseconds: 16);
     }
-    expect(windows, 0);
+    expect(celestas, 0);
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
-    expect(windows, 1);
-    await tester.pump(AppDurations.startupIntroReveal);
-    expect(windows, 1);
+    expect(celestas, 1);
+    await tester.pump(AppDurations.startupIntro);
+    expect(celestas, 1);
   });
 
   testWidgets('passée avant le clap, l\'intro n\'en joue pas le son',

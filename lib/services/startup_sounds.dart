@@ -24,12 +24,12 @@ void setStartupSound(WidgetRef ref, bool enabled) {
   ref.read(sharedPreferencesProvider).setBool(startupSoundKey, enabled);
 }
 
-/// Sons de l'intro : au clap, l'interrupteur d'un projecteur Super 8 (le
-/// tout premier son de l'enregistrement, avant le moteur), et une nappe
-/// lente et atmosphérique qui monte avec l'aurore ; à l'ouverture,
-/// un souffle vif quand le faisceau surgit du K, puis un souffle d'air
-/// léger qui passe de gauche à droite quand sa fenêtre s'élargit. Chacun part au moment où l'animation le franchit
-/// (pas une piste mixée d'avance : l'horloge de l'intro peut ralentir un
+/// Sons de l'intro : une nappe de verre et de cloches qui monte dès le
+/// noir et enfle pendant le mouvement de caméra ; juste avant le clap, une
+/// cascade de célesta qui se pose sur lui ; au clap, l'interrupteur d'un
+/// projecteur Super 8, et la nappe s'éteint doucement. L'ouverture est
+/// silencieuse. Chaque son part au moment où l'animation le franchit (pas
+/// une piste mixée d'avance : l'horloge de l'intro peut ralentir un
 /// instant quand une image bloque, une piste figée se décalerait).
 ///
 /// Les lecteurs (mpv, sans sortie vidéo) sont préparés dès l'écran de
@@ -37,17 +37,17 @@ void setStartupSound(WidgetRef ref, bool enabled) {
 /// prend plusieurs dizaines de millisecondes.
 ///
 /// Sons sous licence CC0 (freesound.org), coupés et mis au niveau :
-/// « VideoTronic Super 8mm Projector » par ajoyce86 (213741), « Shimmery »
-/// par opticaillusions (521886, ralenti, plus grave, enchaîné, réverbéré), « Fast whoosh,
-/// bamboo swoosh through air, version 2 » par zapsplat.com (719637) et
-/// « Whoosh stereo light (transition) » par xkeril (701104).
+/// « VideoTronic Super 8mm Projector » par ajoyce86 (213741) ;
+/// « MUSCChim_Atonal Crystal Chime Texture 1_EM » par newlocknew (772279)
+/// mêlé à « Singing Bowl, long without reverb » par hollandm (573805,
+/// filtré, très bas) ; « Celesta Chime Descending » par Qvantor (879801,
+/// ralenti, réverbéré).
 class StartupSounds {
-  StartupSounds._(this._clap, this._aurora, this._beam, this._window);
+  StartupSounds._(this._clap, this._bed, this._celesta);
 
   final mpv.Player _clap;
-  final mpv.Player _aurora;
-  final mpv.Player _beam;
-  final mpv.Player _window;
+  final mpv.Player _bed;
+  final mpv.Player _celesta;
   bool _disposed = false;
 
   /// Prépare les sons ; `null` si la lecture audio est indisponible (le
@@ -67,9 +67,8 @@ class StartupSounds {
 
       return StartupSounds._(
         await load('intro_clap.wav', _clapVolume),
-        await load('intro_aurora.ogg', _auroraVolume),
-        await load('intro_beam.wav', _beamVolume),
-        await load('intro_window.wav', _windowVolume),
+        await load('intro_bed.ogg', _bedVolume),
+        await load('intro_celesta.ogg', _celestaVolume),
       );
     } catch (_) {
       return null;
@@ -78,52 +77,53 @@ class StartupSounds {
 
   // Volumes mpv (0–100) : nettement sous la lecture vidéo.
   static const _clapVolume = 30.0;
-  static const _auroraVolume = 25.0;
-  static const _beamVolume = 25.0;
-  static const _windowVolume = 30.0;
+  static const _bedVolume = 32.0;
+  static const _celestaVolume = 34.0;
 
-  /// Le clap : l'interrupteur, et la nappe qui monte avec l'aurore.
-  void clap() {
-    if (_disposed || !backgroundPlayerOpen(_clap)) return;
-    _clap.play();
-    _aurora.play();
+  bool _open(mpv.Player player) => !_disposed && backgroundPlayerOpen(player);
+
+  /// La nappe, dès le noir de l'intro.
+  void start() {
+    if (_open(_bed)) _bed.play();
   }
 
-  /// Éteint la nappe de l'aurore en [duration] : elle tient pendant
-  /// l'ouverture et s'éteint au moment où l'accueil est entièrement
-  /// découvert, quel que soit le temps qu'il a mis à se charger.
-  void fadeAurora(Duration duration) {
+  /// La cascade de célesta, qui se pose sur le clap.
+  void celesta() {
+    if (_open(_celesta)) _celesta.play();
+  }
+
+  /// Le clap : l'interrupteur, et la nappe qui s'éteint.
+  void clap() {
+    if (_open(_clap)) _clap.play();
+    _fadeBed(_bedFade);
+  }
+
+  // La nappe s'éteint en ce temps après le clap.
+  static const _bedFade = Duration(milliseconds: 1600);
+
+  void _fadeBed(Duration duration) {
     if (_disposed || _fading != null) return;
     final start = DateTime.now();
     _fading = Timer.periodic(_fadeStep, (timer) {
       final t = DateTime.now().difference(start).inMicroseconds /
           duration.inMicroseconds;
-      final open = !_disposed && backgroundPlayerOpen(_aurora);
+      final open = _open(_bed);
       if (!open || t >= 1) {
         timer.cancel();
-        if (open) _aurora.pause();
+        if (open) _bed.pause();
         return;
       }
       // Descente en douceur, plus marquée vers la fin.
       final remaining = 1 - t;
-      _aurora.setVolume(_auroraVolume * remaining * remaining);
+      _bed.setVolume(_bedVolume * remaining * remaining);
     });
   }
 
   Timer? _fading;
   static const _fadeStep = Duration(milliseconds: 15);
 
-  void beam() {
-    if (!_disposed && backgroundPlayerOpen(_beam)) _beam.play();
-  }
-
-  void window() {
-    if (!_disposed && backgroundPlayerOpen(_window)) _window.play();
-  }
-
-  /// Libère les lecteurs une fois les derniers sons finis : libérés à la
-  /// fin de l'ouverture, la nappe et le souffle étaient coupés net avant
-  /// leur fondu de sortie.
+  /// Libère les lecteurs une fois les derniers sons finis (la résonance du
+  /// célesta tient encore après le clap).
   void release() {
     unawaited(Future<void>.delayed(_tail, dispose));
   }
@@ -136,8 +136,7 @@ class StartupSounds {
     _disposed = true;
     _fading?.cancel();
     await disposeBackgroundPlayer(_clap);
-    await disposeBackgroundPlayer(_aurora);
-    await disposeBackgroundPlayer(_beam);
-    await disposeBackgroundPlayer(_window);
+    await disposeBackgroundPlayer(_bed);
+    await disposeBackgroundPlayer(_celesta);
   }
 }

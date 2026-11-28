@@ -66,6 +66,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     unawaited(StartupSounds.prepare().then((sounds) {
       // Prêts après coup : le clap déjà passé ne joue pas en retard.
       _sounds = sounds;
+      // La nappe monte dès le noir de l'intro.
+      sounds?.start();
     }));
   }
 
@@ -139,15 +141,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   tint: overlayRef.watch(startupTintProvider),
                   ready:
                       !loggedIn || overlayRef.watch(startupPageReadyProvider),
-                  onWindow: () {
-                    _sounds?.window();
-                    // La nappe s'éteint d'ici la fin de l'ouverture.
-                    _sounds?.fadeAurora(AppDurations.startupIntroReveal *
-                        (1 - AppMotion.startupIntroBeamOpen.begin));
-                  },
                   onOpening: () {
-                    // Le faisceau surgit du K.
-                    _sounds?.beam();
+                    // L'ouverture est silencieuse.
                     overlayRef
                         .read(startupCurtainPhaseProvider.notifier)
                         .state = StartupCurtainPhase.opening;
@@ -244,6 +239,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 intro: _intro,
                 word: _word,
                 tint: ref.watch(startupTintProvider),
+                onCelesta: () => _sounds?.celesta(),
                 onClap: () => _sounds?.clap(),
                 onLogoReady: () {
                   if (!_logoReady.isCompleted) _logoReady.complete();
