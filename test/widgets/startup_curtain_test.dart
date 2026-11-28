@@ -199,30 +199,6 @@ void main() {
     expect(claps, 1);
   });
 
-  testWidgets('le célesta part une fois, assez tôt pour se poser sur le clap',
-      (tester) async {
-    var celestas = 0;
-    await tester.pumpWidget(MaterialApp(
-        home: StartupCurtain(
-            intro: true, onCelesta: () => celestas++, onLogoReady: () {})));
-    await tester.pump();
-    final at = AppDurations.startupIntro *
-            (AppMotion.startupIntroAssemblyEnd * AppMotion.startupIntroClap) -
-        AppDurations.startupCelestaLead;
-    var elapsed = Duration.zero;
-    while (elapsed < at - AppDurations.startupSoundLead * 2) {
-      await tester.pump(const Duration(milliseconds: 16));
-      elapsed += const Duration(milliseconds: 16);
-    }
-    expect(celestas, 0);
-    for (var i = 0; i < 8; i++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    expect(celestas, 1);
-    await tester.pump(AppDurations.startupIntro);
-    expect(celestas, 1);
-  });
-
   testWidgets('passée avant le clap, l\'intro n\'en joue pas le son',
       (tester) async {
     var claps = 0;

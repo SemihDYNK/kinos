@@ -25,9 +25,9 @@ void setStartupSound(WidgetRef ref, bool enabled) {
 }
 
 /// Sons de l'intro : une nappe de verre et de cloches qui monte dès le
-/// noir et enfle pendant le mouvement de caméra ; juste avant le clap, une
-/// cascade de célesta qui se pose sur lui ; au clap, l'interrupteur d'un
-/// projecteur Super 8, et la nappe s'éteint doucement. L'ouverture est
+/// noir et enfle pendant le mouvement de caméra ; au clap, l'interrupteur
+/// d'un projecteur Super 8 et une cascade de célesta qui frappe avec lui,
+/// pendant que la nappe s'éteint doucement. L'ouverture est
 /// silencieuse. Chaque son part au moment où l'animation le franchit (pas
 /// une piste mixée d'avance : l'horloge de l'intro peut ralentir un
 /// instant quand une image bloque, une piste figée se décalerait).
@@ -87,14 +87,11 @@ class StartupSounds {
     if (_open(_bed)) _bed.play();
   }
 
-  /// La cascade de célesta, qui se pose sur le clap.
-  void celesta() {
-    if (_open(_celesta)) _celesta.play();
-  }
-
-  /// Le clap : l'interrupteur, et la nappe qui s'éteint.
+  /// Le clap : l'interrupteur et la cascade de célesta, dont la première
+  /// note (la plus forte) frappe avec lui ; la nappe s'éteint.
   void clap() {
     if (_open(_clap)) _clap.play();
+    if (_open(_celesta)) _celesta.play();
     _fadeBed(_bedFade);
   }
 

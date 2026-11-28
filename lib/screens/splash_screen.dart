@@ -239,7 +239,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 intro: _intro,
                 word: _word,
                 tint: ref.watch(startupTintProvider),
-                onCelesta: () => _sounds?.celesta(),
                 onClap: () => _sounds?.clap(),
                 onLogoReady: () {
                   if (!_logoReady.isCompleted) _logoReady.complete();
