@@ -14,22 +14,15 @@ enum StartupBackdrop {
   /// La goutte : l'onde part du K et découvre le liquide du film.
   drop,
 
-  /// La goutte, puis le liquide se retire dans un faisceau qui s'ouvre
-  /// depuis le K.
-  dropBeam,
-
   /// L'ancienne aurore : des taches de couleur floues.
   aurora,
 }
 
-/// `KINOS_STARTUP_BACKDROP=drop`, `drop-beam` ou `aurora` (mise au point) ;
-/// la goutte par défaut.
+/// `KINOS_STARTUP_BACKDROP=aurora` (mise au point) ; la goutte sinon.
 StartupBackdrop startupBackdropFrom(Map<String, String> environment) =>
-    switch (environment['KINOS_STARTUP_BACKDROP']) {
-      'drop-beam' => StartupBackdrop.dropBeam,
-      'aurora' => StartupBackdrop.aurora,
-      _ => StartupBackdrop.drop,
-    };
+    environment['KINOS_STARTUP_BACKDROP'] == 'aurora'
+        ? StartupBackdrop.aurora
+        : StartupBackdrop.drop;
 
 final _log = Logger('StartupAurora');
 
@@ -108,12 +101,11 @@ abstract final class StartupAurora {
       ];
 
   /// Peint le fond liquide sur [rect] : [colors] (fond, encre, cœur),
-  /// [wave] secondes après le clap, le faisceau (variante) depuis
-  /// [source]. Comme l'aurore, dans une petite image agrandie à l'écran.
+  /// [wave] secondes après le clap. Comme l'aurore, dans une petite image
+  /// agrandie à l'écran.
   static void paintLiquid(Canvas canvas, Rect rect,
       {required List<Color> colors,
       required double wave,
-      required Offset source,
       double intensity = 1,
       BlendMode blendMode = BlendMode.srcOver}) {
     final program = _liquid;
@@ -122,10 +114,6 @@ abstract final class StartupAurora {
         math.min(1.0, AppMotion.startupLiquidResolution / rect.longestSide);
     final width = math.max(1, (rect.width * scale).ceil());
     final height = math.max(1, (rect.height * scale).ceil());
-    final beam = Curves.easeInOut.transform(
-        ((wave - AppMotion.startupLiquidBeamDelay) /
-                AppMotion.startupLiquidBeamOpen)
-            .clamp(0.0, 1.0));
     final shader = program.fragmentShader();
     var i = 0;
     void set(double value) => shader.setFloat(i++, value);
@@ -140,10 +128,6 @@ abstract final class StartupAurora {
     set(time.value);
     set(wave);
     set(intensity);
-    set(backdrop == StartupBackdrop.dropBeam ? 1 : 0);
-    set((source.dx - rect.left) * scale);
-    set((source.dy - rect.top) * scale);
-    set(beam);
     color(AppColors.background);
     for (final c in colors) {
       color(c);

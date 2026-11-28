@@ -1,9 +1,8 @@
 #version 460 core
 
-// Le fond liquide de l'intro de Kinos : des volutes aux couleurs du film
-// (une encre qui se déforme sur elle-même), révélées au clap par l'onde
-// d'une goutte tombée sur le K. Variante « faisceau » : après l'onde, le
-// liquide se retire dans un faisceau qui s'ouvre depuis le K.
+// Le fond liquide de l'intro de Kinos : des ruisseaux de lumière aux
+// couleurs du film, qui coulent sur un fond presque noir, révélés au clap
+// par l'onde d'une goutte tombée sur le K.
 
 #include <flutter/runtime_effect.glsl>
 
@@ -13,11 +12,6 @@ uniform float uTime;
 uniform float uWave;
 // Intensité globale (0 : le fond seul, 1 : le liquide entier).
 uniform float uIntensity;
-// 0 : la goutte ; 1 : la goutte puis le faisceau.
-uniform float uMode;
-// Source du faisceau (pixels) et son ouverture (0 à 1).
-uniform vec2 uSource;
-uniform float uBeam;
 uniform vec3 uBlack;
 uniform vec3 uGround;
 uniform vec3 uInk;
@@ -42,6 +36,18 @@ float fbm(vec2 p) {
   float v = 0.0;
   float a = 0.5;
   for (int i = 0; i < 5; i++) {
+    v += a * noise(p);
+    p = p * 2.03 + vec2(1.7, 9.2);
+    a *= 0.5;
+  }
+  return v;
+}
+
+// Le même bruit, en trois octaves : un champ lisse pour les ruisseaux.
+float fbm3(vec2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 3; i++) {
     v += a * noise(p);
     p = p * 2.03 + vec2(1.7, 9.2);
     a *= 0.5;
@@ -75,34 +81,41 @@ void main() {
     spec = pow(max(0.0, slope), 3.0) * 0.9;
   }
 
-  // Les volutes : un bruit qui se déforme deux fois sur lui-même.
-  vec2 p = (uv + offset) * vec2(aspect, 1.0) * 2.0;
-  float t = uTime * 0.09;
+  // Le liquide : un bruit qui se déforme deux fois sur lui-même, assez
+  // vite pour qu'on le voie couler pendant les trois secondes de l'intro.
+  vec2 p = (uv + offset) * vec2(aspect, 1.0) * 1.6;
+  float t = uTime * 0.22;
   vec2 q = vec2(fbm(p + t), fbm(p + vec2(5.2, 1.3) - t));
-  vec2 r = vec2(fbm(p + 3.5 * q + vec2(1.7, 9.2) + t * 1.4),
-                fbm(p + 3.5 * q + vec2(8.3, 2.8) - t));
-  float f = fbm(p + 3.5 * r);
-  float ink = smoothstep(0.42, 0.9, f * f * 1.7 + length(r) * 0.22);
-  vec3 color = mix(uGround, uInk, ink);
-  color = mix(color, uHot, smoothstep(0.72, 1.0, ink + 0.25 * r.x) * 0.85);
+  vec2 r = vec2(fbm(p + 3.0 * q + vec2(1.7, 9.2) + t * 1.4),
+                fbm(p + 3.0 * q + vec2(8.3, 2.8) - t));
+  float f = fbm(p + 3.0 * r);
+
+  // Les ruisseaux : les lignes de niveau d'un champ lisse et lent (de
+  // longues courbes, pas les détails du liquide), qui défilent le long de
+  // lui, seulement là où un second champ les laisse passer. Un cœur fin et
+  // chaud, une lueur de l'encre, une frange de la teinte opposée au bord.
+  vec2 s0 = (uv + offset) * vec2(aspect, 1.0) * 0.9;
+  vec2 w = vec2(fbm3(s0 + t * 0.5), fbm3(s0 + vec2(4.1, 7.3) - t * 0.5));
+  float g = fbm3(s0 + 1.6 * w + vec2(t * 0.3, 0.0));
+  float phase = g * 11.0 - uTime * 0.45;
+  float line = 1.0 - abs(fract(phase) - 0.5) * 2.0;
+  float keep = smoothstep(0.3, 0.55, fbm3(s0 * 0.7 + vec2(3.1, 7.4) - w));
+  float core = pow(line, 26.0) * keep;
+  float glow = pow(line, 5.0) * keep;
+  float fringe = (pow(line, 10.0) - pow(line, 22.0)) * keep;
+
+  vec3 color = uGround * (0.6 + 0.8 * f);
+  // Le corps du liquide, à peine : la nuit reste dominante.
+  color += uInk * smoothstep(0.5, 0.95, f + 0.2 * length(r)) * 0.12;
+  color += uInk * glow * 1.4;
+  color += normalize(uGround + 1e-3) * fringe * 0.7;
+  color += uHot * core * 1.8;
 
   // Ce que l'onde a découvert.
   float lit = uWave > 0.0
                   ? smoothstep(front + 0.02, front - 0.3, dist + (f - 0.5) * 0.12)
                   : 0.0;
-  float mask = lit;
-  if (uMode > 0.5) {
-    // Le faisceau, depuis le K : un éventail qui s'ouvre jusqu'à tout
-    // couvrir. L'onde s'efface pendant qu'il s'ouvre.
-    vec2 b = (px - uSource) / uSize.y;
-    float angle = abs(atan(b.y, b.x));
-    float width = mix(0.02, 1.75, uBeam * uBeam);
-    float beam = smoothstep(width, width - 0.25, angle) *
-                 smoothstep(-0.2, 0.05, b.x);
-    beam = max(beam, step(1.0, uBeam));
-    mask = max(lit * (1.0 - smoothstep(0.0, 0.5, uWave - 0.45)), beam);
-  }
-  mask *= uIntensity;
+  float mask = lit * uIntensity;
 
   color = mix(uBlack, color, mask);
   color += vec3(spec) * (0.35 + 0.65 * (1.0 - mask * 0.5)) * uIntensity;

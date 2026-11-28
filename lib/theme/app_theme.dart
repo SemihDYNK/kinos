@@ -834,17 +834,11 @@ abstract final class AppMotion {
   ];
   static const startupAuroraDrift = Offset(.24, .22);
   // Fond liquide (cf. StartupAurora.paintLiquid) : côté le plus long de
-  // son image (agrandie à l'écran), grain, onde depuis longtemps calmée
-  // quand le clap n'a pas été vu (intro passée), et ouverture du faisceau
-  // de la variante « goutte et faisceau » (secondes après le clap).
+  // son image (agrandie à l'écran), grain, et onde depuis longtemps calmée
+  // quand le clap n'a pas été vu (intro passée).
   static const startupLiquidResolution = 640.0;
   static const startupLiquidGrain = .05;
   static const startupLiquidCalm = 30.0;
-  static const startupLiquidBeamDelay = .5;
-  static const startupLiquidBeamOpen = 1.4;
-  // Source du faisceau pendant l'intro : la bouche du K, un peu à gauche
-  // du centre (fraction du petit côté de l'écran).
-  static const startupLiquidSourceShift = .05;
   // Couleurs du liquide : le fond (teinte opposée, presque noir), l'encre
   // (la dominante) et le cœur chaud (voisine, plus claire). Teinte décalée
   // (degrés), saturation, clarté.

@@ -360,7 +360,6 @@ class StartupIntroBeam extends CustomPainter {
                 ? StartupAurora.liquidNeutral
                 : StartupAurora.liquidColorsFor(tint!),
             wave: StartupAurora.wave,
-            source: notch,
             blendMode: blendMode);
       } else {
         StartupAurora.paint(canvas, Offset.zero & size,

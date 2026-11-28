@@ -668,11 +668,7 @@ class _AuroraPainter extends CustomPainter {
       // La goutte tombe au clap : l'onde part du K, au centre.
       StartupAurora.clapAt ??= StartupAurora.time.value;
       StartupAurora.paintLiquid(canvas, Offset.zero & size,
-          colors: liquid,
-          wave: StartupAurora.wave,
-          source: size.center(Offset.zero) -
-              Offset(
-                  size.shortestSide * AppMotion.startupLiquidSourceShift, 0));
+          colors: liquid, wave: StartupAurora.wave);
       return;
     }
     StartupAurora.paint(canvas, Offset.zero & size,
