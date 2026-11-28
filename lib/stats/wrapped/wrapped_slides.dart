@@ -3452,6 +3452,14 @@ _ArchetypeLook _archetypeLook(WrappedInputs w) {
         hoursNumber,
       ];
   }
+  // L'âme sœur cinéphile, quand vous en avez une, signe la story : elle
+  // prend la place du dernier chiffre.
+  if (data.soulmate case final soulmate? when numbers.length >= 2) {
+    numbers = [
+      ...numbers.take(2),
+      (soulmate.friend.name, 'âme sœur'),
+    ];
+  }
   return (
     image: image ?? (lead == null ? null : w.poster(lead)),
     tint: tint ?? w.tint(lead),
