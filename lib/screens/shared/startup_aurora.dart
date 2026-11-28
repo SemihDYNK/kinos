@@ -134,6 +134,55 @@ abstract final class StartupAurora {
           [stop(letters[0]), stop(letters[1])]);
   }
 
+  /// Secondes de la scène (version longue) depuis son début, d'après le
+  /// temps depuis le clap.
+  static double storyOf(double wave) =>
+      wave +
+      AppMotion.startupIntroAssemblyEnd *
+          AppMotion.startupIntroClap *
+          AppDurations.startupIntro.inMicroseconds /
+          1e6;
+
+  /// La galerie de verre à l'instant [story] (secondes de la scène) :
+  /// profondeur et décalage de la caméra, front de la lumière dans les
+  /// arêtes, éclairage du K, reflet d'objectif et sortie du noir.
+  static ({
+    double depth,
+    double side,
+    double ignite,
+    double lit,
+    double flare,
+    double fade,
+  }) galleryAt(double story) {
+    double clamp01(double x) => x.clamp(0.0, 1.0);
+    double out(double x) => Curves.easeOutCubic.transform(clamp01(x));
+    final travel = Curves.easeInOutCubic
+        .transform(clamp01(story / AppMotion.startupGalleryDollyTime));
+    final clap = storyOf(0);
+    return (
+      depth: AppMotion.startupGalleryDolly * travel,
+      side: AppMotion.startupGalleryArc *
+          math.sin(story * AppMotion.startupGalleryArcRate) *
+          (1 - travel),
+      ignite: -1 +
+          AppMotion.startupGalleryIgniteDepth *
+              out((story - AppMotion.startupGalleryIgniteFrom) /
+                  AppMotion.startupGalleryIgniteTime),
+      lit: out((story - AppMotion.startupGalleryLitFrom) /
+          AppMotion.startupGalleryLitTime),
+      flare: story > clap
+          ? math.exp(-(story - clap) * AppMotion.startupGalleryFlare)
+          : 0.0,
+      fade: out(story / AppMotion.startupGalleryFadeIn),
+    );
+  }
+
+  /// Échelle du K au fond de la galerie : il grandit à mesure que la
+  /// caméra approche, jusqu'à sa taille finale.
+  static double markScale(double story) => (AppMotion.startupGalleryMarkRest /
+          (AppMotion.startupGalleryMarkDepth - galleryAt(story).depth))
+      .clamp(0.0, 1.0);
+
   /// Peint la lumière du clap sur [rect] : [colors] (encre, cœur), [wave]
   /// secondes après le clap, les traînées convergeant vers [centre] et les
   /// rayons ([rays], de 0 à 1) à travers les lettres que [paintMask] dessine
@@ -207,6 +256,13 @@ abstract final class StartupAurora {
     // Les irisations du verre suivent la dominante ; sans elle, gris.
     set(tint == null ? 0 : HSLColor.fromColor(tint).hue / 360);
     set(tint == null ? 0 : 1);
+    final shot = galleryAt(storyOf(wave));
+    set(shot.depth);
+    set(shot.side);
+    set(shot.ignite);
+    set(shot.lit);
+    set(shot.flare);
+    set(shot.fade);
     shader.setImageSampler(0, glow, filterQuality: FilterQuality.medium);
     shader.setImageSampler(1, spill, filterQuality: FilterQuality.medium);
 

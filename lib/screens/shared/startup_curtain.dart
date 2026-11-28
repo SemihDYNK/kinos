@@ -674,15 +674,13 @@ class _AuroraPainter extends CustomPainter {
     // Sans le mot, l'intro s'arrête à la fin de l'assemblage.
     final full = word ? 1.0 : AppMotion.startupIntroAssemblyEnd;
     final bloom = AppMotion.startupIntroBloom.transform(progress.value * full);
-    // Le temps depuis le clap, tiré de l'avancement de l'animation (pas de
-    // l'horloge) : les traînées frappent le K au moment exact où il se
-    // referme. L'horloge en garde l'origine pour l'ouverture qui suit.
-    final duration =
-        (word ? AppDurations.startupIntro : AppDurations.startupIntroShort)
-                .inMicroseconds /
-            1e6;
+    // Le temps depuis le clap, en secondes de la scène (la version courte
+    // la joue en accéléré), tiré de l'avancement de l'animation (pas de
+    // l'horloge) : la galerie et le K restent synchrones. L'horloge en
+    // garde l'origine pour l'ouverture qui suit.
+    final story = AppDurations.startupIntro.inMicroseconds / 1e6;
     const clap = AppMotion.startupIntroAssemblyEnd * AppMotion.startupIntroClap;
-    final wave = (progress.value * full - clap) / full * duration;
+    final wave = (progress.value * full - clap) * story;
     StartupAurora.clapAt = StartupAurora.time.value - wave;
     if (wave < -AppMotion.startupLightLead) return;
     StartupAurora.letters = letters;

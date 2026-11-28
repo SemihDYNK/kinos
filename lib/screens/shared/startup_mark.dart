@@ -149,10 +149,10 @@ class _StartupMarkPainter extends CustomPainter {
       oldDelegate.progress != progress;
 }
 
-/// Premier lancement de la session : la lumière converge et se condense en
-/// K (cf. [StartupAurora]), les pièces s'y solidifient sur place ; la
-/// branche du haut s'ouvre puis se referme comme un clap (cf.
-/// [AppMotion.startupIntroClap]).
+/// Premier lancement de la session : au fond d'une galerie de verre que la
+/// caméra traverse (cf. [StartupAurora]), le K grandit à son approche et
+/// s'éclaire ; la branche du haut s'ouvre puis se referme comme un clap
+/// (cf. [AppMotion.startupIntroClap]).
 /// Décalage du K vers la gauche, en unités du signe, pour que « KINOS »
 /// soit centré là où se tenait le K seul.
 final double introWordShift = (_StartupMarkPainter._kLeft + wordmarkRight) / 2 -
@@ -221,8 +221,8 @@ class _StartupIntroPainter extends CustomPainter {
     final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
     // Le K posé (et le mot) : dessiné en double résolution puis réduit. Le
     // moteur de rendu n'adoucit pas toujours le bord des formes (sans
-    // multi-échantillonnage) ; avant, les pièces se solidifient dans la
-    // lumière, qui cache l'escalier.
+    // multi-échantillonnage) ; avant, le K s'allume dans le noir, et
+    // l'escalier ne se voit pas.
     if (AppMotion.startupIntroArrivals.any((i) => i.transform(a) < 1)) {
       _draw(canvas, size);
       return;
@@ -272,13 +272,17 @@ class _StartupIntroPainter extends CustomPainter {
     // Avancement de l'assemblage et du clap, avant le mot.
     final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
     final impact = impactScale(a);
-    final scale = unit * impact;
+    // Le K est au fond de la galerie : il grandit pendant que la caméra
+    // approche (cf. StartupAurora.markScale).
+    final depth = StartupAurora.markScale(
+        progress * AppDurations.startupIntro.inMicroseconds / 1e6);
+    final scale = unit * impact * depth;
     canvas.translate(size.width / 2, size.height / 2);
     canvas.scale(scale);
     canvas.translate(-_centre.dx, -_centre.dy);
 
-    // Les pièces se solidifient sur place, dans la lumière condensée ; le
-    // pochoir de la lumière les a entières dès le début.
+    // Le K s'éclaire d'un bloc, rétroéclairé ; le pochoir de la lumière
+    // l'a entier dès le début.
     for (var i = 0; i < _parts.length; i++) {
       final arrival =
           stencil ? 1.0 : AppMotion.startupIntroArrivals[i].transform(a);
