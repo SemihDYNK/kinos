@@ -96,6 +96,31 @@ densité est prévue, portée par le même code (cf. `AppDensity`).
   amélioré, options du lecteur enrichies
   (`video_player_options_sheet.dart`), ajustements de `lib_mpv.dart`.
 
+## v0.19.0 (28 novembre)
+
+- **Intro de démarrage** : travelling dans une galerie de lames de verre
+  (`shaders/startup_liquid.frag`, plans empilés, lames qui s'allument une à
+  une, irisées aux teintes du film), le K rétroéclairé au fond, rayons et
+  poussière, reflet d'objectif au clap (`StartupAurora.galleryAt`). Sons :
+  nappe de cristal et bol chantant dès le noir, célesta et interrupteur au
+  clap, ouverture silencieuse (`startup_sounds.dart`, CC0 crédités dans
+  `NOTICE`). Les autres pistes explorées restent sur des branches locales
+  (`intro/*`) ; une version précalculée sous Blender est prévue.
+- **Wrapped** : quatre actes ; heures et jours de visionnage, rythme et
+  séries terminées, profil de spectateur et sa story d'archétype, l'an
+  prochain ; puis l'an dernier, tour du monde (pays de production en cache
+  `film-facts:v3`), records, chaîne, anime (genre ou catalogue AniList),
+  séries laissées en chemin, séries qui reviennent (frise Prochainement),
+  âme sœur cinéphile (`wrapped_more.dart`, `wrapped_slides_more.dart`).
+- **Seerr** : fenêtre de demande « cinéma » (`seerr_request_popup.dart`)
+  avec profil de langue Sonarr.
+- **Lecteur** : aperçu au survol avec timecode sur l'image et trickplay
+  local (`seek_preview.dart`).
+- **Letterboxd** : séries reconnues (`tmdb:tv`), tolérance de date selon le
+  pays.
+- **Fermeture** : sortie directe (`hard_exit.dart`) et lecteurs d'appoint
+  libérés avant la fenêtre ; fondus arrêtés quand leurs lecteurs le sont.
+
 ## v0.18.2 (27 novembre)
 
 - **Letterboxd** : identification manuelle (`letterboxd_identify_dialog.dart`)

@@ -153,6 +153,9 @@ chapitres et l'aperçu au survol dans le lecteur, et le nouvel écran de
 chargement.
 v0.18.1 (27 novembre) répare la mise à jour intégrée sous Windows.
 v0.18.2 (27 novembre) ajoute l'identification manuelle Letterboxd et F11.
+v0.19.0 (28 novembre) ajoute la nouvelle intro (galerie de verre, cloches,
+célesta), la deuxième vague du Wrapped, la nouvelle fenêtre de demande
+Seerr et l'aperçu au survol du lecteur — détail dans `PROJET.md`.
 La vue qBittorrent dédiée et la blocklist Arr sont abandonnées, hors périmètre.
 Les clients et identifiants qBittorrent existants ne sont pas supprimés.
 
