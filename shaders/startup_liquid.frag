@@ -55,6 +55,15 @@ float fbm3(vec2 p) {
   return v;
 }
 
+// Phase des ruisseaux en un point (coordonnées en hauteurs d'écran) : une
+// pente en diagonale, ondulée par un champ lisse qui se déforme lentement.
+// Ses lignes sont de longs arcs presque parallèles qui balaient l'écran,
+// jamais des boucles fermées.
+float streamPhase(vec2 s0, float t) {
+  vec2 w = vec2(fbm3(s0 * 0.8 + t * 0.2), fbm3(s0 * 0.8 + vec2(4.1, 7.3) - t * 0.2));
+  return dot(s0, vec2(0.75, 0.55)) * 4.0 + fbm3(s0 * 0.9 + 1.5 * w) * 5.0;
+}
+
 // Vitesse du front de l'onde, en hauteurs d'écran par seconde.
 const float kSpeed = 0.95;
 // Fréquence des rides (par hauteur d'écran).
@@ -90,26 +99,41 @@ void main() {
                 fbm(p + 3.0 * q + vec2(8.3, 2.8) - t));
   float f = fbm(p + 3.0 * r);
 
-  // Les ruisseaux : les lignes de niveau d'un champ lisse et lent (de
-  // longues courbes, pas les détails du liquide), qui défilent le long de
-  // lui, seulement là où un second champ les laisse passer. Un cœur fin et
-  // chaud, une lueur de l'encre, une frange de la teinte opposée au bord.
-  vec2 s0 = (uv + offset) * vec2(aspect, 1.0) * 0.9;
-  vec2 w = vec2(fbm3(s0 + t * 0.5), fbm3(s0 + vec2(4.1, 7.3) - t * 0.5));
-  float g = fbm3(s0 + 1.6 * w + vec2(t * 0.3, 0.0));
-  float phase = g * 11.0 - uTime * 0.45;
-  float line = 1.0 - abs(fract(phase) - 0.5) * 2.0;
-  float keep = smoothstep(0.3, 0.55, fbm3(s0 * 0.7 + vec2(3.1, 7.4) - w));
-  float core = pow(line, 26.0) * keep;
-  float glow = pow(line, 5.0) * keep;
-  float fringe = (pow(line, 10.0) - pow(line, 22.0)) * keep;
+  // Les ruisseaux : quelques larges rubans de lumière qui glissent
+  // lentement, de largeur constante (la distance à leur ligne centrale
+  // tient compte de la pente du champ : sans elle, un champ presque plat
+  // donnait des flaques). Sur leur largeur, un dégradé : la teinte opposée
+  // au bord, l'encre, puis le cœur chaud ; une lueur douce les entoure.
+  // Un second champ, presque fixe, les fait naître et s'éteindre.
+  vec2 s0 = (uv + offset) * vec2(aspect, 1.0) * 0.55;
+  float e = 0.004;
+  float ph = streamPhase(s0, t);
+  vec2 grad = vec2(streamPhase(s0 + vec2(e, 0.0), t) - ph,
+                   streamPhase(s0 + vec2(0.0, e), t) - ph) / (e / 0.55);
+  float flow = ph - uTime * 0.12;
+  float v = fract(flow) - 0.5;
+  // Chaque ruban a sa lumière : certains s'éteignent, d'autres brillent.
+  float id = floor(flow + 0.5);
+  float own = hash(vec2(id, 7.0));
+  float lightness = own < 0.15 ? 0.0 : mix(0.4, 1.0, (own - 0.15) / 0.85);
+  float keep = smoothstep(0.22, 0.5, fbm3(s0 * 0.45 + vec2(3.1, 7.4) + t * 0.05));
+  // Sa largeur va et vient le long de sa course.
+  float width = mix(0.04, 0.1, fbm3(s0 * 1.3 + vec2(id * 3.7, 1.0)));
+  float slope = max(length(grad), 0.5);
+  float across = 1.0 - clamp(abs(v) / slope / width, 0.0, 1.0);
+  float band = smoothstep(0.0, 0.25, across) * keep * lightness;
+  float halo = 1.0 - clamp(abs(v) / slope / (width * 3.0), 0.0, 1.0);
+  halo = halo * halo * keep * lightness;
 
-  vec3 color = uGround * (0.6 + 0.8 * f);
-  // Le corps du liquide, à peine : la nuit reste dominante.
-  color += uInk * smoothstep(0.5, 0.95, f + 0.2 * length(r)) * 0.12;
-  color += uInk * glow * 1.4;
-  color += normalize(uGround + 1e-3) * fringe * 0.7;
-  color += uHot * core * 1.8;
+  vec3 fringe = normalize(uGround + 1e-3) * 0.75;
+  vec3 ribbon = mix(fringe, uInk * 1.5, smoothstep(0.05, 0.6, across));
+  ribbon = mix(ribbon, uHot * 1.2, smoothstep(0.7, 1.0, across));
+  // Le long du ruban, la lumière va et vient avec le second champ.
+  ribbon *= 0.6 + 0.4 * keep;
+
+  vec3 color = uGround * (0.5 + 0.6 * f);
+  color += uInk * halo * 0.3;
+  color = mix(color, min(ribbon, vec3(1.0)), band);
 
   // Ce que l'onde a découvert.
   float lit = uWave > 0.0
