@@ -63,7 +63,8 @@ vec3 hsv(float h, float s, float v) {
 // teintes voisines de la dominante. Pour qu'elles ne soient pas toutes
 // pareilles, chaque couche a son angle et sa vitesse, les lames ondulent
 // un peu, et chacune a sa lumière et l'allure de son reflet.
-vec3 glass(vec2 d, float depth, float speed, float density, float turn) {
+vec3 glass(vec2 d, float depth, float speed, float density, float turn,
+           float glow) {
   vec2 q = vec2(cos(turn) * d.x - sin(turn) * d.y,
                 sin(turn) * d.x + cos(turn) * d.y);
   float bend = 0.18 * sin(q.y * 0.9 + uTime * 0.25 + depth * 2.3);
@@ -87,7 +88,11 @@ vec3 glass(vec2 d, float depth, float speed, float density, float turn) {
   float own = 0.35 + 0.65 * hash(id + 2.0 + depth);
   vec3 c = vec3(0.025) + iris * spread * 0.55 * sheen * 2.0 +
            vec3(0.9) * edge * (0.25 + 0.75 * sheen) + uInk * 0.05 * g;
-  return c * inside * own;
+  // La lumière des lettres renvoyée par le verre proche : ses arêtes et
+  // son irisation s'allument de leurs couleurs.
+  vec3 letterLight = mix(uHot, vec3(1.0), 0.2);
+  c += letterLight * glow * (edge * 0.9 + spread * 0.5 + 0.06);
+  return c * inside * mix(own, 1.0, clamp(glow, 0.0, 1.0));
 }
 
 // Traînées : autant de couloirs autour du centre, un sur trois ou presque
@@ -106,69 +111,97 @@ void main() {
   float angle = atan(d.y, d.x);
   vec3 color = uBlack;
 
+  // La lumière des lettres, très étalée : ce que le verre autour d'elles
+  // en reçoit.
+  float spill = 0.0;
+  if (uWave > 0.0) {
+    for (int i = 0; i < 12; i++) {
+      float a = float(i) * 0.5236;
+      spill += mask(uv + vec2(cos(a) / aspect, sin(a)) * 0.07);
+      spill += mask(uv + vec2(cos(a + 0.26) / aspect, sin(a + 0.26)) * 0.14) *
+               0.6;
+    }
+    spill = spill / 12.0 * smoothstep(0.0, 0.5, uWave);
+  }
+
   // Le verre, éclairé par la lumière arrivée : trois couches d'angles,
   // de finesses et de vitesses différentes, plus claires près des lettres.
   if (uWave > 0.0) {
-    float lit = smoothstep(0.25, 1.1, uWave);
-    vec3 panes = glass(d, 0.0, 0.03, 2.0, -0.62) +
-                 glass(d * 1.3 + vec2(0.3, 0.0), 1.0, -0.055, 3.1, -0.48) *
+    float lit = smoothstep(0.1, 0.9, uWave);
+    vec3 panes = glass(d, 0.0, 0.03, 2.0, -0.62, spill) +
+                 glass(d * 1.3 + vec2(0.3, 0.0), 1.0, -0.055, 3.1, -0.48,
+                       spill) *
                      0.55 +
-                 glass(d * 0.8, 2.0, 0.012, 1.3, -0.8) * 0.4;
+                 glass(d * 0.8, 2.0, 0.012, 1.3, -0.8, spill) * 0.4;
     color += panes * lit * (1.1 - smoothstep(0.0, 1.0, r * 0.9)) * 1.1;
   }
 
-  // Les traînées : elles partent des bords un peu avant le clap et
-  // frappent les lettres quand le K se referme, chacune une seule fois.
-  if (uWave > -0.7) {
+  // L'hyperespace : avant le clap, des traînées filent des bords vers le
+  // K, longues ou courtes, rapides ou lentes, en plusieurs vagues, et le
+  // chargent de couleur ; la dernière arrive juste avant le clap.
+  if (uWave > -1.8 && uWave < 0.3) {
     float lane = (angle + 3.14159) / 6.28318 * kLanes;
     float id = floor(lane);
     float across = fract(lane);
-    float arrive = 0.12 * hash(id + 11.0);
-    float span = 0.45 + 0.15 * hash(id);
-    float head = 1.15 * (arrive - uWave) / span;
     float reach = clamp(r / (0.95 * aspect * 0.5), 0.0, 1.2);
-    float streak = smoothstep(head + kLength, head, reach) *
-                   smoothstep(head - 0.01, head, reach);
-    float live = step(-0.05, head) * step(head, 1.2);
     // Un couloir n'est jamais plus fin qu'un pixel et demi (crénelage).
     float lanePixel = kLanes / (6.28318 * max(r, 1e-3) * uSize.y);
     float thin = exp(-pow((across - 0.5) / max(0.07, 1.5 * lanePixel), 2.0));
-    float keep = step(0.3, hash(id + 3.0));
-    vec3 tone = mix(mix(uInk, uHot, hash(id + 5.0)), vec3(1.0),
-                    0.3 * hash(id + 9.0));
-    color += tone * streak * thin * keep * live * smoothstep(0.05, 0.2, r) *
-             2.4;
+    for (int k = 0; k < 3; k++) {
+      float seed = id * 3.0 + float(k);
+      float arrive = -1.45 + 1.35 * hash(seed + 11.0);
+      float span = 0.35 + 0.45 * hash(seed);
+      float len = 0.25 + 0.5 * hash(seed + 21.0);
+      float head = 1.15 * (arrive - uWave) / span;
+      float streak = smoothstep(head + len, head, reach) *
+                     smoothstep(head - 0.01, head, reach);
+      float live = step(-0.05, head) * step(head, 1.2);
+      float keep = step(0.35, hash(seed + 3.0));
+      vec3 tone = mix(mix(uInk, uHot, hash(seed + 5.0)), vec3(1.0),
+                      0.35 * hash(seed + 9.0));
+      color += tone * streak * thin * keep * live *
+               (0.6 + 0.8 * hash(seed + 17.0)) *
+               smoothstep(0.05, 0.2, r) * 2.2;
+    }
   }
 
   if (uWave > 0.0) {
     // Les rayons : la lumière derrière les lettres, étirée depuis leur
-    // centre vers l'extérieur, juste après l'impact.
+    // centre vers l'extérieur, juste après le clap.
     if (uRays > 0.0) {
       vec2 toward = centreUv - uv;
       float light = 0.0;
       float weight = 1.0;
       for (int i = 0; i < 40; i++) {
-        light += mask(uv + toward * (float(i) / 40.0) * 0.8) * weight;
-        weight *= 0.95;
+        light += mask(uv + toward * (float(i) / 40.0) * 0.55) * weight;
+        weight *= 0.94;
       }
-      light = light / 22.0 * smoothstep(0.1, 0.6, uWave) * uRays;
+      light = light / 30.0 * smoothstep(0.05, 0.5, uWave) * uRays;
       vec3 beam = mix(uInk, uHot, clamp(light * 0.7, 0.0, 1.0));
       float dust =
           smoothstep(0.985, 1.0,
                      noise(uv * vec2(aspect, 1.0) * 140.0 +
                            vec2(uTime * 0.5, -uTime * 0.8))) *
           1.4;
-      color += beam * light * (1.1 + dust);
+      color += beam * light * (1.0 + dust);
     }
+  }
 
-    // Une lueur douce autour des lettres, chargées de lumière.
-    float halo = 0.0;
-    for (int i = 0; i < 8; i++) {
-      float a = float(i) * 0.785;
-      halo += mask(uv + vec2(cos(a), sin(a)) * 0.012);
+  // La brillance des lettres chargées : un flou doux sur deux rayons (pas
+  // un anneau de copies), plus vif au clap.
+  float charge = smoothstep(-1.3, -0.15, uWave);
+  if (charge > 0.0) {
+    float near = 0.0;
+    float far = 0.0;
+    for (int i = 0; i < 12; i++) {
+      float a = float(i) * 0.5236;
+      vec2 dir = vec2(cos(a) / aspect, sin(a));
+      near += mask(uv + dir * 0.006) + mask(uv + dir * 0.012);
+      far += mask(uv + dir * 0.025);
     }
-    color += mix(uInk, uHot, 0.5) * halo / 8.0 * 0.18 *
-             smoothstep(0.0, 0.5, uWave);
+    float bloom = near / 24.0 * 0.5 + far / 12.0 * 0.5;
+    float flash = uWave > 0.0 ? exp(-uWave * 4.0) : 0.0;
+    color += mix(uHot, vec3(1.0), 0.25) * bloom * charge * (0.22 + 0.5 * flash);
   }
 
   color = mix(uBlack, color, uIntensity);

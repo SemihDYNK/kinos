@@ -110,6 +110,9 @@ abstract final class AppBrand {
   static const markSize = 28.0;
   static const wordmarkWidth = 132.0;
   static const startupMarkSize = 128.0;
+  // Le K posé est dessiné à ce multiple de la résolution de l'écran, puis
+  // réduit : un anticrénelage qui ne dépend pas du moteur de rendu.
+  static const startupMarkSupersample = 2.0;
   static const startupGuideWidth = 1.5;
   static const startupGuideOpacity = .6;
   static const startupApertureFeather = 28.0;
@@ -703,11 +706,12 @@ abstract final class AppDurations {
   /// calme (moins de 15 images/s), l'ouverture ne s'anime pas.
   static const startupStrugglingFrame = Duration(milliseconds: 66);
   // Premier lancement de la session : allumage, assemblage en profondeur,
-  // clap, puis le mot (cf. AppMotion.startupIntro*).
-  static const startupIntro = Duration(milliseconds: 2850);
+  // hyperespace qui charge le K de couleur, clap, puis le mot (cf.
+  // AppMotion.startupIntro*).
+  static const startupIntro = Duration(milliseconds: 4250);
   // Lancements suivants : la même intro sans « KINOS », arrêtée à la fin
   // de l'assemblage (startupIntro × AppMotion.startupIntroAssemblyEnd).
-  static const startupIntroShort = Duration(milliseconds: 2150);
+  static const startupIntroShort = Duration(milliseconds: 3550);
   // Avance des sons de l'intro sur leur moment : la latence de la sortie
   // audio.
   static const startupSoundLead = Duration(milliseconds: 35);
@@ -753,8 +757,8 @@ abstract final class AppMotion {
   // fraction de cette partie. Ensuite vient le mot : le K glisse pour que
   // « KINOS » soit centré, les lettres INOS arrivent écartées et se
   // resserrent, puis le mot complet se pose.
-  static const startupIntroAssemblyEnd = .754;
-  static const startupIntroWord = Interval(.754, .912);
+  static const startupIntroAssemblyEnd = .835;
+  static const startupIntroWord = Interval(.835, .941);
   // Dans le mot (fraction de [startupIntroWord]) : glissement du K, puis
   // chaque lettre, en décalé.
   static const startupIntroWordSlide = Interval(0, .8, curve: easeOut);
@@ -768,18 +772,19 @@ abstract final class AppMotion {
   static const startupIntroTracking = 48.0;
 
   // Assemblage (fraction de la partie assemblage). La caméra part d'un
-  // gros plan : le contour
-  // du K se dessine en fantôme à l'échelle de l'écran, les pièces
-  // arrivent des bords et du fond pendant qu'elle recule ; la branche du
-  // haut, arrivée ouverte autour du creux du K, prend son élan puis se
-  // referme comme un clap, et la marque encaisse le choc.
+  // gros plan : le contour du K se dessine en fantôme à l'échelle de
+  // l'écran, les pièces arrivent des bords et du fond pendant qu'elle
+  // recule, et le K se pose, fermé. Vient l'hyperespace : des traînées de
+  // lumière filent vers le K et le chargent de couleur. Puis la branche
+  // du haut s'ouvre, prend son élan et se referme comme un clap, et la
+  // marque encaisse le choc.
   static const startupIntroTrace =
-      Interval(0, .50, curve: Cubic(.45, 0, .25, 1));
-  static const startupIntroTraceFade = Interval(0, .12, curve: easeOut);
+      Interval(0, .30, curve: Cubic(.45, 0, .25, 1));
+  static const startupIntroTraceFade = Interval(0, .073, curve: easeOut);
   static const startupIntroArrivals = [
-    Interval(.14, .52, curve: easeOut),
-    Interval(.26, .64, curve: easeOut),
-    Interval(.20, .58, curve: easeOut),
+    Interval(.085, .315, curve: easeOut),
+    Interval(.158, .388, curve: easeOut),
+    Interval(.121, .351, curve: easeOut),
   ];
   // Taille d'une pièce au fond, avant d'arriver (1 = à sa place).
   static const startupIntroDepth = .6;
@@ -790,27 +795,31 @@ abstract final class AppMotion {
   // caméra : lent au départ pour laisser voir le trait, posé avant l'élan.
   static const startupIntroCloseup = 6.0;
   static const startupIntroCamera =
-      Interval(.10, .68, curve: Cubic(.75, 0, .25, 1));
+      Interval(.061, .412, curve: Cubic(.75, 0, .25, 1));
   // Inclinaison de départ de la caméra, résorbée pendant le recul.
   static const startupIntroTilt = .35;
   // Images d'affilée sorties à temps avant de lancer l'ouverture.
   static const startupSettleFrames = 8;
-  // Branche du haut : ouverte (radians), élan, puis fermeture accélérée.
+  // Branche du haut : arrivée fermée, elle s'ouvre (radians), prend son
+  // élan, puis se referme en accélérant.
   static const startupIntroClapOpen = -.32;
   static const startupIntroClapLift = -.07;
-  static const startupIntroClapWindup = Interval(.62, .71, curve: easeOut);
+  static const startupIntroClapOpening =
+      Interval(.80, .855, curve: Cubic(.3, 0, .2, 1));
+  static const startupIntroClapWindup = Interval(.855, .88, curve: easeOut);
   static const startupIntroClapClose =
-      Interval(.71, .78, curve: Cubic(.6, 0, 1, .6));
+      Interval(.88, .90, curve: Cubic(.6, 0, 1, .6));
   // Instant du clap (fin de la fermeture), puis choc encaissé sans rebond.
-  static const startupIntroClap = .78;
+  static const startupIntroClap = .90;
   static const startupIntroImpact = .02;
-  static const startupIntroImpactIn = Interval(.78, .80);
-  static const startupIntroImpactOut = Interval(.80, .94, curve: easeOut);
-  static const startupIntroGhostOut = Interval(.78, .88, curve: easeOut);
-  // Le dégradé de couleur naît au clap (fraction de toute l'intro :
-  // startupIntroAssemblyEnd × startupIntroClap ≈ .588) et s'étend comme une
-  // onde avant de se poser.
-  static const startupIntroBloom = Interval(.588, .72, curve: easeOut);
+  static const startupIntroImpactIn = Interval(.90, .91);
+  static const startupIntroImpactOut = Interval(.91, .98, curve: easeOut);
+  // Le contour fantôme s'efface quand le K est posé.
+  static const startupIntroGhostOut = Interval(.36, .46, curve: easeOut);
+  // Le dégradé de couleur (repli sans shader) naît au clap (fraction de
+  // toute l'intro : startupIntroAssemblyEnd × startupIntroClap ≈ .7515) et
+  // s'étend comme une onde avant de se poser.
+  static const startupIntroBloom = Interval(.7515, .85, curve: easeOut);
   // Aurore du clap (cf. StartupAurora) : clarté de chaque tache, écart de
   // teinte des voisines (degrés), saturation maximale (le K blanc doit
   // rester lisible) et vitesse de dérive.
@@ -836,7 +845,7 @@ abstract final class AppMotion {
   // Lumière du clap (cf. StartupAurora.paintLiquid) : côté le plus long
   // de son image (agrandie à l'écran), grain, et clap depuis longtemps
   // passé quand il n'a pas été vu (intro passée).
-  static const startupLiquidResolution = 1280.0;
+  static const startupLiquidResolution = 2560.0;
   static const startupLiquidGrain = .05;
   static const startupLiquidCalm = 30.0;
   // Couleurs de la lumière : l'encre (la dominante) et le cœur chaud
@@ -845,14 +854,15 @@ abstract final class AppMotion {
   static const startupLiquidHot = (22.0, .95, .68);
   static const startupLiquidNeutralLightness = [.5, .75];
   // Les lettres chargées par la lumière : un dégradé du haut (chaud) vers
-  // le bas (la dominante), qui monte entre ces deux instants après le clap
-  // (secondes), quand les traînées les frappent.
+  // le bas (la dominante), qui monte entre ces deux instants autour du
+  // clap (secondes) : pendant l'hyperespace, à mesure que les traînées
+  // frappent le K.
   static const startupLetterTop = (22.0, .95, .74);
   static const startupLetterBottom = (0.0, .85, .6);
-  static const startupLetterChargeFrom = 0.0;
-  static const startupLetterChargeTo = .45;
-  // Les traînées partent des bords tant de secondes avant le clap.
-  static const startupLightLead = .7;
+  static const startupLetterChargeFrom = -1.3;
+  static const startupLetterChargeTo = -.15;
+  // L'hyperespace commence tant de secondes avant le clap.
+  static const startupLightLead = 1.6;
   // Passage du repli neutre à la vraie dominante, si elle arrive tard.
   static const startupTintFade = Duration(milliseconds: 400);
   // Balayage du blanc : régulier sur toute sa durée, pour qu'on le voie

@@ -27,7 +27,7 @@ class StartupMark extends StatelessWidget {
   /// [size] : le pochoir de la lumière du clap.
   static void paintIntro(Canvas canvas, Size size, double progress,
           {bool word = true}) =>
-      _StartupIntroPainter(progress, word: word).paint(canvas, size);
+      _StartupIntroPainter(progress, word: word)._draw(canvas, size);
 
   /// Version longue du premier lancement de la session (allumage,
   /// assemblage en profondeur, clap) ; sinon, l'assemblage court.
@@ -171,11 +171,12 @@ class _StartupIntroPainter extends CustomPainter {
   static const _hinge = Offset(80, 123);
   static const _centre = Offset(_extent / 2, _extent / 2);
 
-  /// Angle de la branche du haut : ouverte, élan, puis fermeture.
+  /// Angle de la branche du haut : fermée, ouverte, élan, puis fermeture.
   static double clapAngle(double progress) {
+    final opening = AppMotion.startupIntroClapOpening.transform(progress);
     final windup = AppMotion.startupIntroClapWindup.transform(progress);
     final close = AppMotion.startupIntroClapClose.transform(progress);
-    final lifted = AppMotion.startupIntroClapOpen +
+    final lifted = AppMotion.startupIntroClapOpen * opening +
         AppMotion.startupIntroClapLift * windup;
     return lifted * (1 - close);
   }
@@ -210,6 +211,43 @@ class _StartupIntroPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
+    final progress = word
+        ? this.progress
+        : this.progress * AppMotion.startupIntroAssemblyEnd;
+    final a = (progress / AppMotion.startupIntroAssemblyEnd).clamp(0.0, 1.0);
+    // Le K posé (et le mot) : dessiné en double résolution puis réduit. Le
+    // moteur de rendu n'adoucit pas toujours le bord des formes (sans
+    // multi-échantillonnage) ; pendant l'assemblage, les pièces viennent
+    // de hors de l'écran et le mouvement cache l'escalier.
+    if (AppMotion.startupIntroCamera.transform(a) < 1) {
+      _draw(canvas, size);
+      return;
+    }
+    final ratio =
+        ui.PlatformDispatcher.instance.views.firstOrNull?.devicePixelRatio ?? 1;
+    final factor = AppBrand.startupMarkSupersample * ratio;
+    final region = Rect.fromCenter(
+        center: size.center(Offset.zero),
+        width: size.width * 3.4,
+        height: size.height * 1.6);
+    final recorder = ui.PictureRecorder();
+    final sharp = Canvas(recorder)
+      ..scale(factor)
+      ..translate(-region.left, -region.top);
+    _draw(sharp, size);
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(
+        (region.width * factor).ceil(), (region.height * factor).ceil());
+    picture.dispose();
+    canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        region,
+        Paint()..filterQuality = FilterQuality.medium);
+    image.dispose();
+  }
+
+  void _draw(Canvas canvas, Size size) {
     // Sans le mot, la même intro s'arrête à la fin de l'assemblage : son
     // avancement couvre seulement cette partie.
     final progress = this.word
